@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import ThemeSwitchButton from '@/components/layout/ThemeSwitchButton.vue';
+import LoginButton from '@/features/user/LoginButton.vue';
 </script>
 
 <template>
   <header>
     <h1>AppName</h1>
-    <ThemeSwitchButton />
+    <div class="button-area">
+      <ThemeSwitchButton />
+      <LoginButton />
+    </div>
   </header>
 </template>
 
@@ -16,6 +20,7 @@ header {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
+  justify-content: space-between
 }
 
 h1 {
@@ -23,5 +28,10 @@ h1 {
   color: var(--color-on-primary);
   margin: 0;
   pointer-events: none;
+}
+
+.button-area {
+  display: flex;
+  gap: var(--space-4)
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ThemeSwitchButton from './ui/button/ThemeSwitchButton.vue';
+import ThemeSwitchButton from '@/components/layout/ThemeSwitchButton.vue';
 </script>
 
 <template>

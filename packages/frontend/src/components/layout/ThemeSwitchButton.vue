@@ -22,7 +22,7 @@ watchEffect(() => {
   </button>
 </template>
 
-<style>
+<style scoped>
 .theme-toggle {
   background: none;
   border: none;

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:17-alpine
-    container_name: app-template-db
+    container_name: taku-biyori-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}

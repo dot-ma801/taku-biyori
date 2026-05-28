@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HealthResponseSchema } from '@app-template/shared';
+import { HealthResponseSchema } from '@taku-biyori/shared';
 import { getHealth } from '../../src/health/application/get-health';
 
 describe('getHealth', () => {

@@ -1,4 +1,4 @@
-import type { HealthResponse } from '@app-template/shared';
+import type { HealthResponse } from '@taku-biyori/shared';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '../../../health/application/get-health';

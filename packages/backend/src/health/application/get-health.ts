@@ -1,7 +1,7 @@
 import {
   HealthResponseSchema,
   type HealthResponse,
-} from '@app-template/shared';
+} from '@taku-biyori/shared';
 import { createHealthStatus } from '../domain/health';
 
 /**

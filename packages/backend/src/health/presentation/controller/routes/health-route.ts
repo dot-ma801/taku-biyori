@@ -1,5 +1,5 @@
-import type { HealthResponse } from '@app-template/shared';
-import { HealthResponseSchema } from '@app-template/shared';
+import type { HealthResponse } from '@taku-biyori/shared';
+import { HealthResponseSchema } from '@taku-biyori/shared';
 import type { Hono } from 'hono';
 
 export interface RegisterHealthRouteOptions {

@@ -10,7 +10,7 @@ importers:
 
   packages/backend:
     dependencies:
-      '@app-template/shared':
+      '@taku-biyori/shared':
         specifier: workspace:*
         version: link:../shared
       '@hono/node-server':
@@ -68,7 +68,7 @@ importers:
 
   packages/frontend:
     dependencies:
-      '@app-template/shared':
+      '@taku-biyori/shared':
         specifier: workspace:*
         version: link:../shared
       '@lucide/vue':

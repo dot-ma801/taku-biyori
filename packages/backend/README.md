@@ -8,7 +8,7 @@
 
 ```bash
 pnpm install
-pnpm --filter @app-template/backend dev
+pnpm --filter @taku-biyori/backend dev
 ```
 
 起動後は次の URL で確認できます。
@@ -34,16 +34,16 @@ pnpm --filter @app-template/backend dev
 
 `packages/backend/package.json` には、主に次のスクリプトがあります。
 
-- `pnpm --filter @app-template/backend dev`
-- `pnpm --filter @app-template/backend build`
-- `pnpm --filter @app-template/backend start`
-- `pnpm --filter @app-template/backend test`
-- `pnpm --filter @app-template/backend test:unit`
-- `pnpm --filter @app-template/backend test:integration`
-- `pnpm --filter @app-template/backend db:generate`
-- `pnpm --filter @app-template/backend db:migrate`
-- `pnpm --filter @app-template/backend db:push`
-- `pnpm --filter @app-template/backend db:studio`
+- `pnpm --filter @taku-biyori/backend dev`
+- `pnpm --filter @taku-biyori/backend build`
+- `pnpm --filter @taku-biyori/backend start`
+- `pnpm --filter @taku-biyori/backend test`
+- `pnpm --filter @taku-biyori/backend test:unit`
+- `pnpm --filter @taku-biyori/backend test:integration`
+- `pnpm --filter @taku-biyori/backend db:generate`
+- `pnpm --filter @taku-biyori/backend db:migrate`
+- `pnpm --filter @taku-biyori/backend db:push`
+- `pnpm --filter @taku-biyori/backend db:studio`
 
 ## アーキテクチャ
 

@@ -1,4 +1,4 @@
-import type { HealthResponse } from '@app-template/shared';
+import type { HealthResponse } from '@taku-biyori/shared';
 
 /**
  * 疎通確認のドメインモデルです。

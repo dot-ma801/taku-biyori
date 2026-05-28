@@ -1,4 +1,4 @@
-import { SessionResponseSchema, type User } from '@app-template/shared';
+import { SessionResponseSchema, type User } from '@taku-biyori/shared';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { authClient } from '@/lib/auth.js';

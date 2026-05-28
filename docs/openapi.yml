@@ -1,0 +1,348 @@
+openapi: 3.1.0
+info:
+  title: app-template API
+  version: 0.1.0
+  description: |
+    app-template バックエンドの API 仕様。
+servers:
+  - url: http://localhost:3000
+    description: ローカル開発サーバー
+tags:
+  - name: Health
+    description: バックエンド稼働確認用のエンドポイント
+  - name: Auth
+    description: Better Auth が提供する認証エンドポイント
+paths:
+  /:
+    get:
+      tags:
+        - Health
+      summary: 稼働確認
+      description: バックエンドが起動しているかを確認するためのヘルスチェック。
+      operationId: getHealth
+      responses:
+        '200':
+          description: バックエンドが正常に応答しています。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/auth/signin/email:
+    post:
+      tags:
+        - Auth
+      summary: メールアドレスとパスワードでログイン
+      description: Better Auth が提供するメールアドレス/パスワード認証のログイン処理。
+      operationId: signInWithEmail
+      security: []
+      requestBody:
+        required: true
+        description: ログインに必要な認証情報を送信します。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInEmailRequest'
+      responses:
+        '200':
+          description: ログインに成功しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: リクエスト形式が不正。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証情報が一致しません。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/signup/email:
+    post:
+      tags:
+        - Auth
+      summary: メールアドレスとパスワードで新規登録
+      description: Better Auth が提供するメールアドレス/パスワード認証の登録処理。
+      operationId: signUpWithEmail
+      security: []
+      requestBody:
+        required: true
+        description: 新規ユーザー登録に必要な情報を送信します。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpEmailRequest'
+      responses:
+        '200':
+          description: 新規登録に成功しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: リクエスト形式が不正。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: すでに同じメールアドレスのユーザーが存在します。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/signout:
+    post:
+      tags:
+        - Auth
+      summary: ログアウト
+      description: Better Auth が提供するセッション破棄処理。
+      operationId: signOut
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: ログアウトに成功しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /api/auth/session:
+    get:
+      tags:
+        - Auth
+      summary: 現在のセッションを取得
+      description: Better Auth が保持する現在のセッション情報を取得します。
+      operationId: getSession
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 現在のセッション情報を返します。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: 有効なセッションがありません。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/signin/social:
+    post:
+      tags:
+        - Auth
+      summary: ソーシャルログインを開始
+      description: Better Auth が提供するソーシャルログイン処理の開始点。
+      operationId: signInWithSocialProvider
+      security: []
+      requestBody:
+        required: true
+        description: 利用するソーシャルプロバイダと任意のコールバック先を指定します。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInSocialRequest'
+      responses:
+        '200':
+          description: ソーシャルログイン処理を開始しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: リクエスト形式が不正。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/callback/google:
+    get:
+      tags:
+        - Auth
+      summary: Google OAuth コールバック
+      description: Better Auth が処理する Google OAuth のコールバックエンドポイント。
+      operationId: googleOAuthCallback
+      security: []
+      responses:
+        '200':
+          description: コールバックを処理しました。
+        '302':
+          description: コールバック後のリダイレクト。
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Cookie-based session authentication.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Optional bearer token authentication.
+  schemas:
+    HealthResponse:
+      type: object
+      description: ヘルスチェック応答。
+      additionalProperties: false
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          examples:
+            - ok
+        message:
+          type: string
+          examples:
+            - Backend is running
+    SuccessResponse:
+      type: object
+      description: 成功を示す汎用応答。
+      additionalProperties: true
+      properties:
+        success:
+          type: boolean
+          default: true
+    ErrorResponse:
+      type: object
+      description: エラー応答の汎用スキーマ。
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties: true
+    User:
+      type: object
+      description: Better Auth が返すユーザー情報の想定スキーマ。
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        emailVerified:
+          type: boolean
+        image:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Session:
+      type: object
+      description: Better Auth が返すセッション情報の想定スキーマ。
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    AuthResponse:
+      type: object
+      description: 認証系エンドポイントの応答を表す汎用スキーマ。
+      additionalProperties: true
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            session:
+              $ref: '#/components/schemas/Session'
+        error:
+          $ref: '#/components/schemas/ErrorResponse'
+    SessionResponse:
+      type: object
+      description: セッション取得時の応答スキーマ。
+      additionalProperties: true
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            session:
+              $ref: '#/components/schemas/Session'
+        error:
+          $ref: '#/components/schemas/ErrorResponse'
+    SignInEmailRequest:
+      type: object
+      description: メールアドレス/パスワードのログイン要求。
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        rememberMe:
+          type: boolean
+          default: true
+        callbackURL:
+          type: string
+          format: uri
+    SignUpEmailRequest:
+      type: object
+      description: メールアドレス/パスワードの新規登録要求。
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        image:
+          type: string
+          format: uri
+        callbackURL:
+          type: string
+          format: uri
+    SignInSocialRequest:
+      type: object
+      description: ソーシャルログイン開始要求。
+      additionalProperties: false
+      required:
+        - provider
+      properties:
+        provider:
+          type: string
+          examples:
+            - google
+        callbackURL:
+          type: string
+          format: uri

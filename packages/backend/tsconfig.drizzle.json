@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["drizzle.config.ts"]
+}

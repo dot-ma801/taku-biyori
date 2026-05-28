@@ -1,0 +1,17 @@
+{
+  "name": "app-template",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format",
+    "test": "pnpm -r run test",
+    "test:coverage": "pnpm -r run test:coverage"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "workspaces": [
+    "packages/*"
+  ]
+}

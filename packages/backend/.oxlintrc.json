@@ -1,0 +1,4 @@
+{
+  "$schema": "../shared/node_modules/oxlint/configuration_schema.json",
+  "extends": ["../shared/.oxlintrc.json"]
+}

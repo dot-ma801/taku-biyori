@@ -1,0 +1,36 @@
+# BaseCollapsible
+
+アコーディオン形式の折りたたみコンポーネント。`@vuetify/v0` の `Collapsible` をベースに実装しています。
+
+## Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `title` | `string` | ✓ | アクティベーターに表示するタイトル |
+| `defaultOpen` | `boolean` | — | 初期状態で開いた状態にする |
+
+## Model
+
+| Model | Type | Description |
+|-------|------|-------------|
+| `v-model` | `boolean` | 開閉状態の双方向バインディング |
+
+## Usage
+
+```vue
+<!-- 単純なアコーディオン -->
+<BaseCollapsible title="よくある質問">
+  回答テキストがここに入ります。
+</BaseCollapsible>
+
+<!-- デフォルトで開いた状態 -->
+<BaseCollapsible title="詳細設定" :default-open="true">
+  設定内容...
+</BaseCollapsible>
+```
+
+## Design Notes
+
+- `<ChevronDown>` アイコンが開閉に合わせて 180 度回転（0.2s transition）
+- アクティベーターは `surface-raised` 背景、コンテンツは `surface` 背景
+- ボーダーとシャドウで囲まれた独立した UI ブロック

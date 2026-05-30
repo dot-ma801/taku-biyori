@@ -6,19 +6,26 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      '@taku-biyori/backend':
+        specifier: workspace:*
+        version: link:packages/backend
+      '@taku-biyori/frontend':
+        specifier: workspace:*
+        version: link:packages/frontend
 
   packages/backend:
     dependencies:
-      '@taku-biyori/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@hono/node-server':
         specifier: ^1.19.11
         version: 1.19.11(hono@4.12.5)
       '@hono/vite-build':
         specifier: ^1.11.1
         version: 1.11.1(hono@4.12.5)
+      '@taku-biyori/shared':
+        specifier: workspace:*
+        version: link:../shared
       better-auth:
         specifier: ^1.6.11
         version: 1.6.11(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(kysely@0.28.17)(postgres@3.4.9))(vitest@4.0.18(@types/node@20.19.37)(jiti@2.6.1)(jsdom@28.1.0(@noble/hashes@2.2.0))(tsx@4.21.0)(yaml@2.8.2))(vue@3.5.29(typescript@5.9.3))
@@ -68,12 +75,12 @@ importers:
 
   packages/frontend:
     dependencies:
-      '@taku-biyori/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@lucide/vue':
         specifier: ^1.16.0
         version: 1.16.0(vue@3.5.29(typescript@5.9.3))
+      '@taku-biyori/shared':
+        specifier: workspace:*
+        version: link:../shared
       better-auth:
         specifier: ^1.6.11
         version: 1.6.11(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(kysely@0.28.17)(postgres@3.4.9))(vitest@4.0.18(@types/node@24.12.0)(jiti@2.6.1)(jsdom@28.1.0(@noble/hashes@2.2.0))(tsx@4.21.0)(yaml@2.8.2))(vue@3.5.29(typescript@5.9.3))

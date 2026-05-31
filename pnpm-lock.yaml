@@ -93,6 +93,9 @@ importers:
       vue:
         specifier: ^3.5.29
         version: 3.5.29(typescript@5.9.3)
+      vue-boring-avatars:
+        specifier: ^1.4.0
+        version: 1.4.0
       vue-router:
         specifier: ^5.0.3
         version: 5.0.3(@vue/compiler-sfc@3.5.29)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3)))(vue@3.5.29(typescript@5.9.3))
@@ -3750,6 +3753,9 @@ packages:
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
 
+  vue-boring-avatars@1.4.0:
+    resolution: {integrity: sha512-J1TpAKKteZXoQ+KqU894lPfEWF1YdybeIFnKg4KSyZT3r+lY4X+XtniBxTFEfoJXX8eI0pJErrjHmrGsO7n1fA==}
+
   vue-component-meta@2.2.12:
     resolution: {integrity: sha512-dQU6/obNSNbennJ1xd+rhDid4g3vQro+9qUBBIg8HMZH2Zs1jTpkFNxuQ3z77bOlU+ew08Qck9sbYkdSePr0Pw==}
     peerDependencies:
@@ -7211,6 +7217,8 @@ snapshots:
   void-elements@3.1.0: {}
 
   vscode-uri@3.1.0: {}
+
+  vue-boring-avatars@1.4.0: {}
 
   vue-component-meta@2.2.12(typescript@5.9.3):
     dependencies:

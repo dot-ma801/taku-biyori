@@ -15,7 +15,9 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write . --config ../shared/prettier.config.mjs --ignore-path ../shared/.prettierignore"
+    "format": "prettier --write . --config ../shared/prettier.config.mjs --ignore-path ../shared/.prettierignore",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@lucide/vue": "^1.16.0",

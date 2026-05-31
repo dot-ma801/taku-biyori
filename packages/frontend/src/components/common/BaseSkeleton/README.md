@@ -35,3 +35,25 @@
 - シマーアニメーションは CSS グラデーション + `background-position` の 1.5s ループ
 - 色は `--color-surface-muted` / `--color-surface-raised`（テーマ対応）
 - 最終行が短い（70% 幅）のは自然な文章末尾を模倣
+
+## 単体テスト項目
+
+### レンダリング
+- デフォルト props でレンダリングされること
+
+### width / height
+- `width` prop が style に反映されること
+- `height` prop が style に反映されること
+
+### rounded
+- `rounded="sm"` / `"md"` / `"full"` それぞれで対応するクラスが付与されること
+
+### lines
+- `lines=1` のとき要素が 1 つ描画されること
+- `lines=3` のとき要素が 3 つ描画されること
+- 複数行のとき最終行の幅が 70% になること
+- 複数行のとき最終行以外の幅が `width` prop の値になること
+
+### アクセシビリティ
+- ローディング中であることを示す `aria-busy="true"` が付与されること
+- スクリーンリーダーに読み上げられないよう `aria-hidden="true"` が付与されること

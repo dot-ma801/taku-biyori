@@ -35,3 +35,39 @@
 - 角丸は `--radius-sm`（4px）を使用
 - シャドウなし（DESIGN.md の「ボタンを浮かせない」方針に準拠）
 - `primary` のカラーは `--color-primary` のみ使用
+
+## 単体テスト項目
+
+### レンダリング
+- デフォルト props でレンダリングされること（`variant="primary"`, `size="md"`）
+- スロットのテキストが表示されること
+
+### variant
+- `variant="primary"` のとき `.btn--primary` クラスが付与されること
+- `variant="secondary"` のとき `.btn--secondary` クラスが付与されること
+- `variant="ghost"` のとき `.btn--ghost` クラスが付与されること
+
+### size
+- `size="sm"` のとき `.btn--sm` クラスが付与されること
+- `size="md"` のとき `.btn--md` クラスが付与されること
+
+### disabled
+- `disabled=true` のとき `disabled` 属性が付与されること
+- `disabled=true` のときクリックしても `click` イベントが発火しないこと
+
+### loading
+- `loading=true` のときスピナー要素が表示されること
+- `loading=true` のとき `disabled` 属性が付与されること
+- `loading=false` のときスピナー要素が表示されないこと
+
+### type
+- `type="submit"` のとき button の `type` 属性が `"submit"` になること
+- `type="reset"` のとき button の `type` 属性が `"reset"` になること
+
+### イベント
+- クリック時に `click` イベントが発火すること
+
+### アクセシビリティ
+- `disabled=true` のとき `aria-disabled="true"` が付与されること
+- `loading=true` のとき `aria-busy="true"` が付与されること
+- スロットのテキストがボタンのアクセシブルな名前として機能すること

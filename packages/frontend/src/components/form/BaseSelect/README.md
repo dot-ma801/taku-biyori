@@ -41,3 +41,35 @@ interface SelectOption {
 - ドロップダウンはネイティブ Popover API + CSS Anchor Positioning で位置決め
 - 選択済み項目にチェックマーク（Lucide `Check`）を表示
 - `v-model` は `option.value` を返し、表示ラベルは内部でルックアップ
+
+## 単体テスト項目
+
+### レンダリング
+- `label` prop を渡したとき、ラベルテキストが表示されること
+- `modelValue` が未選択のとき、`placeholder` テキストが表示されること
+
+### options
+- `options` の数だけ選択肢が表示されること（ドロップダウン開放後）
+- `option.disabled=true` の選択肢が操作不能になること
+
+### modelValue
+- `modelValue` に対応する option のラベルがトリガーに表示されること
+- 選択肢をクリックしたとき `update:modelValue` イベントが発火し、その option の `value` が渡されること
+- 選択済み option にチェックマークが表示されること
+
+### placeholder
+- `modelValue` が空のとき `placeholder` が表示されること（デフォルト: `'選択してください'`）
+
+### disabled
+- `disabled=true` のときトリガーが操作不能になること
+- `disabled=true` のとき操作してもドロップダウンが開かないこと
+
+### アクセシビリティ
+- トリガーに `aria-haspopup="listbox"` が付与されていること
+- ドロップダウンが閉じているとき `aria-expanded="false"`、開いているとき `aria-expanded="true"` になること
+- ドロップダウンのリストに `role="listbox"` が付与されていること
+- 各選択肢に `role="option"` が付与されていること
+- 選択済み option に `aria-selected="true"` が付与されること
+- `option.disabled=true` のとき `aria-disabled="true"` が付与されること
+- `disabled=true` のときトリガーに `aria-disabled="true"` が付与されること
+- `label` prop と トリガーが `aria-labelledby` または `aria-label` で紐付いていること

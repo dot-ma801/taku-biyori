@@ -27,9 +27,9 @@ describe('BaseTabs', () => {
 
       // Assert
       const items = wrapper.findAll('.tabs__item')
-      expect(items[0].text()).toBe('概要')
-      expect(items[1].text()).toBe('詳細')
-      expect(items[2].text()).toBe('設定')
+      expect(items[0]!.text()).toBe('概要')
+      expect(items[1]!.text()).toBe('詳細')
+      expect(items[2]!.text()).toBe('設定')
     })
   })
 
@@ -39,7 +39,7 @@ describe('BaseTabs', () => {
       const wrapper = mount(BaseTabs, { props: { tabs: sampleTabs } })
 
       // Assert
-      const settingsTab = wrapper.findAll('.tabs__item')[2]
+      const settingsTab = wrapper.findAll('.tabs__item')[2]!
       expect(settingsTab.attributes('disabled')).toBeDefined()
     })
   })
@@ -74,6 +74,42 @@ describe('BaseTabs', () => {
 
       // Assert
       expect(wrapper.find('[role="tablist"]').exists()).toBe(true)
+    })
+  })
+
+  describe('stretch', () => {
+    it('stretch=true のとき tabs__list--stretch クラスが付与される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTabs, { props: { tabs: sampleTabs, stretch: true } })
+
+      // Assert
+      expect(wrapper.find('.tabs__list').classes()).toContain('tabs__list--stretch')
+    })
+
+    it('stretch が未指定のとき tabs__list--stretch クラスが付与されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTabs, { props: { tabs: sampleTabs } })
+
+      // Assert
+      expect(wrapper.find('.tabs__list').classes()).not.toContain('tabs__list--stretch')
+    })
+  })
+
+  describe('fixedHeight', () => {
+    it('fixedHeight=true のとき tabs__panels--fixed-height クラスが付与される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTabs, { props: { tabs: sampleTabs, fixedHeight: true } })
+
+      // Assert
+      expect(wrapper.find('.tabs__panels').classes()).toContain('tabs__panels--fixed-height')
+    })
+
+    it('fixedHeight が未指定のとき tabs__panels--fixed-height クラスが付与されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTabs, { props: { tabs: sampleTabs } })
+
+      // Assert
+      expect(wrapper.find('.tabs__panels').classes()).not.toContain('tabs__panels--fixed-height')
     })
   })
 })

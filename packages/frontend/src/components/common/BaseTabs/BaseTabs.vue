@@ -10,6 +10,8 @@ export interface TabItem {
 defineProps<{
   tabs: TabItem[]
   label?: string
+  stretch?: boolean
+  fixedHeight?: boolean
 }>()
 
 const model = defineModel<string>()
@@ -17,7 +19,7 @@ const model = defineModel<string>()
 
 <template>
   <Tabs.Root v-model="model" class="tabs">
-    <Tabs.List :label="label ?? 'タブ'" class="tabs__list">
+    <Tabs.List :label="label ?? 'タブ'" :class="['tabs__list', { 'tabs__list--stretch': stretch }]">
       <Tabs.Item
         v-for="tab in tabs"
         :key="tab.value"
@@ -29,7 +31,7 @@ const model = defineModel<string>()
       </Tabs.Item>
     </Tabs.List>
 
-    <div class="tabs__panels">
+    <div :class="['tabs__panels', { 'tabs__panels--fixed-height': fixedHeight }]">
       <Tabs.Panel v-for="tab in tabs" :key="tab.value" :value="tab.value" class="tabs__panel">
         <slot :name="tab.value" />
       </Tabs.Panel>
@@ -49,6 +51,11 @@ const model = defineModel<string>()
   padding: 0;
   margin: 0;
   list-style: none;
+}
+
+.tabs__list--stretch .tabs__item {
+  flex: 1;
+  text-align: center;
 }
 
 .tabs__item {
@@ -85,6 +92,20 @@ const model = defineModel<string>()
 
 .tabs__panels {
   padding-top: var(--space-4);
+}
+
+.tabs__panels--fixed-height {
+  display: grid;
+}
+
+.tabs__panels--fixed-height .tabs__panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.tabs__panels--fixed-height .tabs__panel[hidden] {
+  display: block !important;
+  visibility: hidden;
 }
 
 .tabs__panel {

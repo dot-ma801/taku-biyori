@@ -9,6 +9,8 @@
 | `tabs` | `TabItem[]` | ✓ | タブ定義の配列 |
 | `modelValue` | `string` | — | v-model バインディング（アクティブタブの `value`） |
 | `label` | `string` | — | タブリストの aria-label |
+| `stretch` | `boolean` | — | タブボタンを均等幅・中央揃えにする |
+| `fixedHeight` | `boolean` | — | パネルエリアの高さを最も高いパネルに固定し、タブ切り替えでレイアウトがずれるのを防ぐ |
 
 ## Types
 
@@ -27,6 +29,7 @@ interface TabItem {
 ## Usage
 
 ```vue
+<!-- 基本 -->
 <BaseTabs
   v-model="activeTab"
   :tabs="[
@@ -37,6 +40,12 @@ interface TabItem {
 >
   <template #overview>概要コンテンツ</template>
   <template #details>詳細コンテンツ</template>
+</BaseTabs>
+
+<!-- タブを均等幅にして高さを固定（ログイン/新規作成フォームなど） -->
+<BaseTabs :tabs="tabs" stretch fixed-height>
+  <template #signin><LoginCard /></template>
+  <template #signup><SignupCard /></template>
 </BaseTabs>
 ```
 
@@ -66,6 +75,14 @@ interface TabItem {
 
 ### label
 - `label` prop が `aria-label` としてタブリストに付与されること
+
+### stretch
+- `stretch=true` のとき `.tabs__list--stretch` クラスが付与されること
+- `stretch` 未指定のとき `.tabs__list--stretch` クラスが付与されないこと
+
+### fixedHeight
+- `fixedHeight=true` のとき `.tabs__panels--fixed-height` クラスが付与されること
+- `fixedHeight` 未指定のとき `.tabs__panels--fixed-height` クラスが付与されないこと
 
 ### アクセシビリティ
 - タブリストに `role="tablist"` が付与されていること

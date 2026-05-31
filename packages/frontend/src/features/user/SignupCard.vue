@@ -6,47 +6,17 @@ import BaseDivider from '@/components/common/BaseDivider/BaseDivider.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import GoogleLoginButton from '@/features/user/GoogleLoginButton.vue';
-
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
 import { signUp } from '@/lib/auth';
+import { useAuthForm } from '@/features/user/useAuthForm';
 
-const router = useRouter();
-const authStore = useAuthStore();
-
-const loading = ref<boolean>(false);
-const errorMessage = ref<string>('');
+const { errorMessage, submit } = useAuthForm();
 
 const userName = ref<string>('');
 const email = ref<string>('');
 const password = ref<string>('');
 
-const onClickSignup = async () => {
-  loading.value = true;
-  errorMessage.value = '';
-  try {
-    const { data, error } = await signUp.email({
-      name: userName.value,
-      email: email.value,
-      password: password.value,
-    });
-
-    if (error) {
-      errorMessage.value = error.message ?? 'エラーが発生しました';
-      return;
-    }
-
-    if (data) {
-      await authStore.initSession();
-      // FIXME:
-      router.push({name: 'auth-callback'})
-    }
-  } catch {
-    errorMessage.value = 'エラーが発生しました';
-  } finally {
-    loading.value = false;
-  }
-};
+const onClickSignup = () =>
+  submit(() => signUp.email({ name: userName.value, email: email.value, password: password.value }));
 </script>
 
 <template>

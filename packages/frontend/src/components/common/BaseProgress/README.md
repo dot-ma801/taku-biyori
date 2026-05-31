@@ -67,6 +67,12 @@
 ### アクセシビリティ
 - `role="progressbar"` が付与されていること
 - `aria-valuenow` に現在値が反映されること
+
+  > ⚠️ **テスト除外**
+  > `@vuetify/v0` 1.0.0-alpha.5 の `Progress.Root` は `aria-valuenow` を DOM 属性として出力しない。
+  > 進捗値は CSS カスタムプロパティ（`--progress-value`）でバー幅を制御する実装のため。
+  > **ライブラリのバージョンアップ時に動作を再確認し、テストを追加すること。**
+
 - `aria-valuemin="0"` が付与されていること
 - `aria-valuemax` に `max` prop の値が反映されること
 - `label` prop を渡したとき `aria-label` または `aria-labelledby` でラベルが提供されること

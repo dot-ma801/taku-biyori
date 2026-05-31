@@ -5,6 +5,11 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import BaseTextBox from './BaseTextBox.vue'
 
+// NOTE: @vuetify/v0 では type は Input.Control ではなく Input.Root に渡す必要がある。
+//       Input.Control は useInputRoot() から root.type を取得して controlAttrs にセットし、
+//       mergeProps(attrs, controlAttrs) で後勝ちするため Input.Control への :type は無視される。
+//       BaseTextBox.vue では Input.Root に :type を渡すことで正しく動作する。
+
 describe('BaseTextBox', () => {
   describe('レンダリング', () => {
     it('デフォルト props でレンダリングされる', () => {

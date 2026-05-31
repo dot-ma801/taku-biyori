@@ -3,25 +3,33 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { reactive } from 'vue'
-import type { Toast } from '@/composables/useToast'
+import type { Toast, ToastVariant } from '@/composables/useToast'
 
-// vi.hoisted で reactive なトースト配列と dismiss モックを事前生成
-const mockToasts = vi.hoisted(() => reactive<Toast[]>([]))
+// NOTE: vi.hoisted() 内では Vue の import（reactive 等）は TDZ のため使用不可。
+//       plain array + get アクセサで代用し、mount 前に差し替える。
 const mockDismiss = vi.hoisted(() => vi.fn())
 
 vi.mock('@/composables/useToast', () => ({
-  useToast: () => ({
-    toasts: mockToasts,
-    dismiss: mockDismiss,
-  }),
+  useToast: () => ({ get toasts() { return currentToasts }, dismiss: mockDismiss }),
 }))
+
+// モジュール import より後に定義した変数を vi.mock factory 内から参照する方法として
+// currentToasts を module スコープに置き、beforeEach でリセットする
+let currentToasts: Toast[] = []
 
 import BaseToastContainer from './BaseToastContainer.vue'
 
+const teleportStub = { template: '<div><slot /></div>' }
+
+const makeToast = (
+  variant: ToastVariant,
+  id = 1,
+  message = 'テストメッセージ',
+): Toast => ({ id, message, variant, duration: 4000 })
+
 describe('BaseToastContainer', () => {
   beforeEach(() => {
-    mockToasts.splice(0)
+    currentToasts = []
     mockDismiss.mockClear()
   })
 
@@ -29,7 +37,7 @@ describe('BaseToastContainer', () => {
     it('toasts が空のときトースト要素が表示されない', () => {
       // Arrange & Act
       const wrapper = mount(BaseToastContainer, {
-        global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
+        global: { stubs: { Teleport: teleportStub } },
       })
 
       // Assert
@@ -40,47 +48,41 @@ describe('BaseToastContainer', () => {
   describe('useToast 連携', () => {
     it.each(['success', 'error', 'warning', 'info'] as const)(
       '%s バリアントのトーストが表示される',
-      async (variant) => {
+      (variant) => {
         // Arrange
-        const wrapper = mount(BaseToastContainer, {
-          global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
-        })
+        currentToasts = [makeToast(variant)]
 
         // Act
-        mockToasts.push({ id: 1, message: 'テスト', variant, duration: 4000 })
-        await wrapper.vm.$nextTick()
+        const wrapper = mount(BaseToastContainer, {
+          global: { stubs: { Teleport: teleportStub } },
+        })
 
         // Assert
         expect(wrapper.find(`.toast--${variant}`).exists()).toBe(true)
       },
     )
 
-    it('トーストのメッセージテキストが表示される', async () => {
+    it('トーストのメッセージテキストが表示される', () => {
       // Arrange
-      const wrapper = mount(BaseToastContainer, {
-        global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
-      })
+      currentToasts = [makeToast('success', 1, '保存しました')]
 
       // Act
-      mockToasts.push({ id: 1, message: '保存しました', variant: 'success', duration: 4000 })
-      await wrapper.vm.$nextTick()
+      const wrapper = mount(BaseToastContainer, {
+        global: { stubs: { Teleport: teleportStub } },
+      })
 
       // Assert
       expect(wrapper.find('.toast__message').text()).toBe('保存しました')
     })
 
-    it('複数のトーストが積み上がって表示される', async () => {
+    it('複数のトーストが積み上がって表示される', () => {
       // Arrange
-      const wrapper = mount(BaseToastContainer, {
-        global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
-      })
+      currentToasts = [makeToast('info', 1, '1件目'), makeToast('success', 2, '2件目')]
 
       // Act
-      mockToasts.push(
-        { id: 1, message: '1件目', variant: 'info', duration: 4000 },
-        { id: 2, message: '2件目', variant: 'success', duration: 4000 },
-      )
-      await wrapper.vm.$nextTick()
+      const wrapper = mount(BaseToastContainer, {
+        global: { stubs: { Teleport: teleportStub } },
+      })
 
       // Assert
       expect(wrapper.findAll('.toast')).toHaveLength(2)
@@ -90,11 +92,10 @@ describe('BaseToastContainer', () => {
   describe('手動消去', () => {
     it('閉じるボタンをクリックしたとき dismiss が toast.id とともに呼ばれる', async () => {
       // Arrange
+      currentToasts = [makeToast('info', 42)]
       const wrapper = mount(BaseToastContainer, {
-        global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
+        global: { stubs: { Teleport: teleportStub } },
       })
-      mockToasts.push({ id: 42, message: 'テスト', variant: 'info', duration: 4000 })
-      await wrapper.vm.$nextTick()
 
       // Act
       await wrapper.find('.toast__close').trigger('click')
@@ -108,7 +109,7 @@ describe('BaseToastContainer', () => {
     it('トーストスタックに aria-live 属性が付与されている', () => {
       // Arrange & Act
       const wrapper = mount(BaseToastContainer, {
-        global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
+        global: { stubs: { Teleport: teleportStub } },
       })
 
       // Assert
@@ -117,11 +118,10 @@ describe('BaseToastContainer', () => {
 
     it('閉じるボタンに aria-label が付与されている', async () => {
       // Arrange
+      currentToasts = [makeToast('info', 1)]
       const wrapper = mount(BaseToastContainer, {
-        global: { stubs: { Teleport: { template: '<div><slot /></div>' } } },
+        global: { stubs: { Teleport: teleportStub } },
       })
-      mockToasts.push({ id: 1, message: 'テスト', variant: 'info', duration: 4000 })
-      await wrapper.vm.$nextTick()
 
       // Assert
       expect(wrapper.find('.toast__close').attributes('aria-label')).toBeTruthy()

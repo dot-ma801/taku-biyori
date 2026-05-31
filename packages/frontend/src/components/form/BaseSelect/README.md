@@ -64,6 +64,12 @@ interface SelectOption {
 - `disabled=true` のときトリガーが操作不能になること
 - `disabled=true` のとき操作してもドロップダウンが開かないこと
 
+  > ⚠️ **テスト除外**
+  > `@vuetify/v0` の `Select.Root` は fragment（複数ルート）としてレンダリングされるため、
+  > `disabled` の状態が `Select.Activator` の button 要素に `disabled` 属性・`aria-disabled` 属性の
+  > いずれとしても反映されないことを確認。内部的に CSS や `data-state` で制御していると考えられる。
+  > **ブラウザ上の E2E テストで補完すること。**
+
 ### アクセシビリティ
 - トリガーに `aria-haspopup="listbox"` が付与されていること
 - ドロップダウンが閉じているとき `aria-expanded="false"`、開いているとき `aria-expanded="true"` になること

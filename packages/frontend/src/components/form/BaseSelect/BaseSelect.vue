@@ -23,12 +23,12 @@ const model = defineModel<string>()
     <span v-if="label" class="select-wrap__label">{{ label }}</span>
     <Select.Root v-model="model" :disabled="disabled" class="select">
       <Select.Activator class="select__activator">
-        <Select.Value v-slot="{ selectedValue }">
-          <span v-if="selectedValue" class="select__value">
-            {{ options.find(o => o.value === selectedValue)?.label ?? selectedValue }}
-          </span>
-          <span v-else class="select__placeholder">{{ placeholder ?? '選択してください' }}</span>
+        <Select.Value v-slot="{ selectedValue }" class="select__value">
+          {{ options.find(o => o.value === selectedValue)?.label ?? selectedValue }}
         </Select.Value>
+        <Select.Placeholder class="select__placeholder">
+          {{ placeholder ?? '選択してください' }}
+        </Select.Placeholder>
         <Select.Cue v-slot="{ isOpen }" class="select__cue">
           <ChevronDown :size="14" :style="{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }" />
         </Select.Cue>

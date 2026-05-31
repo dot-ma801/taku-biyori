@@ -22,6 +22,7 @@ const model = defineModel<string>({ default: '' })
   <Input.Root
     v-model="model"
     :label="label"
+    :type="type"
     :rules="rules"
     :disabled="disabled"
     :readonly="readonly"
@@ -30,7 +31,6 @@ const model = defineModel<string>({ default: '' })
   >
     <label v-if="label" class="textbox__label">{{ label }}</label>
     <Input.Control
-      :type="type"
       :placeholder="placeholder"
       class="textbox__control"
     />

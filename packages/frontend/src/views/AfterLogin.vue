@@ -15,11 +15,6 @@ if (authStore.isAuthenticated) {
   // ログイン失敗
   // router.push()
 }
-
-const logout = () => {
-  authStore.logout()
-  router.push({ name: 'login' })
-}
 </script>
 
 <template>
@@ -31,12 +26,6 @@ const logout = () => {
       indeterminate
       label="ログイン中…"
     />
-
-    <!-- FIXME: 要削除 -->
-    <div>
-      <p>{{ authStore.user?.email }}</p>
-      <button @click="logout">ログアウト</button>
-    </div>
   </div>
 </template>
 

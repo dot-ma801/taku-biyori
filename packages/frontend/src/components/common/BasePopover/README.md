@@ -20,10 +20,11 @@
 ```vue
 <BasePopover placement="bottom-end">
   <template #activator>
-    <CircleUser :size="32" aria-label="アカウントメニューを開く" />
+    <button>メニューを開く</button>
   </template>
   <ul>
-    <li>ログイン / サインイン</li>
+    <li>項目 A</li>
+    <li>項目 B</li>
   </ul>
 </BasePopover>
 ```
@@ -31,7 +32,6 @@
 ## Design Notes
 
 - CSS変数 `--color-*` を使用しダーク/ライト両モード対応
-- アイコンは `@lucide/vue` を使用（`CircleUser` など）
 - `@vuetify/v0` の `Popover` コンポーネントをロジック層として活用
 - ポップオーバーパネルは `border` + 薄い `box-shadow` で浮き感を表現
 
@@ -42,8 +42,8 @@
 - activator スロットの内容がレンダリングされること
 
 ### placement
-- すべての placement 値（bottom / bottom-start / bottom-end / top / top-start / top-end）が受け入れられること
-- デフォルトの placement が `bottom-end` であること
+- 各 placement 値が対応する CSS `positionArea` 値（`'bottom right'` など）に変換されて PopoverContent に渡されること
+- デフォルトの placement `bottom-end` が `"bottom right"` として渡されること
 
 ### アクセシビリティ
 - activator にキーボードフォーカス可能な要素を渡せること

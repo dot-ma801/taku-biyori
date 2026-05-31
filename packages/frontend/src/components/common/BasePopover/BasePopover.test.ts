@@ -34,9 +34,16 @@ describe('BasePopover', () => {
   })
 
   describe('placement', () => {
-    it.each(['bottom', 'bottom-start', 'bottom-end', 'top', 'top-start', 'top-end'] as const)(
-      'placement="%s" が受け入れられる',
-      (placement) => {
+    it.each([
+      ['bottom',       'bottom'],
+      ['bottom-start', 'bottom left'],
+      ['bottom-end',   'bottom right'],
+      ['top',          'top'],
+      ['top-start',    'top left'],
+      ['top-end',      'top right'],
+    ] as const)(
+      'placement="%s" のとき positionArea="%s" が PopoverContent に渡される',
+      (placement, expectedPositionArea) => {
         // Arrange & Act
         const wrapper = mount(BasePopover, {
           props: { placement },
@@ -44,18 +51,20 @@ describe('BasePopover', () => {
         })
 
         // Assert
-        expect(wrapper.find('.popover').exists()).toBe(true)
+        const content = wrapper.findComponent({ name: 'PopoverContent' })
+        expect(content.props('positionArea')).toBe(expectedPositionArea)
       },
     )
 
-    it('デフォルトの placement は bottom-end である', () => {
+    it('デフォルトの placement は bottom-end で positionArea は "bottom right" である', () => {
       // Arrange & Act
       const wrapper = mount(BasePopover, {
         slots: { activator: '<button>トリガー</button>' },
       })
 
       // Assert
-      expect(wrapper.find('.popover').exists()).toBe(true)
+      const content = wrapper.findComponent({ name: 'PopoverContent' })
+      expect(content.props('positionArea')).toBe('bottom right')
     })
   })
 

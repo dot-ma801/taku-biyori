@@ -1,20 +1,35 @@
 <script setup lang="ts">
+import { computed, useId } from 'vue'
 import { Popover } from '@vuetify/v0'
 
-withDefaults(defineProps<{
-  placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end'
+type Placement = 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end'
+
+const props = withDefaults(defineProps<{
+  placement?: Placement
 }>(), {
   placement: 'bottom-end',
 })
+
+const POSITION_AREA_MAP: Record<Placement, string> = {
+  'bottom':       'bottom',
+  'bottom-start': 'bottom left',
+  'bottom-end':   'bottom right',
+  'top':          'top',
+  'top-start':    'top left',
+  'top-end':      'top right',
+}
+
+const positionArea = computed(() => POSITION_AREA_MAP[props.placement])
+const id = useId()
 </script>
 
 <template>
   <div class="popover">
-    <Popover.Root>
+    <Popover.Root :id="id">
       <Popover.Activator class="popover__activator">
         <slot name="activator" />
       </Popover.Activator>
-      <Popover.Content :placement="placement" class="popover__content">
+      <Popover.Content :id="id" :position-area="positionArea" class="popover__content">
         <slot />
       </Popover.Content>
     </Popover.Root>

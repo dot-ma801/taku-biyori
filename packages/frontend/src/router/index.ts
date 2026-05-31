@@ -8,6 +8,11 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'top',
+      component: ComponentsView,
+    },
+    {
+      path: '/login',
       name: 'login',
       component: LoginView,
     },
@@ -15,11 +20,6 @@ const router = createRouter({
       path: '/auth/callback',
       name: 'auth-callback',
       component: AfterLogin,
-    },
-    {
-      path: '/components',
-      name: 'components',
-      component: ComponentsView,
     },
   ],
 });

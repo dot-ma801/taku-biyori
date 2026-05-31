@@ -2,21 +2,29 @@
 import { UserRound } from '@lucide/vue';
 import BasePopover from '@/components/common/BasePopover/BasePopover.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+const onClickLogin = () => {
+  router.push({ name: 'login' });
+};
 </script>
 
 <template>
   <BasePopover placement="bottom">
     <!-- ボタン -->
     <template #activator>
-      <button class="user-btn" @click="">
-        <UserRound class="user-round"/>
+      <button class="user-btn">
+        <UserRound class="user-round" />
       </button>
     </template>
 
     <!-- 中身 -->
     <ul>
       <li>
-        <BaseButton variant="ghost"> サインイン / ログイン</BaseButton>
+        <BaseButton variant="ghost" @click="onClickLogin">
+          サインイン / ログイン</BaseButton
+        >
       </li>
     </ul>
   </BasePopover>
@@ -37,10 +45,10 @@ button {
 }
 
 .user-round {
-  color: var(--color-on-primary)
+  color: var(--color-on-primary);
 }
 
 ul {
-  margin: var(--space-2) 0; 
+  margin: var(--space-2) 0;
 }
 </style>

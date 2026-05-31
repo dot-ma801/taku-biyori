@@ -66,7 +66,7 @@ const iconMap = {
   border-color: var(--color-border-strong);
   color: var(--color-text);
 }
-.toast--info .toast__icon { color: var(--color-primary); }
+.toast--info .toast__icon { color: var(--color-primary-text); }
 
 .toast--success {
   background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));

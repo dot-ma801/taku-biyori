@@ -36,7 +36,7 @@ withDefaults(defineProps<{
 }
 .badge--primary {
   background: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface));
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .badge--success {
   background: color-mix(in srgb, var(--color-success) 15%, var(--color-surface));

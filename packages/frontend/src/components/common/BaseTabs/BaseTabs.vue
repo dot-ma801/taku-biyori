@@ -71,8 +71,8 @@ const model = defineModel<string>()
 }
 .tabs__item[aria-selected='true'],
 .tabs__item[data-state='active'] {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--color-primary-text);
+  border-bottom-color: var(--color-primary-text);
 }
 .tabs__item:disabled {
   opacity: 0.4;

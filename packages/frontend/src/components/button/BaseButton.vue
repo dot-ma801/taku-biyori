@@ -86,6 +86,20 @@ withDefaults(defineProps<{
   color: var(--color-text);
 }
 
+/* active (push) */
+.btn--primary:active:not(:disabled) {
+  background-color: var(--color-primary-strong);
+  border-color: var(--color-primary-strong);
+  opacity: 0.8;
+}
+.btn--secondary:active:not(:disabled) {
+  background-color: var(--color-surface-muted);
+}
+.btn--ghost:active:not(:disabled) {
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
 /* disabled / loading */
 .btn:disabled {
   opacity: 0.45;

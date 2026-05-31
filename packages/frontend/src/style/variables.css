@@ -8,8 +8,9 @@
   --color-primary-strong: #004a53;
   --color-primary-soft: #d7ecee;
   --color-on-primary: #ffffff;
+  --color-primary-text: #005f6b;
 
-  --color-secondary: #6e7a8a;
+  --color-secondary: #596774;
 
   --color-background: #f4f5f1;
   --color-background-alt: #eef0eb;
@@ -22,11 +23,11 @@
 
   --color-text: #1f2328;
   --color-text-secondary: #4e5661;
-  --color-text-muted: #74808e;
+  --color-text-muted: #5c6978;
 
-  --color-success: #2f8a5b;
-  --color-warning: #c98520;
-  --color-error: #c94f49;
+  --color-success: #1f7348;
+  --color-warning: #8c5e00;
+  --color-error: #b84040;
   --color-info: #005f6b;
 
   --color-dark-background: #1c2026;
@@ -77,6 +78,15 @@
   --color-text: var(--color-dark-text);
   --color-text-secondary: var(--color-dark-text-secondary);
   --color-text-muted: var(--color-dark-text-muted);
+
+  /* ダーク背景でのコントラスト確保 (各色 4.5:1 以上) */
+  /* --color-primary はボタン/ヘッダー背景にも使用するため変更不可。
+     テキスト用途には --color-primary-text を使う。 */
+  --color-primary-text: #3db5c5;
+  --color-info: #3db5c5;
+  --color-success: #54c48c;  /* 4.5:1+ on badge bg (color-mix 15% surface) */
+  --color-warning: #e8a030;  /* 5.01:1 */
+  --color-error: #f88080;    /* 4.55:1 */
 }
 
 body {
@@ -87,7 +97,7 @@ body {
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 a:hover {

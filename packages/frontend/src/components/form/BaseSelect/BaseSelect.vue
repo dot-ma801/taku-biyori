@@ -148,7 +148,7 @@ const model = defineModel<string>()
   background: var(--color-surface-raised);
 }
 .select__item--selected {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 .select__item--disabled {
@@ -156,7 +156,7 @@ const model = defineModel<string>()
   cursor: not-allowed;
 }
 .select__item-check {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   flex-shrink: 0;
 }
 </style>

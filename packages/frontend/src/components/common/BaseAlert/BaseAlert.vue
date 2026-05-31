@@ -53,7 +53,7 @@ const icon = computed(() => ({
   border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
   color: var(--color-text);
 }
-.alert--info .alert__icon { color: var(--color-primary); }
+.alert--info .alert__icon { color: var(--color-primary-text); }
 
 .alert--success {
   background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));

@@ -6,9 +6,14 @@ type Placement = 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' 
 
 const props = withDefaults(defineProps<{
   placement?: Placement
+  modelValue?: boolean
 }>(), {
   placement: 'bottom-end',
 })
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+}>()
 
 const POSITION_AREA_MAP: Record<Placement, string> = {
   'bottom':       'bottom',
@@ -25,7 +30,7 @@ const id = useId()
 
 <template>
   <div class="popover">
-    <Popover.Root :id="id">
+    <Popover.Root :id="id" :model-value="props.modelValue" @update:model-value="emit('update:modelValue', $event)">
       <Popover.Activator class="popover__activator">
         <slot name="activator" />
       </Popover.Activator>

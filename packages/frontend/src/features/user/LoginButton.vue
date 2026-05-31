@@ -17,13 +17,19 @@ const onClickLogin = () => {
 };
 
 const onClickLogout = async () => {
-  await authStore.logout();
-}
+  try {
+    await authStore.logout();
+    isOpen.value = false;
+    router.push('/');
+  } catch (error) {
+    console.error(error)
+  }
+};
 
 const onClickUserName = () => {
-  // FIXME: 
+  // FIXME:
   // router.push({ name: 'login' });
-}
+};
 </script>
 
 <template>

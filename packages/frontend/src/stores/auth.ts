@@ -12,9 +12,12 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  /** ログイン済みかどうか */
   const isAuthenticated = computed(() => !!user.value);
+  /** 現在のログインユーザー */
   const currentUser = computed(() => user.value);
 
+  /** アプリ起動時にセッションを取得し、ユーザー情報を初期化する */
   const initSession = async () => {
     loading.value = true;
     try {
@@ -40,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  /** サインアウトしてユーザー情報をクリアする */
   const logout = async () => {
     try {
       await authClient.signOut();
@@ -50,6 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  /** API を呼ばずにローカルのセッション状態だけをリセットする */
   const clearSession = () => {
     user.value = null;
     error.value = null;

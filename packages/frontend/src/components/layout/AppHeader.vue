@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import ThemeSwitchButton from '@/components/layout/ThemeSwitchButton.vue';
 import LoginButton from '@/features/user/LoginButton.vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const onClickTitle = () => {  
+  router.push('/')
+} 
 </script>
 
 <template>
   <header>
-    <h1>AppName</h1>
+    <h1 @click="onClickTitle">AppName</h1>
     <div class="button-area">
       <ThemeSwitchButton />
       <LoginButton />
@@ -27,7 +34,7 @@ h1 {
   font-size: 1.5rem;
   color: var(--color-on-primary);
   margin: 0;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .button-area {

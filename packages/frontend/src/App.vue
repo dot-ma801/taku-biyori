@@ -17,7 +17,7 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
 
 <style scoped>
 .app-container {
-  min-height: 100vh;
+  height: 100vh;
   background-color: var(--color-background);
   color: var(--color-text);
   display: flex;
@@ -25,6 +25,9 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   background-color: var(--color-primary);
   color: var(--color-on-primary);
   padding: var(--space-4);
@@ -33,13 +36,15 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
 .content {
   flex: 1;
   padding: var(--space-4);
-
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
 .footer {
+  position: sticky;
   bottom: 0;
+  z-index: 100;
   width: 100%;
   background-color: var(--color-primary);
   color: var(--color-on-primary);

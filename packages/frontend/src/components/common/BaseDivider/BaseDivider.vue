@@ -6,7 +6,7 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <div v-if="label" class="divider divider--labeled" role="separator">
+  <div v-if="label" class="divider--labeled" role="separator">
     <span class="divider__line" />
     <span class="divider__label">{{ label }}</span>
     <span class="divider__line" />

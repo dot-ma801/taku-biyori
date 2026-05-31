@@ -9,7 +9,7 @@ import GoogleLoginButton from '@/features/user/GoogleLoginButton.vue';
 
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import { signIn } from '@/lib/auth';
+import { signUp } from '@/lib/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -17,14 +17,16 @@ const authStore = useAuthStore();
 const loading = ref<boolean>(false);
 const errorMessage = ref<string>('');
 
+const userName = ref<string>('');
 const email = ref<string>('');
 const password = ref<string>('');
 
-const onClickLogin = async () => {
+const onClickSignup = async () => {
   loading.value = true;
   errorMessage.value = '';
   try {
-    const { data, error } = await signIn.email({
+    const { data, error } = await signUp.email({
+      name: userName.value,
       email: email.value,
       password: password.value,
     });
@@ -50,14 +52,20 @@ const onClickLogin = async () => {
 <template>
   <BaseCard>
     <div class="content">
-      <BaseAlert v-if="errorMessage" title="ログインに失敗しました" variant="error">
-        {{ errorMessage }}
+      <BaseAlert v-if="errorMessage" title="アカウントの作成に失敗しました" variant="error">
+        {{ errorMessage || 'メールアドレス または パスワードを再度お確かめください。' }}
       </BaseAlert>
 
       <GoogleLoginButton class="google-login"></GoogleLoginButton>
 
       <BaseDivider class="base-divider" label="または"></BaseDivider>
 
+      <BaseTextBox
+        v-model="userName"
+        label="ユーザー名"
+        placeholder="卓 日和"
+        type="text"
+      ></BaseTextBox>
       <BaseTextBox
         v-model="email"
         label="メールアドレス"
@@ -70,8 +78,8 @@ const onClickLogin = async () => {
         type="password"
       ></BaseTextBox>
 
-      <BaseButton class="login-button" @click="onClickLogin">
-        ログイン
+      <BaseButton class="login-button" @click="onClickSignup">
+        アカウントを作成
       </BaseButton>
     </div>
   </BaseCard>

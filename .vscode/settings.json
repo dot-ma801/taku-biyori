@@ -1,4 +1,11 @@
 {
   "js/ts.preferences.importModuleSpecifier": "non-relative",
-  "cSpell.words": ["biyori", "taku"]
+  "cSpell.words": [
+    "taku",
+    "biyori"
+  ],
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "*.vue": "${capture}.test.ts, ${capture}.stories.ts"
+  }
 }

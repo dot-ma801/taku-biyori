@@ -33,6 +33,9 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
 .content {
   flex: 1;
   padding: var(--space-4);
+
+  display: flex;
+  flex-direction: column;
 }
 
 .footer {

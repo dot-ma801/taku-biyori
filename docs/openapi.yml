@@ -17,6 +17,9 @@ servers:
   - url: http://localhost:3000
     description: ローカル開発サーバー
 
+security:
+  - sessionCookie: []
+
 tags:
   - name: Health
     description: バックエンド稼働確認用のエンドポイント
@@ -41,6 +44,7 @@ paths:
       summary: 稼働確認
       description: バックエンドが起動しているかを確認するためのヘルスチェック。
       operationId: getHealth
+      security: []
       responses:
         '200':
           description: バックエンドが正常に応答しています。

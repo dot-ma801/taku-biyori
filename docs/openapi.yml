@@ -965,13 +965,19 @@ components:
     GameSessionStatus:
       type: string
       enum:
-        - adjusting
+        - draft
+        - open
+        - scheduling
         - confirmed
+        - today
         - completed
       description: |
-        - `adjusting`: 日程調整中（初期状態）
-        - `confirmed`: 日程確定（以降はメンバー・日程調整がロック）
-        - `completed`: 卓（ゲームセッション）完了
+        - `draft`: 非公開（公開前の下書き状態）
+        - `open`: 募集中（公開済み・募集期間内）
+        - `scheduling`: 日程調整中（募集期間終了・実施日未確定）
+        - `confirmed`: 実施前（実施日確定・当日前）
+        - `today`: 当日（実施日が今日）
+        - `completed`: 通過済み（ホストの完了アクション後）
 
     ScheduleAvailability:
       type: string
@@ -1096,15 +1102,18 @@ components:
 
     GameSessionMember:
       type: object
-      required: [id, userId, characterName, joinedAt]
+      required: [id, characterName, joinedAt]
       properties:
         id:
           type: string
           format: uuid
           description: session_members.id
         userId:
-          type: string
-          description: Better Auth の userId。users.name の参照に使用（表示名は可変）
+          type: [string, 'null']
+          description: Better Auth の userId。ゲストの場合は null
+        guestName:
+          type: [string, 'null']
+          description: ゲストの表示名。ゲストの場合のみ存在（userId が null のとき非 null）
         characterName:
           type: string
           example: アルベルト

@@ -1149,7 +1149,7 @@ components:
 
     GameSessionMember:
       type: object
-      required: [id, characterName, joinedAt]
+      required: [id, joinedAt]
       properties:
         id:
           type: string
@@ -1162,7 +1162,7 @@ components:
           type: [string, 'null']
           description: ゲストの表示名。ゲストの場合のみ存在（userId が null のとき非 null）
         characterName:
-          type: string
+          type: [string, 'null']
           example: アルベルト
         joinedAt:
           type: string

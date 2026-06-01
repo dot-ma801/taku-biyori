@@ -1092,6 +1092,10 @@ components:
           type: [string, 'null']
           format: date
           description: 実施日。confirmed 以降にセットされる
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+          description: 完了日時。ホストの明示的な完了アクションで記録。null なら未完了
         maxMembers:
           type: [integer, 'null']
         createdBy:

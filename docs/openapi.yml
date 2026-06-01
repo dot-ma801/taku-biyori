@@ -1047,7 +1047,7 @@ components:
         isPublished:
           type: boolean
           description: 公開フラグ。false の間は draft
-        recruitingUntil:
+        openUntil:
           type: [string, 'null']
           format: date
           description: 募集締め切り日。null なら募集期間なし
@@ -1084,7 +1084,7 @@ components:
         isPublished:
           type: boolean
           description: 公開フラグ。false の間は draft
-        recruitingUntil:
+        openUntil:
           type: [string, 'null']
           format: date
           description: 募集締め切り日。null なら募集期間なし

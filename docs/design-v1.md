@@ -102,7 +102,7 @@
 | `max_players` | `integer?` | 定員。未設定の場合は `null` |
 | `guest_link_token` | `text` | ゲストリンク用トークン。アプリ側で生成して DB に保持 |
 | `is_published` | `boolean` | 公開フラグ。`false` の間は `draft` |
-| `recruiting_until` | `date?` | 募集締め切り日。`null` なら募集期間なし |
+| `open_until` | `date?` | 募集締め切り日。`null` なら募集期間なし |
 | `scheduled_at` | `date?` | 実施日。`null` なら日程未確定 |
 | `completed_at` | `timestamp?` | 完了日時。ホストの明示的な完了アクションで記録 |
 | `created_at` | `timestamp` | |
@@ -186,7 +186,7 @@ game_session_members
 | カラム名 | 型 | 説明 |
 |---|---|---|
 | `is_published` | `boolean` | 公開フラグ。`false` の間は非公開（draft） |
-| `recruiting_until` | `date?` | 募集締め切り日。`null` なら募集期間なし |
+| `open_until` | `date?` | 募集締め切り日。`null` なら募集期間なし |
 | `scheduled_at` | `date?` | 実施日。`null` なら日程未確定 |
 | `completed_at` | `timestamp?` | 完了日時。`null` なら未完了。ホストの意思的な完了アクションで記録 |
 
@@ -217,12 +217,12 @@ export type GameSessionStatus =
   | 'completed'
 
 export function getGameSessionStatus(
-  session: Pick<GameSession, 'isPublished' | 'recruitingUntil' | 'scheduledAt' | 'completedAt'>,
+  session: Pick<GameSession, 'isPublished' | 'openUntil' | 'scheduledAt' | 'completedAt'>,
   now: Date = new Date()
 ): GameSessionStatus {
   if (!session.isPublished) return 'draft'
 
-  if (session.recruitingUntil && now < session.recruitingUntil) return 'open'
+  if (session.openUntil && now < session.openUntil) return 'open'
 
   if (!session.scheduledAt) return 'scheduling'
 
@@ -251,9 +251,9 @@ is_published=false
       │
       │ 公開する
       ▼
-   open      ◀──  recruiting_until が未来
+   open      ◀──  open_until が未来
       │
-      │ recruiting_until を過ぎる or 募集期間なし
+      │ open_until を過ぎる or 募集期間なし
       ▼
  scheduling  ◀──  scheduled_at=null
       │

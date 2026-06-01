@@ -5,6 +5,9 @@ import { createApp } from '@/app/presentation/controller/create-app';
 import { createAuth } from '@/auth/infrastructure/create-auth';
 import { createDatabase } from '@/system/infrastructure/database/client';
 import { loadBackendConfig } from '@/system/infrastructure/config/env';
+import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
+import { listGameSessions } from '@/game-session/application/list-game-sessions';
+import { createGameSession } from '@/game-session/application/create-game-session';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -17,9 +20,14 @@ const auth = createAuth({
   googleClientSecret: config.googleClientSecret,
 });
 
+const gameSessionRepo = createGameSessionRepository(db);
+
 const app = createApp({
   frontendOrigin: config.frontendOrigin,
   authHandler: (request) => auth.handler(request),
+  getSession: (headers) => auth.api.getSession({ headers }),
+  listGameSessions: (userId) => listGameSessions(gameSessionRepo, userId),
+  createGameSession: (userId, input) => createGameSession(gameSessionRepo, userId, input),
 });
 
 export default app;

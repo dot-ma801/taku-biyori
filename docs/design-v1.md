@@ -325,8 +325,7 @@ confirmed（実施前）
 | `POST` | `/game-sessions` | セッション新規作成 |
 | `GET` | `/game-sessions/:id` | セッション詳細 |
 | `PATCH` | `/game-sessions/:id` | セッション更新 |
-| `POST` | `/game-sessions/:id/publish` | 公開する |
-| `POST` | `/game-sessions/:id/complete` | 完了にする |
+| `PATCH` | `/api/game-sessions/:id/status` | ステータス遷移（`draft→open` / `today→completed`） |
 | `POST` | `/game-sessions/:id/candidates` | 候補日追加 |
 | `DELETE` | `/game-sessions/:id/candidates/:candidateId` | 候補日削除 |
 | `POST` | `/game-sessions/:id/candidates/:candidateId/confirm` | 候補日確定（scheduled_at セット） |
@@ -362,6 +361,14 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 `game_session_candidates` への候補日登録は、ステータスに関係なくいつでも登録できる。
 
 ### API設計
+
+#### publish / complete を PATCH /status に統合
+当初 `POST /publish` と `POST /complete` を独立エンドポイントとして設計していたが、`PATCH /:id/status` に統合した。
+
+- `{ status: "open" }` — `draft → open`（公開）
+- `{ status: "completed" }` — `today → completed`（完了）
+
+`scheduling → confirmed` の遷移は `POST .../availability-dates/:dateId/confirm` が担う（日程確定と同時に行うため独立させる）。
 
 #### セッション一覧は全件返す
 `GET /game-sessions` はホストの卓・参加中の卓を区別せず全件返す。絞り込みはフロント側で実装する。

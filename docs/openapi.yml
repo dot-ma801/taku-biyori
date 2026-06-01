@@ -444,7 +444,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JoinSessionInput'
+              $ref: '#/components/schemas/JoinGuestSessionInput'
       responses:
         '201':
           description: 作成されたメンバー情報
@@ -1183,6 +1183,18 @@ components:
     JoinSessionInput:
       type: object
       properties:
+        characterName:
+          type: string
+          maxLength: 50
+
+    JoinGuestSessionInput:
+      type: object
+      required: [guestName]
+      properties:
+        guestName:
+          type: string
+          maxLength: 50
+          description: ゲストの表示名（game_session_members.guest_name に保存）
         characterName:
           type: string
           maxLength: 50

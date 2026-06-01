@@ -1020,7 +1020,7 @@ components:
         - `today`: 当日（実施日が今日）
         - `completed`: 通過済み（ホストの完了アクション後）
 
-    ScheduleAvailability:
+    ScheduleAnswer:
       type: string
       enum:
         - ok
@@ -1245,7 +1245,7 @@ components:
 
     AvailabilityResponse:
       type: object
-      required: [id, dateId, memberId, availability, createdAt]
+      required: [id, dateId, memberId, answer, createdAt]
       properties:
         id:
           type: string
@@ -1259,8 +1259,8 @@ components:
           type: string
           format: uuid
           description: game_session_members.id。ログインユーザー・ゲスト共通のメンバーID
-        availability:
-          $ref: '#/components/schemas/ScheduleAvailability'
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
         comment:
           type: string
         createdAt:
@@ -1269,14 +1269,14 @@ components:
 
     UpsertAvailabilityResponseInput:
       type: object
-      required: [availability]
+      required: [answer]
       properties:
         memberId:
           type: string
           format: uuid
           description: ゲストが回答対象メンバーを明示する場合に指定。ログインユーザーは省略可（Cookie から自動解決）
-        availability:
-          $ref: '#/components/schemas/ScheduleAvailability'
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
         comment:
           type: string
           maxLength: 200

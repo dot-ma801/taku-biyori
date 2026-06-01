@@ -634,7 +634,8 @@ paths:
       summary: 日程回答を登録・更新（◯△×）
       description: |
         メンバーが候補日に対して回答する。既存の回答があれば上書き。
-        回答者はCookieのセッション情報から自動取得するため、リクエストボディへのuserId指定は不要。
+        ログインユーザーは Cookie のセッション情報から memberId を自動解決する。
+        ゲスト（user_id=null）が複数いる場合は memberId を明示すること。
         ステータスが `confirmed` 以降は回答不可。
       operationId: upsertAvailabilityResponse
       requestBody:
@@ -1267,6 +1268,10 @@ components:
       type: object
       required: [availability]
       properties:
+        memberId:
+          type: string
+          format: uuid
+          description: ゲストが回答対象メンバーを明示する場合に指定。ログインユーザーは省略可（Cookie から自動解決）
         availability:
           $ref: '#/components/schemas/ScheduleAvailability'
         comment:

@@ -150,6 +150,7 @@
 | `candidate_id` | `uuid` | FK → `game_session_candidates.id` |
 | `member_id` | `uuid` | FK → `game_session_members.id` |
 | `answer` | `'ok' \| 'maybe' \| 'ng'` | 回答値 |
+| `comment` | `text?` | 回答コメント（任意） |
 | `created_at` | `timestamp` | |
 | `updated_at` | `timestamp` | |
 

@@ -640,10 +640,18 @@ paths:
       summary: 日程回答を登録・更新（◯△×）
       description: |
         メンバーが候補日に対して回答する。既存の回答があれば上書き。
-        ログインユーザーは Cookie のセッション情報から memberId を自動解決する。
-        ゲスト（user_id=null）が複数いる場合は memberId を明示すること。
         ステータスが `confirmed` 以降は回答不可。
+
+        ## 認証あり（ログインユーザー）
+        Cookie のセッション情報からユーザーを解決し、そのユーザーに紐づく
+        メンバーレコードを自動で特定する。`memberId` は省略可。
+
+        ## 認証なし（ゲスト）
+        `memberId` は必須。指定した `memberId` が `user_id=null`（ゲスト）で
+        あることをサーバー側で検証する。`user_id != null` のメンバーを指定した
+        場合は `403` を返す。
       operationId: upsertAvailabilityResponse
+      security: []
       requestBody:
         required: true
         content:

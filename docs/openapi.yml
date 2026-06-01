@@ -1041,7 +1041,7 @@ components:
           type: string
           example: 蒼き月の夜卓
         scenarioName:
-          type: string
+          type: [string, 'null']
         status:
           $ref: '#/components/schemas/GameSessionStatus'
         isPublished:
@@ -1075,9 +1075,9 @@ components:
           type: string
           example: 蒼き月の夜卓
         description:
-          type: string
+          type: [string, 'null']
         scenarioName:
-          type: string
+          type: [string, 'null']
           description: nullの場合はシナリオなし扱い
         status:
           $ref: '#/components/schemas/GameSessionStatus'
@@ -1093,7 +1093,7 @@ components:
           format: date
           description: 実施日。confirmed 以降にセットされる
         maxMembers:
-          type: integer
+          type: [integer, 'null']
         createdBy:
           type: string
           description: Better Auth の userId

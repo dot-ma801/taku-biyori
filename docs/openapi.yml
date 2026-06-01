@@ -1260,7 +1260,7 @@ components:
         url:
           type: string
           format: uri
-          example: https://takubiyori.app/join/v2f8xK3pQr
+          example: https://example.com/join/v2f8xK3pQr
           description: フロントエンドの参加URL
         createdAt:
           type: string

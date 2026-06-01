@@ -330,7 +330,9 @@ confirmed（実施前）
 | `POST` | `/game-sessions/:id/candidates` | 候補日追加 |
 | `DELETE` | `/game-sessions/:id/candidates/:candidateId` | 候補日削除 |
 | `POST` | `/game-sessions/:id/candidates/:candidateId/confirm` | 候補日確定（scheduled_at セット） |
-| `POST` | `/join/:token` | ゲストリンクから参加登録 |
+| `GET` | `/join/:token` | ゲストリンクプレビュー（未ログイン可） |
+| `GET` | `/api/game-sessions/:id/guest-link` | ゲストリンク情報取得（ホストのみ） |
+| `POST` | `/api/game-sessions/:id/guest-members` | ゲストリンク経由でメンバー参加 |
 | `PUT` | `/game-sessions/:id/answers` | 日程回答（◯△×）の更新 |
 
 ---
@@ -363,6 +365,14 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 
 #### セッション一覧は全件返す
 `GET /game-sessions` はホストの卓・参加中の卓を区別せず全件返す。絞り込みはフロント側で実装する。
+
+#### ゲストリンク参加は2ステップ
+当初 `POST /join/:token` 1本でゲスト参加を完結させる設計だったが、以下の理由で分割した。
+
+1. `GET /join/:token` — トークンを受け取り卓の概要を返す（未ログイン可）。フロントがプレビュー画面を表示するために使う。
+2. `POST /api/game-sessions/:id/guest-members` — ゲストとして参加登録する（ログイン済みユーザー）。
+
+ログイン後にリダイレクトされ参加するフローを自然に表現するため。
 
 ---
 

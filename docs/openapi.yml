@@ -1135,6 +1135,10 @@ components:
           type: integer
           minimum: 2
           maximum: 20
+        openUntil:
+          type: string
+          format: date
+          description: 募集締め切り日。null なら募集期間なし
 
     UpdateGameSessionInput:
       type: object
@@ -1148,6 +1152,10 @@ components:
           type: string
         maxMembers:
           type: integer
+        openUntil:
+          type: [string, 'null']
+          format: date
+          description: 募集締め切り日。null を渡すと募集期間なしにリセット
 
     # ---------- GameSessionMember ----------
 

@@ -317,22 +317,52 @@ confirmed（実施前）
 - `GET /game-sessions` はホストの卓・参加中の卓を区別せず全件返す
 - 絞り込み（ホスト卓のみ / 参加中のみ）はフロント側で実装する
 
-### エンドポイント一覧（予定）
+### エンドポイント一覧
+
+#### Game Sessions
 
 | メソッド | パス | 概要 |
 |---|---|---|
-| `GET` | `/game-sessions` | セッション一覧（全件） |
-| `POST` | `/game-sessions` | セッション新規作成 |
-| `GET` | `/game-sessions/:id` | セッション詳細 |
-| `PATCH` | `/game-sessions/:id` | セッション更新 |
+| `GET` | `/api/game-sessions` | セッション一覧（全件） |
+| `POST` | `/api/game-sessions` | セッション新規作成 |
+| `GET` | `/api/game-sessions/:id` | セッション詳細（メンバー含む） |
+| `PATCH` | `/api/game-sessions/:id` | セッション情報更新 |
+| `DELETE` | `/api/game-sessions/:id` | セッション削除（ホストのみ） |
 | `PATCH` | `/api/game-sessions/:id/status` | ステータス遷移（`draft→open` / `today→completed`） |
-| `POST` | `/game-sessions/:id/candidates` | 候補日追加 |
-| `DELETE` | `/game-sessions/:id/candidates/:candidateId` | 候補日削除 |
-| `POST` | `/game-sessions/:id/candidates/:candidateId/confirm` | 候補日確定（scheduled_at セット） |
-| `GET` | `/join/:token` | ゲストリンクプレビュー（未ログイン可） |
-| `GET` | `/api/game-sessions/:id/guest-link` | ゲストリンク情報取得（ホストのみ） |
+
+#### Game Session Members
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| `GET` | `/api/game-sessions/:id/members` | メンバー一覧取得 |
+| `POST` | `/api/game-sessions/:id/members` | メンバー参加（ログインユーザー） |
 | `POST` | `/api/game-sessions/:id/guest-members` | ゲストリンク経由でメンバー参加 |
-| `PUT` | `/game-sessions/:id/answers` | 日程回答（◯△×）の更新 |
+| `PATCH` | `/api/game-sessions/:id/members/:memberId` | メンバー情報更新（キャラクター名） |
+| `DELETE` | `/api/game-sessions/:id/members/:memberId` | メンバー退出 |
+
+#### Schedules（日程調整）
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| `GET` | `/api/game-sessions/:id/availability-dates` | 候補日一覧（回答含む） |
+| `POST` | `/api/game-sessions/:id/availability-dates` | 候補日追加 |
+| `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日削除 |
+| `POST` | `/api/game-sessions/:id/availability-dates/:dateId/confirm` | 候補日確定（`scheduled_at` セット） |
+| `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/responses` | 日程回答（◯△×）登録・更新 |
+
+#### Guest Links
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| `GET` | `/api/game-sessions/:id/guest-link` | ゲストリンク取得（ホストのみ） |
+| `GET` | `/join/:token` | ゲストリンクプレビュー（未ログイン可） |
+
+#### Profile
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| `GET` | `/api/profile` | 自分のプロフィール取得 |
+| `PATCH` | `/api/profile` | プロフィール更新 |
 
 ---
 

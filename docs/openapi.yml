@@ -1282,7 +1282,7 @@ components:
 
     GuestLink:
       type: object
-      required: [token, url, createdAt]
+      required: [token, url]
       properties:
         token:
           type: string
@@ -1292,9 +1292,6 @@ components:
           format: uri
           example: https://example.com/join/v2f8xK3pQr
           description: フロントエンドの参加URL
-        createdAt:
-          type: string
-          format: date-time
 
     GuestLinkPreview:
       type: object

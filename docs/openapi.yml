@@ -260,6 +260,7 @@ paths:
       summary: 卓（ゲームセッション）詳細取得
       description: 指定した卓の詳細情報（メンバー含む）を返す。
       operationId: getGameSession
+      security: []
       responses:
         '200':
           description: 卓（ゲームセッション）詳細
@@ -379,6 +380,7 @@ paths:
       tags: [GameSessionMembers]
       summary: メンバー一覧取得
       operationId: listGameSessionMembers
+      security: []
       responses:
         '200':
           description: メンバー一覧
@@ -532,6 +534,7 @@ paths:
       summary: 日程候補一覧取得
       description: 候補日時と各メンバーの◯△×回答をまとめて返す。
       operationId: listAvailabilityDates
+      security: []
       responses:
         '200':
           description: 日程候補一覧

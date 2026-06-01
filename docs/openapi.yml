@@ -325,9 +325,10 @@ paths:
         卓（ゲームセッション）のステータスを遷移させる。作成者のみ操作可能。
 
         遷移ルール：
-        - `adjusting` → `confirmed`
-        - `confirmed` → `completed`
+        - `draft` → `open`（公開）
+        - `today` → `completed`（完了）
 
+        `scheduling` → `confirmed` の遷移は `POST .../availability-dates/{dateId}/confirm` で行う。
         逆方向への遷移は不可。
       operationId: updateGameSessionStatus
       requestBody:
@@ -578,6 +579,34 @@ paths:
       responses:
         '204':
           description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/availability-dates/{dateId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/DateId'
+
+    post:
+      tags: [Schedules]
+      summary: 候補日を確定（scheduling → confirmed）
+      description: |
+        指定した候補日を `scheduled_at` にセットし、ステータスを `confirmed` に遷移させる。
+        作成者のみ操作可能。ステータスが `scheduling` のときのみ操作可能。
+      operationId: confirmAvailabilityDate
+      responses:
+        '200':
+          description: 更新後の卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1093,10 +1122,6 @@ components:
           type: string
         maxMembers:
           type: integer
-        scheduledAt:
-          type: string
-          format: date-time
-          description: confirmed以降に確定日程を手動セットする場合に使用
 
     # ---------- GameSessionMember ----------
 

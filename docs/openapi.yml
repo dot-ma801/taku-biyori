@@ -340,7 +340,11 @@ paths:
               required: [status]
               properties:
                 status:
-                  $ref: '#/components/schemas/GameSessionStatus'
+                  type: string
+                  enum: [open, completed]
+                  description: |
+                    - `open`: draft → open（公開）
+                    - `completed`: today → completed（完了）
       responses:
         '200':
           description: 更新後の卓（ゲームセッション）
@@ -1172,9 +1176,9 @@ components:
           description: availability_dates.id（AvailabilityResponseのdateIdと対応）
         date:
           type: string
-          format: date-time
-          example: '2025-08-10T14:00:00+09:00'
-          description: 候補日時。確定日程ではなく調整中の選択肢。
+          format: date
+          example: '2025-08-10'
+          description: 候補日。時刻は持たない。確定日程ではなく調整中の選択肢。
         responses:
           type: array
           description: この候補日に対する各メンバーの◯△×回答一覧
@@ -1190,8 +1194,8 @@ components:
       properties:
         date:
           type: string
-          format: date-time
-          description: 候補として追加する日時
+          format: date
+          description: 候補として追加する日付
 
     AvailabilityResponse:
       type: object

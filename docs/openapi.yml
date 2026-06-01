@@ -1165,24 +1165,39 @@ components:
 
     GameSessionMember:
       type: object
+      description: |
+        ログインユーザーとゲストの2種類が存在する。
+        - ログインユーザー: `userId` が非 null、`guestName` は null
+        - ゲスト: `userId` が null、`guestName` が非 null
       required: [id, joinedAt]
       properties:
         id:
           type: string
           format: uuid
           description: session_members.id
-        userId:
-          type: [string, 'null']
-          description: Better Auth の userId。ゲストの場合は null
-        guestName:
-          type: [string, 'null']
-          description: ゲストの表示名。ゲストの場合のみ存在（userId が null のとき非 null）
         characterName:
           type: [string, 'null']
           example: アルベルト
         joinedAt:
           type: string
           format: date-time
+      oneOf:
+        - title: ログインユーザーメンバー
+          required: [userId]
+          properties:
+            userId:
+              type: string
+              description: Better Auth の userId
+            guestName:
+              type: 'null'
+        - title: ゲストメンバー
+          required: [guestName]
+          properties:
+            userId:
+              type: 'null'
+            guestName:
+              type: string
+              description: ゲストの表示名（game_session_members.guest_name）
 
     JoinSessionInput:
       type: object

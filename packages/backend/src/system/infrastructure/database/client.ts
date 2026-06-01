@@ -1,6 +1,9 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '@/system/infrastructure/database/schema';
+import * as authSchema from '@/system/infrastructure/database/schema';
+import * as gameSessionSchema from '@/system/infrastructure/database/game-session-schema';
+
+const schema = { ...authSchema, ...gameSessionSchema };
 
 /**
  * PostgreSQL クライアントと Drizzle の組み合わせを生成します。

@@ -4,14 +4,35 @@ info:
   version: 0.1.0
   description: |
     taku-biyori バックエンドの API 仕様。
+
+    ## 認証
+    Better Auth（メール/パスワード・ソーシャルログイン）を利用。認証済みセッションのCookieをリクエストに含めること。
+    未認証の場合は `401 Unauthorized` を返す。
+
+    ## 命名規則
+    - URLは `/sessions` を使用
+    - コード内の変数・型名は `gameSession` / `GameSession` プレフィックスを使用（Better Auth の `session` と衝突回避のため）
+
 servers:
   - url: http://localhost:3000
     description: ローカル開発サーバー
+
 tags:
   - name: Health
     description: バックエンド稼働確認用のエンドポイント
   - name: Auth
     description: Better Auth が提供する認証エンドポイント
+  - name: GameSessions
+    description: 卓（ゲームセッション）管理
+  - name: GameSessionMembers
+    description: 卓のメンバー管理
+  - name: Schedules
+    description: 日程調整（◯△×方式）
+  - name: GuestLinks
+    description: ゲストリンク管理
+  - name: Profile
+    description: プロフィール設定
+
 paths:
   /:
     get:
@@ -27,6 +48,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+
   /api/auth/signin/email:
     post:
       tags:
@@ -61,6 +83,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
   /api/auth/signup/email:
     post:
       tags:
@@ -95,6 +118,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
   /api/auth/signout:
     post:
       tags:
@@ -111,6 +135,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+
   /api/auth/session:
     get:
       tags:
@@ -133,6 +158,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
   /api/auth/signin/social:
     post:
       tags:
@@ -161,6 +187,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
   /api/auth/callback/google:
     get:
       tags:
@@ -174,6 +201,520 @@ paths:
           description: コールバックを処理しました。
         '302':
           description: コールバック後のリダイレクト。
+
+  # ========== Game Sessions ==========
+
+  /api/game-sessions:
+    get:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）一覧取得
+      description: ログインユーザーが参加・作成した卓（ゲームセッション）一覧を返す。
+      operationId: listGameSessions
+      responses:
+        '200':
+          description: 卓（ゲームセッション）一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameSessionListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）新規作成
+      description: |
+        新しい卓を作成する。作成者は `createdBy` に自動セットされ、
+        同時に `session_members` に作成者のレコードが自動追加される。
+      operationId: createGameSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameSessionInput'
+      responses:
+        '201':
+          description: 作成された卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/game-sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）詳細取得
+      description: 指定した卓の詳細情報（メンバー含む）を返す。
+      operationId: getGameSession
+      responses:
+        '200':
+          description: 卓（ゲームセッション）詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）情報更新
+      description: |
+        卓名・シナリオ情報などを更新する。作成者のみ操作可能。
+        ステータスに関わらず更新可能。
+      operationId: updateGameSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameSessionInput'
+      responses:
+        '200':
+          description: 更新後の卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）削除
+      description: 作成者のみ操作可能。
+      operationId: deleteGameSession
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/game-sessions/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    patch:
+      tags: [GameSessions]
+      summary: ステータス遷移
+      description: |
+        卓（ゲームセッション）のステータスを遷移させる。作成者のみ操作可能。
+
+        遷移ルール：
+        - `adjusting` → `confirmed`
+        - `confirmed` → `completed`
+
+        逆方向への遷移は不可。
+      operationId: updateGameSessionStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/GameSessionStatus'
+      responses:
+        '200':
+          description: 更新後の卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== Game Session Members ==========
+
+  /api/game-sessions/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GameSessionMembers]
+      summary: メンバー一覧取得
+      operationId: listGameSessionMembers
+      responses:
+        '200':
+          description: メンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameSessionMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [GameSessionMembers]
+      summary: メンバー参加（通常）
+      description: |
+        ログイン済みユーザーが直接卓に参加する。
+        ステータスが `confirmed` 以降は参加不可。
+        リクエストユーザーはCookieのセッション情報から自動取得する。
+      operationId: joinGameSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinSessionInput'
+      responses:
+        '201':
+          description: 作成されたメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: すでに参加済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/guest-members:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    post:
+      tags: [GameSessionMembers]
+      summary: ゲストリンク経由でメンバー参加
+      description: |
+        ゲストリンク経由でセッションにメンバーとして参加する。
+        ステータスが `confirmed` 以降は参加不可。
+        リクエストユーザーは Cookie のセッション情報から自動取得する。
+      operationId: joinGameSessionAsGuest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinSessionInput'
+      responses:
+        '201':
+          description: 作成されたメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: すでに参加済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/MemberId'
+
+    patch:
+      tags: [GameSessionMembers]
+      summary: メンバー情報更新（キャラクター名）
+      description: |
+        キャラクター名を更新する。本人または作成者（createdBy）が操作可能。
+        ステータスが `confirmed` 以降は更新不可。
+      operationId: updateGameSessionMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameSessionMemberInput'
+      responses:
+        '200':
+          description: 更新後のメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+    delete:
+      tags: [GameSessionMembers]
+      summary: メンバー退出
+      description: |
+        卓（ゲームセッション）から退出する。本人のみ操作可能。
+        ステータスが `confirmed` 以降は退出不可。
+      operationId: leaveGameSession
+      responses:
+        '204':
+          description: 退出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  # ========== Schedules ==========
+
+  /api/game-sessions/{id}/availability-dates:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [Schedules]
+      summary: 日程候補一覧取得
+      description: 候補日時と各メンバーの◯△×回答をまとめて返す。
+      operationId: listAvailabilityDates
+      responses:
+        '200':
+          description: 日程候補一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilityDate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Schedules]
+      summary: 日程候補追加
+      description: |
+        候補日時を追加する。作成者のみ操作可能。
+        ステータスが `confirmed` 以降は追加不可。
+      operationId: addAvailabilityDate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAvailabilityDateInput'
+      responses:
+        '201':
+          description: 追加された日程候補
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityDate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/availability-dates/{dateId}:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/DateId'
+
+    delete:
+      tags: [Schedules]
+      summary: 日程候補削除
+      description: |
+        作成者のみ操作可能。
+        ステータスが `confirmed` 以降は削除不可。
+      operationId: removeAvailabilityDate
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/availability-dates/{dateId}/responses:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/DateId'
+
+    put:
+      tags: [Schedules]
+      summary: 日程回答を登録・更新（◯△×）
+      description: |
+        メンバーが候補日に対して回答する。既存の回答があれば上書き。
+        回答者はCookieのセッション情報から自動取得するため、リクエストボディへのuserId指定は不要。
+        ステータスが `confirmed` 以降は回答不可。
+      operationId: upsertAvailabilityResponse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertAvailabilityResponseInput'
+      responses:
+        '200':
+          description: 登録・更新後の回答
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  # ========== Guest Links ==========
+
+  /api/game-sessions/{id}/guest-link:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GuestLinks]
+      summary: ゲストリンク取得
+      description: |
+        卓のゲスト招待リンク情報を返す。作成者のみ取得可能。
+        卓作成時に自動生成されるため、常に存在する。
+      operationId: getGuestLink
+      responses:
+        '200':
+          description: ゲストリンク情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /join/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        description: ゲストリンクのトークン（nanoid等で生成した推測困難な文字列）
+        schema:
+          type: string
+
+    get:
+      tags: [GuestLinks]
+      summary: ゲストリンクプレビュー
+      description: |
+        トークンに紐づく卓の概要を返す。未ログインユーザーも参照可能。
+        参加するにはログインが必要。
+      operationId: previewGuestLink
+      security: []
+      responses:
+        '200':
+          description: 卓のプレビュー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLinkPreview'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== Profile ==========
+
+  /api/profile:
+    get:
+      tags: [Profile]
+      summary: 自分のプロフィール取得
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: プロフィール情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Profile]
+      summary: プロフィール更新
+      operationId: updateMyProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileInput'
+      responses:
+        '200':
+          description: 更新後のプロフィール
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
 components:
   securitySchemes:
     sessionCookie:
@@ -186,6 +727,69 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Optional bearer token authentication.
+
+  # ========== Parameters ==========
+  parameters:
+    GameSessionId:
+      name: id
+      in: path
+      required: true
+      description: 卓（ゲームセッション）のID
+      schema:
+        type: string
+        format: uuid
+
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      description: メンバーのID（session_members.id）
+      schema:
+        type: string
+        format: uuid
+
+    DateId:
+      name: dateId
+      in: path
+      required: true
+      description: 日程候補のID（availability_dates.id）
+      schema:
+        type: string
+        format: uuid
+
+  # ========== Responses ==========
+  responses:
+    BadRequest:
+      description: リクエストが不正
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 未認証
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 権限なし
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Locked:
+      description: ステータスがconfirmed以降のため操作不可
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
   schemas:
     HealthResponse:
       type: object
@@ -203,6 +807,7 @@ components:
           type: string
           examples:
             - Backend is running
+
     SuccessResponse:
       type: object
       description: 成功を示す汎用応答。
@@ -211,6 +816,7 @@ components:
         success:
           type: boolean
           default: true
+
     ErrorResponse:
       type: object
       description: エラー応答の汎用スキーマ。
@@ -223,6 +829,7 @@ components:
             - type: string
             - type: object
               additionalProperties: true
+
     User:
       type: object
       description: Better Auth が返すユーザー情報の想定スキーマ。
@@ -246,6 +853,7 @@ components:
         updatedAt:
           type: string
           format: date-time
+
     Session:
       type: object
       description: Better Auth が返すセッション情報の想定スキーマ。
@@ -258,6 +866,7 @@ components:
         expiresAt:
           type: string
           format: date-time
+
     AuthResponse:
       type: object
       description: 認証系エンドポイントの応答を表す汎用スキーマ。
@@ -273,6 +882,7 @@ components:
               $ref: '#/components/schemas/Session'
         error:
           $ref: '#/components/schemas/ErrorResponse'
+
     SessionResponse:
       type: object
       description: セッション取得時の応答スキーマ。
@@ -288,6 +898,7 @@ components:
               $ref: '#/components/schemas/Session'
         error:
           $ref: '#/components/schemas/ErrorResponse'
+
     SignInEmailRequest:
       type: object
       description: メールアドレス/パスワードのログイン要求。
@@ -308,6 +919,7 @@ components:
         callbackURL:
           type: string
           format: uri
+
     SignUpEmailRequest:
       type: object
       description: メールアドレス/パスワードの新規登録要求。
@@ -332,6 +944,7 @@ components:
         callbackURL:
           type: string
           format: uri
+
     SignInSocialRequest:
       type: object
       description: ソーシャルログイン開始要求。
@@ -346,3 +959,294 @@ components:
         callbackURL:
           type: string
           format: uri
+
+    # ---------- Enums ----------
+
+    GameSessionStatus:
+      type: string
+      enum:
+        - adjusting
+        - confirmed
+        - completed
+      description: |
+        - `adjusting`: 日程調整中（初期状態）
+        - `confirmed`: 日程確定（以降はメンバー・日程調整がロック）
+        - `completed`: 卓（ゲームセッション）完了
+
+    ScheduleAvailability:
+      type: string
+      enum:
+        - ok
+        - maybe
+        - ng
+      description: |
+        - `ok`: 参加可能（◯）
+        - `maybe`: 調整可能（△）
+        - `ng`: 参加不可（×）
+
+    # ---------- GameSession ----------
+
+    GameSessionListItem:
+      type: object
+      description: 一覧表示用の軽量スキーマ
+      required: [id, title, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓
+        scenarioName:
+          type: string
+        status:
+          $ref: '#/components/schemas/GameSessionStatus'
+        memberCount:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+          description: confirmed以降に手動でセットされる確定日程
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GameSession:
+      type: object
+      required: [id, title, status, createdBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓
+        description:
+          type: string
+        scenarioName:
+          type: string
+          description: nullの場合はシナリオなし扱い
+        status:
+          $ref: '#/components/schemas/GameSessionStatus'
+        scheduledAt:
+          type: string
+          format: date-time
+          description: confirmed以降に手動でセットされる確定日程
+        maxMembers:
+          type: integer
+        createdBy:
+          type: string
+          description: Better Auth の userId
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GameSessionDetail:
+      allOf:
+        - $ref: '#/components/schemas/GameSession'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/GameSessionMember'
+
+    CreateGameSessionInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        scenarioName:
+          type: string
+          maxLength: 200
+        maxMembers:
+          type: integer
+          minimum: 2
+          maximum: 20
+
+    UpdateGameSessionInput:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        scenarioName:
+          type: string
+        maxMembers:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+          description: confirmed以降に確定日程を手動セットする場合に使用
+
+    # ---------- GameSessionMember ----------
+
+    GameSessionMember:
+      type: object
+      required: [id, userId, characterName, joinedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: session_members.id
+        userId:
+          type: string
+          description: Better Auth の userId。users.name の参照に使用（表示名は可変）
+        characterName:
+          type: string
+          example: アルベルト
+        joinedAt:
+          type: string
+          format: date-time
+
+    JoinSessionInput:
+      type: object
+      properties:
+        characterName:
+          type: string
+          maxLength: 50
+
+    UpdateGameSessionMemberInput:
+      type: object
+      properties:
+        characterName:
+          type: string
+          maxLength: 50
+
+    # ---------- AvailabilityDate ----------
+
+    AvailabilityDate:
+      type: object
+      required: [id, date, responses, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: availability_dates.id（AvailabilityResponseのdateIdと対応）
+        date:
+          type: string
+          format: date-time
+          example: '2025-08-10T14:00:00+09:00'
+          description: 候補日時。確定日程ではなく調整中の選択肢。
+        responses:
+          type: array
+          description: この候補日に対する各メンバーの◯△×回答一覧
+          items:
+            $ref: '#/components/schemas/AvailabilityResponse'
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateAvailabilityDateInput:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: 候補として追加する日時
+
+    AvailabilityResponse:
+      type: object
+      required: [id, dateId, userId, availability, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: availability_responses.id（回答レコード自体のID）
+        dateId:
+          type: string
+          format: uuid
+          description: availability_dates.id（どの候補日への回答かを示す）
+        userId:
+          type: string
+          description: 回答したユーザーのBetter Auth userId
+        availability:
+          $ref: '#/components/schemas/ScheduleAvailability'
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UpsertAvailabilityResponseInput:
+      type: object
+      required: [availability]
+      properties:
+        availability:
+          $ref: '#/components/schemas/ScheduleAvailability'
+        comment:
+          type: string
+          maxLength: 200
+
+    # ---------- GuestLink ----------
+
+    GuestLink:
+      type: object
+      required: [token, url, createdAt]
+      properties:
+        token:
+          type: string
+          description: nanoid等で生成した推測困難なトークン
+        url:
+          type: string
+          format: uri
+          example: https://takubiyori.app/join/v2f8xK3pQr
+          description: フロントエンドの参加URL
+        createdAt:
+          type: string
+          format: date-time
+
+    GuestLinkPreview:
+      type: object
+      description: 未ログインユーザーも参照可能な卓の概要
+      required: [gameSessionId, title, status]
+      properties:
+        gameSessionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓
+        scenarioName:
+          type: string
+        status:
+          $ref: '#/components/schemas/GameSessionStatus'
+        memberCount:
+          type: integer
+        maxMembers:
+          type: integer
+
+    # ---------- Profile ----------
+
+    UserProfile:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 50

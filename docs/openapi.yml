@@ -440,9 +440,10 @@ paths:
       summary: ゲストリンク経由でメンバー参加
       description: |
         ゲストリンク経由でセッションにメンバーとして参加する。
+        認証不要。`user_id` は null として登録され、`guest_name` に入力した名前を使用する。
         ステータスが `confirmed` 以降は参加不可。
-        リクエストユーザーは Cookie のセッション情報から自動取得する。
       operationId: joinGameSessionAsGuest
+      security: []
       requestBody:
         required: true
         content:
@@ -458,8 +459,6 @@ paths:
                 $ref: '#/components/schemas/GameSessionMember'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '409':
           description: すでに参加済み
           content:

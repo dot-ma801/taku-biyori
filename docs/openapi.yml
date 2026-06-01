@@ -1033,7 +1033,7 @@ components:
     GameSessionListItem:
       type: object
       description: 一覧表示用の軽量スキーマ
-      required: [id, title, status, isPublished, createdAt, updatedAt]
+      required: [id, title, status, isPublished, memberCount, createdAt, updatedAt]
       properties:
         id:
           type: string

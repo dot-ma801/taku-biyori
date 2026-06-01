@@ -328,9 +328,13 @@ paths:
       description: |
         卓（ゲームセッション）のステータスを遷移させる。作成者のみ操作可能。
 
-        遷移ルール：
-        - `draft` → `open`（公開）
-        - `today` → `completed`（完了）
+        このエンドポイントは DB のファクトカラムを更新し、ステータスはサーバーが再導出して返す。
+
+        操作内容：
+        - `open`: `is_published = true` にセットする。
+          `open_until` が設定済みで未来の場合は導出ステータスが `open` になる。
+          `open_until` が null または過去の場合は即座に `scheduling` になる。
+        - `completed`: `completed_at` に現在時刻をセットする（`today` 状態のときのみ有効）。
 
         `scheduling` → `confirmed` の遷移は `POST .../availability-dates/{dateId}/confirm` で行う。
         逆方向への遷移は不可。
@@ -347,8 +351,8 @@ paths:
                   type: string
                   enum: [open, completed]
                   description: |
-                    - `open`: draft → open（公開）
-                    - `completed`: today → completed（完了）
+                    - `open`: `is_published = true` にセット（導出ステータスは open_until の値による）
+                    - `completed`: `completed_at` に現在時刻をセット（today 状態のときのみ有効）
       responses:
         '200':
           description: 更新後の卓（ゲームセッション）

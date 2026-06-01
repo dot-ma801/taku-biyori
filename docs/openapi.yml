@@ -1279,13 +1279,13 @@ components:
           type: string
           example: 蒼き月の夜卓
         scenarioName:
-          type: string
+          type: [string, 'null']
         status:
           $ref: '#/components/schemas/GameSessionStatus'
         memberCount:
           type: integer
         maxMembers:
-          type: integer
+          type: [integer, 'null']
 
     # ---------- Profile ----------
 

@@ -1217,7 +1217,7 @@ components:
 
     AvailabilityResponse:
       type: object
-      required: [id, dateId, userId, availability, createdAt]
+      required: [id, dateId, memberId, availability, createdAt]
       properties:
         id:
           type: string
@@ -1227,9 +1227,10 @@ components:
           type: string
           format: uuid
           description: availability_dates.id（どの候補日への回答かを示す）
-        userId:
+        memberId:
           type: string
-          description: 回答したユーザーのBetter Auth userId
+          format: uuid
+          description: game_session_members.id。ログインユーザー・ゲスト共通のメンバーID
         availability:
           $ref: '#/components/schemas/ScheduleAvailability'
         comment:

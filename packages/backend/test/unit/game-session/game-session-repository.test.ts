@@ -40,17 +40,17 @@ const makeTransactionDb = (sessionRow: unknown) => {
     }),
   };
   let callCount = 0;
-  const txInsert = vi.fn().mockImplementation(() =>
-    callCount++ === 0 ? sessionInsert : memberInsert,
-  );
+  const txInsert = vi
+    .fn()
+    .mockImplementation(() =>
+      callCount++ === 0 ? sessionInsert : memberInsert,
+    );
   const tx = { insert: txInsert };
   return {
     db: {
       transaction: vi
         .fn()
-        .mockImplementation(
-          (fn: (tx: typeof tx) => unknown) => fn(tx),
-        ),
+        .mockImplementation((fn: (tx: typeof tx) => unknown) => fn(tx)),
     } as unknown as Database,
     txInsert,
     memberInsert,

@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.30.3'
+
+jobs:
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared
+        run: pnpm --filter @taku-biyori/shared build
+      - name: Typecheck (backend)
+        run: pnpm --filter @taku-biyori/backend typecheck
+      - name: Typecheck (frontend)
+        run: pnpm --filter @taku-biyori/frontend type-check
+
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting (shared)
+        run: pnpm --filter @taku-biyori/shared format:check
+      - name: Check formatting (backend)
+        run: pnpm --filter @taku-biyori/backend format:check
+      - name: Check formatting (frontend)
+        run: pnpm --filter @taku-biyori/frontend format:check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint (shared)
+        run: pnpm --filter @taku-biyori/shared lint:check
+      - name: Lint (backend)
+        run: pnpm --filter @taku-biyori/backend lint:check
+      - name: Lint (frontend)
+        run: pnpm --filter @taku-biyori/frontend lint:check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build (shared)
+        run: pnpm --filter @taku-biyori/shared build
+      - name: Build (backend)
+        run: pnpm --filter @taku-biyori/backend build
+      - name: Build (frontend)
+        run: pnpm --filter @taku-biyori/frontend build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared
+        run: pnpm --filter @taku-biyori/shared build
+      - name: Test (backend)
+        run: pnpm --filter @taku-biyori/backend test
+      - name: Test (frontend)
+        run: pnpm --filter @taku-biyori/frontend test

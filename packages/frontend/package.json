@@ -15,7 +15,9 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
+    "lint:check": "oxlint . && eslint .",
     "format": "prettier --write . --config ../shared/prettier.config.mjs --ignore-path ../shared/.prettierignore",
+    "format:check": "prettier --check . --config ../shared/prettier.config.mjs --ignore-path ../shared/.prettierignore",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

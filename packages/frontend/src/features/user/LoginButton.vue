@@ -22,7 +22,7 @@ const onClickLogout = async () => {
     isOpen.value = false;
     router.push('/');
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
 };
 

@@ -1,25 +1,31 @@
 <script setup lang="ts">
-import { X, Info, CheckCircle, AlertTriangle, AlertCircle } from '@lucide/vue'
-import { computed } from 'vue'
+import { X, Info, CheckCircle, AlertTriangle, AlertCircle } from '@lucide/vue';
+import { computed } from 'vue';
 
-type Variant = 'info' | 'success' | 'warning' | 'error'
+type Variant = 'info' | 'success' | 'warning' | 'error';
 
-const props = withDefaults(defineProps<{
-  variant?: Variant
-  title?: string
-  dismissible?: boolean
-}>(), {
-  variant: 'info',
-})
+const props = withDefaults(
+  defineProps<{
+    variant?: Variant;
+    title?: string;
+    dismissible?: boolean;
+  }>(),
+  {
+    variant: 'info',
+  },
+);
 
-const emit = defineEmits<{ dismiss: [] }>()
+const emit = defineEmits<{ dismiss: [] }>();
 
-const icon = computed(() => ({
-  info: Info,
-  success: CheckCircle,
-  warning: AlertTriangle,
-  error: AlertCircle,
-})[props.variant])
+const icon = computed(
+  () =>
+    ({
+      info: Info,
+      success: CheckCircle,
+      warning: AlertTriangle,
+      error: AlertCircle,
+    })[props.variant],
+);
 </script>
 
 <template>
@@ -29,7 +35,12 @@ const icon = computed(() => ({
       <p v-if="title" class="alert__title">{{ title }}</p>
       <div class="alert__content"><slot /></div>
     </div>
-    <button v-if="dismissible" class="alert__dismiss" aria-label="閉じる" @click="emit('dismiss')">
+    <button
+      v-if="dismissible"
+      class="alert__dismiss"
+      aria-label="閉じる"
+      @click="emit('dismiss')"
+    >
       <X :size="14" />
     </button>
   </div>
@@ -49,32 +60,64 @@ const icon = computed(() => ({
 }
 
 .alert--info {
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 12%,
+    var(--color-surface)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 30%,
+    var(--color-border)
+  );
   color: var(--color-text);
 }
-.alert--info .alert__icon { color: var(--color-primary-text); }
+.alert--info .alert__icon {
+  color: var(--color-primary-text);
+}
 
 .alert--success {
-  background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-success) 12%,
+    var(--color-surface)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--color-success) 30%,
+    var(--color-border)
+  );
   color: var(--color-text);
 }
-.alert--success .alert__icon { color: var(--color-success); }
+.alert--success .alert__icon {
+  color: var(--color-success);
+}
 
 .alert--warning {
-  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-warning) 12%,
+    var(--color-surface)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--color-warning) 30%,
+    var(--color-border)
+  );
   color: var(--color-text);
 }
-.alert--warning .alert__icon { color: var(--color-warning); }
+.alert--warning .alert__icon {
+  color: var(--color-warning);
+}
 
 .alert--error {
   background: color-mix(in srgb, var(--color-error) 12%, var(--color-surface));
   border-color: color-mix(in srgb, var(--color-error) 30%, var(--color-border));
   color: var(--color-text);
 }
-.alert--error .alert__icon { color: var(--color-error); }
+.alert--error .alert__icon {
+  color: var(--color-error);
+}
 
 .alert__icon {
   flex-shrink: 0;

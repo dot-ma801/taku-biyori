@@ -1,18 +1,21 @@
 <script setup lang="ts">
-type Variant = 'primary' | 'secondary' | 'ghost'
-type Size = 'sm' | 'md'
+type Variant = 'primary' | 'secondary' | 'ghost';
+type Size = 'sm' | 'md';
 
-withDefaults(defineProps<{
-  variant?: Variant
-  size?: Size
-  loading?: boolean
-  disabled?: boolean
-  type?: 'button' | 'submit' | 'reset'
-}>(), {
-  variant: 'primary',
-  size: 'md',
-  type: 'button',
-})
+withDefaults(
+  defineProps<{
+    variant?: Variant;
+    size?: Size;
+    loading?: boolean;
+    disabled?: boolean;
+    type?: 'button' | 'submit' | 'reset';
+  }>(),
+  {
+    variant: 'primary',
+    size: 'md',
+    type: 'button',
+  },
+);
 </script>
 
 <template>
@@ -20,7 +23,12 @@ withDefaults(defineProps<{
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
-    :class="['btn', `btn--${variant}`, `btn--${size}`, { 'btn--loading': loading }]"
+    :class="[
+      'btn',
+      `btn--${variant}`,
+      `btn--${size}`,
+      { 'btn--loading': loading },
+    ]"
   >
     <span v-if="loading" class="btn__spinner" aria-hidden="true" />
     <slot v-else />
@@ -41,7 +49,11 @@ withDefaults(defineProps<{
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    opacity 0.15s;
   white-space: nowrap;
   user-select: none;
 }
@@ -51,8 +63,13 @@ withDefaults(defineProps<{
 }
 
 /* sizes */
-.btn--sm { padding: 6px 12px; font-size: 12px; }
-.btn--md { padding: 10px 16px; }
+.btn--sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.btn--md {
+  padding: 10px 16px;
+}
 
 /* primary */
 .btn--primary {
@@ -118,6 +135,8 @@ withDefaults(defineProps<{
   flex-shrink: 0;
 }
 @keyframes btn-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -1,21 +1,24 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseBadge from './BaseBadge.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 
 const meta: Meta<typeof BaseBadge> = {
   title: 'Common/BaseBadge',
   component: BaseBadge,
   tags: ['autodocs'],
   argTypes: {
-    variant: { control: 'select', options: ['default', 'primary', 'success', 'warning', 'error'] },
+    variant: {
+      control: 'select',
+      options: ['default', 'primary', 'success', 'warning', 'error'],
+    },
   },
   args: {
     variant: 'default',
     dot: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { variant: 'default' },
@@ -24,7 +27,7 @@ export const Default: Story = {
     setup: () => ({ args }),
     template: '<BaseBadge v-bind="args">デフォルト</BaseBadge>',
   }),
-}
+};
 
 export const Primary: Story = {
   args: { variant: 'primary' },
@@ -33,7 +36,7 @@ export const Primary: Story = {
     setup: () => ({ args }),
     template: '<BaseBadge v-bind="args">プライマリ</BaseBadge>',
   }),
-}
+};
 
 export const AllVariants: Story = {
   render: () => ({
@@ -48,7 +51,7 @@ export const AllVariants: Story = {
       </div>
     `,
   }),
-}
+};
 
 export const DotVariants: Story = {
   render: () => ({
@@ -63,4 +66,4 @@ export const DotVariants: Story = {
       </div>
     `,
   }),
-}
+};

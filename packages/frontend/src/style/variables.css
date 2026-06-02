@@ -84,9 +84,9 @@
      テキスト用途には --color-primary-text を使う。 */
   --color-primary-text: #3db5c5;
   --color-info: #3db5c5;
-  --color-success: #54c48c;  /* 4.5:1+ on badge bg (color-mix 15% surface) */
-  --color-warning: #e8a030;  /* 5.01:1 */
-  --color-error: #f88080;    /* 4.55:1 */
+  --color-success: #54c48c; /* 4.5:1+ on badge bg (color-mix 15% surface) */
+  --color-warning: #e8a030; /* 5.01:1 */
+  --color-error: #f88080; /* 4.55:1 */
 }
 
 body {

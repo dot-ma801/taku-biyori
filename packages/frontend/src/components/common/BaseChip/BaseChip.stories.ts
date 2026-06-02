@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
-import BaseChip from './BaseChip.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import { ref } from 'vue';
+import BaseChip from '@/components/common/BaseChip/BaseChip.vue';
 
 const meta: Meta<typeof BaseChip> = {
   title: 'Common/BaseChip',
@@ -11,10 +11,10 @@ const meta: Meta<typeof BaseChip> = {
     removable: false,
     disabled: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: (args) => ({
@@ -22,7 +22,7 @@ export const Default: Story = {
     setup: () => ({ args }),
     template: '<BaseChip v-bind="args">チップ</BaseChip>',
   }),
-}
+};
 
 export const Selected: Story = {
   args: { selected: true },
@@ -31,7 +31,7 @@ export const Selected: Story = {
     setup: () => ({ args }),
     template: '<BaseChip v-bind="args">選択済み</BaseChip>',
   }),
-}
+};
 
 export const Removable: Story = {
   args: { removable: true },
@@ -40,7 +40,7 @@ export const Removable: Story = {
     setup: () => ({ args }),
     template: '<BaseChip v-bind="args">削除可能</BaseChip>',
   }),
-}
+};
 
 export const Disabled: Story = {
   args: { disabled: true },
@@ -49,7 +49,7 @@ export const Disabled: Story = {
     setup: () => ({ args }),
     template: '<BaseChip v-bind="args">無効</BaseChip>',
   }),
-}
+};
 
 export const Interactive: Story = {
   render: () => ({
@@ -59,9 +59,11 @@ export const Interactive: Story = {
         { label: 'Vue', selected: true },
         { label: 'TypeScript', selected: false },
         { label: 'Storybook', selected: false },
-      ])
-      const toggle = (i: number) => { chips.value[i].selected = !chips.value[i].selected }
-      return { chips, toggle }
+      ]);
+      const toggle = (i: number) => {
+        chips.value[i]!.selected = !chips.value[i]!.selected;
+      };
+      return { chips, toggle };
     },
     template: `
       <div style="display: flex; gap: 8px;">
@@ -74,4 +76,4 @@ export const Interactive: Story = {
       </div>
     `,
   }),
-}
+};

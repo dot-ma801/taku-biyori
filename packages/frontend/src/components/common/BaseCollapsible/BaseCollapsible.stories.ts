@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseCollapsible from './BaseCollapsible.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseCollapsible from '@/components/common/BaseCollapsible/BaseCollapsible.vue';
 
 const meta: Meta<typeof BaseCollapsible> = {
   title: 'Common/BaseCollapsible',
@@ -9,10 +9,10 @@ const meta: Meta<typeof BaseCollapsible> = {
     title: 'セクションタイトル',
     defaultOpen: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: (args) => ({
@@ -24,7 +24,7 @@ export const Default: Story = {
       </BaseCollapsible>
     `,
   }),
-}
+};
 
 export const DefaultOpen: Story = {
   args: { defaultOpen: true },
@@ -37,7 +37,7 @@ export const DefaultOpen: Story = {
       </BaseCollapsible>
     `,
   }),
-}
+};
 
 export const Multiple: Story = {
   render: () => ({
@@ -56,4 +56,4 @@ export const Multiple: Story = {
       </div>
     `,
   }),
-}
+};

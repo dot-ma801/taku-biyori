@@ -1,26 +1,32 @@
 <script setup lang="ts">
-import { Radio } from '@vuetify/v0'
+import { Radio } from '@vuetify/v0';
 
 export interface RadioOption {
-  value: string
-  label: string
-  disabled?: boolean
+  value: string;
+  label: string;
+  disabled?: boolean;
 }
 
 defineProps<{
-  options: RadioOption[]
-  label?: string
-  disabled?: boolean
-  direction?: 'row' | 'column'
-}>()
+  options: RadioOption[];
+  label?: string;
+  disabled?: boolean;
+  direction?: 'row' | 'column';
+}>();
 
-const model = defineModel<string>()
+const model = defineModel<string>();
 </script>
 
 <template>
   <fieldset class="radio-group" :disabled="disabled">
     <legend v-if="label" class="radio-group__legend">{{ label }}</legend>
-    <Radio.Group v-model="model" :class="['radio-group__list', direction === 'row' ? 'radio-group__list--row' : '']">
+    <Radio.Group
+      v-model="model"
+      :class="[
+        'radio-group__list',
+        direction === 'row' ? 'radio-group__list--row' : '',
+      ]"
+    >
       <label
         v-for="opt in options"
         :key="opt.value"

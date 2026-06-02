@@ -4,21 +4,21 @@
 
 ## Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `tabs` | `TabItem[]` | ✓ | タブ定義の配列 |
-| `modelValue` | `string` | — | v-model バインディング（アクティブタブの `value`） |
-| `label` | `string` | — | タブリストの aria-label |
-| `stretch` | `boolean` | — | タブボタンを均等幅・中央揃えにする |
-| `fixedHeight` | `boolean` | — | パネルエリアの高さを最も高いパネルに固定し、タブ切り替えでレイアウトがずれるのを防ぐ |
+| Prop          | Type        | Required | Description                                                                          |
+| ------------- | ----------- | -------- | ------------------------------------------------------------------------------------ |
+| `tabs`        | `TabItem[]` | ✓        | タブ定義の配列                                                                       |
+| `modelValue`  | `string`    | —        | v-model バインディング（アクティブタブの `value`）                                   |
+| `label`       | `string`    | —        | タブリストの aria-label                                                              |
+| `stretch`     | `boolean`   | —        | タブボタンを均等幅・中央揃えにする                                                   |
+| `fixedHeight` | `boolean`   | —        | パネルエリアの高さを最も高いパネルに固定し、タブ切り替えでレイアウトがずれるのを防ぐ |
 
 ## Types
 
 ```ts
 interface TabItem {
-  value: string
-  label: string
-  disabled?: boolean
+  value: string;
+  label: string;
+  disabled?: boolean;
 }
 ```
 
@@ -58,33 +58,41 @@ interface TabItem {
 ## 単体テスト項目
 
 ### レンダリング
+
 - `tabs` prop に渡した数だけタブボタンが表示されること
 - 各タブの `label` がボタンテキストとして表示されること
 
 ### modelValue
+
 - `modelValue` で指定したタブが初期アクティブ状態になること
 - タブをクリックしたとき `update:modelValue` イベントが発火し、クリックしたタブの `value` が渡されること
 
 ### disabled
+
 - `disabled=true` のタブが操作不能（`aria-disabled` または `disabled` 属性）になること
 - 無効タブをクリックしても `update:modelValue` イベントが発火しないこと
 
 ### slots
+
 - アクティブタブに対応する名前付きスロットのコンテンツが表示されること
 - 非アクティブタブのスロットコンテンツが非表示になること
 
 ### label
+
 - `label` prop が `aria-label` としてタブリストに付与されること
 
 ### stretch
+
 - `stretch=true` のとき `.tabs__list--stretch` クラスが付与されること
 - `stretch` 未指定のとき `.tabs__list--stretch` クラスが付与されないこと
 
 ### fixedHeight
+
 - `fixedHeight=true` のとき `.tabs__panels--fixed-height` クラスが付与されること
 - `fixedHeight` 未指定のとき `.tabs__panels--fixed-height` クラスが付与されないこと
 
 ### アクセシビリティ
+
 - タブリストに `role="tablist"` が付与されていること
 - 各タブボタンに `role="tab"` が付与されていること
 - アクティブタブに `aria-selected="true"` が付与されること

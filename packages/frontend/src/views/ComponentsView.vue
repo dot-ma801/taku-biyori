@@ -1,68 +1,71 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-import BaseButton from '@/components/button/BaseButton.vue'
-import BaseDialog from '@/components/dialog/BaseDialog.vue'
-import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue'
-import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue'
-import BaseCheckbox from '@/components/form/BaseCheckbox/BaseCheckbox.vue'
-import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue'
-import BaseSelect from '@/components/form/BaseSelect/BaseSelect.vue'
-import BaseRadioGroup from '@/components/form/BaseRadioGroup/BaseRadioGroup.vue'
-import BaseChip from '@/components/common/BaseChip/BaseChip.vue'
-import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue'
-import BaseCard from '@/components/common/BaseCard/BaseCard.vue'
-import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue'
-import BaseProgress from '@/components/common/BaseProgress/BaseProgress.vue'
-import BaseCollapsible from '@/components/common/BaseCollapsible/BaseCollapsible.vue'
-import BaseDivider from '@/components/common/BaseDivider/BaseDivider.vue'
-import BaseSkeleton from '@/components/common/BaseSkeleton/BaseSkeleton.vue'
-import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue'
-import { useToast } from '@/composables/useToast'
+import BaseButton from '@/components/button/BaseButton.vue';
+import BaseDialog from '@/components/dialog/BaseDialog.vue';
+import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
+import BaseCheckbox from '@/components/form/BaseCheckbox/BaseCheckbox.vue';
+import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
+import BaseSelect from '@/components/form/BaseSelect/BaseSelect.vue';
+import BaseRadioGroup from '@/components/form/BaseRadioGroup/BaseRadioGroup.vue';
+import BaseChip from '@/components/common/BaseChip/BaseChip.vue';
+import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
+import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
+import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue';
+import BaseProgress from '@/components/common/BaseProgress/BaseProgress.vue';
+import BaseCollapsible from '@/components/common/BaseCollapsible/BaseCollapsible.vue';
+import BaseDivider from '@/components/common/BaseDivider/BaseDivider.vue';
+import BaseSkeleton from '@/components/common/BaseSkeleton/BaseSkeleton.vue';
+import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
+import { useToast } from '@/composables/useToast';
 
-const toast = useToast()
+const toast = useToast();
 
 // Form state
-const textValue = ref('')
-const textAreaValue = ref('')
-const checked = ref(false)
-const switchOn = ref(false)
-const selectedFruit = ref('')
-const selectedRadio = ref('a')
-const chipSelected = ref(true)
-const activeTab = ref('overview')
-const progressValue = ref(65)
+const textValue = ref('');
+const textAreaValue = ref('');
+const checked = ref(false);
+const switchOn = ref(false);
+const selectedFruit = ref('');
+const selectedRadio = ref('a');
+const chipSelected = ref(true);
+const activeTab = ref('overview');
+const progressValue = ref(65);
 
 const fruitOptions = [
   { value: 'apple', label: 'りんご' },
   { value: 'banana', label: 'バナナ' },
   { value: 'cherry', label: 'さくらんぼ' },
   { value: 'grape', label: 'ぶどう', disabled: true },
-]
+];
 
 const radioOptions = [
   { value: 'a', label: 'オプション A' },
   { value: 'b', label: 'オプション B' },
   { value: 'c', label: 'オプション C' },
-]
+];
 
 const tabs = [
   { value: 'overview', label: '概要' },
   { value: 'details', label: '詳細' },
   { value: 'settings', label: '設定', disabled: true },
-]
+];
 
 const emailRules = [
-  (v: string) => !!v || 'メールアドレスは必須です',
-  (v: string) => /.+@.+\..+/.test(v) || 'メールアドレスの形式が正しくありません',
-]
+  (v: unknown) => !!v || 'メールアドレスは必須です',
+  (v: unknown) =>
+    /.+@.+\..+/.test(v as string) || 'メールアドレスの形式が正しくありません',
+];
 </script>
 
 <template>
   <div class="sandbox">
     <header class="sandbox__header">
       <h1 class="sandbox__title">コンポーネント一覧</h1>
-      <p class="sandbox__desc">デザインシステムの基本コンポーネント動作確認用ページ</p>
+      <p class="sandbox__desc">
+        デザインシステムの基本コンポーネント動作確認用ページ
+      </p>
     </header>
 
     <!-- Buttons -->
@@ -89,7 +92,14 @@ const emailRules = [
         <BaseBadge variant="success">Success</BaseBadge>
         <BaseBadge variant="warning">Warning</BaseBadge>
         <BaseBadge variant="error">Error</BaseBadge>
-        <span style="display:inline-flex; align-items:center; gap:6px; font-size:13px;">
+        <span
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+          "
+        >
           <BaseBadge dot variant="success" /> オンライン
         </span>
       </div>
@@ -104,7 +114,9 @@ const emailRules = [
         <BaseChip v-model:selected="chipSelected">選択可能</BaseChip>
         <BaseChip :selected="true">選択済み</BaseChip>
         <BaseChip :selected="false">未選択</BaseChip>
-        <BaseChip :selected="true" removable @remove="() => {}">削除可能</BaseChip>
+        <BaseChip :selected="true" removable @remove="() => {}"
+          >削除可能</BaseChip
+        >
         <BaseChip :selected="false" :disabled="true">無効</BaseChip>
       </div>
     </section>
@@ -116,9 +128,15 @@ const emailRules = [
       <h2 class="section__title">Alert</h2>
       <div class="col">
         <BaseAlert variant="info" title="情報">操作が完了しました。</BaseAlert>
-        <BaseAlert variant="success" title="成功">データが正常に保存されました。</BaseAlert>
-        <BaseAlert variant="warning" title="警告" dismissible>この操作は取り消しできません。</BaseAlert>
-        <BaseAlert variant="error" title="エラー">接続に失敗しました。再度お試しください。</BaseAlert>
+        <BaseAlert variant="success" title="成功"
+          >データが正常に保存されました。</BaseAlert
+        >
+        <BaseAlert variant="warning" title="警告" dismissible
+          >この操作は取り消しできません。</BaseAlert
+        >
+        <BaseAlert variant="error" title="エラー"
+          >接続に失敗しました。再度お試しください。</BaseAlert
+        >
       </div>
     </section>
 
@@ -128,10 +146,30 @@ const emailRules = [
     <section class="section">
       <h2 class="section__title">Toast</h2>
       <div class="row">
-        <BaseButton variant="secondary" size="sm" @click="toast.info('情報メッセージです')">Info</BaseButton>
-        <BaseButton variant="secondary" size="sm" @click="toast.success('正常に保存されました')">Success</BaseButton>
-        <BaseButton variant="secondary" size="sm" @click="toast.warning('この操作には注意が必要です')">Warning</BaseButton>
-        <BaseButton variant="secondary" size="sm" @click="toast.error('エラーが発生しました')">Error</BaseButton>
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          @click="toast.info('情報メッセージです')"
+          >Info</BaseButton
+        >
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          @click="toast.success('正常に保存されました')"
+          >Success</BaseButton
+        >
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          @click="toast.warning('この操作には注意が必要です')"
+          >Warning</BaseButton
+        >
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          @click="toast.error('エラーが発生しました')"
+          >Error</BaseButton
+        >
       </div>
     </section>
 
@@ -161,7 +199,9 @@ const emailRules = [
       <h2 class="section__title">Tabs</h2>
       <BaseTabs v-model="activeTab" :tabs="tabs">
         <template #overview>
-          <p>概要タブのコンテンツです。ここにプロジェクトの概要説明が入ります。</p>
+          <p>
+            概要タブのコンテンツです。ここにプロジェクトの概要説明が入ります。
+          </p>
         </template>
         <template #details>
           <p>詳細タブのコンテンツです。より詳しい情報がここに表示されます。</p>
@@ -190,15 +230,29 @@ const emailRules = [
     <section class="section">
       <h2 class="section__title">Progress</h2>
       <div class="col">
-        <BaseProgress :value="progressValue" label="アップロード中" show-value />
+        <BaseProgress
+          :value="progressValue"
+          label="アップロード中"
+          show-value
+        />
         <BaseProgress :value="40" variant="success" label="成功" />
         <BaseProgress :value="70" variant="warning" label="警告" size="sm" />
         <BaseProgress :value="85" variant="error" label="エラー" size="sm" />
         <BaseProgress :indeterminate="true" label="処理中..." />
       </div>
       <div class="row" style="margin-top: var(--space-3)">
-        <BaseButton variant="ghost" size="sm" @click="progressValue = Math.max(0, progressValue - 10)">−10</BaseButton>
-        <BaseButton variant="ghost" size="sm" @click="progressValue = Math.min(100, progressValue + 10)">+10</BaseButton>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          @click="progressValue = Math.max(0, progressValue - 10)"
+          >−10</BaseButton
+        >
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          @click="progressValue = Math.min(100, progressValue + 10)"
+          >+10</BaseButton
+        >
       </div>
     </section>
 
@@ -207,12 +261,12 @@ const emailRules = [
     <!-- Skeleton -->
     <section class="section">
       <h2 class="section__title">Skeleton</h2>
-      <div class="col" style="max-width: 400px;">
+      <div class="col" style="max-width: 400px">
         <BaseSkeleton height="20px" width="60%" />
         <BaseSkeleton :lines="3" height="14px" />
-        <div style="display:flex; gap: var(--space-3); align-items:center;">
+        <div style="display: flex; gap: var(--space-3); align-items: center">
           <BaseSkeleton width="40px" height="40px" rounded="full" />
-          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
             <BaseSkeleton height="14px" width="40%" />
             <BaseSkeleton height="12px" width="70%" />
           </div>
@@ -225,7 +279,7 @@ const emailRules = [
     <!-- Forms -->
     <section class="section">
       <h2 class="section__title">Form</h2>
-      <div class="col" style="max-width: 480px;">
+      <div class="col" style="max-width: 480px">
         <BaseTextBox
           v-model="textValue"
           label="メールアドレス"
@@ -270,16 +324,30 @@ const emailRules = [
     <section class="section">
       <h2 class="section__title">Dialog</h2>
       <div class="row">
-        <BaseDialog title="確認" description="この操作を実行してよろしいですか？">
+        <BaseDialog
+          title="確認"
+          description="この操作を実行してよろしいですか？"
+        >
           <template #activator>
             <BaseButton variant="secondary">ダイアログを開く</BaseButton>
           </template>
-          <p style="font-size:14px; color:var(--color-text-secondary); margin:0;">
+          <p
+            style="
+              font-size: 14px;
+              color: var(--color-text-secondary);
+              margin: 0;
+            "
+          >
             削除したデータは復元できません。続行する場合は「実行」を押してください。
           </p>
           <template #actions>
             <BaseButton variant="ghost" size="sm">キャンセル</BaseButton>
-            <BaseButton variant="primary" size="sm" @click="toast.success('実行されました')">実行</BaseButton>
+            <BaseButton
+              variant="primary"
+              size="sm"
+              @click="toast.success('実行されました')"
+              >実行</BaseButton
+            >
           </template>
         </BaseDialog>
 
@@ -287,7 +355,13 @@ const emailRules = [
           <template #activator>
             <BaseButton variant="secondary">別のダイアログ</BaseButton>
           </template>
-          <p style="font-size:14px; color:var(--color-text-secondary); margin:0;">
+          <p
+            style="
+              font-size: 14px;
+              color: var(--color-text-secondary);
+              margin: 0;
+            "
+          >
             Dialog.Activator スロット経由で開くダイアログです。
           </p>
         </BaseDialog>
@@ -302,10 +376,17 @@ const emailRules = [
       <div class="col">
         <BaseDivider />
         <BaseDivider label="または" />
-        <div style="display:flex; height: 40px; align-items:center; gap: var(--space-4);">
-          <span style="font-size:13px;">左</span>
+        <div
+          style="
+            display: flex;
+            height: 40px;
+            align-items: center;
+            gap: var(--space-4);
+          "
+        >
+          <span style="font-size: 13px">左</span>
           <BaseDivider :vertical="true" />
-          <span style="font-size:13px;">右</span>
+          <span style="font-size: 13px">右</span>
         </div>
       </div>
     </section>

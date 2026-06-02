@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Dialog } from '@vuetify/v0'
+import { Dialog } from '@vuetify/v0';
 
 defineProps<{
-  title: string
-  description?: string
-}>()
+  title: string;
+  description?: string;
+}>();
 </script>
 
 <template>
@@ -86,7 +86,9 @@ defineProps<{
   border-radius: var(--radius-sm);
   line-height: 1;
   font-size: 14px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 .dialog__close:hover {
   color: var(--color-text);

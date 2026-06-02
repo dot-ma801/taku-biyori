@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { Select } from '@vuetify/v0'
-import { ChevronDown, Check } from '@lucide/vue'
+import { Select } from '@vuetify/v0';
+import { ChevronDown, Check } from '@lucide/vue';
 
 export interface SelectOption {
-  value: string
-  label: string
-  disabled?: boolean
+  value: string;
+  label: string;
+  disabled?: boolean;
 }
 
-const props = defineProps<{
-  options: SelectOption[]
-  placeholder?: string
-  label?: string
-  disabled?: boolean
-}>()
+defineProps<{
+  options: SelectOption[];
+  placeholder?: string;
+  label?: string;
+  disabled?: boolean;
+}>();
 
-const model = defineModel<string>()
+const model = defineModel<string>();
 </script>
 
 <template>
@@ -24,13 +24,22 @@ const model = defineModel<string>()
     <Select.Root v-model="model" :disabled="disabled" class="select">
       <Select.Activator class="select__activator">
         <Select.Value v-slot="{ selectedValue }" class="select__value">
-          {{ options.find(o => o.value === selectedValue)?.label ?? selectedValue }}
+          {{
+            options.find((o) => o.value === selectedValue)?.label ??
+            selectedValue
+          }}
         </Select.Value>
         <Select.Placeholder class="select__placeholder">
           {{ placeholder ?? '選択してください' }}
         </Select.Placeholder>
         <Select.Cue v-slot="{ isOpen }" class="select__cue">
-          <ChevronDown :size="14" :style="{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }" />
+          <ChevronDown
+            :size="14"
+            :style="{
+              transform: isOpen ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.15s',
+            }"
+          />
         </Select.Cue>
       </Select.Activator>
 
@@ -43,7 +52,14 @@ const model = defineModel<string>()
           :disabled="opt.disabled"
           v-slot="{ isSelected, attrs }"
         >
-          <div v-bind="attrs" class="select__item" :class="{ 'select__item--selected': isSelected, 'select__item--disabled': opt.disabled }">
+          <div
+            v-bind="attrs"
+            class="select__item"
+            :class="{
+              'select__item--selected': isSelected,
+              'select__item--disabled': opt.disabled,
+            }"
+          >
             <span>{{ opt.label }}</span>
             <Check v-if="isSelected" :size="13" class="select__item-check" />
           </div>
@@ -86,7 +102,9 @@ const model = defineModel<string>()
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .select__activator:hover:not(:disabled) {
   border-color: var(--color-secondary);

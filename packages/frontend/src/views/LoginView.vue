@@ -4,7 +4,6 @@ import BaseTabs, {
 } from '@/components/common/BaseTabs/BaseTabs.vue';
 import LoginCard from '@/features/user/LoginCard.vue';
 import SignupCard from '@/features/user/SignupCard.vue';
-import { ref } from 'vue';
 
 const tabs: TabItem[] = [
   {
@@ -25,7 +24,7 @@ const tabs: TabItem[] = [
       <template #signin>
         <LoginCard class="card"></LoginCard>
       </template>
-      
+
       <!-- 新規作成タブ -->
       <template #signup>
         <SignupCard class="card" />

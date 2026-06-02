@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseTabs from './BaseTabs.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue';
 
 const meta: Meta<typeof BaseTabs> = {
   title: 'Common/BaseTabs',
   component: BaseTabs,
   tags: ['autodocs'],
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => ({
@@ -18,8 +18,8 @@ export const Default: Story = {
         { value: 'tab1', label: 'タブ 1' },
         { value: 'tab2', label: 'タブ 2' },
         { value: 'tab3', label: 'タブ 3' },
-      ]
-      return { tabs }
+      ];
+      return { tabs };
     },
     template: `
       <BaseTabs :tabs="tabs" style="max-width: 500px;">
@@ -29,7 +29,7 @@ export const Default: Story = {
       </BaseTabs>
     `,
   }),
-}
+};
 
 export const WithDisabledTab: Story = {
   render: () => ({
@@ -39,8 +39,8 @@ export const WithDisabledTab: Story = {
         { value: 'tab1', label: 'タブ 1' },
         { value: 'tab2', label: 'タブ 2 (無効)', disabled: true },
         { value: 'tab3', label: 'タブ 3' },
-      ]
-      return { tabs }
+      ];
+      return { tabs };
     },
     template: `
       <BaseTabs :tabs="tabs" style="max-width: 500px;">
@@ -50,7 +50,7 @@ export const WithDisabledTab: Story = {
       </BaseTabs>
     `,
   }),
-}
+};
 
 export const Stretch: Story = {
   render: () => ({
@@ -59,8 +59,8 @@ export const Stretch: Story = {
       const tabs = [
         { value: 'tab1', label: 'タブ 1' },
         { value: 'tab2', label: 'タブ 2' },
-      ]
-      return { tabs }
+      ];
+      return { tabs };
     },
     template: `
       <BaseTabs :tabs="tabs" stretch style="max-width: 500px;">
@@ -69,7 +69,7 @@ export const Stretch: Story = {
       </BaseTabs>
     `,
   }),
-}
+};
 
 export const FixedHeight: Story = {
   render: () => ({
@@ -78,8 +78,8 @@ export const FixedHeight: Story = {
       const tabs = [
         { value: 'tab1', label: 'タブ 1' },
         { value: 'tab2', label: 'タブ 2' },
-      ]
-      return { tabs }
+      ];
+      return { tabs };
     },
     template: `
       <BaseTabs :tabs="tabs" fixed-height style="max-width: 500px;">
@@ -92,7 +92,7 @@ export const FixedHeight: Story = {
       </BaseTabs>
     `,
   }),
-}
+};
 
 export const StretchAndFixedHeight: Story = {
   render: () => ({
@@ -101,8 +101,8 @@ export const StretchAndFixedHeight: Story = {
       const tabs = [
         { value: 'tab1', label: 'ログイン' },
         { value: 'tab2', label: '新規作成' },
-      ]
-      return { tabs }
+      ];
+      return { tabs };
     },
     template: `
       <BaseTabs :tabs="tabs" stretch fixed-height style="max-width: 400px;">
@@ -116,4 +116,4 @@ export const StretchAndFixedHeight: Story = {
       </BaseTabs>
     `,
   }),
-}
+};

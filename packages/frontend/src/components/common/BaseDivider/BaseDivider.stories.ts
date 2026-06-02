@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseDivider from './BaseDivider.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseDivider from '@/components/common/BaseDivider/BaseDivider.vue';
 
 const meta: Meta<typeof BaseDivider> = {
   title: 'Common/BaseDivider',
@@ -9,10 +9,10 @@ const meta: Meta<typeof BaseDivider> = {
     label: '',
     vertical: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Horizontal: Story = {
   render: (args) => ({
@@ -26,7 +26,7 @@ export const Horizontal: Story = {
       </div>
     `,
   }),
-}
+};
 
 export const WithLabel: Story = {
   args: { label: 'または' },
@@ -41,7 +41,7 @@ export const WithLabel: Story = {
       </div>
     `,
   }),
-}
+};
 
 export const Vertical: Story = {
   args: { vertical: true },
@@ -56,4 +56,4 @@ export const Vertical: Story = {
       </div>
     `,
   }),
-}
+};

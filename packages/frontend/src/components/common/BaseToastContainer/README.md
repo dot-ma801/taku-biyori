@@ -21,29 +21,29 @@
 ### 任意のコンポーネントから呼び出し
 
 ```ts
-import { useToast } from '@/composables/useToast'
+import { useToast } from '@/composables/useToast';
 
-const toast = useToast()
+const toast = useToast();
 
-toast.success('保存しました')
-toast.error('エラーが発生しました')
-toast.warning('注意が必要です')
-toast.info('情報メッセージ')
+toast.success('保存しました');
+toast.error('エラーが発生しました');
+toast.warning('注意が必要です');
+toast.info('情報メッセージ');
 
 // duration 指定（ミリ秒）
-toast.success('完了', 6000)
+toast.success('完了', 6000);
 ```
 
 ## useToast API
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `show` | `(message, variant?, duration?) => void` | 汎用表示 |
-| `success` | `(message, duration?) => void` | 成功トースト |
-| `error` | `(message, duration?) => void` | エラートースト |
-| `warning` | `(message, duration?) => void` | 警告トースト |
-| `info` | `(message, duration?) => void` | 情報トースト |
-| `dismiss` | `(id: number) => void` | 指定 ID を手動で消去 |
+| Method    | Signature                                | Description          |
+| --------- | ---------------------------------------- | -------------------- |
+| `show`    | `(message, variant?, duration?) => void` | 汎用表示             |
+| `success` | `(message, duration?) => void`           | 成功トースト         |
+| `error`   | `(message, duration?) => void`           | エラートースト       |
+| `warning` | `(message, duration?) => void`           | 警告トースト         |
+| `info`    | `(message, duration?) => void`           | 情報トースト         |
+| `dismiss` | `(id: number) => void`                   | 指定 ID を手動で消去 |
 
 ## Design Notes
 
@@ -56,6 +56,7 @@ toast.success('完了', 6000)
 ## 単体テスト項目
 
 ### useToast 連携
+
 - `toast.success(message)` を呼んだとき、成功バリアントのトーストが表示されること
 - `toast.error(message)` を呼んだとき、エラーバリアントのトーストが表示されること
 - `toast.warning(message)` を呼んだとき、警告バリアントのトーストが表示されること
@@ -63,19 +64,24 @@ toast.success('完了', 6000)
 - `toast.show(message)` を呼んだとき、トーストが表示されること
 
 ### 複数トースト
+
 - 複数回 `toast.show()` を呼んだとき、呼んだ数だけトーストが積み上がって表示されること
 
 ### 自動消去
+
 - デフォルト duration（4000ms）経過後にトーストが非表示になること
 - `duration` を指定したとき、その時間経過後にトーストが非表示になること
 
 ### 手動消去
+
 - `toast.dismiss(id)` を呼んだとき、対象トーストが非表示になること
 
 ### マウント位置
+
 - コンポーネントが `body` 直下にテレポートされること
 
 ### アクセシビリティ
+
 - トーストコンテナに `aria-live="polite"`（または `"assertive"`）が付与されていること
 - エラートーストのとき `aria-live="assertive"` / `role="alert"` が付与されること
 - トーストにメッセージテキストが含まれ、スクリーンリーダーに読み上げられること

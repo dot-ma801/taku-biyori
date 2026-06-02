@@ -4,12 +4,12 @@
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `width` | `string` | `'100%'` | 幅（CSS 値） |
-| `height` | `string` | `'14px'` | 高さ（CSS 値） |
-| `rounded` | `'sm' \| 'md' \| 'full'` | `'sm'` | 角丸スタイル |
-| `lines` | `number` | `1` | 複数行表示（最終行は 70% 幅） |
+| Prop      | Type                     | Default  | Description                   |
+| --------- | ------------------------ | -------- | ----------------------------- |
+| `width`   | `string`                 | `'100%'` | 幅（CSS 値）                  |
+| `height`  | `string`                 | `'14px'` | 高さ（CSS 値）                |
+| `rounded` | `'sm' \| 'md' \| 'full'` | `'sm'`   | 角丸スタイル                  |
+| `lines`   | `number`                 | `1`      | 複数行表示（最終行は 70% 幅） |
 
 ## Usage
 
@@ -39,21 +39,26 @@
 ## 単体テスト項目
 
 ### レンダリング
+
 - デフォルト props でレンダリングされること
 
 ### width / height
+
 - `width` prop が style に反映されること
 - `height` prop が style に反映されること
 
 ### rounded
+
 - `rounded="sm"` / `"md"` / `"full"` それぞれで対応するクラスが付与されること
 
 ### lines
+
 - `lines=1` のとき要素が 1 つ描画されること
 - `lines=3` のとき要素が 3 つ描画されること
 - 複数行のとき最終行の幅が 70% になること
 - 複数行のとき最終行以外の幅が `width` prop の値になること
 
 ### アクセシビリティ
+
 - ローディング中であることを示す `aria-busy="true"` が付与されること
 - スクリーンリーダーに読み上げられないよう `aria-hidden="true"` が付与されること

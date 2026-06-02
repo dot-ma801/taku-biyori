@@ -5,9 +5,9 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
-const onClickTitle = () => {  
-  router.push('/')
-} 
+const onClickTitle = () => {
+  router.push('/');
+};
 </script>
 
 <template>
@@ -27,7 +27,7 @@ header {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
-  justify-content: space-between
+  justify-content: space-between;
 }
 
 h1 {
@@ -39,6 +39,6 @@ h1 {
 
 .button-area {
   display: flex;
-  gap: var(--space-4)
+  gap: var(--space-4);
 }
 </style>

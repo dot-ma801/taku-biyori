@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HealthResponseSchema } from '@taku-biyori/shared';
-import { getHealth } from '../../src/health/application/get-health';
+import { getHealth } from '@/health/application/get-health';
 
 describe('getHealth', () => {
   it('共有スキーマに合う疎通確認レスポンスを返す', () => {

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { useToast } from '@/composables/useToast'
-import { CheckCircle, Info, AlertTriangle, AlertCircle, X } from '@lucide/vue'
+import { useToast } from '@/composables/useToast';
+import { CheckCircle, Info, AlertTriangle, AlertCircle, X } from '@lucide/vue';
 
-const { toasts, dismiss } = useToast()
+const { toasts, dismiss } = useToast();
 
 const iconMap = {
   success: CheckCircle,
   info: Info,
   warning: AlertTriangle,
   error: AlertCircle,
-}
+};
 </script>
 
 <template>
@@ -22,9 +22,18 @@ const iconMap = {
           :class="['toast', `toast--${toast.variant}`]"
           role="status"
         >
-          <component :is="iconMap[toast.variant]" :size="16" class="toast__icon" aria-hidden="true" />
+          <component
+            :is="iconMap[toast.variant]"
+            :size="16"
+            class="toast__icon"
+            aria-hidden="true"
+          />
           <span class="toast__message">{{ toast.message }}</span>
-          <button class="toast__close" aria-label="閉じる" @click="dismiss(toast.id)">
+          <button
+            class="toast__close"
+            aria-label="閉じる"
+            @click="dismiss(toast.id)"
+          >
             <X :size="14" />
           </button>
         </div>
@@ -66,31 +75,59 @@ const iconMap = {
   border-color: var(--color-border-strong);
   color: var(--color-text);
 }
-.toast--info .toast__icon { color: var(--color-primary-text); }
+.toast--info .toast__icon {
+  color: var(--color-primary-text);
+}
 
 .toast--success {
-  background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-success) 12%,
+    var(--color-surface)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--color-success) 30%,
+    var(--color-border)
+  );
   color: var(--color-text);
 }
-.toast--success .toast__icon { color: var(--color-success); }
+.toast--success .toast__icon {
+  color: var(--color-success);
+}
 
 .toast--warning {
-  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-warning) 12%,
+    var(--color-surface)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--color-warning) 30%,
+    var(--color-border)
+  );
   color: var(--color-text);
 }
-.toast--warning .toast__icon { color: var(--color-warning); }
+.toast--warning .toast__icon {
+  color: var(--color-warning);
+}
 
 .toast--error {
   background: color-mix(in srgb, var(--color-error) 12%, var(--color-surface));
   border-color: color-mix(in srgb, var(--color-error) 30%, var(--color-border));
   color: var(--color-text);
 }
-.toast--error .toast__icon { color: var(--color-error); }
+.toast--error .toast__icon {
+  color: var(--color-error);
+}
 
-.toast__icon { flex-shrink: 0; }
-.toast__message { flex: 1; }
+.toast__icon {
+  flex-shrink: 0;
+}
+.toast__message {
+  flex: 1;
+}
 
 .toast__close {
   flex-shrink: 0;
@@ -105,12 +142,16 @@ const iconMap = {
   border-radius: var(--radius-sm);
   transition: opacity 0.15s;
 }
-.toast__close:hover { opacity: 1; }
+.toast__close:hover {
+  opacity: 1;
+}
 
 /* transitions */
 .toast-enter-active,
 .toast-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 .toast-enter-from {
   opacity: 0;

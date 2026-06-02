@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseDialog from './BaseDialog.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseDialog from '@/components/dialog/BaseDialog.vue';
 
 const meta: Meta<typeof BaseDialog> = {
   title: 'Dialog/BaseDialog',
@@ -9,10 +9,10 @@ const meta: Meta<typeof BaseDialog> = {
     title: 'ダイアログタイトル',
     description: '',
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { title: '確認', description: 'この操作を実行してもよいですか？' },
@@ -30,10 +30,13 @@ export const Default: Story = {
       </BaseDialog>
     `,
   }),
-}
+};
 
 export const WithActions: Story = {
-  args: { title: '削除の確認', description: 'このアイテムを削除しますか？この操作は元に戻せません。' },
+  args: {
+    title: '削除の確認',
+    description: 'このアイテムを削除しますか？この操作は元に戻せません。',
+  },
   render: (args) => ({
     components: { BaseDialog },
     setup: () => ({ args }),
@@ -52,4 +55,4 @@ export const WithActions: Story = {
       </BaseDialog>
     `,
   }),
-}
+};

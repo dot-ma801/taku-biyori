@@ -1,4 +1,4 @@
-import type { StorybookConfig } from '@storybook/vue3-vite'
+import type { StorybookConfig } from '@storybook/vue3-vite';
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)'],
@@ -6,6 +6,6 @@ const config: StorybookConfig = {
     name: '@storybook/vue3-vite',
     options: {},
   },
-}
+};
 
-export default config
+export default config;

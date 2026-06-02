@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
-import BaseCheckbox from './BaseCheckbox.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import { ref } from 'vue';
+import BaseCheckbox from '@/components/form/BaseCheckbox/BaseCheckbox.vue';
 
 const meta: Meta<typeof BaseCheckbox> = {
   title: 'Form/BaseCheckbox',
@@ -10,44 +10,44 @@ const meta: Meta<typeof BaseCheckbox> = {
     label: 'チェックボックス',
     disabled: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: (args) => ({
     components: { BaseCheckbox },
     setup() {
-      const checked = ref(false)
-      return { args, checked }
+      const checked = ref(false);
+      return { args, checked };
     },
     template: '<BaseCheckbox v-bind="args" v-model="checked" />',
   }),
-}
+};
 
 export const Checked: Story = {
   render: (args) => ({
     components: { BaseCheckbox },
     setup() {
-      const checked = ref(true)
-      return { args, checked }
+      const checked = ref(true);
+      return { args, checked };
     },
     template: '<BaseCheckbox v-bind="args" v-model="checked" />',
   }),
-}
+};
 
 export const Disabled: Story = {
   args: { disabled: true },
   render: (args) => ({
     components: { BaseCheckbox },
     setup() {
-      const checked = ref(false)
-      return { args, checked }
+      const checked = ref(false);
+      return { args, checked };
     },
     template: '<BaseCheckbox v-bind="args" v-model="checked" />',
   }),
-}
+};
 
 export const Group: Story = {
   render: () => ({
@@ -57,8 +57,8 @@ export const Group: Story = {
         { label: 'Vue.js', checked: true },
         { label: 'TypeScript', checked: false },
         { label: 'Storybook', checked: false },
-      ])
-      return { options }
+      ]);
+      return { options };
     },
     template: `
       <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -71,4 +71,4 @@ export const Group: Story = {
       </div>
     `,
   }),
-}
+};

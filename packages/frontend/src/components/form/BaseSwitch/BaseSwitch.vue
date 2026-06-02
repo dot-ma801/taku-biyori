@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Switch } from '@vuetify/v0'
+import { Switch } from '@vuetify/v0';
 
 defineProps<{
-  label?: string
-  disabled?: boolean
-}>()
+  label?: string;
+  disabled?: boolean;
+}>();
 
-const model = defineModel<boolean>({ default: false })
+const model = defineModel<boolean>({ default: false });
 </script>
 
 <template>

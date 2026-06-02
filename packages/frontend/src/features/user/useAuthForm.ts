@@ -2,7 +2,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
-type AuthCall = () => Promise<{ data: unknown; error: { message?: string } | null }>;
+type AuthCall = () => Promise<{
+  data: unknown;
+  error: { message?: string } | null;
+}>;
 
 export function useAuthForm() {
   const router = useRouter();

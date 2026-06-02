@@ -1,27 +1,34 @@
 <script setup lang="ts">
-import { X } from '@lucide/vue'
+import { X } from '@lucide/vue';
 
-const props = withDefaults(defineProps<{
-  selected?: boolean
-  removable?: boolean
-  disabled?: boolean
-}>(), {})
+const props = withDefaults(
+  defineProps<{
+    selected?: boolean;
+    removable?: boolean;
+    disabled?: boolean;
+  }>(),
+  {},
+);
 
 const emit = defineEmits<{
-  'update:selected': [value: boolean]
-  remove: []
-}>()
+  'update:selected': [value: boolean];
+  remove: [];
+}>();
 
 const toggle = () => {
   if (!props.disabled) {
-    emit('update:selected', !props.selected)
+    emit('update:selected', !props.selected);
   }
-}
+};
 </script>
 
 <template>
   <span
-    :class="['chip', selected ? 'chip--selected' : 'chip--unselected', { 'chip--disabled': disabled }]"
+    :class="[
+      'chip',
+      selected ? 'chip--selected' : 'chip--unselected',
+      { 'chip--disabled': disabled },
+    ]"
     :aria-pressed="selected"
     role="button"
     :tabindex="disabled ? -1 : 0"
@@ -55,7 +62,10 @@ const toggle = () => {
   border-radius: var(--radius-full);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   user-select: none;
   white-space: nowrap;
 }
@@ -65,9 +75,17 @@ const toggle = () => {
 }
 
 .chip--selected {
-  background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface));
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary) 15%,
+    var(--color-surface)
+  );
   color: var(--color-text);
-  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 40%,
+    var(--color-border)
+  );
 }
 
 .chip--unselected {

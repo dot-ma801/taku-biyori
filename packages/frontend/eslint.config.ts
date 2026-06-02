@@ -6,6 +6,7 @@ import pluginVue from 'eslint-plugin-vue';
 import pluginPlaywright from 'eslint-plugin-playwright';
 import pluginVitest from '@vitest/eslint-plugin';
 import pluginOxlint from 'eslint-plugin-oxlint';
+// @ts-expect-error -- no type declaration for shared eslint config mjs file
 import sharedEslintConfig from '../shared/eslint.config.mjs';
 
 export default defineConfigWithVueTs(

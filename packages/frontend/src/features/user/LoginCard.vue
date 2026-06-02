@@ -21,7 +21,11 @@ const onClickLogin = () =>
 <template>
   <BaseCard>
     <div class="content">
-      <BaseAlert v-if="errorMessage" title="ログインに失敗しました" variant="error">
+      <BaseAlert
+        v-if="errorMessage"
+        title="ログインに失敗しました"
+        variant="error"
+      >
         {{ errorMessage }}
       </BaseAlert>
 

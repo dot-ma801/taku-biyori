@@ -1,13 +1,16 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
-  width?: string
-  height?: string
-  rounded?: 'sm' | 'md' | 'full'
-  lines?: number
-}>(), {
-  rounded: 'sm',
-  lines: 1,
-})
+withDefaults(
+  defineProps<{
+    width?: string;
+    height?: string;
+    rounded?: 'sm' | 'md' | 'full';
+    lines?: number;
+  }>(),
+  {
+    rounded: 'sm',
+    lines: 1,
+  },
+);
 </script>
 
 <template>
@@ -50,12 +53,22 @@ withDefaults(defineProps<{
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
-.skeleton--sm { border-radius: var(--radius-sm); }
-.skeleton--md { border-radius: var(--radius-md); }
-.skeleton--full { border-radius: var(--radius-full); }
+.skeleton--sm {
+  border-radius: var(--radius-sm);
+}
+.skeleton--md {
+  border-radius: var(--radius-md);
+}
+.skeleton--full {
+  border-radius: var(--radius-full);
+}
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

@@ -8,7 +8,7 @@ vi.mock('better-auth/adapters/drizzle', () => ({
   drizzleAdapter: vi.fn(() => ({ adapter: true })),
 }));
 
-import { createAuth } from '../../src/auth/infrastructure/create-auth.js';
+import { createAuth } from '@/auth/infrastructure/create-auth.js';
 
 describe('createAuth', () => {
   const baseOptions = {

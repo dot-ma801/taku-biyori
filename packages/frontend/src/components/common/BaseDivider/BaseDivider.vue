@@ -1,8 +1,11 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
-  label?: string
-  vertical?: boolean
-}>(), {})
+withDefaults(
+  defineProps<{
+    label?: string;
+    vertical?: boolean;
+  }>(),
+  {},
+);
 </script>
 
 <template>
@@ -11,7 +14,11 @@ withDefaults(defineProps<{
     <span class="divider__label">{{ label }}</span>
     <span class="divider__line" />
   </div>
-  <hr v-else :class="['divider', { 'divider--vertical': vertical }]" role="separator" />
+  <hr
+    v-else
+    :class="['divider', { 'divider--vertical': vertical }]"
+    role="separator"
+  />
 </template>
 
 <style scoped>

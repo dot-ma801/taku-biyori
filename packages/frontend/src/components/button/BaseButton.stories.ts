@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseButton from './BaseButton.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseButton from '@/components/button/BaseButton.vue';
 
 const meta: Meta<typeof BaseButton> = {
   title: 'Button/BaseButton',
@@ -17,10 +17,10 @@ const meta: Meta<typeof BaseButton> = {
     disabled: false,
     type: 'button',
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = {
   args: { variant: 'primary' },
@@ -29,7 +29,7 @@ export const Primary: Story = {
     setup: () => ({ args }),
     template: '<BaseButton v-bind="args">ボタン</BaseButton>',
   }),
-}
+};
 
 export const Secondary: Story = {
   args: { variant: 'secondary' },
@@ -38,7 +38,7 @@ export const Secondary: Story = {
     setup: () => ({ args }),
     template: '<BaseButton v-bind="args">ボタン</BaseButton>',
   }),
-}
+};
 
 export const Ghost: Story = {
   args: { variant: 'ghost' },
@@ -47,7 +47,7 @@ export const Ghost: Story = {
     setup: () => ({ args }),
     template: '<BaseButton v-bind="args">ボタン</BaseButton>',
   }),
-}
+};
 
 export const Small: Story = {
   args: { size: 'sm' },
@@ -56,7 +56,7 @@ export const Small: Story = {
     setup: () => ({ args }),
     template: '<BaseButton v-bind="args">小さいボタン</BaseButton>',
   }),
-}
+};
 
 export const Loading: Story = {
   args: { loading: true },
@@ -65,7 +65,7 @@ export const Loading: Story = {
     setup: () => ({ args }),
     template: '<BaseButton v-bind="args">ロード中</BaseButton>',
   }),
-}
+};
 
 export const Disabled: Story = {
   args: { disabled: true },
@@ -74,7 +74,7 @@ export const Disabled: Story = {
     setup: () => ({ args }),
     template: '<BaseButton v-bind="args">無効</BaseButton>',
   }),
-}
+};
 
 export const AllVariants: Story = {
   render: () => ({
@@ -90,4 +90,4 @@ export const AllVariants: Story = {
       </div>
     `,
   }),
-}
+};

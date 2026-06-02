@@ -4,10 +4,10 @@
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `variant` | `'default' \| 'primary' \| 'success' \| 'warning' \| 'error'` | `'default'` | 色バリアント |
-| `dot` | `boolean` | `false` | ドット形式（テキストなし）で表示 |
+| Prop      | Type                                                          | Default     | Description                      |
+| --------- | ------------------------------------------------------------- | ----------- | -------------------------------- |
+| `variant` | `'default' \| 'primary' \| 'success' \| 'warning' \| 'error'` | `'default'` | 色バリアント                     |
+| `dot`     | `boolean`                                                     | `false`     | ドット形式（テキストなし）で表示 |
 
 ## Usage
 
@@ -33,10 +33,12 @@
 ## 単体テスト項目
 
 ### レンダリング
+
 - デフォルト props でレンダリングされること（`variant="default"`, `dot=false`）
 - スロットのテキストが表示されること
 
 ### variant
+
 - `variant="default"` のとき対応するクラスが付与されること
 - `variant="primary"` のとき対応するクラスが付与されること
 - `variant="success"` のとき対応するクラスが付与されること
@@ -44,9 +46,11 @@
 - `variant="error"` のとき対応するクラスが付与されること
 
 ### dot
+
 - `dot=false` のとき通常のテキストバッジとして表示されること
 - `dot=true` のときドット形式で表示されること
 - `dot=true` のときスロットコンテンツが非表示（または幅ゼロ）になること
 
 ### アクセシビリティ
+
 - `dot=true` のとき、視覚的なドットのみでテキストがないため `aria-label` でラベルが提供されること

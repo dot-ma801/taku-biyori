@@ -1,12 +1,15 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseAlert from './BaseAlert.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 
 const meta: Meta<typeof BaseAlert> = {
   title: 'Common/BaseAlert',
   component: BaseAlert,
   tags: ['autodocs'],
   argTypes: {
-    variant: { control: 'select', options: ['info', 'success', 'warning', 'error'] },
+    variant: {
+      control: 'select',
+      options: ['info', 'success', 'warning', 'error'],
+    },
     onDismiss: { action: 'dismiss' },
   },
   args: {
@@ -14,10 +17,10 @@ const meta: Meta<typeof BaseAlert> = {
     title: '',
     dismissible: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Info: Story = {
   args: { variant: 'info', title: 'お知らせ' },
@@ -26,7 +29,7 @@ export const Info: Story = {
     setup: () => ({ args }),
     template: '<BaseAlert v-bind="args">これは情報メッセージです。</BaseAlert>',
   }),
-}
+};
 
 export const Success: Story = {
   args: { variant: 'success', title: '成功' },
@@ -35,16 +38,17 @@ export const Success: Story = {
     setup: () => ({ args }),
     template: '<BaseAlert v-bind="args">操作が正常に完了しました。</BaseAlert>',
   }),
-}
+};
 
 export const Warning: Story = {
   args: { variant: 'warning', title: '警告' },
   render: (args) => ({
     components: { BaseAlert },
     setup: () => ({ args }),
-    template: '<BaseAlert v-bind="args">この操作には注意が必要です。</BaseAlert>',
+    template:
+      '<BaseAlert v-bind="args">この操作には注意が必要です。</BaseAlert>',
   }),
-}
+};
 
 export const Error: Story = {
   args: { variant: 'error', title: 'エラー' },
@@ -53,7 +57,7 @@ export const Error: Story = {
     setup: () => ({ args }),
     template: '<BaseAlert v-bind="args">エラーが発生しました。</BaseAlert>',
   }),
-}
+};
 
 export const Dismissible: Story = {
   args: { variant: 'info', title: '閉じられるアラート', dismissible: true },
@@ -62,7 +66,7 @@ export const Dismissible: Story = {
     setup: () => ({ args }),
     template: '<BaseAlert v-bind="args">×ボタンで閉じられます。</BaseAlert>',
   }),
-}
+};
 
 export const AllVariants: Story = {
   render: () => ({
@@ -76,4 +80,4 @@ export const AllVariants: Story = {
       </div>
     `,
   }),
-}
+};

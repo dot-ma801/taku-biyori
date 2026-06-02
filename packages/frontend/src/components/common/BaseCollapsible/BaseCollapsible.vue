@@ -1,23 +1,30 @@
 <script setup lang="ts">
-import { Collapsible } from '@vuetify/v0'
-import { ChevronDown } from '@lucide/vue'
+import { Collapsible } from '@vuetify/v0';
+import { ChevronDown } from '@lucide/vue';
 
 defineProps<{
-  title: string
-  defaultOpen?: boolean
-}>()
+  title: string;
+  defaultOpen?: boolean;
+}>();
 
-const open = defineModel<boolean>({ default: false })
+const open = defineModel<boolean>({ default: false });
 </script>
 
 <template>
-  <Collapsible.Root v-model:open="open" :default-open="defaultOpen" class="collapsible">
+  <Collapsible.Root
+    v-model:open="open"
+    :default-open="defaultOpen"
+    class="collapsible"
+  >
     <Collapsible.Activator class="collapsible__activator">
       <span class="collapsible__title">{{ title }}</span>
       <Collapsible.Cue v-slot="{ isOpen }" class="collapsible__cue">
         <ChevronDown
           :size="16"
-          :style="{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }"
+          :style="{
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s',
+          }"
         />
       </Collapsible.Cue>
     </Collapsible.Activator>

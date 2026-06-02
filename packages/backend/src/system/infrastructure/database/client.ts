@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from './schema';
+import * as schema from '@/system/infrastructure/database/schema';
 
 /**
  * PostgreSQL クライアントと Drizzle の組み合わせを生成します。

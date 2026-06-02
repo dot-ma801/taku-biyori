@@ -1,4 +1,4 @@
 export {
   createDatabase,
   type Database,
-} from '../infrastructure/database/client';
+} from '@/system/infrastructure/database/client';

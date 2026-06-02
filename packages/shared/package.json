@@ -14,10 +14,13 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
     "lint:eslint": "eslint . --fix --cache",
     "lint:oxlint": "oxlint . --fix",
     "lint": "pnpm run lint:eslint && pnpm run lint:oxlint",
+    "lint:check": "eslint . && oxlint .",
     "format": "prettier --write . --config prettier.config.mjs --ignore-path .prettierignore",
+    "format:check": "prettier --check . --config prettier.config.mjs --ignore-path .prettierignore",
     "test": "echo \"Error: no test specified\""
   },
   "keywords": [],

@@ -1,9 +1,9 @@
 import type { HealthResponse } from '@taku-biyori/shared';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { getHealth } from '../../../health/application/get-health';
-import { registerAuthRoute } from '../../../auth/presentation/controller/routes/auth-route';
-import { registerHealthRoute } from '../../../health/presentation/controller/routes/health-route';
+import { getHealth } from '@/health/application/get-health';
+import { registerAuthRoute } from '@/auth/presentation/controller/routes/auth-route';
+import { registerHealthRoute } from '@/health/presentation/controller/routes/health-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;

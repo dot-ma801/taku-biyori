@@ -1,12 +1,15 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseProgress from './BaseProgress.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseProgress from '@/components/common/BaseProgress/BaseProgress.vue';
 
 const meta: Meta<typeof BaseProgress> = {
   title: 'Common/BaseProgress',
   component: BaseProgress,
   tags: ['autodocs'],
   argTypes: {
-    variant: { control: 'select', options: ['default', 'success', 'warning', 'error'] },
+    variant: {
+      control: 'select',
+      options: ['default', 'success', 'warning', 'error'],
+    },
     size: { control: 'select', options: ['sm', 'md'] },
   },
   args: {
@@ -17,10 +20,10 @@ const meta: Meta<typeof BaseProgress> = {
     size: 'md',
     showValue: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { value: 60, label: 'アップロード中' },
@@ -29,7 +32,7 @@ export const Default: Story = {
     setup: () => ({ args }),
     template: '<BaseProgress v-bind="args" style="max-width: 400px;" />',
   }),
-}
+};
 
 export const WithValue: Story = {
   args: { value: 75, label: '完了率', showValue: true },
@@ -38,7 +41,7 @@ export const WithValue: Story = {
     setup: () => ({ args }),
     template: '<BaseProgress v-bind="args" style="max-width: 400px;" />',
   }),
-}
+};
 
 export const Indeterminate: Story = {
   args: { indeterminate: true, label: '処理中...' },
@@ -47,7 +50,7 @@ export const Indeterminate: Story = {
     setup: () => ({ args }),
     template: '<BaseProgress v-bind="args" style="max-width: 400px;" />',
   }),
-}
+};
 
 export const AllVariants: Story = {
   render: () => ({
@@ -61,7 +64,7 @@ export const AllVariants: Story = {
       </div>
     `,
   }),
-}
+};
 
 export const Sizes: Story = {
   render: () => ({
@@ -73,4 +76,4 @@ export const Sizes: Story = {
       </div>
     `,
   }),
-}
+};

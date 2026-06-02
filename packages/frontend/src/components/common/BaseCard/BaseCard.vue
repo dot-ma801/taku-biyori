@@ -1,14 +1,22 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
-  title?: string
-  subtitle?: string
-  noPadding?: boolean
-  hoverable?: boolean
-}>(), {})
+withDefaults(
+  defineProps<{
+    title?: string;
+    subtitle?: string;
+    noPadding?: boolean;
+    hoverable?: boolean;
+  }>(),
+  {},
+);
 </script>
 
 <template>
-  <div :class="['card', { 'card--hoverable': hoverable, 'card--no-padding': noPadding }]">
+  <div
+    :class="[
+      'card',
+      { 'card--hoverable': hoverable, 'card--no-padding': noPadding },
+    ]"
+  >
     <div v-if="title || subtitle || $slots.header" class="card__header">
       <slot name="header">
         <div>
@@ -36,7 +44,9 @@ withDefaults(defineProps<{
   overflow: hidden;
 }
 .card--hoverable {
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
   cursor: pointer;
 }
 .card--hoverable:hover {

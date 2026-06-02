@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseCard from './BaseCard.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 
 const meta: Meta<typeof BaseCard> = {
   title: 'Common/BaseCard',
@@ -11,10 +11,10 @@ const meta: Meta<typeof BaseCard> = {
     noPadding: false,
     hoverable: false,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { title: 'カードタイトル', subtitle: 'サブタイトル' },
@@ -27,7 +27,7 @@ export const Default: Story = {
       </BaseCard>
     `,
   }),
-}
+};
 
 export const WithActions: Story = {
   args: { title: 'アクション付きカード' },
@@ -44,7 +44,7 @@ export const WithActions: Story = {
       </BaseCard>
     `,
   }),
-}
+};
 
 export const Hoverable: Story = {
   args: { title: 'ホバー可能カード', hoverable: true },
@@ -57,7 +57,7 @@ export const Hoverable: Story = {
       </BaseCard>
     `,
   }),
-}
+};
 
 export const NoPadding: Story = {
   args: { title: 'パディングなし', noPadding: true },
@@ -70,4 +70,4 @@ export const NoPadding: Story = {
       </BaseCard>
     `,
   }),
-}
+};

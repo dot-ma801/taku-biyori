@@ -4,16 +4,16 @@
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| Prop        | Type                                                                              | Default        | Description              |
+| ----------- | --------------------------------------------------------------------------------- | -------------- | ------------------------ |
 | `placement` | `'bottom' \| 'bottom-start' \| 'bottom-end' \| 'top' \| 'top-start' \| 'top-end'` | `'bottom-end'` | ポップオーバーの表示位置 |
 
 ## Slots
 
-| Slot | Description |
-|------|-------------|
-| `activator` | ポップオーバーを開くトリガー要素 |
-| `default` | ポップオーバー内に表示するコンテンツ |
+| Slot        | Description                          |
+| ----------- | ------------------------------------ |
+| `activator` | ポップオーバーを開くトリガー要素     |
+| `default`   | ポップオーバー内に表示するコンテンツ |
 
 ## Usage
 
@@ -38,12 +38,15 @@
 ## 単体テスト項目
 
 ### レンダリング
+
 - デフォルト props でレンダリングされること
 - activator スロットの内容がレンダリングされること
 
 ### placement
+
 - 各 placement 値が対応する CSS `positionArea` 値（`'bottom right'` など）に変換されて PopoverContent に渡されること
 - デフォルトの placement `bottom-end` が `"bottom right"` として渡されること
 
 ### アクセシビリティ
+
 - activator にキーボードフォーカス可能な要素を渡せること

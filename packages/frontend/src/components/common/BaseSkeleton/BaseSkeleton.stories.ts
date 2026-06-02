@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BaseSkeleton from './BaseSkeleton.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BaseSkeleton from '@/components/common/BaseSkeleton/BaseSkeleton.vue';
 
 const meta: Meta<typeof BaseSkeleton> = {
   title: 'Common/BaseSkeleton',
@@ -12,10 +12,10 @@ const meta: Meta<typeof BaseSkeleton> = {
     rounded: 'sm',
     lines: 1,
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { width: '200px', height: '14px' },
@@ -24,7 +24,7 @@ export const Default: Story = {
     setup: () => ({ args }),
     template: '<BaseSkeleton v-bind="args" />',
   }),
-}
+};
 
 export const Circle: Story = {
   args: { width: '40px', height: '40px', rounded: 'full' },
@@ -33,7 +33,7 @@ export const Circle: Story = {
     setup: () => ({ args }),
     template: '<BaseSkeleton v-bind="args" />',
   }),
-}
+};
 
 export const MultipleLines: Story = {
   args: { lines: 3, height: '14px' },
@@ -42,7 +42,7 @@ export const MultipleLines: Story = {
     setup: () => ({ args }),
     template: '<BaseSkeleton v-bind="args" style="max-width: 300px;" />',
   }),
-}
+};
 
 export const CardPlaceholder: Story = {
   render: () => ({
@@ -60,4 +60,4 @@ export const CardPlaceholder: Story = {
       </div>
     `,
   }),
-}
+};

@@ -1,25 +1,28 @@
 <script setup lang="ts">
-import { Tabs } from '@vuetify/v0'
+import { Tabs } from '@vuetify/v0';
 
 export interface TabItem {
-  value: string
-  label: string
-  disabled?: boolean
+  value: string;
+  label: string;
+  disabled?: boolean;
 }
 
 defineProps<{
-  tabs: TabItem[]
-  label?: string
-  stretch?: boolean
-  fixedHeight?: boolean
-}>()
+  tabs: TabItem[];
+  label?: string;
+  stretch?: boolean;
+  fixedHeight?: boolean;
+}>();
 
-const model = defineModel<string>()
+const model = defineModel<string>();
 </script>
 
 <template>
   <Tabs.Root v-model="model" class="tabs">
-    <Tabs.List :label="label ?? 'タブ'" :class="['tabs__list', { 'tabs__list--stretch': stretch }]">
+    <Tabs.List
+      :label="label ?? 'タブ'"
+      :class="['tabs__list', { 'tabs__list--stretch': stretch }]"
+    >
       <Tabs.Item
         v-for="tab in tabs"
         :key="tab.value"
@@ -31,8 +34,15 @@ const model = defineModel<string>()
       </Tabs.Item>
     </Tabs.List>
 
-    <div :class="['tabs__panels', { 'tabs__panels--fixed-height': fixedHeight }]">
-      <Tabs.Panel v-for="tab in tabs" :key="tab.value" :value="tab.value" class="tabs__panel">
+    <div
+      :class="['tabs__panels', { 'tabs__panels--fixed-height': fixedHeight }]"
+    >
+      <Tabs.Panel
+        v-for="tab in tabs"
+        :key="tab.value"
+        :value="tab.value"
+        class="tabs__panel"
+      >
         <slot :name="tab.value" />
       </Tabs.Panel>
     </div>
@@ -69,7 +79,9 @@ const model = defineModel<string>()
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
   white-space: nowrap;
   font-family: var(--font-family-base);
 }

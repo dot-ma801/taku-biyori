@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../../src/app/presentation/controller/create-app';
+import { createApp } from '@/app/presentation/controller/create-app';
 
 describe('createApp', () => {
   it('GET / で疎通確認を返す', async () => {

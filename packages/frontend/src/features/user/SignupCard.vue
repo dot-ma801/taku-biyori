@@ -16,14 +16,27 @@ const email = ref<string>('');
 const password = ref<string>('');
 
 const onClickSignup = () =>
-  submit(() => signUp.email({ name: userName.value, email: email.value, password: password.value }));
+  submit(() =>
+    signUp.email({
+      name: userName.value,
+      email: email.value,
+      password: password.value,
+    }),
+  );
 </script>
 
 <template>
   <BaseCard>
     <div class="content">
-      <BaseAlert v-if="errorMessage" title="アカウントの作成に失敗しました" variant="error">
-        {{ errorMessage || 'メールアドレス または パスワードを再度お確かめください。' }}
+      <BaseAlert
+        v-if="errorMessage"
+        title="アカウントの作成に失敗しました"
+        variant="error"
+      >
+        {{
+          errorMessage ||
+          'メールアドレス または パスワードを再度お確かめください。'
+        }}
       </BaseAlert>
 
       <GoogleLoginButton class="google-login"></GoogleLoginButton>

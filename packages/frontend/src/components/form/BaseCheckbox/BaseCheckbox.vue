@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { Checkbox } from '@vuetify/v0'
-import { Check } from '@lucide/vue'
+import { Checkbox } from '@vuetify/v0';
+import { Check } from '@lucide/vue';
 
 defineProps<{
-  label?: string
-  disabled?: boolean
-  value?: string
-}>()
+  label?: string;
+  disabled?: boolean;
+  value?: string;
+}>();
 
-const model = defineModel<boolean>({ default: false })
+const model = defineModel<boolean>({ default: false });
 </script>
 
 <template>
   <label :class="['checkbox', { 'checkbox--disabled': disabled }]">
-    <Checkbox.Root v-model="model" :disabled="disabled" :value="value" class="checkbox__root">
+    <Checkbox.Root
+      v-model="model"
+      :disabled="disabled"
+      :value="value"
+      class="checkbox__root"
+    >
       <Checkbox.Indicator class="checkbox__indicator">
         <Check :size="12" stroke-width="3" />
       </Checkbox.Indicator>
@@ -50,7 +55,9 @@ const model = defineModel<boolean>({ default: false })
   align-items: center;
   justify-content: center;
   cursor: inherit;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
   padding: 0;
 }
 .checkbox__root[aria-checked='true'],

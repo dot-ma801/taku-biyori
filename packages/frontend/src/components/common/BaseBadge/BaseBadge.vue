@@ -1,16 +1,23 @@
 <script setup lang="ts">
-type Variant = 'default' | 'primary' | 'success' | 'warning' | 'error'
+type Variant = 'default' | 'primary' | 'success' | 'warning' | 'error';
 
-withDefaults(defineProps<{
-  variant?: Variant
-  dot?: boolean
-}>(), {
-  variant: 'default',
-})
+withDefaults(
+  defineProps<{
+    variant?: Variant;
+    dot?: boolean;
+  }>(),
+  {
+    variant: 'default',
+  },
+);
 </script>
 
 <template>
-  <span v-if="dot" :class="['badge-dot', `badge-dot--${variant}`]" aria-hidden="true" />
+  <span
+    v-if="dot"
+    :class="['badge-dot', `badge-dot--${variant}`]"
+    aria-hidden="true"
+  />
   <span v-else :class="['badge', `badge--${variant}`]">
     <slot />
   </span>
@@ -35,15 +42,27 @@ withDefaults(defineProps<{
   color: var(--color-text-secondary);
 }
 .badge--primary {
-  background: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 15%,
+    var(--color-surface)
+  );
   color: var(--color-primary-text);
 }
 .badge--success {
-  background: color-mix(in srgb, var(--color-success) 15%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-success) 15%,
+    var(--color-surface)
+  );
   color: var(--color-success);
 }
 .badge--warning {
-  background: color-mix(in srgb, var(--color-warning) 15%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-warning) 15%,
+    var(--color-surface)
+  );
   color: var(--color-warning);
 }
 .badge--error {
@@ -57,9 +76,19 @@ withDefaults(defineProps<{
   height: 8px;
   border-radius: 50%;
 }
-.badge-dot--default { background: var(--color-text-muted); }
-.badge-dot--primary { background: var(--color-primary); }
-.badge-dot--success { background: var(--color-success); }
-.badge-dot--warning { background: var(--color-warning); }
-.badge-dot--error { background: var(--color-error); }
+.badge-dot--default {
+  background: var(--color-text-muted);
+}
+.badge-dot--primary {
+  background: var(--color-primary);
+}
+.badge-dot--success {
+  background: var(--color-success);
+}
+.badge-dot--warning {
+  background: var(--color-warning);
+}
+.badge-dot--error {
+  background: var(--color-error);
+}
 </style>

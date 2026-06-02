@@ -1,8 +1,5 @@
-import {
-  HealthResponseSchema,
-  type HealthResponse,
-} from '@taku-biyori/shared';
-import { createHealthStatus } from '../domain/health';
+import { HealthResponseSchema, type HealthResponse } from '@taku-biyori/shared';
+import { createHealthStatus } from '@/health/domain/health';
 
 /**
  * 疎通確認のユースケースです。

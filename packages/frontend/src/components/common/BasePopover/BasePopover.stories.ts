@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import BasePopover from './BasePopover.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import BasePopover from '@/components/common/BasePopover/BasePopover.vue';
 
 const meta: Meta<typeof BasePopover> = {
   title: 'Common/BasePopover',
@@ -8,16 +8,23 @@ const meta: Meta<typeof BasePopover> = {
   argTypes: {
     placement: {
       control: 'select',
-      options: ['bottom', 'bottom-start', 'bottom-end', 'top', 'top-start', 'top-end'],
+      options: [
+        'bottom',
+        'bottom-start',
+        'bottom-end',
+        'top',
+        'top-start',
+        'top-end',
+      ],
     },
   },
   args: {
     placement: 'bottom-end',
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const menuItemStyle = `
   display: block;
@@ -31,7 +38,7 @@ const menuItemStyle = `
   color: var(--color-text);
   cursor: pointer;
   transition: background-color 0.15s;
-`
+`;
 
 export const WithClickableItems: Story = {
   render: (args) => ({
@@ -54,7 +61,7 @@ export const WithClickableItems: Story = {
       </div>
     `,
   }),
-}
+};
 
 export const AllPlacements: Story = {
   render: () => ({
@@ -63,7 +70,7 @@ export const AllPlacements: Story = {
       return {
         topPlacements: ['top-start', 'top', 'top-end'],
         bottomPlacements: ['bottom-start', 'bottom', 'bottom-end'],
-      }
+      };
     },
     template: `
       <div style="display: flex; flex-direction: column; gap: 0; height: 320px; justify-content: space-between; padding: 0 64px;">
@@ -92,4 +99,4 @@ export const AllPlacements: Story = {
       </div>
     `,
   }),
-}
+};

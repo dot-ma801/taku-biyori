@@ -1,21 +1,24 @@
 <script setup lang="ts">
-import { Input } from '@vuetify/v0'
+import { Input } from '@vuetify/v0';
 
-type Rule = (value: string) => true | string
+type Rule = (value: unknown) => true | string;
 
-withDefaults(defineProps<{
-  label?: string
-  placeholder?: string
-  hint?: string
-  type?: string
-  rules?: Rule[]
-  disabled?: boolean
-  readonly?: boolean
-}>(), {
-  type: 'text',
-})
+withDefaults(
+  defineProps<{
+    label?: string;
+    placeholder?: string;
+    hint?: string;
+    type?: string;
+    rules?: Rule[];
+    disabled?: boolean;
+    readonly?: boolean;
+  }>(),
+  {
+    type: 'text',
+  },
+);
 
-const model = defineModel<string>({ default: '' })
+const model = defineModel<string>({ default: '' });
 </script>
 
 <template>
@@ -30,19 +33,14 @@ const model = defineModel<string>({ default: '' })
     validate-on="blur"
   >
     <label v-if="label" class="textbox__label">{{ label }}</label>
-    <Input.Control
-      :placeholder="placeholder"
-      class="textbox__control"
-    />
+    <Input.Control :placeholder="placeholder" class="textbox__control" />
     <Input.Description v-if="hint" class="textbox__hint">
       {{ hint }}
     </Input.Description>
     <Input.Error v-slot="{ errors }" class="textbox__errors">
-      <span
-        v-for="error in errors"
-        :key="error"
-        class="textbox__error"
-      >{{ error }}</span>
+      <span v-for="error in errors" :key="error" class="textbox__error">{{
+        error
+      }}</span>
     </Input.Error>
   </Input.Root>
 </template>
@@ -71,7 +69,9 @@ const model = defineModel<string>({ default: '' })
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   width: 100%;
   box-sizing: border-box;
 }

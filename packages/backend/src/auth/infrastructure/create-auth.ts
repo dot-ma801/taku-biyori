@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import type { Database } from '../../system/infrastructure/database/client';
-import * as schema from '../../system/infrastructure/database/schema';
+import type { Database } from '@/system/infrastructure/database/client';
+import * as schema from '@/system/infrastructure/database/schema';
 
 export interface CreateAuthOptions {
   db: Database;

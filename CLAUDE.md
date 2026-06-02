@@ -74,7 +74,8 @@ import { foo } from '@/game-session/domain/foo';
 import { bar } from '@/system/infrastructure/database/schema';
 ```
 
-`@/` は `packages/backend/src/` にマッピングされています（`tsconfig.json` の `paths` と `vite.config.ts` の `resolve.alias` で設定）。
+`@/` は各パッケージの `src/` にマッピングされています（`tsconfig.json` の `paths` と `vite.config.ts` の `resolve.alias` で設定）。
+backend・frontend ともに同じ規則です。
 
 ---
 

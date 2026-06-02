@@ -25,7 +25,7 @@ export const gameSessions = pgTable('game_sessions', {
   scheduledAt: date('scheduled_at'),
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const gameSessionMembers = pgTable('game_session_members', {
@@ -37,7 +37,7 @@ export const gameSessionMembers = pgTable('game_session_members', {
   guestName: text('guest_name'),
   characterName: text('character_name'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const gameSessionsRelations = relations(gameSessions, ({ one, many }) => ({

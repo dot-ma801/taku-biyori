@@ -46,6 +46,6 @@ export const CreateGameSessionInputSchema = z.object({
   description: z.string().max(1000).optional(),
   scenarioName: z.string().max(200).optional(),
   maxMembers: z.number().int().min(2).max(20).optional(),
-  openUntil: z.string().optional(),
+  openUntil: z.iso.date().optional(),
 });
 export type CreateGameSessionInput = z.infer<typeof CreateGameSessionInputSchema>;

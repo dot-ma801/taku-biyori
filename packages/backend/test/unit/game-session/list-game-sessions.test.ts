@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { listGameSessions } from '../../../src/game-session/application/list-game-sessions';
-import type { ListGameSessionsRepository } from '../../../src/game-session/application/list-game-sessions';
+import { listGameSessions } from '@/game-session/application/list-game-sessions';
+import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
 import type { GameSessionListItem } from '@taku-biyori/shared';
 
 const mockListItem: GameSessionListItem = {

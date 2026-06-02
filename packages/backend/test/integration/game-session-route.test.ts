@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../../src/app/presentation/controller/create-app';
+import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionListItem, GameSession } from '@taku-biyori/shared';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -24,17 +24,24 @@ const mockGameSession: GameSession = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
-const makeApp = (overrides: {
-  getSession?: () => Promise<typeof mockSession | null>;
-  listGameSessions?: (userId: string) => Promise<GameSessionListItem[]>;
-  createGameSession?: (userId: string, input: unknown) => Promise<GameSession>;
-} = {}) =>
+const makeApp = (
+  overrides: {
+    getSession?: () => Promise<typeof mockSession | null>;
+    listGameSessions?: (userId: string) => Promise<GameSessionListItem[]>;
+    createGameSession?: (
+      userId: string,
+      input: unknown,
+    ) => Promise<GameSession>;
+  } = {},
+) =>
   createApp({
     frontendOrigin: 'http://localhost:5173',
     authHandler: vi.fn(async () => new Response('ok')),
     getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
-    listGameSessions: overrides.listGameSessions ?? vi.fn().mockResolvedValue([mockListItem]),
-    createGameSession: overrides.createGameSession ?? vi.fn().mockResolvedValue(mockGameSession),
+    listGameSessions:
+      overrides.listGameSessions ?? vi.fn().mockResolvedValue([mockListItem]),
+    createGameSession:
+      overrides.createGameSession ?? vi.fn().mockResolvedValue(mockGameSession),
   });
 
 describe('GET /api/game-sessions', () => {

@@ -27,7 +27,8 @@ const app = createApp({
   authHandler: (request) => auth.handler(request),
   getSession: (headers) => auth.api.getSession({ headers }),
   listGameSessions: (userId) => listGameSessions(gameSessionRepo, userId),
-  createGameSession: (userId, input) => createGameSession(gameSessionRepo, userId, input),
+  createGameSession: (userId, input) =>
+    createGameSession(gameSessionRepo, userId, input),
 });
 
 export default app;

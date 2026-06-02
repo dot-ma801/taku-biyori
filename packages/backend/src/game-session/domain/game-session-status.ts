@@ -1,4 +1,7 @@
-import { GameSessionStatusSchema, type GameSessionStatus } from '@taku-biyori/shared';
+import {
+  GameSessionStatusSchema,
+  type GameSessionStatus,
+} from '@taku-biyori/shared';
 
 const { enum: Status } = GameSessionStatusSchema;
 

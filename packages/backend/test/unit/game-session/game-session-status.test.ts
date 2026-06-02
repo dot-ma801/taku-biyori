@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getGameSessionStatus } from '../../../src/game-session/domain/game-session-status';
+import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 
 const base = {
   isPublished: false,

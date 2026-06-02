@@ -1,7 +1,4 @@
-import {
-  HealthResponseSchema,
-  type HealthResponse,
-} from '@taku-biyori/shared';
+import { HealthResponseSchema, type HealthResponse } from '@taku-biyori/shared';
 import { createHealthStatus } from '@/health/domain/health';
 
 /**

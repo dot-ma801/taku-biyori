@@ -1,4 +1,9 @@
-import type { HealthResponse, GameSessionListItem, GameSession, CreateGameSessionInput } from '@taku-biyori/shared';
+import type {
+  HealthResponse,
+  GameSessionListItem,
+  GameSession,
+  CreateGameSessionInput,
+} from '@taku-biyori/shared';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '@/health/application/get-health';
@@ -12,7 +17,10 @@ export interface CreateAppOptions {
   getHealth?: () => HealthResponse;
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
   listGameSessions: (userId: string) => Promise<GameSessionListItem[]>;
-  createGameSession: (userId: string, input: CreateGameSessionInput) => Promise<GameSession>;
+  createGameSession: (
+    userId: string,
+    input: CreateGameSessionInput,
+  ) => Promise<GameSession>;
 }
 
 /**

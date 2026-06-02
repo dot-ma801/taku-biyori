@@ -9,7 +9,8 @@ import { getGameSessionStatus } from '@/game-session/domain/game-session-status'
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
 import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
 
-export type GameSessionRepository = ListGameSessionsRepository & CreateGameSessionRepository;
+export type GameSessionRepository = ListGameSessionsRepository &
+  CreateGameSessionRepository;
 
 type GameSessionRow = {
   id: string;
@@ -28,7 +29,8 @@ type GameSessionRow = {
 
 type ListRow = GameSessionRow & { memberCount: number };
 
-const toDateOrNull = (s: string | null): Date | null => (s ? new Date(s) : null);
+const toDateOrNull = (s: string | null): Date | null =>
+  s ? new Date(s) : null;
 
 const toGameSession = (row: GameSessionRow): GameSession => ({
   id: row.id,
@@ -69,7 +71,9 @@ const toListItem = (row: ListRow): GameSessionListItem => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-export const createGameSessionRepository = (db: Database): GameSessionRepository => ({
+export const createGameSessionRepository = (
+  db: Database,
+): GameSessionRepository => ({
   async findByUserId(userId: string): Promise<GameSessionListItem[]> {
     const rows = await db
       .select({
@@ -77,7 +81,10 @@ export const createGameSessionRepository = (db: Database): GameSessionRepository
         memberCount: count(gameSessionMembers.id),
       })
       .from(gameSessions)
-      .leftJoin(gameSessionMembers, eq(gameSessionMembers.gameSessionId, gameSessions.id))
+      .leftJoin(
+        gameSessionMembers,
+        eq(gameSessionMembers.gameSessionId, gameSessions.id),
+      )
       .where(
         or(
           eq(gameSessions.hostUserId, userId),

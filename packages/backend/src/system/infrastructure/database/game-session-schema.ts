@@ -8,7 +8,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { user } from './schema';
+import { user } from '@/system/infrastructure/database/schema';
 
 export const gameSessions = pgTable('game_sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -25,7 +25,10 @@ export const gameSessions = pgTable('game_sessions', {
   scheduledAt: date('scheduled_at'),
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const gameSessionMembers = pgTable('game_session_members', {
@@ -37,24 +40,33 @@ export const gameSessionMembers = pgTable('game_session_members', {
   guestName: text('guest_name'),
   characterName: text('character_name'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
-export const gameSessionsRelations = relations(gameSessions, ({ one, many }) => ({
-  host: one(user, {
-    fields: [gameSessions.hostUserId],
-    references: [user.id],
+export const gameSessionsRelations = relations(
+  gameSessions,
+  ({ one, many }) => ({
+    host: one(user, {
+      fields: [gameSessions.hostUserId],
+      references: [user.id],
+    }),
+    members: many(gameSessionMembers),
   }),
-  members: many(gameSessionMembers),
-}));
+);
 
-export const gameSessionMembersRelations = relations(gameSessionMembers, ({ one }) => ({
-  gameSession: one(gameSessions, {
-    fields: [gameSessionMembers.gameSessionId],
-    references: [gameSessions.id],
+export const gameSessionMembersRelations = relations(
+  gameSessionMembers,
+  ({ one }) => ({
+    gameSession: one(gameSessions, {
+      fields: [gameSessionMembers.gameSessionId],
+      references: [gameSessions.id],
+    }),
+    user: one(user, {
+      fields: [gameSessionMembers.userId],
+      references: [user.id],
+    }),
   }),
-  user: one(user, {
-    fields: [gameSessionMembers.userId],
-    references: [user.id],
-  }),
-}));
+);

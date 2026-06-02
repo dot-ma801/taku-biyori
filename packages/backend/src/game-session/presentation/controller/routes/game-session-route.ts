@@ -1,11 +1,18 @@
 import type { Hono } from 'hono';
-import type { GameSession, GameSessionListItem, CreateGameSessionInput } from '@taku-biyori/shared';
+import type {
+  GameSession,
+  GameSessionListItem,
+  CreateGameSessionInput,
+} from '@taku-biyori/shared';
 import { CreateGameSessionInputSchema } from '@taku-biyori/shared';
 
 export interface RegisterGameSessionRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
   listGameSessions: (userId: string) => Promise<GameSessionListItem[]>;
-  createGameSession: (userId: string, input: CreateGameSessionInput) => Promise<GameSession>;
+  createGameSession: (
+    userId: string,
+    input: CreateGameSessionInput,
+  ) => Promise<GameSession>;
 }
 
 export const registerGameSessionRoute = (
@@ -39,7 +46,10 @@ export const registerGameSessionRoute = (
       return c.json({ error: parsed.error.issues }, 400);
     }
 
-    const gameSession = await options.createGameSession(session.user.id, parsed.data);
+    const gameSession = await options.createGameSession(
+      session.user.id,
+      parsed.data,
+    );
     return c.json(gameSession, 201);
   });
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGameSession } from '../../../src/game-session/application/create-game-session';
-import type { CreateGameSessionRepository } from '../../../src/game-session/application/create-game-session';
+import { createGameSession } from '@/game-session/application/create-game-session';
+import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
 import type { GameSession } from '@taku-biyori/shared';
 
 const mockGameSession: GameSession = {
@@ -28,7 +28,9 @@ describe('createGameSession', () => {
     };
 
     // Act
-    const result = await createGameSession(repo, 'user-1', { title: 'テスト卓' });
+    const result = await createGameSession(repo, 'user-1', {
+      title: 'テスト卓',
+    });
 
     // Assert
     expect(result).toMatchObject({

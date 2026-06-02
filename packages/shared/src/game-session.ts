@@ -48,4 +48,6 @@ export const CreateGameSessionInputSchema = z.object({
   maxMembers: z.number().int().min(2).max(20).optional(),
   openUntil: z.iso.date().optional(),
 });
-export type CreateGameSessionInput = z.infer<typeof CreateGameSessionInputSchema>;
+export type CreateGameSessionInput = z.infer<
+  typeof CreateGameSessionInputSchema
+>;

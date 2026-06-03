@@ -59,6 +59,26 @@ packages/backend/src/
 
 ---
 
+## インポートルール
+
+`src/` および `test/` 配下のファイルは、**相対パス（`./`・`../`）でのインポートを禁止**しています。
+必ず `@/` エイリアスを使うこと（ESLint `no-restricted-imports` で強制）。
+
+```ts
+// ❌ NG
+import { foo } from '../../../src/game-session/domain/foo';
+import { bar } from './schema';
+
+// ✅ OK
+import { foo } from '@/game-session/domain/foo';
+import { bar } from '@/system/infrastructure/database/schema';
+```
+
+`@/` は各パッケージの `src/` にマッピングされています（`tsconfig.json` の `paths` と `vite.config.ts` の `resolve.alias` で設定）。
+backend・frontend ともに同じ規則です。
+
+---
+
 ## 命名規則
 
 - ファイル名は **kebab-case**（例: `create-game-session.ts`, `game-session-route.ts`）
@@ -148,6 +168,33 @@ pnpm --filter @taku-biyori/backend test:integration
 4. `src/{機能名}/` ディレクトリを作成し、レイヤーごとにファイルを分ける
 5. `src/{機能名}/presentation/controller/routes/{機能名}-route.ts` にルートを定義する
 6. `src/app/presentation/controller/create-app.ts` にルートを登録する
+
+---
+
+## コミット前チェック
+
+コミット前に以下をすべて通しておくこと。CI で Lint・Format Check・Type Check・Test が別ジョブで動くため、まとめて確認しておくと安全。
+
+```bash
+# shared のビルド（テスト実行前に必要）
+pnpm --filter @taku-biyori/shared build
+
+# フォーマット修正（shared・backend 両方）
+pnpm --filter @taku-biyori/shared format
+pnpm --filter @taku-biyori/backend format
+
+# Lint
+pnpm --filter @taku-biyori/backend lint
+
+# 型チェック
+pnpm --filter @taku-biyori/backend typecheck
+
+# テスト
+pnpm --filter @taku-biyori/backend test
+```
+
+> **注意**: `@taku-biyori/shared` は `dist/` が存在しないとバックエンドのテストが型解決に失敗する。
+> shared のコードを変更した場合は必ず `build` を再実行すること。
 
 ---
 

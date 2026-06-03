@@ -7,6 +7,9 @@ describe('createApp', () => {
     const app = createApp({
       frontendOrigin: 'http://localhost:5173',
       authHandler: vi.fn(async () => new Response('ok')),
+      getSession: vi.fn().mockResolvedValue(null),
+      listGameSessions: vi.fn().mockResolvedValue([]),
+      createGameSession: vi.fn(),
     });
 
     // Act
@@ -41,6 +44,9 @@ describe('createApp', () => {
     const app = createApp({
       frontendOrigin: 'http://localhost:5173',
       authHandler,
+      getSession: vi.fn().mockResolvedValue(null),
+      listGameSessions: vi.fn().mockResolvedValue([]),
+      createGameSession: vi.fn(),
     });
 
     // Act

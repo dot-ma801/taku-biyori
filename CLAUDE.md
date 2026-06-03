@@ -171,6 +171,23 @@ pnpm --filter @taku-biyori/backend test:integration
 
 ---
 
+## コミット規則
+
+- **メッセージは日本語**で書く
+- **粒度は細かく**保つ。「shared に型追加」「application 層実装」「route 登録」など、意味のまとまりごとに分けてコミットする
+- 1 コミットに複数の独立した変更を混ぜない
+
+```
+# 例
+feat: shared に UpdateGameSessionInput 型を追加
+feat: update-game-session ユースケースを実装
+feat: PATCH /api/game-sessions/:id ルートを登録
+test: update-game-session のユニットテストを追加
+fix: GET /api/game-sessions/:id を未認証でも公開セッションに接続できるよう修正
+```
+
+---
+
 ## コミット前チェック
 
 コミット前に以下をすべて通しておくこと。CI で Lint・Format Check・Type Check・Test が別ジョブで動くため、まとめて確認しておくと安全。

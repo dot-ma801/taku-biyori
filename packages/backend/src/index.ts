@@ -8,6 +8,9 @@ import { loadBackendConfig } from '@/system/infrastructure/config/env';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
 import { listGameSessions } from '@/game-session/application/list-game-sessions';
 import { createGameSession } from '@/game-session/application/create-game-session';
+import { getGameSession } from '@/game-session/application/get-game-session';
+import { updateGameSession } from '@/game-session/application/update-game-session';
+import { deleteGameSession } from '@/game-session/application/delete-game-session';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -29,6 +32,11 @@ const app = createApp({
   listGameSessions: (userId) => listGameSessions(gameSessionRepo, userId),
   createGameSession: (userId, input) =>
     createGameSession(gameSessionRepo, userId, input),
+  getGameSession: (id) => getGameSession(gameSessionRepo, id),
+  updateGameSession: (id, userId, input) =>
+    updateGameSession(gameSessionRepo, id, userId, input),
+  deleteGameSession: (id, userId) =>
+    deleteGameSession(gameSessionRepo, id, userId),
 });
 
 export default app;

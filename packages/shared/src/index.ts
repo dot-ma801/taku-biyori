@@ -16,4 +16,10 @@ export {
   type GameSession,
   CreateGameSessionInputSchema,
   type CreateGameSessionInput,
+  UpdateGameSessionInputSchema,
+  type UpdateGameSessionInput,
+  GameSessionMemberSchema,
+  type GameSessionMember,
+  GameSessionDetailSchema,
+  type GameSessionDetail,
 } from './game-session.js';

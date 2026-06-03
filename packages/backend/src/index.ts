@@ -32,7 +32,7 @@ const app = createApp({
   listGameSessions: (userId) => listGameSessions(gameSessionRepo, userId),
   createGameSession: (userId, input) =>
     createGameSession(gameSessionRepo, userId, input),
-  getGameSession: (id) => getGameSession(gameSessionRepo, id),
+  getGameSession: (id, userId) => getGameSession(gameSessionRepo, id, userId),
   updateGameSession: (id, userId, input) =>
     updateGameSession(gameSessionRepo, id, userId, input),
   deleteGameSession: (id, userId) =>

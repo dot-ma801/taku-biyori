@@ -1,7 +1,6 @@
 import type { Hono } from 'hono';
 import type {
   GameSession,
-  GameSessionDetail,
   GameSessionListItem,
   CreateGameSessionInput,
   UpdateGameSessionInput,
@@ -10,6 +9,7 @@ import {
   CreateGameSessionInputSchema,
   UpdateGameSessionInputSchema,
 } from '@taku-biyori/shared';
+import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionResult } from '@/game-session/application/delete-game-session';
 
@@ -20,7 +20,10 @@ export interface RegisterGameSessionRouteOptions {
     userId: string,
     input: CreateGameSessionInput,
   ) => Promise<GameSession>;
-  getGameSession: (id: string) => Promise<GameSessionDetail | null>;
+  getGameSession: (
+    id: string,
+    userId: string | null,
+  ) => Promise<GetGameSessionResult>;
   updateGameSession: (
     id: string,
     userId: string,
@@ -72,20 +75,17 @@ export const registerGameSessionRoute = (
 
   app.get('/api/game-sessions/:id', async (c) => {
     const session = await options.getSession(c.req.raw.headers);
-    if (!session) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
+    const userId = session?.user.id ?? null;
 
-    const detail = await options.getGameSession(c.req.param('id'));
-    if (!detail) {
-      return c.json({ error: 'Not Found' }, 404);
-    }
+    const result = await options.getGameSession(c.req.param('id'), userId);
 
-    if (!detail.isPublished && detail.createdBy !== session.user.id) {
-      return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    if (result.type === 'forbidden') {
+      return userId === null
+        ? c.json({ error: 'Unauthorized' }, 401)
+        : c.json({ error: 'Forbidden' }, 403);
     }
-
-    return c.json(detail);
+    return c.json(result.gameSession);
   });
 
   app.patch('/api/game-sessions/:id', async (c) => {
@@ -106,11 +106,16 @@ export const registerGameSessionRoute = (
       return c.json({ error: parsed.error.issues }, 400);
     }
 
-    const result = await options.updateGameSession(
-      c.req.param('id'),
-      session.user.id,
-      parsed.data,
-    );
+    let result: UpdateGameSessionResult;
+    try {
+      result = await options.updateGameSession(
+        c.req.param('id'),
+        session.user.id,
+        parsed.data,
+      );
+    } catch {
+      return c.json({ error: 'Internal Server Error' }, 500);
+    }
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);

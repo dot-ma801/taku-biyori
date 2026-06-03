@@ -2,10 +2,10 @@ import type {
   HealthResponse,
   GameSessionListItem,
   GameSession,
-  GameSessionDetail,
   CreateGameSessionInput,
   UpdateGameSessionInput,
 } from '@taku-biyori/shared';
+import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionResult } from '@/game-session/application/delete-game-session';
 import { Hono } from 'hono';
@@ -25,7 +25,10 @@ export interface CreateAppOptions {
     userId: string,
     input: CreateGameSessionInput,
   ) => Promise<GameSession>;
-  getGameSession: (id: string) => Promise<GameSessionDetail | null>;
+  getGameSession: (
+    id: string,
+    userId: string | null,
+  ) => Promise<GetGameSessionResult>;
   updateGameSession: (
     id: string,
     userId: string,

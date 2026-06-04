@@ -67,6 +67,13 @@ export type UpdateGameSessionInput = z.infer<
   typeof UpdateGameSessionInputSchema
 >;
 
+export const UpdateGameSessionStatusInputSchema = z.object({
+  status: z.enum(['open', 'completed']),
+});
+export type UpdateGameSessionStatusInput = z.infer<
+  typeof UpdateGameSessionStatusInputSchema
+>;
+
 export const GameSessionMemberSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().nullable(),

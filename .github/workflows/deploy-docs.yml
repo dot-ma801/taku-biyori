@@ -1,0 +1,148 @@
+name: Deploy Branch-specific API Docs
+
+on:
+  push:
+    # すべてのブランチ（gh-pagesを除く）へのPushを対象にする
+    branches-ignore:
+      - 'gh-pages'
+    paths:
+      - 'docs/openapi.yml'
+
+permissions:
+  contents: write # gh-pagesブランチへの書き込み権限が必要
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      - name: Get Branch Name
+        # ブランチ名を安全なフォルダ名に変換し、ref のハッシュを付与して衝突を防ぐ
+        run: |
+          RAW_REF="${GITHUB_REF#refs/heads/}"
+          SAFE_REF="$(printf '%s' "$RAW_REF" | sed 's/[^a-zA-Z0-9\-_]/_/g')"
+          REF_HASH="$(printf '%s' "$RAW_REF" | sha256sum | cut -c1-8)"
+          echo "BRANCH_NAME=${SAFE_REF}_${REF_HASH}" >> "$GITHUB_ENV"
+
+      - name: Build Redoc HTML
+        run: |
+          mkdir -p output
+          redocly build-docs docs/openapi.yml -o output/index.html
+
+      - name: Build Swagger UI HTML
+        run: |
+          cp docs/openapi.yml output/openapi.yml
+          cat > output/swagger.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>taku-biyori API - Swagger UI</title>
+            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css">
+          </head>
+          <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+            <script>
+              SwaggerUIBundle({
+                url: './openapi.yml',
+                dom_id: '#swagger-ui',
+                presets: [SwaggerUIBundle.presets.apis],
+                layout: 'BaseLayout',
+              });
+            </script>
+          </body>
+          </html>
+          EOF
+
+      # 生成したHTMLを、gh-pagesブランチの「api-doc/branches/ブランチ名/」配下にだけ反映・プッシュする
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          destination_dir: api-doc/branches/${{ env.BRANCH_NAME }}
+          keep_files: true # 他のブランチのドキュメントを消さずに残す設定
+
+      - name: Update root index
+        run: |
+          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          git clone --depth=1 --single-branch --branch gh-pages \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            gh-pages-dir
+          cd gh-pages-dir
+
+          # api-doc/branches/ 配下のディレクトリ一覧を取得
+          BRANCHES=$(find api-doc/branches -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|api-doc/branches/||' | sort)
+
+          # index.html を生成
+          mkdir -p api-doc
+          cat > api-doc/index.html << HTMLEOF
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>taku-biyori API ドキュメント</title>
+            <style>
+              body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 16px; }
+              h1 { font-size: 1.4rem; }
+              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+              th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e0e0e0; }
+              th { background: #f5f5f5; font-size: 0.85rem; color: #555; }
+              a { color: #0969da; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <h1>taku-biyori API ドキュメント</h1>
+            <table>
+              <thead><tr><th>ブランチ</th><th>Redoc</th><th>Swagger UI</th></tr></thead>
+              <tbody>
+          HTMLEOF
+
+          for branch in $BRANCHES; do
+            echo "      <tr>" >> api-doc/index.html
+            echo "        <td>$(echo $branch | sed 's/_/\//2;s/_/-/g')</td>" >> api-doc/index.html
+            echo "        <td><a href=\"${BASE_URL}/api-doc/branches/${branch}/\">Redoc</a></td>" >> api-doc/index.html
+            echo "        <td><a href=\"${BASE_URL}/api-doc/branches/${branch}/swagger.html\">Swagger UI</a></td>" >> api-doc/index.html
+            echo "      </tr>" >> api-doc/index.html
+          done
+
+          cat >> api-doc/index.html << HTMLEOF
+              </tbody>
+            </table>
+          </body>
+          </html>
+          HTMLEOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add api-doc/index.html
+          git diff --cached --quiet || git commit -m "update: api-doc index を更新"
+          git push
+
+      - name: Output docs URL
+        run: |
+          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          echo "### API ドキュメント" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**一覧ページ**: [$BASE_URL/]($BASE_URL/)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| UI | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Redoc | [$BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/]($BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Swagger UI | [$BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/swagger.html]($BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/swagger.html) |" >> $GITHUB_STEP_SUMMARY

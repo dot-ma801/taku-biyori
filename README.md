@@ -4,6 +4,12 @@
 
 > **セットアップ時の注意**: `taku-biyori` を文字列検索して、プロジェクト名に書き換えてください。
 
+## API ドキュメント
+
+**[https://dot-ma801.github.io/taku-biyori/api-doc/](https://dot-ma801.github.io/taku-biyori/api-doc/)**
+
+ブランチごとの Redoc / Swagger UI へのリンクをまとめたページです。`docs/openapi.yml` を変更して push すると自動更新されます。
+
 ## 技術スタック
 
 - **パッケージマネージャ**: pnpm (monorepo)

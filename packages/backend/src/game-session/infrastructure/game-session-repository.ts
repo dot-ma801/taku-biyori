@@ -1,4 +1,12 @@
-import { and, count, eq, exists, or, getTableColumns } from 'drizzle-orm';
+import {
+  and,
+  count,
+  eq,
+  exists,
+  isNull,
+  or,
+  getTableColumns,
+} from 'drizzle-orm';
 import type {
   GameSession,
   GameSessionDetail,
@@ -224,7 +232,7 @@ export const createGameSessionRepository = (
     const result = await db
       .update(gameSessions)
       .set({ isPublished: true })
-      .where(eq(gameSessions.id, id))
+      .where(and(eq(gameSessions.id, id), eq(gameSessions.isPublished, false)))
       .returning();
 
     const session = result[0];
@@ -236,7 +244,13 @@ export const createGameSessionRepository = (
     const result = await db
       .update(gameSessions)
       .set({ completedAt })
-      .where(eq(gameSessions.id, id))
+      .where(
+        and(
+          eq(gameSessions.id, id),
+          eq(gameSessions.isPublished, true),
+          isNull(gameSessions.completedAt),
+        ),
+      )
       .returning();
 
     const session = result[0];

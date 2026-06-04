@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,8 +29,12 @@ jobs:
         run: npm install -g @redocly/cli
 
       - name: Get Branch Name
-        # スラッシュなどの特殊文字を置換して安全なフォルダ名を取得
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9\-_]/_/g')" >> $GITHUB_ENV
+        # ブランチ名を安全なフォルダ名に変換し、ref のハッシュを付与して衝突を防ぐ
+        run: |
+          RAW_REF="${GITHUB_REF#refs/heads/}"
+          SAFE_REF="$(printf '%s' "$RAW_REF" | sed 's/[^a-zA-Z0-9\-_]/_/g')"
+          REF_HASH="$(printf '%s' "$RAW_REF" | sha256sum | cut -c1-8)"
+          echo "BRANCH_NAME=${SAFE_REF}_${REF_HASH}" >> "$GITHUB_ENV"
 
       - name: Build Redoc HTML
         run: |
@@ -45,16 +51,16 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>taku-biyori API - Swagger UI</title>
-            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
+            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css">
           </head>
           <body>
             <div id="swagger-ui"></div>
-            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+            <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
             <script>
               SwaggerUIBundle({
                 url: './openapi.yml',
                 dom_id: '#swagger-ui',
-                presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+                presets: [SwaggerUIBundle.presets.apis],
                 layout: 'BaseLayout',
               });
             </script>

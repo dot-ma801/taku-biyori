@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionListItem, GameSession } from '@taku-biyori/shared';
+import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -24,6 +25,16 @@ const mockGameSession: GameSession = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
+const mockGameSessionDetail = {
+  ...mockGameSession,
+  members: [],
+};
+
+const mockGetOk: GetGameSessionResult = {
+  type: 'ok',
+  gameSession: mockGameSessionDetail,
+};
+
 const makeApp = (
   overrides: {
     getSession?: () => Promise<typeof mockSession | null>;
@@ -32,6 +43,23 @@ const makeApp = (
       userId: string,
       input: unknown,
     ) => Promise<GameSession>;
+    getGameSession?: (
+      id: string,
+      userId: string | null,
+    ) => Promise<GetGameSessionResult>;
+    updateGameSession?: (
+      id: string,
+      userId: string,
+      input: unknown,
+    ) => Promise<
+      | { type: 'ok'; gameSession: GameSession }
+      | { type: 'notFound' }
+      | { type: 'forbidden' }
+    >;
+    deleteGameSession?: (
+      id: string,
+      userId: string,
+    ) => Promise<{ type: 'ok' } | { type: 'notFound' } | { type: 'forbidden' }>;
   } = {},
 ) =>
   createApp({
@@ -42,6 +70,13 @@ const makeApp = (
       overrides.listGameSessions ?? vi.fn().mockResolvedValue([mockListItem]),
     createGameSession:
       overrides.createGameSession ?? vi.fn().mockResolvedValue(mockGameSession),
+    getGameSession:
+      overrides.getGameSession ?? vi.fn().mockResolvedValue(mockGetOk),
+    updateGameSession:
+      overrides.updateGameSession ??
+      vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+    deleteGameSession:
+      overrides.deleteGameSession ?? vi.fn().mockResolvedValue({ type: 'ok' }),
   });
 
 describe('GET /api/game-sessions', () => {
@@ -166,5 +201,242 @@ describe('POST /api/game-sessions', () => {
       'user-1',
       expect.objectContaining({ title: '詳細卓', maxMembers: 4 }),
     );
+  });
+});
+
+describe('GET /api/game-sessions/:id', () => {
+  it('認証済みなら 200 で詳細を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1');
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockGameSessionDetail);
+  });
+
+  it('公開済みセッションは未認証でも 200 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getSession: vi.fn().mockResolvedValue(null),
+      getGameSession: vi.fn().mockResolvedValue(mockGetOk),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1');
+
+    // Assert
+    expect(response.status).toBe(200);
+  });
+
+  it('存在しないセッションなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGameSession: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/nonexistent');
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('非公開セッションにホスト以外がアクセスすると 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGameSession: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1');
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('非公開セッションに未認証でアクセスすると 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getSession: vi.fn().mockResolvedValue(null),
+      getGameSession: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1');
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('userId を getGameSession に渡す', async () => {
+    // Arrange
+    const getGameSession = vi.fn().mockResolvedValue(mockGetOk);
+    const app = makeApp({ getGameSession });
+
+    // Act
+    await app.request('/api/game-sessions/session-1');
+
+    // Assert
+    expect(getGameSession).toHaveBeenCalledWith('session-1', 'user-1');
+  });
+});
+
+describe('PATCH /api/game-sessions/:id', () => {
+  it('ホストが更新すると 200 とセッションを返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '更新後' }),
+    });
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockGameSession);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '更新後' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホストでない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGameSession: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '更新後' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しないセッションなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGameSession: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '更新後' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('空ボディなら 400 を返す（最低1フィールド必要）', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('title が空文字なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/game-sessions/:id', () => {
+  it('ホストが削除すると 204 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(response.status).toBe(204);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホストでない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteGameSession: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しないセッションなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteGameSession: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(response.status).toBe(404);
   });
 });

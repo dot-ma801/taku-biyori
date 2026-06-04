@@ -171,6 +171,36 @@ pnpm --filter @taku-biyori/backend test:integration
 
 ---
 
+## コミット規則
+
+- **メッセージは日本語**で書く
+- **粒度は細かく**保つ。「shared に型追加」「application 層実装」「route 登録」など、意味のまとまりごとに分けてコミットする
+- 1 コミットに複数の独立した変更を混ぜない
+- **プレフィックスは以下のいずれかを使う**
+
+| プレフィックス | 用途 |
+|---|---|
+| `[add]` | 新規ファイル・機能・型の追加 |
+| `[update]` | 既存機能の変更・改善 |
+| `[fix]` | バグ修正 |
+| `[delete]` | ファイル・コード・機能の削除 |
+| `[clean]` | コードフォーマット・lint・命名など動作に影響しない変更 |
+| `[style]` | CSS・スタイリングの変更 |
+| `[doc]` | ドキュメント・コメントの追加・更新 |
+
+```
+# 例
+[add] shared に UpdateGameSessionInput 型を追加
+[add] update-game-session ユースケースを実装
+[add] PATCH /api/game-sessions/:id ルートを登録
+[add] update-game-session のユニットテストを追加
+[fix] GET /api/game-sessions/:id を未認証でも公開セッションに接続できるよう修正
+[update] getGameSession の権限チェックを application 層へ移動
+[doc] コミット規則を CLAUDE.md に追記
+```
+
+---
+
 ## コミット前チェック
 
 コミット前に以下をすべて通しておくこと。CI で Lint・Format Check・Type Check・Test が別ジョブで動くため、まとめて確認しておくと安全。

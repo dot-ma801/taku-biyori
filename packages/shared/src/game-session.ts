@@ -51,3 +51,32 @@ export const CreateGameSessionInputSchema = z.object({
 export type CreateGameSessionInput = z.infer<
   typeof CreateGameSessionInputSchema
 >;
+
+export const UpdateGameSessionInputSchema = z
+  .object({
+    title: z.string().min(1).max(100).optional(),
+    description: z.string().max(1000).nullable().optional(),
+    scenarioName: z.string().max(200).nullable().optional(),
+    maxMembers: z.number().int().min(2).max(20).nullable().optional(),
+    openUntil: z.iso.date().nullable().optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, {
+    message: '少なくとも1つのフィールドが必要です',
+  });
+export type UpdateGameSessionInput = z.infer<
+  typeof UpdateGameSessionInputSchema
+>;
+
+export const GameSessionMemberSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().nullable(),
+  guestName: z.string().nullable(),
+  characterName: z.string().nullable(),
+  joinedAt: z.string(),
+});
+export type GameSessionMember = z.infer<typeof GameSessionMemberSchema>;
+
+export const GameSessionDetailSchema = GameSessionSchema.extend({
+  members: z.array(GameSessionMemberSchema),
+});
+export type GameSessionDetail = z.infer<typeof GameSessionDetailSchema>;

@@ -3,7 +3,11 @@ import type {
   GameSessionListItem,
   GameSession,
   CreateGameSessionInput,
+  UpdateGameSessionInput,
 } from '@taku-biyori/shared';
+import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
+import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
+import type { DeleteGameSessionResult } from '@/game-session/application/delete-game-session';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '@/health/application/get-health';
@@ -21,6 +25,19 @@ export interface CreateAppOptions {
     userId: string,
     input: CreateGameSessionInput,
   ) => Promise<GameSession>;
+  getGameSession: (
+    id: string,
+    userId: string | null,
+  ) => Promise<GetGameSessionResult>;
+  updateGameSession: (
+    id: string,
+    userId: string,
+    input: UpdateGameSessionInput,
+  ) => Promise<UpdateGameSessionResult>;
+  deleteGameSession: (
+    id: string,
+    userId: string,
+  ) => Promise<DeleteGameSessionResult>;
 }
 
 /**
@@ -45,6 +62,9 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     listGameSessions: options.listGameSessions,
     createGameSession: options.createGameSession,
+    getGameSession: options.getGameSession,
+    updateGameSession: options.updateGameSession,
+    deleteGameSession: options.deleteGameSession,
   });
 
   return app;

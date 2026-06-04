@@ -71,12 +71,71 @@ jobs:
           destination_dir: branches/${{ env.BRANCH_NAME }}
           keep_files: true # 他のブランチのドキュメントを消さずに残す設定
 
+      - name: Update root index
+        run: |
+          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          git clone --depth=1 --single-branch --branch gh-pages \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            gh-pages-dir
+          cd gh-pages-dir
+
+          # branches/ 配下のディレクトリ一覧を取得
+          BRANCHES=$(find branches -mindepth 1 -maxdepth 1 -type d | sed 's|branches/||' | sort)
+
+          # index.html を生成
+          cat > index.html << HTMLEOF
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>taku-biyori API ドキュメント</title>
+            <style>
+              body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 16px; }
+              h1 { font-size: 1.4rem; }
+              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+              th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e0e0e0; }
+              th { background: #f5f5f5; font-size: 0.85rem; color: #555; }
+              a { color: #0969da; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <h1>taku-biyori API ドキュメント</h1>
+            <table>
+              <thead><tr><th>ブランチ</th><th>Redoc</th><th>Swagger UI</th></tr></thead>
+              <tbody>
+          HTMLEOF
+
+          for branch in $BRANCHES; do
+            echo "      <tr>" >> index.html
+            echo "        <td>$(echo $branch | sed 's/_/\//2;s/_/-/g')</td>" >> index.html
+            echo "        <td><a href=\"${BASE_URL}/branches/${branch}/\">Redoc</a></td>" >> index.html
+            echo "        <td><a href=\"${BASE_URL}/branches/${branch}/swagger.html\">Swagger UI</a></td>" >> index.html
+            echo "      </tr>" >> index.html
+          done
+
+          cat >> index.html << HTMLEOF
+              </tbody>
+            </table>
+          </body>
+          </html>
+          HTMLEOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "update: root index を更新"
+          git push
+
       - name: Output docs URL
         run: |
-          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branches/${{ env.BRANCH_NAME }}"
+          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
           echo "### API ドキュメント" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**一覧ページ**: [$BASE_URL/]($BASE_URL/)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| UI | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| Redoc | [$BASE_URL/]($BASE_URL/) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Swagger UI | [$BASE_URL/swagger.html]($BASE_URL/swagger.html) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Redoc | [$BASE_URL/branches/${{ env.BRANCH_NAME }}/]($BASE_URL/branches/${{ env.BRANCH_NAME }}/) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Swagger UI | [$BASE_URL/branches/${{ env.BRANCH_NAME }}/swagger.html]($BASE_URL/branches/${{ env.BRANCH_NAME }}/swagger.html) |" >> $GITHUB_STEP_SUMMARY

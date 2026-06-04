@@ -184,7 +184,8 @@ pnpm --filter @taku-biyori/backend test:integration
 | `[update]` | 既存機能の変更・改善 |
 | `[fix]` | バグ修正 |
 | `[delete]` | ファイル・コード・機能の削除 |
-| `[style]` | フォーマット・lint・命名など動作に影響しない変更 |
+| `[clean]` | コードフォーマット・lint・命名など動作に影響しない変更 |
+| `[style]` | CSS・スタイリングの変更 |
 | `[doc]` | ドキュメント・コメントの追加・更新 |
 
 ```

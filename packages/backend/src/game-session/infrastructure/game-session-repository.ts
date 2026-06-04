@@ -170,7 +170,7 @@ export const createGameSessionRepository = (
   async updateById(
     id: string,
     input: UpdateGameSessionInput,
-  ): Promise<GameSession> {
+  ): Promise<GameSession | null> {
     const result = await db
       .update(gameSessions)
       .set({
@@ -188,7 +188,7 @@ export const createGameSessionRepository = (
       .returning();
 
     const session = result[0];
-    if (!session) throw new Error('セッションの更新に失敗しました');
+    if (!session) return null;
     return toGameSession(session);
   },
 

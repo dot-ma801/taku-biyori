@@ -35,6 +35,33 @@ jobs:
           mkdir -p output
           redocly build-docs docs/openapi.yml -o output/index.html
 
+      - name: Build Swagger UI HTML
+        run: |
+          cp docs/openapi.yml output/openapi.yml
+          cat > output/swagger.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>taku-biyori API - Swagger UI</title>
+            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
+          </head>
+          <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+            <script>
+              SwaggerUIBundle({
+                url: './openapi.yml',
+                dom_id: '#swagger-ui',
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+                layout: 'BaseLayout',
+              });
+            </script>
+          </body>
+          </html>
+          EOF
+
       # 生成したHTMLを、gh-pagesブランチの「branches/ブランチ名/」配下にだけ反映・プッシュする
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
@@ -46,7 +73,10 @@ jobs:
 
       - name: Output docs URL
         run: |
-          DOCS_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branches/${{ env.BRANCH_NAME }}/"
+          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branches/${{ env.BRANCH_NAME }}"
           echo "### API ドキュメント" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[$DOCS_URL]($DOCS_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "| UI | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Redoc | [$BASE_URL/]($BASE_URL/) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Swagger UI | [$BASE_URL/swagger.html]($BASE_URL/swagger.html) |" >> $GITHUB_STEP_SUMMARY

@@ -62,13 +62,13 @@ jobs:
           </html>
           EOF
 
-      # 生成したHTMLを、gh-pagesブランチの「branches/ブランチ名/」配下にだけ反映・プッシュする
+      # 生成したHTMLを、gh-pagesブランチの「api-doc/branches/ブランチ名/」配下にだけ反映・プッシュする
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output
-          destination_dir: branches/${{ env.BRANCH_NAME }}
+          destination_dir: api-doc/branches/${{ env.BRANCH_NAME }}
           keep_files: true # 他のブランチのドキュメントを消さずに残す設定
 
       - name: Update root index
@@ -79,11 +79,12 @@ jobs:
             gh-pages-dir
           cd gh-pages-dir
 
-          # branches/ 配下のディレクトリ一覧を取得
-          BRANCHES=$(find branches -mindepth 1 -maxdepth 1 -type d | sed 's|branches/||' | sort)
+          # api-doc/branches/ 配下のディレクトリ一覧を取得
+          BRANCHES=$(find api-doc/branches -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|api-doc/branches/||' | sort)
 
           # index.html を生成
-          cat > index.html << HTMLEOF
+          mkdir -p api-doc
+          cat > api-doc/index.html << HTMLEOF
           <!DOCTYPE html>
           <html lang="ja">
           <head>
@@ -108,14 +109,14 @@ jobs:
           HTMLEOF
 
           for branch in $BRANCHES; do
-            echo "      <tr>" >> index.html
-            echo "        <td>$(echo $branch | sed 's/_/\//2;s/_/-/g')</td>" >> index.html
-            echo "        <td><a href=\"${BASE_URL}/branches/${branch}/\">Redoc</a></td>" >> index.html
-            echo "        <td><a href=\"${BASE_URL}/branches/${branch}/swagger.html\">Swagger UI</a></td>" >> index.html
-            echo "      </tr>" >> index.html
+            echo "      <tr>" >> api-doc/index.html
+            echo "        <td>$(echo $branch | sed 's/_/\//2;s/_/-/g')</td>" >> api-doc/index.html
+            echo "        <td><a href=\"${BASE_URL}/api-doc/branches/${branch}/\">Redoc</a></td>" >> api-doc/index.html
+            echo "        <td><a href=\"${BASE_URL}/api-doc/branches/${branch}/swagger.html\">Swagger UI</a></td>" >> api-doc/index.html
+            echo "      </tr>" >> api-doc/index.html
           done
 
-          cat >> index.html << HTMLEOF
+          cat >> api-doc/index.html << HTMLEOF
               </tbody>
             </table>
           </body>
@@ -124,8 +125,8 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet || git commit -m "update: root index を更新"
+          git add api-doc/index.html
+          git diff --cached --quiet || git commit -m "update: api-doc index を更新"
           git push
 
       - name: Output docs URL
@@ -137,5 +138,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| UI | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| Redoc | [$BASE_URL/branches/${{ env.BRANCH_NAME }}/]($BASE_URL/branches/${{ env.BRANCH_NAME }}/) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Swagger UI | [$BASE_URL/branches/${{ env.BRANCH_NAME }}/swagger.html]($BASE_URL/branches/${{ env.BRANCH_NAME }}/swagger.html) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Redoc | [$BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/]($BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Swagger UI | [$BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/swagger.html]($BASE_URL/api-doc/branches/${{ env.BRANCH_NAME }}/swagger.html) |" >> $GITHUB_STEP_SUMMARY

@@ -32,13 +32,11 @@ const makeRepo = (
   publish: vi
     .fn()
     .mockResolvedValue({ ...baseSession, status: 'open', isPublished: true }),
-  complete: vi
-    .fn()
-    .mockResolvedValue({
-      ...baseSession,
-      status: 'completed',
-      completedAt: '2025-01-01T00:00:00.000Z',
-    }),
+  complete: vi.fn().mockResolvedValue({
+    ...baseSession,
+    status: 'completed',
+    completedAt: '2025-01-01T00:00:00.000Z',
+  }),
   ...overrides,
 });
 

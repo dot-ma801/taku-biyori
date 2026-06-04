@@ -17,12 +17,14 @@ import type { CreateGameSessionRepository } from '@/game-session/application/cre
 import type { GetGameSessionRepository } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
+import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
   GetGameSessionRepository &
   UpdateGameSessionRepository &
-  DeleteGameSessionRepository;
+  DeleteGameSessionRepository &
+  UpdateGameSessionStatusRepository;
 
 type GameSessionRow = {
   id: string;
@@ -194,6 +196,52 @@ export const createGameSessionRepository = (
 
   async deleteById(id: string): Promise<void> {
     await db.delete(gameSessions).where(eq(gameSessions.id, id));
+  },
+
+  async findStatusFields(id: string) {
+    const row = await db
+      .select({
+        isPublished: gameSessions.isPublished,
+        openUntil: gameSessions.openUntil,
+        scheduledAt: gameSessions.scheduledAt,
+        completedAt: gameSessions.completedAt,
+      })
+      .from(gameSessions)
+      .where(eq(gameSessions.id, id))
+      .limit(1);
+
+    if (!row[0]) return null;
+    const r = row[0];
+    return {
+      isPublished: r.isPublished,
+      openUntil: toDateOrNull(r.openUntil),
+      scheduledAt: toDateOrNull(r.scheduledAt),
+      completedAt: r.completedAt,
+    };
+  },
+
+  async publish(id: string): Promise<GameSession | null> {
+    const result = await db
+      .update(gameSessions)
+      .set({ isPublished: true })
+      .where(eq(gameSessions.id, id))
+      .returning();
+
+    const session = result[0];
+    if (!session) return null;
+    return toGameSession(session);
+  },
+
+  async complete(id: string, completedAt: Date): Promise<GameSession | null> {
+    const result = await db
+      .update(gameSessions)
+      .set({ completedAt })
+      .where(eq(gameSessions.id, id))
+      .returning();
+
+    const session = result[0];
+    if (!session) return null;
+    return toGameSession(session);
   },
 
   async createWithHost(params): Promise<GameSession> {

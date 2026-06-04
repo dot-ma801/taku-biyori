@@ -1,0 +1,45 @@
+name: Deploy Branch-specific API Docs
+
+on:
+  push:
+    # すべてのブランチ（gh-pagesを除く）へのPushを対象にする
+    branches-ignore:
+      - 'gh-pages'
+    paths:
+      - 'docs/openapi.yml'
+
+permissions:
+  contents: write # gh-pagesブランチへの書き込み権限が必要
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      - name: Get Branch Name
+        # スラッシュなどの特殊文字を置換して安全なフォルダ名を取得
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9\-_]/_/g')" >> $GITHUB_ENV
+
+      - name: Build Redoc HTML
+        run: |
+          mkdir -p output
+          redocly build-docs docs/openapi.yml -o output/index.html
+
+      # 生成したHTMLを、gh-pagesブランチの「branches/ブランチ名/」配下にだけ反映・プッシュする
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          destination_dir: branches/${{ env.BRANCH_NAME }}
+          keep_files: true # 他のブランチのドキュメントを消さずに残す設定

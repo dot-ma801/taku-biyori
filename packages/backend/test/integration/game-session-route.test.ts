@@ -352,7 +352,7 @@ describe('PATCH /api/game-sessions/:id', () => {
     expect(response.status).toBe(404);
   });
 
-  it('空ボディでも 200 を返す（全フィールド省略可）', async () => {
+  it('空ボディなら 400 を返す（最低1フィールド必要）', async () => {
     // Arrange
     const app = makeApp();
 
@@ -364,7 +364,7 @@ describe('PATCH /api/game-sessions/:id', () => {
     });
 
     // Assert
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
   });
 
   it('title が空文字なら 400 を返す', async () => {
@@ -380,23 +380,6 @@ describe('PATCH /api/game-sessions/:id', () => {
 
     // Assert
     expect(response.status).toBe(400);
-  });
-
-  it('updateGameSession が例外を投げると 500 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateGameSession: vi.fn().mockRejectedValue(new Error('DB error')),
-    });
-
-    // Act
-    const response = await app.request('/api/game-sessions/session-1', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '更新後' }),
-    });
-
-    // Assert
-    expect(response.status).toBe(500);
   });
 });
 

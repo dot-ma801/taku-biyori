@@ -52,13 +52,17 @@ export type CreateGameSessionInput = z.infer<
   typeof CreateGameSessionInputSchema
 >;
 
-export const UpdateGameSessionInputSchema = z.object({
-  title: z.string().min(1).max(100).optional(),
-  description: z.string().max(1000).nullable().optional(),
-  scenarioName: z.string().max(200).nullable().optional(),
-  maxMembers: z.number().int().min(2).max(20).nullable().optional(),
-  openUntil: z.iso.date().nullable().optional(),
-});
+export const UpdateGameSessionInputSchema = z
+  .object({
+    title: z.string().min(1).max(100).optional(),
+    description: z.string().max(1000).nullable().optional(),
+    scenarioName: z.string().max(200).nullable().optional(),
+    maxMembers: z.number().int().min(2).max(20).nullable().optional(),
+    openUntil: z.iso.date().nullable().optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, {
+    message: '少なくとも1つのフィールドが必要です',
+  });
 export type UpdateGameSessionInput = z.infer<
   typeof UpdateGameSessionInputSchema
 >;

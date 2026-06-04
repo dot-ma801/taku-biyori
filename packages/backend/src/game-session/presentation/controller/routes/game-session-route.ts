@@ -106,16 +106,11 @@ export const registerGameSessionRoute = (
       return c.json({ error: parsed.error.issues }, 400);
     }
 
-    let result: UpdateGameSessionResult;
-    try {
-      result = await options.updateGameSession(
-        c.req.param('id'),
-        session.user.id,
-        parsed.data,
-      );
-    } catch {
-      return c.json({ error: 'Internal Server Error' }, 500);
-    }
+    const result = await options.updateGameSession(
+      c.req.param('id'),
+      session.user.id,
+      parsed.data,
+    );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);

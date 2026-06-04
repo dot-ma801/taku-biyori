@@ -43,3 +43,10 @@ jobs:
           publish_dir: ./output
           destination_dir: branches/${{ env.BRANCH_NAME }}
           keep_files: true # 他のブランチのドキュメントを消さずに残す設定
+
+      - name: Output docs URL
+        run: |
+          DOCS_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branches/${{ env.BRANCH_NAME }}/"
+          echo "### API ドキュメント" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[$DOCS_URL]($DOCS_URL)" >> $GITHUB_STEP_SUMMARY

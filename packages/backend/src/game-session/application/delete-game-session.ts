@@ -1,5 +1,6 @@
-export interface DeleteGameSessionRepository {
-  findHostUserId(id: string): Promise<string | null>;
+import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
+
+export interface DeleteGameSessionRepository extends GameSessionHostRepository {
   deleteById(id: string): Promise<void>;
 }
 

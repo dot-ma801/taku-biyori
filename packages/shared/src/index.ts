@@ -18,6 +18,8 @@ export {
   type CreateGameSessionInput,
   UpdateGameSessionInputSchema,
   type UpdateGameSessionInput,
+  UpdateGameSessionStatusInputSchema,
+  type UpdateGameSessionStatusInput,
   GameSessionMemberSchema,
   type GameSessionMember,
   GameSessionDetailSchema,

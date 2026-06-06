@@ -25,6 +25,7 @@ const props = withDefaults(
   {
     level: 'h2',
     iconColor: 'primary',
+    textColor: 'default'
   },
 );
 
@@ -39,13 +40,23 @@ const iconColorStyle = computed(() => {
   }
   return props.iconColor;
 });
+
+const textColorStyle = computed(() => {
+  if (props.textColor === 'primary') {
+    return 'var(--color-primary)';
+  }
+  if (props.textColor === 'default') {
+    return 'currentcolor';
+  }
+  return props.textColor;
+});
 </script>
 
 <template>
   <component
     :is="level"
     class="section-heading"
-    :style="{ color: iconColorStyle }"
+    :style="{ color: textColorStyle }"
   >
     <span
       v-if="icon"

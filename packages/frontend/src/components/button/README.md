@@ -7,7 +7,7 @@
 | Prop       | Type                                  | Default     | Description                              |
 | ---------- | ------------------------------------- | ----------- | ---------------------------------------- |
 | `variant`  | `'primary' \| 'secondary' \| 'ghost'` | `'primary'` | 表示スタイル                             |
-| `size`     | `'sm' \| 'md'`                        | `'md'`      | サイズ                                   |
+| `size`     | `'sm' \| 'md' \| 'lg'`                | `'md'`      | サイズ                                   |
 | `loading`  | `boolean`                             | `false`     | ローディングスピナーを表示し操作を無効化 |
 | `disabled` | `boolean`                             | `false`     | 操作を無効化                             |
 | `type`     | `'button' \| 'submit' \| 'reset'`     | `'button'`  | ネイティブ button の type 属性           |
@@ -53,6 +53,7 @@
 
 - `size="sm"` のとき `.btn--sm` クラスが付与されること
 - `size="md"` のとき `.btn--md` クラスが付与されること
+- `size="lg"` のとき `.btn--lg` クラスが付与されること
 
 ### disabled
 

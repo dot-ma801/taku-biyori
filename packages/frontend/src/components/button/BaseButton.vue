@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type Variant = 'primary' | 'secondary' | 'ghost';
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'lg';
 
 withDefaults(
   defineProps<{
@@ -69,6 +69,10 @@ withDefaults(
 }
 .btn--md {
   padding: 10px 16px;
+}
+.btn--lg {
+  padding: 14px 20px;
+  font-size: 15px;
 }
 
 /* primary */

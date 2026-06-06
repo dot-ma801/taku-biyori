@@ -18,8 +18,8 @@ import InputScheduleInfo from '@/features/GameSession/Edit/InputScheduleInfo.vue
   </div>
 
   <div class="button-area">
-    <BaseButton variant="secondary">キャンセル</BaseButton>
-    <BaseButton>セッションを作成する</BaseButton>
+    <BaseButton size="lg" variant="secondary">キャンセル</BaseButton>
+    <BaseButton size="lg">セッションを作成する</BaseButton>
   </div>
 </template>
 

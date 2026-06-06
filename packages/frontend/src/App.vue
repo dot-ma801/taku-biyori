@@ -20,8 +20,8 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
   height: 100vh;
   background-color: var(--color-background);
   color: var(--color-text);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
 }
 
 .header {
@@ -34,8 +34,8 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
 }
 
 .content {
-  flex: 1;
-  padding: var(--space-4);
+  min-height: 0;
+  padding: var(--space-4) ;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

@@ -59,6 +59,7 @@ const iconColorStyle = computed(() => {
   align-items: center;
   gap: var(--space-2);
   margin: 0;
+  line-height: 1;
   font-family: var(--font-family-base);
   color: var(--color-text);
 }

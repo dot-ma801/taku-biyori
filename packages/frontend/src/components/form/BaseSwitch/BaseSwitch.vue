@@ -13,7 +13,7 @@ const model = defineModel<boolean>({ default: false });
   <label :class="['switch', { 'switch--disabled': disabled }]">
     <Switch.Root v-model="model" :disabled="disabled" class="switch__root">
       <Switch.Track class="switch__track">
-        <Switch.Thumb class="switch__thumb" />
+        <span class="switch__thumb" />
       </Switch.Track>
     </Switch.Root>
     <span v-if="label" class="switch__label">{{ label }}</span>
@@ -37,18 +37,20 @@ const model = defineModel<boolean>({ default: false });
   cursor: not-allowed;
 }
 
-.switch__root {
+:deep(.switch__root) {
+  appearance: none;
   background: none;
   border: none;
+  outline: none;
   padding: 0;
   cursor: inherit;
 }
-.switch__root:focus-visible .switch__track {
+:deep(.switch__root:focus-visible .switch__track) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-.switch__track {
+:deep(.switch__track) {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -60,12 +62,12 @@ const model = defineModel<boolean>({ default: false });
   padding: 2px;
   box-sizing: border-box;
 }
-.switch__root[aria-checked='true'] .switch__track,
-.switch__root[data-state='checked'] .switch__track {
+:deep(.switch__root[aria-checked='true'] .switch__track),
+:deep(.switch__root[data-state='checked'] .switch__track) {
   background: var(--color-primary);
 }
 
-.switch__thumb {
+:deep(.switch__thumb) {
   width: 16px;
   height: 16px;
   background: #fff;
@@ -74,9 +76,10 @@ const model = defineModel<boolean>({ default: false });
   transform: translateX(0);
   display: block;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.switch__root[aria-checked='true'] .switch__thumb,
-.switch__root[data-state='checked'] .switch__thumb {
+:deep(.switch__root[aria-checked='true'] .switch__thumb),
+:deep(.switch__root[data-state='checked'] .switch__thumb) {
   transform: translateX(16px);
 }
 

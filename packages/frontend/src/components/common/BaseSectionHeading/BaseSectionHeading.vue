@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { LucideIcon } from '@lucide/vue'
+import { computed } from 'vue';
+import type { LucideIcon } from '@lucide/vue';
 
-type Level = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+// NOTE: string & {} は string への型の吸収を防ぎ、リテラルの補完を残しつつ任意文字列も受け付けるイディオム
+type Color = 'primary' | 'default' | (string & {});
+type Level = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
 const ICON_SIZE: Record<Level, number> = {
   h1: 28,
@@ -11,36 +13,40 @@ const ICON_SIZE: Record<Level, number> = {
   h4: 18,
   h5: 15,
   h6: 13,
-}
+};
 
 const props = withDefaults(
   defineProps<{
-    level?: Level
-    icon?: LucideIcon
-    // NOTE: string & {} は string への型の吸収を防ぎ、リテラルの補完を残しつつ任意文字列も受け付けるイディオム
-    iconColor?: 'primary' | 'default' | (string & {})
+    level?: Level;
+    icon?: LucideIcon;
+    iconColor?: Color;
+    textColor?: Color;
   }>(),
   {
     level: 'h2',
     iconColor: 'primary',
   },
-)
+);
 
-const iconSize = computed(() => ICON_SIZE[props.level])
+const iconSize = computed(() => ICON_SIZE[props.level]);
 
 const iconColorStyle = computed(() => {
   if (props.iconColor === 'primary') {
-    return 'var(--color-primary)'
+    return 'var(--color-primary)';
   }
   if (props.iconColor === 'default') {
-    return 'currentcolor'
+    return 'currentcolor';
   }
-  return props.iconColor
-})
+  return props.iconColor;
+});
 </script>
 
 <template>
-  <component :is="level" class="section-heading">
+  <component
+    :is="level"
+    class="section-heading"
+    :style="{ color: iconColorStyle }"
+  >
     <span
       v-if="icon"
       class="section-heading__icon"

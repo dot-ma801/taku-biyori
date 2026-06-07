@@ -103,6 +103,13 @@ export type CreateAvailabilityDateInput = z.infer<
   typeof CreateAvailabilityDateInputSchema
 >;
 
+export const BulkUpdateAvailabilityDatesInputSchema = z.object({
+  dates: z.array(z.iso.date()),
+});
+export type BulkUpdateAvailabilityDatesInput = z.infer<
+  typeof BulkUpdateAvailabilityDatesInputSchema
+>;
+
 export const GameSessionMemberSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().nullable(),

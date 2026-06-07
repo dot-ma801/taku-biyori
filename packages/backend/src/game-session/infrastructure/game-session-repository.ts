@@ -8,6 +8,8 @@ import {
   getTableColumns,
 } from 'drizzle-orm';
 import type {
+  AvailabilityDate,
+  AvailabilityDateAnswer,
   GameSession,
   GameSessionDetail,
   GameSessionListItem,
@@ -18,6 +20,8 @@ import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
   gameSessionMembers,
+  gameSessionCandidates,
+  gameSessionAnswers,
 } from '@/system/infrastructure/database/game-session-schema';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
@@ -26,13 +30,21 @@ import type { GetGameSessionRepository } from '@/game-session/application/get-ga
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
+import type { ListAvailabilityDatesRepository } from '@/game-session/application/list-availability-dates';
+import type { AddAvailabilityDateRepository } from '@/game-session/application/add-availability-date';
+import type { DeleteAvailabilityDateRepository } from '@/game-session/application/delete-availability-date';
+import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
   GetGameSessionRepository &
   UpdateGameSessionRepository &
   DeleteGameSessionRepository &
-  UpdateGameSessionStatusRepository;
+  UpdateGameSessionStatusRepository &
+  ListAvailabilityDatesRepository &
+  AddAvailabilityDateRepository &
+  DeleteAvailabilityDateRepository &
+  ConfirmAvailabilityDateRepository;
 
 type GameSessionRow = {
   id: string;
@@ -40,6 +52,7 @@ type GameSessionRow = {
   title: string;
   scenarioName: string | null;
   description: string | null;
+  location: string | null;
   maxPlayers: number | null;
   isPublished: boolean;
   openUntil: string | null;
@@ -59,6 +72,7 @@ const toGameSession = (row: GameSessionRow): GameSession => ({
   title: row.title,
   description: row.description,
   scenarioName: row.scenarioName,
+  location: row.location,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
     openUntil: toDateOrNull(row.openUntil),
@@ -191,8 +205,12 @@ export const createGameSessionRepository = (
         ...(input.scenarioName !== undefined && {
           scenarioName: input.scenarioName,
         }),
+        ...(input.location !== undefined && { location: input.location }),
         ...(input.maxMembers !== undefined && { maxPlayers: input.maxMembers }),
         ...(input.openUntil !== undefined && { openUntil: input.openUntil }),
+        ...(input.scheduledAt !== undefined && {
+          scheduledAt: input.scheduledAt,
+        }),
       })
       .where(eq(gameSessions.id, id))
       .returning();
@@ -267,8 +285,10 @@ export const createGameSessionRepository = (
           title: params.title,
           description: params.description ?? null,
           scenarioName: params.scenarioName ?? null,
+          location: params.location ?? null,
           maxPlayers: params.maxMembers ?? null,
           openUntil: params.openUntil ?? null,
+          scheduledAt: params.scheduledAt ?? null,
           guestLinkToken: params.guestLinkToken,
           isPublished: false,
         })
@@ -284,5 +304,107 @@ export const createGameSessionRepository = (
 
       return toGameSession(session);
     });
+  },
+
+  async gameSessionExists(id: string): Promise<boolean> {
+    const row = await db
+      .select({ id: gameSessions.id })
+      .from(gameSessions)
+      .where(eq(gameSessions.id, id))
+      .limit(1);
+    return row.length > 0;
+  },
+
+  async findByGameSessionId(
+    gameSessionId: string,
+  ): Promise<AvailabilityDate[]> {
+    const rows = await db
+      .select({
+        candidateId: gameSessionCandidates.id,
+        date: gameSessionCandidates.date,
+        answerId: gameSessionAnswers.id,
+        memberId: gameSessionAnswers.memberId,
+        answer: gameSessionAnswers.answer,
+        comment: gameSessionAnswers.comment,
+      })
+      .from(gameSessionCandidates)
+      .leftJoin(
+        gameSessionAnswers,
+        eq(gameSessionAnswers.candidateId, gameSessionCandidates.id),
+      )
+      .where(eq(gameSessionCandidates.gameSessionId, gameSessionId))
+      .orderBy(gameSessionCandidates.date);
+
+    const map = new Map<string, AvailabilityDate>();
+    for (const row of rows) {
+      if (!map.has(row.candidateId)) {
+        map.set(row.candidateId, {
+          id: row.candidateId,
+          date: row.date,
+          answers: [],
+        });
+      }
+      if (row.answerId !== null && row.memberId !== null) {
+        const entry = map.get(row.candidateId)!;
+        const answerValue = row.answer as AvailabilityDateAnswer['answer'];
+        entry.answers.push({
+          id: row.answerId,
+          memberId: row.memberId,
+          answer: answerValue,
+          comment: row.comment,
+        });
+      }
+    }
+
+    return [...map.values()];
+  },
+
+  async addDate(
+    gameSessionId: string,
+    date: string,
+  ): Promise<AvailabilityDate> {
+    const result = await db
+      .insert(gameSessionCandidates)
+      .values({ gameSessionId, date })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('候補日の追加に失敗しました');
+    return { id: row.id, date: row.date, answers: [] };
+  },
+
+  async findCandidateOwner(
+    dateId: string,
+  ): Promise<{ gameSessionId: string; date: string } | null> {
+    const row = await db
+      .select({
+        gameSessionId: gameSessionCandidates.gameSessionId,
+        date: gameSessionCandidates.date,
+      })
+      .from(gameSessionCandidates)
+      .where(eq(gameSessionCandidates.id, dateId))
+      .limit(1);
+    return row[0] ?? null;
+  },
+
+  async deleteDateById(dateId: string): Promise<void> {
+    await db
+      .delete(gameSessionCandidates)
+      .where(eq(gameSessionCandidates.id, dateId));
+  },
+
+  async setScheduledAt(
+    gameSessionId: string,
+    date: string,
+  ): Promise<GameSession | null> {
+    const result = await db
+      .update(gameSessions)
+      .set({ scheduledAt: date })
+      .where(eq(gameSessions.id, gameSessionId))
+      .returning();
+
+    const session = result[0];
+    if (!session) return null;
+    return toGameSession(session);
   },
 });

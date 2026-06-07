@@ -17,10 +17,12 @@ export interface RegisterAvailabilityDateRouteOptions {
     input: { date: string },
   ) => Promise<AddAvailabilityDateResult>;
   deleteAvailabilityDate: (
+    gameSessionId: string,
     dateId: string,
     userId: string,
   ) => Promise<DeleteAvailabilityDateResult>;
   confirmAvailabilityDate: (
+    gameSessionId: string,
     dateId: string,
     userId: string,
   ) => Promise<ConfirmAvailabilityDateResult>;
@@ -68,6 +70,7 @@ export const registerAvailabilityDateRoute = (
     if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
     const result = await options.deleteAvailabilityDate(
+      c.req.param('id'),
       c.req.param('dateId'),
       session.user.id,
     );
@@ -84,6 +87,7 @@ export const registerAvailabilityDateRoute = (
       if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
       const result = await options.confirmAvailabilityDate(
+        c.req.param('id'),
         c.req.param('dateId'),
         session.user.id,
       );

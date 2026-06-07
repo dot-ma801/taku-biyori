@@ -48,10 +48,10 @@ const app = createApp({
     listAvailabilityDates(gameSessionRepo, gameSessionId),
   addAvailabilityDate: (gameSessionId, userId, input) =>
     addAvailabilityDate(gameSessionRepo, gameSessionId, userId, input),
-  deleteAvailabilityDate: (dateId, userId) =>
-    deleteAvailabilityDate(gameSessionRepo, dateId, userId),
-  confirmAvailabilityDate: (dateId, userId) =>
-    confirmAvailabilityDate(gameSessionRepo, dateId, userId),
+  deleteAvailabilityDate: (gameSessionId, dateId, userId) =>
+    deleteAvailabilityDate(gameSessionRepo, gameSessionId, dateId, userId),
+  confirmAvailabilityDate: (gameSessionId, dateId, userId) =>
+    confirmAvailabilityDate(gameSessionRepo, gameSessionId, dateId, userId),
 });
 
 export default app;

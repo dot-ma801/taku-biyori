@@ -30,21 +30,5 @@ const description = defineModel<string>('description', { default: '' });
 </template>
 
 <style scoped>
-.switch {
-  margin-bottom: var(--space-4);
-}
 
-.contents {
-  /* 余白 */
-  > * {
-    margin: var(--space-5) 0;
-
-    &:first-child {
-      margin-top: 0;
-    }
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-}
 </style>

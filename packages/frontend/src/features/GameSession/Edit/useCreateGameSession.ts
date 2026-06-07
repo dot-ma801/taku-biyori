@@ -26,7 +26,7 @@ export const useCreateGameSession = () => {
       // 具体例:
       // ...false -> 何も展開されない
       // ...{ scenarioName: 'シナリオ名' } -> scenarioName: 'シナリオ名' が展開される
-      const session = await createGameSession({
+      const gameSession = await createGameSession({
         title: title.value,
         ...(scenarioName.value && { scenarioName: scenarioName.value }),
         ...(maxMembers.value && { maxMembers: Number(maxMembers.value) }),
@@ -34,7 +34,7 @@ export const useCreateGameSession = () => {
         ...(openUntil.value && { openUntil: openUntil.value }),
       });
 
-      router.push({ name: 'game-session-detail', params: { id: session.id } });
+      router.push({ name: 'game-session-detail', params: { id: gameSession.id } });
     } catch (err) {
       if (err instanceof ApiError) {
         errorMessage.value = err.message;

@@ -1,4 +1,6 @@
 import type {
+  AvailabilityDate,
+  CreateAvailabilityDateInput,
   CreateGameSessionInput,
   GameSession,
   GameSessionDetail,
@@ -37,6 +39,34 @@ export async function updateGameSession(
 
 export function deleteGameSession(id: string): Promise<void> {
   return apiRequest<void>(`/api/game-sessions/${id}`, { method: 'DELETE' });
+}
+
+export async function listAvailabilityDates(
+  sessionId: string,
+): Promise<AvailabilityDate[]> {
+  return (await apiRequest<AvailabilityDate[]>(
+    `/api/game-sessions/${sessionId}/availability-dates`,
+  ))!;
+}
+
+export async function addAvailabilityDate(
+  sessionId: string,
+  input: CreateAvailabilityDateInput,
+): Promise<AvailabilityDate> {
+  return (await apiRequest<AvailabilityDate>(
+    `/api/game-sessions/${sessionId}/availability-dates`,
+    { method: 'POST', body: input },
+  ))!;
+}
+
+export function deleteAvailabilityDate(
+  sessionId: string,
+  dateId: string,
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/game-sessions/${sessionId}/availability-dates/${dateId}`,
+    { method: 'DELETE' },
+  );
 }
 
 export async function updateGameSessionStatus(

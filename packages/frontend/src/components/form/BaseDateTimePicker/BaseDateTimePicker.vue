@@ -8,17 +8,13 @@ withDefaults(
     label?: string;
     placeholder?: string;
     hint?: string;
-    type?: string;
     rules?: Rule[];
     disabled?: boolean;
     readonly?: boolean;
-    min?: string | number;
-    max?: string | number;
-    step?: string | number;
+    min?: string;
+    max?: string;
   }>(),
-  {
-    type: 'text',
-  },
+  {},
 );
 
 const model = defineModel<string>({ default: '' });
@@ -28,48 +24,50 @@ const model = defineModel<string>({ default: '' });
   <Input.Root
     v-model="model"
     :label="label"
-    :type="type"
+    type="datetime-local"
     :rules="rules"
     :disabled="disabled"
     :readonly="readonly"
-    class="textbox"
+    class="datetimepicker"
     validate-on="blur"
   >
-    <label v-if="label" class="textbox__label">{{ label }}</label>
+    <label v-if="label" class="datetimepicker__label">{{ label }}</label>
     <Input.Control
-      :placeholder="placeholder"
       :min="min"
       :max="max"
-      :step="step"
-      class="textbox__control"
+      :placeholder="placeholder"
+      class="datetimepicker__control"
     />
-    <Input.Description v-if="hint" class="textbox__hint">
+    <Input.Description v-if="hint" class="datetimepicker__hint">
       {{ hint }}
     </Input.Description>
-    <Input.Error v-slot="{ errors }" class="textbox__errors">
-      <span v-for="error in errors" :key="error" class="textbox__error">{{
-        error
-      }}</span>
+    <Input.Error v-slot="{ errors }" class="datetimepicker__errors">
+      <span
+        v-for="error in errors"
+        :key="error"
+        class="datetimepicker__error"
+        >{{ error }}</span
+      >
     </Input.Error>
   </Input.Root>
 </template>
 
 <style scoped>
-.textbox {
+.datetimepicker {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   font-family: var(--font-family-base);
 }
 
-.textbox__label {
+.datetimepicker__label {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
 }
 
-.textbox__control {
+.datetimepicker__control {
   padding: 10px 12px;
   font-family: var(--font-family-base);
   font-size: 14px;
@@ -84,35 +82,32 @@ const model = defineModel<string>({ default: '' });
   width: 100%;
   box-sizing: border-box;
 }
-.textbox__control::placeholder {
-  color: var(--color-text-muted);
-}
-.textbox__control:hover:not(:disabled):not(:read-only) {
+.datetimepicker__control:hover:not(:disabled):not(:read-only) {
   border-color: var(--color-secondary);
 }
-.textbox__control:focus {
+.datetimepicker__control:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-soft);
 }
-.textbox__control:disabled {
+.datetimepicker__control:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--color-surface-muted);
 }
 
-.textbox__hint {
+.datetimepicker__hint {
   font-size: 12px;
   color: var(--color-text-muted);
   line-height: 1.45;
 }
 
-.textbox__errors {
+.datetimepicker__errors {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.textbox__error {
+.datetimepicker__error {
   font-size: 12px;
   color: var(--color-error);
   line-height: 1.45;

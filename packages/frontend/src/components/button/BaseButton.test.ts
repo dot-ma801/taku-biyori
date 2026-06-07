@@ -39,7 +39,7 @@ describe('BaseButton', () => {
   });
 
   describe('size', () => {
-    it.each(['sm', 'md'] as const)(
+    it.each(['sm', 'md', 'lg'] as const)(
       'size="%s" のとき .btn--%s クラスが付与される',
       (size) => {
         // Arrange & Act

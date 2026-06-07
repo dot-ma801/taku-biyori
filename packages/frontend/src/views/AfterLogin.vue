@@ -27,7 +27,7 @@ if (authStore.isAuthenticated) {
   </div>
 </template>
 
-<style>
+<style scoped>
 .container {
   flex: 1;
   height: 100%;

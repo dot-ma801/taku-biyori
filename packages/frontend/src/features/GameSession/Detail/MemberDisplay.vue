@@ -2,7 +2,12 @@
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import type { GameSessionMember } from '@taku-biyori/shared';
 import { UsersRound } from '@lucide/vue';
+
+const props = defineProps<{
+  members: GameSessionMember[];
+}>();
 </script>
 
 <template>
@@ -11,11 +16,11 @@ import { UsersRound } from '@lucide/vue';
       参加メンバー
     </BaseSectionHeading>
 
-    <div v-for="i in 3" :key="i" class="user-container">
-      <UserAvatar class="avatar"></UserAvatar>
+    <div v-for="member in props.members" :key="member.id" class="user-container">
+      <UserAvatar class="avatar" :size="35"></UserAvatar>
 
-      <p class="user-name">{{ '田中' }}</p>
-      <p class="char-name">キャラクター：{{ 'チシャ猫' }}</p>
+      <p class="user-name">{{ member.userName ?? member.guestName ?? '（未設定）' }}</p>
+      <p class="char-name">キャラクター：{{ member.characterName ?? '未設定' }}</p>
     </div>
   </BaseCard>
 </template>

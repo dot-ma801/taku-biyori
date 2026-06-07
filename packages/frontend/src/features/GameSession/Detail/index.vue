@@ -24,9 +24,10 @@ onMounted(fetch);
 
   <div v-else-if="gameSession" class="container">
     <div>
-      <BaseSectionHeading level="h1">{{
-        gameSession.title
-      }}</BaseSectionHeading>
+      <BaseSectionHeading level="h1">
+        {{ gameSession.title }}
+      </BaseSectionHeading>
+
       <div class="description">
         <Album :size="16" />
         <p>シナリオ：{{ gameSession.scenarioName ?? '未設定' }}</p>
@@ -38,7 +39,7 @@ onMounted(fetch);
     <ScenarioInfoDisplay></ScenarioInfoDisplay>
     <MemoDisplay :text="gameSession.description ?? undefined"></MemoDisplay>
     <ScheduleDisplay></ScheduleDisplay>
-    <MemberDisplay></MemberDisplay>
+    <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>
 </template>
 

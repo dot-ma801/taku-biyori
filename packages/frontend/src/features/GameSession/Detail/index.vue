@@ -7,7 +7,8 @@ import ScenarioInfoDisplay from '@/features/GameSession/Detail/ScenarioInfoDispl
 import ScheduleDisplay from '@/features/GameSession/Detail/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { onMounted } from 'vue';
-import { Album, UsersRound } from '@lucide/vue';
+import { Album, UsersRound, UserRoundPlus , SquarePen } from '@lucide/vue';
+import BaseButton from '@/components/button/BaseButton.vue';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -28,11 +29,17 @@ onMounted(fetch);
         {{ gameSession.title }}
       </BaseSectionHeading>
 
-      <div class="description">
-        <Album :size="16" />
-        <p>シナリオ：{{ gameSession.scenarioName ?? '未設定' }}</p>
-        <UsersRound :size="16" />
-        <p>募集人数: {{ gameSession.maxMembers ?? '未設定' }}</p>
+      <div class="session-meta-bar">
+        <div class="description">
+          <Album :size="16" />
+          <p>シナリオ：{{ gameSession.scenarioName ?? '未設定' }}</p>
+          <UsersRound :size="16" />
+          <p>募集人数: {{ gameSession.maxMembers ?? '未設定' }}</p>
+        </div>
+        <div class="button-area">
+          <BaseButton :left-icon="SquarePen" variant="secondary">セッション編集</BaseButton>
+          <BaseButton :left-icon="UserRoundPlus ">参加する</BaseButton>
+        </div>
       </div>
     </div>
 
@@ -50,13 +57,24 @@ onMounted(fetch);
   gap: var(--space-5);
 }
 
-.description {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: 1fr 1fr;
-  align-items: center;
+.session-meta-bar {
+  display: flex;
+  justify-content: space-between;
+  
+  .description {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: 1fr 1fr;
+    align-items: center;
+    
+    gap: 0 var(--space-1);
+    padding-left: var(--space-3);
+  }
 
-  gap: 0 var(--space-1);
-  padding-left: var(--space-3);
+  .button-area {
+    >* {
+      margin: 0 var(--space-1);
+    }
+  }
 }
 </style>

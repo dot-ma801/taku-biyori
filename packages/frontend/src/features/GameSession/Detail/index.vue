@@ -6,7 +6,7 @@ import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import ScenarioInfoDisplay from '@/features/GameSession/Detail/ScenarioInfoDisplay.vue';
 import ScheduleDisplay from '@/features/GameSession/Detail/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { Album, UsersRound, UserRoundPlus , SquarePen } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 
@@ -17,6 +17,11 @@ const { gameSession, loading, errorMessage, fetch } = useGetGameSessionDetail(
 );
 
 onMounted(fetch);
+
+// NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
+const scenarioName = computed(() => gameSession.value?.scenarioName ?? '未設定');
+const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
+const description = computed(() => gameSession.value?.description ?? undefined);
 </script>
 
 <template>
@@ -32,9 +37,9 @@ onMounted(fetch);
       <div class="session-meta-bar">
         <div class="description">
           <Album :size="16" />
-          <p>シナリオ：{{ gameSession.scenarioName ?? '未設定' }}</p>
+          <p>シナリオ：{{ scenarioName }}</p>
           <UsersRound :size="16" />
-          <p>募集人数: {{ gameSession.maxMembers ?? '未設定' }}</p>
+          <p>募集人数: {{ maxMembers }}</p>
         </div>
         <div class="button-area">
           <BaseButton :left-icon="SquarePen" variant="secondary">セッション編集</BaseButton>
@@ -44,7 +49,7 @@ onMounted(fetch);
     </div>
 
     <ScenarioInfoDisplay></ScenarioInfoDisplay>
-    <MemoDisplay :text="gameSession.description ?? undefined"></MemoDisplay>
+    <MemoDisplay :text="description"></MemoDisplay>
     <ScheduleDisplay></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>

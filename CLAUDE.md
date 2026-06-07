@@ -234,3 +234,28 @@ pnpm --filter @taku-biyori/backend test
 pnpm --filter @taku-biyori/backend dev
 # → http://localhost:3000
 ```
+
+---
+
+## フロントエンド実装方針
+
+### template 内の式は computed に切り出す
+
+`<template>` 内に `??` や三項演算子などの式を直接書かない。
+必ず `<script setup>` 内の `computed` に切り出すこと。
+
+```vue
+<!-- ❌ NG -->
+<p>{{ gameSession.scenarioName ?? '未設定' }}</p>
+
+<!-- ✅ OK -->
+<p>{{ scenarioName }}</p>
+
+<!-- script setup 側 -->
+const scenarioName = computed(() => gameSession.value?.scenarioName ?? '未設定');
+```
+
+### 表示用のフォールバック値は composable ではなくコンポーネントに置く
+
+`'未設定'` のような表示文言は UI の関心事であり、データ取得に集中する composable には含めない。
+composable はフォールバックなしの生データを返し、コンポーネント側の `computed` で表示用に加工する。

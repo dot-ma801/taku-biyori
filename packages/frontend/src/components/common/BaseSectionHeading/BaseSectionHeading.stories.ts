@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
 import { BookOpenText, NotebookPen, Settings } from '@lucide/vue';
-import BaseSectionHeading from './BaseSectionHeading.vue';
+import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 
 const meta: Meta<typeof BaseSectionHeading> = {
   title: 'Common/BaseSectionHeading',

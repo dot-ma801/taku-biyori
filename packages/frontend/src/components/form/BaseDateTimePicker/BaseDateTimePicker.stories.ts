@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
-import BaseDateTimePicker from './BaseDateTimePicker.vue';
+import BaseDateTimePicker from '@/components/form/BaseDateTimePicker/BaseDateTimePicker.vue';
 
 const meta: Meta<typeof BaseDateTimePicker> = {
   title: 'Form/BaseDateTimePicker',

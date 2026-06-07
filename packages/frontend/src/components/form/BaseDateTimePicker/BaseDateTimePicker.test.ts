@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import BaseDateTimePicker from './BaseDateTimePicker.vue';
+import BaseDateTimePicker from '@/components/form/BaseDateTimePicker/BaseDateTimePicker.vue';
 
 describe('BaseDateTimePicker', () => {
   describe('レンダリング', () => {

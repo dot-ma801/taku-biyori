@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { NotebookPen } from '@lucide/vue';
-import BaseSectionHeading from './BaseSectionHeading.vue';
+import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 
 describe('BaseSectionHeading', () => {
   describe('レンダリング', () => {

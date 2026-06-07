@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'GameSessionEdit' });
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import InputBasicInfo from '@/features/GameSession/Edit/InputBasicInfo.vue';

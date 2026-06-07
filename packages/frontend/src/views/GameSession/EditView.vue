@@ -10,6 +10,8 @@ const {
   maxMembers,
   description,
   openUntil,
+  scheduledAt,
+  location,
   loading,
   errorMessage,
   submit,
@@ -21,11 +23,14 @@ const {
   <GameSessionEdit
     heading="セッション編集"
     submit-label="セッションを更新する"
+    :game-session-id="props.gameSessionId"
     v-model:title="title"
     v-model:scenarioName="scenarioName"
     v-model:maxMembers="maxMembers"
     v-model:description="description"
     v-model:openUntil="openUntil"
+    v-model:scheduledAt="scheduledAt"
+    v-model:location="location"
     :loading="loading"
     :error-message="errorMessage"
     @submit="submit"

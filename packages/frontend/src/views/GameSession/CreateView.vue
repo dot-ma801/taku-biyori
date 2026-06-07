@@ -8,6 +8,8 @@ const {
   maxMembers,
   description,
   openUntil,
+  scheduledAt,
+  location,
   loading,
   errorMessage,
   submit,
@@ -24,6 +26,8 @@ const {
     v-model:maxMembers="maxMembers"
     v-model:description="description"
     v-model:openUntil="openUntil"
+    v-model:scheduledAt="scheduledAt"
+    v-model:location="location"
     :loading="loading"
     :error-message="errorMessage"
     @submit="submit"

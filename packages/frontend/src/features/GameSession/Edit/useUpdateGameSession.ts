@@ -12,6 +12,8 @@ export const useUpdateGameSession = (id: string) => {
   const maxMembers = ref('');
   const description = ref('');
   const openUntil = ref('');
+  const scheduledAt = ref('');
+  const location = ref('');
 
   const loading = ref(false);
   const errorMessage = ref('');
@@ -28,6 +30,8 @@ export const useUpdateGameSession = (id: string) => {
         gameSession.maxMembers != null ? String(gameSession.maxMembers) : '';
       description.value = gameSession.description ?? '';
       openUntil.value = gameSession.openUntil ?? '';
+      scheduledAt.value = gameSession.scheduledAt ?? '';
+      location.value = gameSession.location ?? '';
     } catch (err) {
       if (err instanceof ApiError) {
         errorMessage.value = err.message;
@@ -67,6 +71,12 @@ export const useUpdateGameSession = (id: string) => {
         ...(openUntil.value
           ? { openUntil: openUntil.value }
           : { openUntil: null }),
+        ...(scheduledAt.value
+          ? { scheduledAt: scheduledAt.value }
+          : { scheduledAt: null }),
+        ...(location.value
+          ? { location: location.value }
+          : { location: null }),
       });
 
       router.push({
@@ -94,6 +104,8 @@ export const useUpdateGameSession = (id: string) => {
     maxMembers,
     description,
     openUntil,
+    scheduledAt,
+    location,
     loading,
     errorMessage,
     submit,

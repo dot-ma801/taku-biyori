@@ -12,6 +12,8 @@ export const useCreateGameSession = () => {
   const maxMembers = ref('');
   const description = ref('');
   const openUntil = ref('');
+  const scheduledAt = ref('');
+  const location = ref('');
 
   const loading = ref(false);
   const errorMessage = ref('');
@@ -21,11 +23,6 @@ export const useCreateGameSession = () => {
     errorMessage.value = '';
 
     try {
-      // `&&` の手前が falsy なら false が返り、そうでなければ 値を返す
-      // `...` により false なら、何も展開されず、値はそのまま展開される
-      // 具体例:
-      // ...false -> 何も展開されない
-      // ...{ scenarioName: 'シナリオ名' } -> scenarioName: 'シナリオ名' が展開される
       const parsedMaxMembers = Number(maxMembers.value.trim());
       const validMaxMembers =
         maxMembers.value.trim() !== '' &&
@@ -38,6 +35,8 @@ export const useCreateGameSession = () => {
         ...(validMaxMembers && { maxMembers: parsedMaxMembers }),
         ...(description.value && { description: description.value }),
         ...(openUntil.value && { openUntil: openUntil.value }),
+        ...(scheduledAt.value && { scheduledAt: scheduledAt.value }),
+        ...(location.value && { location: location.value }),
       });
 
       router.push({
@@ -65,6 +64,8 @@ export const useCreateGameSession = () => {
     maxMembers,
     description,
     openUntil,
+    scheduledAt,
+    location,
     loading,
     errorMessage,
     submit,

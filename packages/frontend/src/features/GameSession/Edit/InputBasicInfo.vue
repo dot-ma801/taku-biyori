@@ -4,6 +4,10 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import { NotebookPen, BookOpenText } from '@lucide/vue';
+
+const title = defineModel<string>('title', { default: '' });
+const scenarioName = defineModel<string>('scenarioName', { default: '' });
+const maxMembers = defineModel<string>('maxMembers', { default: '' });
 </script>
 
 <template>
@@ -15,7 +19,7 @@ import { NotebookPen, BookOpenText } from '@lucide/vue';
     </template>
 
     <template #default>
-      <BaseTextBox label="タイトル" placeholder="例：【5月】定期開催マダミス会"></BaseTextBox>
+      <BaseTextBox v-model="title" label="タイトル" placeholder="例：【5月】定期開催マダミス会"></BaseTextBox>
 
       <div class="scenario-info">
         <BaseSectionHeading
@@ -25,8 +29,8 @@ import { NotebookPen, BookOpenText } from '@lucide/vue';
         >
           シナリオ情報
         </BaseSectionHeading>
-        <BaseTextBox label="シナリオタイトル"></BaseTextBox>
-        <BaseTextBox label="募集人数" :type="'number'" min="0"></BaseTextBox>
+        <BaseTextBox v-model="scenarioName" label="シナリオタイトル"></BaseTextBox>
+        <BaseTextBox v-model="maxMembers" label="募集人数（自分を含めて）" :type="'number'" min="2"></BaseTextBox>
 
         <BaseTextArea
           label="シナリオ説明"

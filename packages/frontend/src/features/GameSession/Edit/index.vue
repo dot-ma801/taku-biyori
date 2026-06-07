@@ -4,6 +4,19 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import InputBasicInfo from '@/features/GameSession/Edit/InputBasicInfo.vue';
 import InputMemo from '@/features/GameSession/Edit/InputMemo.vue';
 import InputScheduleInfo from '@/features/GameSession/Edit/InputScheduleInfo.vue';
+import { useCreateGameSession } from '@/features/GameSession/Edit/useCreateGameSession';
+
+const {
+  title,
+  scenarioName,
+  maxMembers,
+  description,
+  openUntil,
+  loading,
+  errorMessage,
+  submit,
+  cancel,
+} = useCreateGameSession();
 </script>
 
 <template>
@@ -12,14 +25,29 @@ import InputScheduleInfo from '@/features/GameSession/Edit/InputScheduleInfo.vue
       セッション新規作成
     </BaseSectionHeading>
 
-    <InputBasicInfo></InputBasicInfo>
-    <InputScheduleInfo></InputScheduleInfo>
-    <InputMemo></InputMemo>
+    <InputBasicInfo
+      v-model:title="title"
+      v-model:scenarioName="scenarioName"
+      v-model:maxMembers="maxMembers"
+    ></InputBasicInfo>
+    <InputScheduleInfo v-model:openUntil="openUntil"></InputScheduleInfo>
+    <InputMemo v-model:description="description"></InputMemo>
   </div>
 
+  <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+
   <div class="button-area">
-    <BaseButton size="lg" variant="secondary">キャンセル</BaseButton>
-    <BaseButton size="lg">セッションを作成する</BaseButton>
+    <BaseButton
+      size="lg"
+      variant="secondary"
+      :disabled="loading"
+      @click="cancel"
+    >
+      キャンセル
+    </BaseButton>
+    <BaseButton size="lg" :disabled="loading || !title" @click="submit">
+      {{ loading ? '作成中…' : 'セッションを作成する' }}
+    </BaseButton>
   </div>
 </template>
 

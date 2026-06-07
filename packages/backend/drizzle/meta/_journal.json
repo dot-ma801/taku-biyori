@@ -15,6 +15,13 @@
       "when": 1780325821010,
       "tag": "0001_vengeful_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780822826309,
+      "tag": "0002_brave_wonder_man",
+      "breakpoints": true
     }
   ]
 }

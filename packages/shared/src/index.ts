@@ -24,4 +24,10 @@ export {
   type GameSessionMember,
   GameSessionDetailSchema,
   type GameSessionDetail,
+  AvailabilityDateAnswerSchema,
+  type AvailabilityDateAnswer,
+  AvailabilityDateSchema,
+  type AvailabilityDate,
+  CreateAvailabilityDateInputSchema,
+  type CreateAvailabilityDateInput,
 } from './game-session.js';

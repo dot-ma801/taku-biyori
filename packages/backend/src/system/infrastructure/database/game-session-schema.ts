@@ -1,7 +1,9 @@
 import {
   boolean,
   date,
+  index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -18,6 +20,7 @@ export const gameSessions = pgTable('game_sessions', {
   title: text('title').notNull(),
   scenarioName: text('scenario_name'),
   description: text('description'),
+  location: text('location'),
   maxPlayers: integer('max_players'),
   guestLinkToken: text('guest_link_token').notNull(),
   isPublished: boolean('is_published').notNull().default(false),
@@ -46,6 +49,59 @@ export const gameSessionMembers = pgTable('game_session_members', {
     .$onUpdate(() => new Date()),
 });
 
+export const gameSessionCandidates = pgTable(
+  'game_session_candidates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gameSessionId: uuid('game_session_id')
+      .notNull()
+      .references(() => gameSessions.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    gameSessionIdIdx: index('game_session_candidates_game_session_id_idx').on(
+      table.gameSessionId,
+    ),
+  }),
+);
+
+export const availabilityDateAnswerEnum = pgEnum('availability_date_answer', [
+  'ok',
+  'maybe',
+  'ng',
+]);
+
+export const gameSessionAnswers = pgTable(
+  'game_session_answers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => gameSessionCandidates.id, { onDelete: 'cascade' }),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => gameSessionMembers.id, { onDelete: 'cascade' }),
+    answer: availabilityDateAnswerEnum('answer').notNull(),
+    comment: text('comment'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    candidateIdIdx: index('game_session_answers_candidate_id_idx').on(
+      table.candidateId,
+    ),
+    memberIdIdx: index('game_session_answers_member_id_idx').on(table.memberId),
+  }),
+);
+
 export const gameSessionsRelations = relations(
   gameSessions,
   ({ one, many }) => ({
@@ -54,12 +110,13 @@ export const gameSessionsRelations = relations(
       references: [user.id],
     }),
     members: many(gameSessionMembers),
+    candidates: many(gameSessionCandidates),
   }),
 );
 
 export const gameSessionMembersRelations = relations(
   gameSessionMembers,
-  ({ one }) => ({
+  ({ one, many }) => ({
     gameSession: one(gameSessions, {
       fields: [gameSessionMembers.gameSessionId],
       references: [gameSessions.id],
@@ -67,6 +124,32 @@ export const gameSessionMembersRelations = relations(
     user: one(user, {
       fields: [gameSessionMembers.userId],
       references: [user.id],
+    }),
+    answers: many(gameSessionAnswers),
+  }),
+);
+
+export const gameSessionCandidatesRelations = relations(
+  gameSessionCandidates,
+  ({ one, many }) => ({
+    gameSession: one(gameSessions, {
+      fields: [gameSessionCandidates.gameSessionId],
+      references: [gameSessions.id],
+    }),
+    answers: many(gameSessionAnswers),
+  }),
+);
+
+export const gameSessionAnswersRelations = relations(
+  gameSessionAnswers,
+  ({ one }) => ({
+    candidate: one(gameSessionCandidates, {
+      fields: [gameSessionAnswers.candidateId],
+      references: [gameSessionCandidates.id],
+    }),
+    member: one(gameSessionMembers, {
+      fields: [gameSessionAnswers.memberId],
+      references: [gameSessionMembers.id],
     }),
   }),
 );

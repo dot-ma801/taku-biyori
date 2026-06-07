@@ -7,8 +7,10 @@ export interface CreateGameSessionRepository {
     title: string;
     description?: string;
     scenarioName?: string;
+    location?: string;
     maxMembers?: number;
     openUntil?: string;
+    scheduledAt?: string;
     guestLinkToken: string;
   }): Promise<GameSession>;
 }
@@ -24,8 +26,10 @@ export const createGameSession = async (
     title: input.title,
     description: input.description,
     scenarioName: input.scenarioName,
+    location: input.location,
     maxMembers: input.maxMembers,
     openUntil: input.openUntil,
+    scheduledAt: input.scheduledAt,
     guestLinkToken,
   });
 };

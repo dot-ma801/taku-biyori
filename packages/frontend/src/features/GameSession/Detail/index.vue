@@ -48,7 +48,8 @@ const description = computed(() => gameSession.value?.description ?? undefined);
       </div>
     </div>
 
-    <ScenarioInfoDisplay></ScenarioInfoDisplay>
+    <!-- シナリオの詳細文で v-if する -->
+    <ScenarioInfoDisplay v-if="false"></ScenarioInfoDisplay>
     <MemoDisplay :text="description"></MemoDisplay>
     <ScheduleDisplay></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>

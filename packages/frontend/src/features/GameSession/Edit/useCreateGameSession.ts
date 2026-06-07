@@ -24,6 +24,11 @@ export const useCreateGameSession = () => {
     errorMessage.value = '';
 
     try {
+      // `&&` の手前が falsy なら false が返り、そうでなければ 値を返す
+      // `...` により false なら、何も展開されず、値はそのまま展開される
+      // 具体例:
+      // ...false -> 何も展開されない
+      // ...{ scenarioName: 'シナリオ名' } -> scenarioName: 'シナリオ名' が展開される
       const parsedMaxMembers = Number(maxMembers.value.trim());
       const validMaxMembers =
         maxMembers.value.trim() !== '' &&

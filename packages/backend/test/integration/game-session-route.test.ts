@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
-import type { GameSessionListItem, GameSession } from '@taku-biyori/shared';
+import type {
+  GameSessionListItem,
+  GameSession,
+  AvailabilityDate,
+} from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
+import type { ListAvailabilityDatesResult } from '@/game-session/application/list-availability-dates';
+import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
+import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
+import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -36,6 +44,12 @@ const mockGetOk: GetGameSessionResult = {
   gameSession: mockGameSessionDetail,
 };
 
+const mockAvailabilityDate: AvailabilityDate = {
+  id: 'date-1',
+  date: '2025-09-01',
+  answers: [],
+};
+
 const makeApp = (
   overrides: {
     getSession?: () => Promise<typeof mockSession | null>;
@@ -66,6 +80,22 @@ const makeApp = (
       userId: string,
       input: unknown,
     ) => Promise<UpdateGameSessionStatusResult>;
+    listAvailabilityDates?: (
+      gameSessionId: string,
+    ) => Promise<ListAvailabilityDatesResult>;
+    addAvailabilityDate?: (
+      gameSessionId: string,
+      userId: string,
+      input: unknown,
+    ) => Promise<AddAvailabilityDateResult>;
+    deleteAvailabilityDate?: (
+      dateId: string,
+      userId: string,
+    ) => Promise<DeleteAvailabilityDateResult>;
+    confirmAvailabilityDate?: (
+      dateId: string,
+      userId: string,
+    ) => Promise<ConfirmAvailabilityDateResult>;
   } = {},
 ) =>
   createApp({
@@ -85,6 +115,18 @@ const makeApp = (
       overrides.deleteGameSession ?? vi.fn().mockResolvedValue({ type: 'ok' }),
     updateGameSessionStatus:
       overrides.updateGameSessionStatus ??
+      vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+    listAvailabilityDates:
+      overrides.listAvailabilityDates ??
+      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
+    addAvailabilityDate:
+      overrides.addAvailabilityDate ??
+      vi.fn().mockResolvedValue({ type: 'ok', date: mockAvailabilityDate }),
+    deleteAvailabilityDate:
+      overrides.deleteAvailabilityDate ??
+      vi.fn().mockResolvedValue({ type: 'ok' }),
+    confirmAvailabilityDate:
+      overrides.confirmAvailabilityDate ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
   });
 
@@ -586,5 +628,163 @@ describe('PATCH /api/game-sessions/:id/status', () => {
       'user-1',
       { status: 'open' },
     );
+  });
+});
+
+describe('GET /api/game-sessions/:id/availability-dates', () => {
+  it('候補日一覧を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockAvailabilityDate]);
+  });
+
+  it('存在しないセッションIDは 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/nonexistent/availability-dates',
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('POST /api/game-sessions/:id/availability-dates', () => {
+  it('有効なボディで 201 と候補日を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2025-09-01' }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(201);
+    expect(body).toEqual(mockAvailabilityDate);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2025-09-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホスト以外は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2025-09-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+});
+
+describe('DELETE /api/game-sessions/:id/availability-dates/:dateId', () => {
+  it('204 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/date-1',
+      {
+        method: 'DELETE',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(204);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/date-1',
+      {
+        method: 'DELETE',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('POST /api/game-sessions/:id/availability-dates/:dateId/confirm', () => {
+  it('候補日を確定してセッションを返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/date-1/confirm',
+      { method: 'POST' },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockGameSession);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/date-1/confirm',
+      { method: 'POST' },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
   });
 });

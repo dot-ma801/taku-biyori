@@ -10,6 +10,7 @@ const {
   openUntil,
   scheduledAt,
   location,
+  pendingDates,
   loading,
   errorMessage,
   submit,
@@ -28,6 +29,7 @@ const {
     v-model:openUntil="openUntil"
     v-model:scheduledAt="scheduledAt"
     v-model:location="location"
+    v-model:pendingDates="pendingDates"
     :loading="loading"
     :error-message="errorMessage"
     @submit="submit"

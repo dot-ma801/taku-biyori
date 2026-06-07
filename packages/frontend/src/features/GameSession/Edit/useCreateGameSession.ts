@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { createGameSession } from '@/api/game-session';
+import { createGameSession, addAvailabilityDate } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 
 export const useCreateGameSession = () => {
@@ -14,6 +14,7 @@ export const useCreateGameSession = () => {
   const openUntil = ref('');
   const scheduledAt = ref('');
   const location = ref('');
+  const pendingDates = ref<string[]>([]);
 
   const loading = ref(false);
   const errorMessage = ref('');
@@ -38,6 +39,15 @@ export const useCreateGameSession = () => {
         ...(scheduledAt.value && { scheduledAt: scheduledAt.value }),
         ...(location.value && { location: location.value }),
       });
+
+      // 候補日が選択されていればセッション作成後に一括 POST
+      if (pendingDates.value.length > 0) {
+        await Promise.all(
+          pendingDates.value.map((date) =>
+            addAvailabilityDate(gameSession.id, { date }),
+          ),
+        );
+      }
 
       router.push({
         name: 'game-session-detail',
@@ -66,6 +76,7 @@ export const useCreateGameSession = () => {
     openUntil,
     scheduledAt,
     location,
+    pendingDates,
     loading,
     errorMessage,
     submit,

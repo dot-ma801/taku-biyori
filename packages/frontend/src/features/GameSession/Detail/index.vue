@@ -12,7 +12,7 @@ import BaseButton from '@/components/button/BaseButton.vue';
 
 const props = defineProps<{ gameSessionId: string }>();
 
-const { gameSession, loading, errorMessage, fetch } = useGetGameSessionDetail(
+const { gameSession, loading, errorMessage, fetch, onClickEdit } = useGetGameSessionDetail(
   props.gameSessionId,
 );
 
@@ -42,7 +42,7 @@ const description = computed(() => gameSession.value?.description ?? undefined);
           <p>募集人数: {{ maxMembers }}</p>
         </div>
         <div class="button-area">
-          <BaseButton :left-icon="SquarePen" variant="secondary">セッション編集</BaseButton>
+          <BaseButton :left-icon="SquarePen" variant="secondary" @click="onClickEdit">セッション編集</BaseButton>
           <BaseButton :left-icon="UserRoundPlus ">参加する</BaseButton>
         </div>
       </div>

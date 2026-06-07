@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { getGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 import type { GameSessionDetail } from '@taku-biyori/shared';
+import { useRouter } from 'vue-router';
 
 export const useGetGameSessionDetail = (id: string) => {
   const gameSession = ref<GameSessionDetail | null>(null);
@@ -25,10 +26,16 @@ export const useGetGameSessionDetail = (id: string) => {
     }
   }
 
+  const router = useRouter();
+  const onClickEdit = () => {
+    router.push({ name: 'game-sessions-edit', params: { gameSessionId: id } });
+  };
+
   return {
     gameSession,
     loading,
     errorMessage,
     fetch,
+    onClickEdit,
   };
 };

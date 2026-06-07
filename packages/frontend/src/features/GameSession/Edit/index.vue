@@ -5,25 +5,30 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import InputBasicInfo from '@/features/GameSession/Edit/InputBasicInfo.vue';
 import InputMemo from '@/features/GameSession/Edit/InputMemo.vue';
 import InputScheduleInfo from '@/features/GameSession/Edit/InputScheduleInfo.vue';
-import { useCreateGameSession } from '@/features/GameSession/Edit/useCreateGameSession';
 
-const {
-  title,
-  scenarioName,
-  maxMembers,
-  description,
-  openUntil,
-  loading,
-  errorMessage,
-  submit,
-  cancel,
-} = useCreateGameSession();
+const props = defineProps<{
+  heading: string;
+  submitLabel: string;
+  loading: boolean;
+  errorMessage: string;
+}>();
+
+const emit = defineEmits<{
+  submit: [];
+  cancel: [];
+}>();
+
+const title = defineModel<string>('title', { default: '' });
+const scenarioName = defineModel<string>('scenarioName', { default: '' });
+const maxMembers = defineModel<string>('maxMembers', { default: '' });
+const description = defineModel<string>('description', { default: '' });
+const openUntil = defineModel<string>('openUntil', { default: '' });
 </script>
 
 <template>
   <div class="container">
     <BaseSectionHeading level="h1" text-color="primary">
-      セッション新規作成
+      {{ heading }}
     </BaseSectionHeading>
 
     <InputBasicInfo
@@ -42,12 +47,12 @@ const {
       size="lg"
       variant="secondary"
       :disabled="loading"
-      @click="cancel"
+      @click="emit('cancel')"
     >
       キャンセル
     </BaseButton>
-    <BaseButton size="lg" :disabled="loading || !title" @click="submit">
-      {{ loading ? '作成中…' : 'セッションを作成する' }}
+    <BaseButton size="lg" :disabled="loading || !title" @click="emit('submit')">
+      {{ loading ? '処理中…' : submitLabel }}
     </BaseButton>
   </div>
 </template>

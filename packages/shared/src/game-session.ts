@@ -77,6 +77,7 @@ export type UpdateGameSessionStatusInput = z.infer<
 export const GameSessionMemberSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().nullable(),
+  userName: z.string().nullable(),
   guestName: z.string().nullable(),
   characterName: z.string().nullable(),
   joinedAt: z.string(),

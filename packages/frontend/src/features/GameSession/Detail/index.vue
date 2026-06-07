@@ -5,26 +5,38 @@ import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import ScenarioInfoDisplay from '@/features/GameSession/Detail/ScenarioInfoDisplay.vue';
 import ScheduleDisplay from '@/features/GameSession/Detail/ScheduleDisplay.vue';
-import { ref } from 'vue';
+import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
+import { onMounted } from 'vue';
 import { Album, UsersRound } from '@lucide/vue';
 
-const title = ref('セッションタイトル');
+const props = defineProps<{ gameSessionId: string }>();
+
+const { gameSession, loading, errorMessage, fetch } = useGetGameSessionDetail(
+  props.gameSessionId,
+);
+
+onMounted(fetch);
 </script>
 
 <template>
-  <div class="container">
+  <div v-if="loading">読み込み中...</div>
+  <div v-else-if="errorMessage">{{ errorMessage }}</div>
+
+  <div v-else-if="gameSession" class="container">
     <div>
-      <BaseSectionHeading level="h1">{{ title }}</BaseSectionHeading>
+      <BaseSectionHeading level="h1">{{
+        gameSession.title
+      }}</BaseSectionHeading>
       <div class="description">
         <Album :size="16" />
-        <p>シナリオ：{{}}</p>
+        <p>シナリオ：{{ gameSession.scenarioName ?? '未設定' }}</p>
         <UsersRound :size="16" />
-        <p>募集人数: {{}}</p>
+        <p>募集人数: {{ gameSession.maxMembers ?? '未設定' }}</p>
       </div>
     </div>
 
     <ScenarioInfoDisplay></ScenarioInfoDisplay>
-    <MemoDisplay></MemoDisplay>
+    <MemoDisplay :text="gameSession.description ?? undefined"></MemoDisplay>
     <ScheduleDisplay></ScheduleDisplay>
     <MemberDisplay></MemberDisplay>
   </div>

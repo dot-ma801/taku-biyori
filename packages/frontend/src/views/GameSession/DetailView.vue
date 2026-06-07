@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import GameSessionDetail from '@/features/GameSession/Detail/index.vue';
+
 const props = defineProps<{ gameSessionId: string }>();
 </script>
 
 <template>
-  <h1>GameSession/DetailView.vue</h1>
-  <p>{{ props.gameSessionId }}</p>
+  <GameSessionDetail :game-session-id="props.gameSessionId"></GameSessionDetail>
 </template>
 
-<style></style>
+<style scoped></style>

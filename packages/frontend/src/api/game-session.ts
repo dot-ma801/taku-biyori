@@ -1,5 +1,6 @@
 import type {
   AvailabilityDate,
+  BulkUpdateAvailabilityDatesInput,
   CreateAvailabilityDateInput,
   CreateGameSessionInput,
   GameSession,
@@ -56,6 +57,16 @@ export async function addAvailabilityDate(
   return (await apiRequest<AvailabilityDate>(
     `/api/game-sessions/${sessionId}/availability-dates`,
     { method: 'POST', body: input },
+  ))!;
+}
+
+export async function bulkUpdateAvailabilityDates(
+  sessionId: string,
+  input: BulkUpdateAvailabilityDatesInput,
+): Promise<AvailabilityDate[]> {
+  return (await apiRequest<AvailabilityDate[]>(
+    `/api/game-sessions/${sessionId}/availability-dates`,
+    { method: 'PUT', body: input },
   ))!;
 }
 

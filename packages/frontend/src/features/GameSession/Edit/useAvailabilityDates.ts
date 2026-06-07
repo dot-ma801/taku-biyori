@@ -2,8 +2,7 @@ import { ref, onMounted } from 'vue';
 import type { AvailabilityDate } from '@taku-biyori/shared';
 import {
   listAvailabilityDates,
-  addAvailabilityDate,
-  deleteAvailabilityDate,
+  bulkUpdateAvailabilityDates,
 } from '@/api/game-session';
 
 export const useAvailabilityDates = (gameSessionId: string) => {
@@ -26,38 +25,16 @@ export const useAvailabilityDates = (gameSessionId: string) => {
   onMounted(fetchAvailabilityDates);
 
   // BaseDatePicker(multiple) の v-model と同期するハンドラ
-  // 追加: 既存にない日付が渡されたら POST
-  // 削除: 既存にある日付が渡されなかったら DELETE
+  // 現在の選択状態をそのまま PUT して、差分調整はサーバーに任せる
   async function syncDates(newDates: string[]) {
     errorMessage.value = '';
-
-    const currentDates = availabilityDates.value.map((d) => d.date);
-
-    // 追加された日付
-    const toAdd = newDates.filter((d) => !currentDates.includes(d));
-    // 削除された日付
-    const toDelete = availabilityDates.value.filter(
-      (d) => !newDates.includes(d.date),
-    );
-
     try {
-      await Promise.all([
-        ...toAdd.map((date) =>
-          addAvailabilityDate(gameSessionId, { date }).then((created) => {
-            availabilityDates.value.push(created);
-          }),
-        ),
-        ...toDelete.map((d) =>
-          deleteAvailabilityDate(gameSessionId, d.id).then(() => {
-            availabilityDates.value = availabilityDates.value.filter(
-              (a) => a.id !== d.id,
-            );
-          }),
-        ),
-      ]);
+      availabilityDates.value = await bulkUpdateAvailabilityDates(
+        gameSessionId,
+        { dates: newDates },
+      );
     } catch {
       errorMessage.value = '候補日の更新に失敗しました';
-      // エラー時はサーバー状態に戻す
       await fetchAvailabilityDates();
     }
   }

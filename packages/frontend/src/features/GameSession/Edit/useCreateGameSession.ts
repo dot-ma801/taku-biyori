@@ -1,7 +1,10 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { createGameSession, addAvailabilityDate } from '@/api/game-session';
+import {
+  createGameSession,
+  bulkUpdateAvailabilityDates,
+} from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 
 export const useCreateGameSession = () => {
@@ -45,13 +48,11 @@ export const useCreateGameSession = () => {
         ...(location.value && { location: location.value }),
       });
 
-      // 候補日が選択されていればセッション作成後に一括 POST
+      // 候補日が選択されていればセッション作成後に一括 PUT
       if (pendingDates.value.length > 0) {
-        await Promise.all(
-          pendingDates.value.map((date) =>
-            addAvailabilityDate(gameSession.id, { date }),
-          ),
-        );
+        await bulkUpdateAvailabilityDates(gameSession.id, {
+          dates: pendingDates.value,
+        });
       }
 
       router.push({

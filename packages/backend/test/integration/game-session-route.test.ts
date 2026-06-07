@@ -89,10 +89,12 @@ const makeApp = (
       input: unknown,
     ) => Promise<AddAvailabilityDateResult>;
     deleteAvailabilityDate?: (
+      gameSessionId: string,
       dateId: string,
       userId: string,
     ) => Promise<DeleteAvailabilityDateResult>;
     confirmAvailabilityDate?: (
+      gameSessionId: string,
       dateId: string,
       userId: string,
     ) => Promise<ConfirmAvailabilityDateResult>;

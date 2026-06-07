@@ -31,7 +31,12 @@ describe('confirmAvailabilityDate', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await confirmAvailabilityDate(repo, 'date-1', 'user-1');
+    const result = await confirmAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', gameSession: mockGameSession });
@@ -44,7 +49,35 @@ describe('confirmAvailabilityDate', () => {
     });
 
     // Act
-    const result = await confirmAvailabilityDate(repo, 'nonexistent', 'user-1');
+    const result = await confirmAvailabilityDate(
+      repo,
+      'session-1',
+      'nonexistent',
+      'user-1',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('候補日が別セッションに属する場合は notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findCandidateOwner: vi
+        .fn()
+        .mockResolvedValue({
+          gameSessionId: 'other-session',
+          date: '2025-09-01',
+        }),
+    });
+
+    // Act
+    const result = await confirmAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -57,7 +90,12 @@ describe('confirmAvailabilityDate', () => {
     });
 
     // Act
-    const result = await confirmAvailabilityDate(repo, 'date-1', 'user-1');
+    const result = await confirmAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -69,7 +107,7 @@ describe('confirmAvailabilityDate', () => {
     const repo = makeRepo({ setScheduledAt });
 
     // Act
-    await confirmAvailabilityDate(repo, 'date-1', 'user-1');
+    await confirmAvailabilityDate(repo, 'session-1', 'date-1', 'user-1');
 
     // Assert
     expect(setScheduledAt).toHaveBeenCalledWith('session-1', '2025-09-01');

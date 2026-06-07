@@ -17,7 +17,12 @@ describe('deleteAvailabilityDate', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await deleteAvailabilityDate(repo, 'date-1', 'user-1');
+    const result = await deleteAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok' });
@@ -30,7 +35,32 @@ describe('deleteAvailabilityDate', () => {
     });
 
     // Act
-    const result = await deleteAvailabilityDate(repo, 'nonexistent', 'user-1');
+    const result = await deleteAvailabilityDate(
+      repo,
+      'session-1',
+      'nonexistent',
+      'user-1',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('候補日が別セッションに属する場合は notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findCandidateOwner: vi
+        .fn()
+        .mockResolvedValue({ gameSessionId: 'other-session' }),
+    });
+
+    // Act
+    const result = await deleteAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -43,7 +73,12 @@ describe('deleteAvailabilityDate', () => {
     });
 
     // Act
-    const result = await deleteAvailabilityDate(repo, 'date-1', 'user-1');
+    const result = await deleteAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -55,7 +90,7 @@ describe('deleteAvailabilityDate', () => {
     const repo = makeRepo({ deleteDateById });
 
     // Act
-    await deleteAvailabilityDate(repo, 'date-99', 'user-1');
+    await deleteAvailabilityDate(repo, 'session-1', 'date-99', 'user-1');
 
     // Assert
     expect(deleteDateById).toHaveBeenCalledWith('date-99');

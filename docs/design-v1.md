@@ -346,8 +346,9 @@ confirmed（実施前）
 | メソッド | パス | 概要 |
 |---|---|---|
 | `GET` | `/api/game-sessions/:id/availability-dates` | 候補日一覧（回答含む） |
-| `POST` | `/api/game-sessions/:id/availability-dates` | 候補日追加 |
-| `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日削除 |
+| `POST` | `/api/game-sessions/:id/availability-dates` | 候補日を1件追加 |
+| `PUT` | `/api/game-sessions/:id/availability-dates` | 候補日を一括更新（`{ dates }` で全件置き換え、差分は追加/削除） |
+| `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日を1件削除 |
 | `POST` | `/api/game-sessions/:id/availability-dates/:dateId/confirm` | 候補日確定（`scheduled_at` セット） |
 | `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/responses` | 日程回答（◯△×）登録・更新 |
 

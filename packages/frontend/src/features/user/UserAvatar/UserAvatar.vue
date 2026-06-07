@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Avatar from 'vue-boring-avatars';
+import { computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
@@ -8,12 +9,15 @@ const props = withDefaults(
   defineProps<{
     size?: number;
     variant?: 'marble' | 'beam' | 'pixel' | 'sunset' | 'ring' | 'bauhaus';
+    name?: string;
   }>(),
   {
     size: 30,
     variant: 'beam',
   },
 );
+
+const avatarName = computed(() => props.name ?? authStore.user?.name ?? '');
 </script>
 
 <template>
@@ -22,11 +26,7 @@ const props = withDefaults(
     :style="{ width: `${props.size}px`, height: `${props.size}px` }"
     aria-hidden="true"
   >
-    <Avatar
-      :size="props.size"
-      :variant="props.variant"
-      :name="authStore.user?.name ?? ''"
-    />
+    <Avatar :size="props.size" :variant="props.variant" :name="avatarName" />
   </span>
 </template>
 

@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { getGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 import type { GameSessionDetail } from '@taku-biyori/shared';
@@ -25,6 +25,8 @@ export const useGetGameSessionDetail = (id: string) => {
       loading.value = false;
     }
   }
+
+  onMounted(fetch);
 
   const router = useRouter();
   const onClickEdit = () => {

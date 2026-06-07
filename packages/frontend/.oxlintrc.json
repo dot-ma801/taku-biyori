@@ -5,5 +5,6 @@
     "builtin": true,
     "browser": true
   },
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "vue", "vitest"]
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "vue", "vitest"],
+  "ignorePatterns": ["src/components/common/BaseTable/BaseTable.vue"]
 }

@@ -27,10 +27,20 @@ const props = withDefaults(
 
 defineSlots<{
   [key: `cell-${string}`]: (props: { row: T; value: unknown }) => unknown;
-  empty: () => unknown;
+  empty?: () => unknown;
 }>();
 
 const sortState = ref<SortState>(null);
+
+function getAriaSortValue(
+  column: TableColumn,
+): 'ascending' | 'descending' | 'none' | undefined {
+  if (!column.sortable) return undefined;
+  if (sortState.value?.key === column.key) {
+    return sortState.value.direction === 'asc' ? 'ascending' : 'descending';
+  }
+  return 'none';
+}
 
 function toggleSort(key: string) {
   if (sortState.value?.key === key) {
@@ -78,15 +88,7 @@ const sortedRows = computed(() => {
               { 'table__th--sortable': col.sortable },
             ]"
             scope="col"
-            :aria-sort="
-              col.sortable && sortState?.key === col.key
-                ? sortState.direction === 'asc'
-                  ? 'ascending'
-                  : 'descending'
-                : col.sortable
-                  ? 'none'
-                  : undefined
-            "
+            :aria-sort="getAriaSortValue(col)"
             @click="col.sortable ? toggleSort(col.key) : undefined"
           >
             <span class="table__th-inner">

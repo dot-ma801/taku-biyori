@@ -41,7 +41,7 @@ const onClickUserName = () => {
   >
     <!-- ボタン -->
     <template #activator>
-      <button class="user-btn">
+      <button class="user-btn" aria-label="ユーザーメニューを開く">
         <UserAvatar />
       </button>
     </template>

@@ -36,6 +36,7 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
+    :aria-label="loading ? '読み込み中' : undefined"
     :class="[
       'btn',
       `btn--${variant}`,
@@ -45,9 +46,19 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   >
     <span v-if="loading" class="btn__spinner" aria-hidden="true" />
     <template v-else>
-      <component :is="leftIcon" v-if="leftIcon" :size="iconSize" aria-hidden="true" />
+      <component
+        :is="leftIcon"
+        v-if="leftIcon"
+        :size="iconSize"
+        aria-hidden="true"
+      />
       <slot />
-      <component :is="rightIcon" v-if="rightIcon" :size="iconSize" aria-hidden="true" />
+      <component
+        :is="rightIcon"
+        v-if="rightIcon"
+        :size="iconSize"
+        aria-hidden="true"
+      />
     </template>
   </button>
 </template>

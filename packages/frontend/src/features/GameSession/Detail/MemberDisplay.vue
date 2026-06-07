@@ -16,11 +16,23 @@ const props = defineProps<{
       参加メンバー
     </BaseSectionHeading>
 
-    <div v-for="member in props.members" :key="member.id" class="user-container">
-      <UserAvatar class="avatar" :size="35"></UserAvatar>
+    <div
+      v-for="member in props.members"
+      :key="member.id"
+      class="user-container"
+    >
+      <UserAvatar
+        class="avatar"
+        :size="35"
+        :name="member.userName ?? member.guestName ?? undefined"
+      ></UserAvatar>
 
-      <p class="user-name">{{ member.userName ?? member.guestName ?? '（未設定）' }}</p>
-      <p class="char-name">キャラクター：{{ member.characterName ?? '未設定' }}</p>
+      <p class="user-name">
+        {{ member.userName ?? member.guestName ?? '（未設定）' }}
+      </p>
+      <p class="char-name">
+        キャラクター：{{ member.characterName ?? '未設定' }}
+      </p>
     </div>
   </BaseCard>
 </template>

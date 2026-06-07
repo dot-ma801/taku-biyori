@@ -31,8 +31,8 @@ describe('BaseTable', () => {
       // Assert
       const headers = wrapper.findAll('.table__th');
       expect(headers).toHaveLength(2);
-      expect(headers[0].text()).toBe('名前');
-      expect(headers[1].text()).toBe('スコア');
+      expect(headers[0]!.text()).toBe('名前');
+      expect(headers[1]!.text()).toBe('スコア');
     });
 
     it('行データが表示される', () => {
@@ -41,8 +41,8 @@ describe('BaseTable', () => {
 
       // Assert
       const cells = wrapper.findAll('.table__td');
-      expect(cells[0].text()).toBe('田中');
-      expect(cells[1].text()).toBe('10');
+      expect(cells[0]!.text()).toBe('田中');
+      expect(cells[1]!.text()).toBe('10');
     });
   });
 
@@ -77,8 +77,8 @@ describe('BaseTable', () => {
 
       // Assert
       const dataRows = wrapper.findAll('.table__body .table__row');
-      expect(dataRows[0].classes()).not.toContain('table__row--striped');
-      expect(dataRows[1].classes()).toContain('table__row--striped');
+      expect(dataRows[0]!.classes()).not.toContain('table__row--striped');
+      expect(dataRows[1]!.classes()).toContain('table__row--striped');
     });
 
     it('striped=false のとき table__row--striped クラスが付与されない', () => {
@@ -117,7 +117,7 @@ describe('BaseTable', () => {
 
       // Assert
       const headers = wrapper.findAll('.table__th');
-      expect(headers[1].classes()).toContain('table__th--right');
+      expect(headers[1]!.classes()).toContain('table__th--right');
     });
 
     it('align 未指定のカラムに table__th--left クラスが付与される', () => {
@@ -126,7 +126,7 @@ describe('BaseTable', () => {
 
       // Assert
       const headers = wrapper.findAll('.table__th');
-      expect(headers[0].classes()).toContain('table__th--left');
+      expect(headers[0]!.classes()).toContain('table__th--left');
     });
   });
 
@@ -150,7 +150,7 @@ describe('BaseTable', () => {
 
       // Assert
       const headers = wrapper.findAll('.table__th');
-      expect(headers[0].classes()).toContain('table__th--sortable');
+      expect(headers[0]!.classes()).toContain('table__th--sortable');
     });
 
     it('sortable=false のカラムヘッダーに table__th--sortable クラスが付与されない', () => {
@@ -167,7 +167,7 @@ describe('BaseTable', () => {
 
       // Assert
       const headers = wrapper.findAll('.table__th');
-      expect(headers[0].classes()).not.toContain('table__th--sortable');
+      expect(headers[0]!.classes()).not.toContain('table__th--sortable');
     });
 
     it('ソートヘッダーをクリックすると昇順に並び替えられる', async () => {
@@ -175,17 +175,17 @@ describe('BaseTable', () => {
       const wrapper = mount(BaseTable, { props: { columns, rows } });
 
       // Act
-      await wrapper.findAll('.table__th')[1].trigger('click'); // score 昇順
+      await wrapper.findAll('.table__th')[1]!.trigger('click'); // score 昇順
 
       // Assert
       const cells = wrapper.findAll('.table__td');
-      expect(cells[1].text()).toBe('10'); // 最初の行の score が小さい方
+      expect(cells[1]!.text()).toBe('10'); // 最初の行の score が小さい方
     });
 
     it('同じヘッダーを2回クリックすると降順になる', async () => {
       // Arrange
       const wrapper = mount(BaseTable, { props: { columns, rows } });
-      const scoreHeader = wrapper.findAll('.table__th')[1];
+      const scoreHeader = wrapper.findAll('.table__th')[1]!;
 
       // Act
       await scoreHeader.trigger('click'); // 昇順
@@ -193,13 +193,13 @@ describe('BaseTable', () => {
 
       // Assert
       const cells = wrapper.findAll('.table__td');
-      expect(cells[1].text()).toBe('20'); // 最初の行の score が大きい方
+      expect(cells[1]!.text()).toBe('20'); // 最初の行の score が大きい方
     });
 
     it('同じヘッダーを3回クリックするとソートが解除される', async () => {
       // Arrange
       const wrapper = mount(BaseTable, { props: { columns, rows } });
-      const scoreHeader = wrapper.findAll('.table__th')[1];
+      const scoreHeader = wrapper.findAll('.table__th')[1]!;
 
       // Act
       await scoreHeader.trigger('click'); // 昇順
@@ -208,13 +208,13 @@ describe('BaseTable', () => {
 
       // Assert
       const cells = wrapper.findAll('.table__td');
-      expect(cells[1].text()).toBe('10'); // 元の順序
+      expect(cells[1]!.text()).toBe('10'); // 元の順序
     });
 
     it('ソート中のカラムに aria-sort 属性が付与される', async () => {
       // Arrange
       const wrapper = mount(BaseTable, { props: { columns, rows } });
-      const scoreHeader = wrapper.findAll('.table__th')[1];
+      const scoreHeader = wrapper.findAll('.table__th')[1]!;
 
       // Act
       await scoreHeader.trigger('click');
@@ -226,7 +226,7 @@ describe('BaseTable', () => {
     it('降順ソート中は aria-sort="descending" が付与される', async () => {
       // Arrange
       const wrapper = mount(BaseTable, { props: { columns, rows } });
-      const scoreHeader = wrapper.findAll('.table__th')[1];
+      const scoreHeader = wrapper.findAll('.table__th')[1]!;
 
       // Act
       await scoreHeader.trigger('click'); // 昇順

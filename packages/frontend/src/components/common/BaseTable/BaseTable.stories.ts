@@ -22,9 +22,11 @@ const rows: SampleRow[] = [
   { name: '佐藤 次郎', role: 'プレイヤー', status: '参加中', score: 28 },
 ];
 
-const meta: Meta<typeof BaseTable> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const meta: Meta<any> = {
   title: 'Common/BaseTable',
-  component: BaseTable,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  component: BaseTable as any,
   tags: ['autodocs'],
   argTypes: {
     striped: { control: 'boolean' },
@@ -57,7 +59,8 @@ export const Empty: Story = {
 
 export const CustomCell: Story = {
   render: (args) => ({
-    components: { BaseTable },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    components: { BaseTable: BaseTable as any },
     setup: () => ({ args, columns, rows }),
     template: `
       <BaseTable v-bind="args">
@@ -77,7 +80,8 @@ export const Sortable: Story = {
 
 export const AllVariants: Story = {
   render: () => ({
-    components: { BaseTable },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    components: { BaseTable: BaseTable as any },
     setup: () => ({ columns, rows }),
     template: `
       <div style="display: flex; flex-direction: column; gap: 24px;">

@@ -24,7 +24,8 @@ export const useUpdateGameSession = (id: string) => {
       const gameSession = await getGameSession(id);
       title.value = gameSession.title;
       scenarioName.value = gameSession.scenarioName ?? '';
-      maxMembers.value = gameSession.maxMembers != null ? String(gameSession.maxMembers) : '';
+      maxMembers.value =
+        gameSession.maxMembers != null ? String(gameSession.maxMembers) : '';
       description.value = gameSession.description ?? '';
       openUntil.value = gameSession.openUntil ?? '';
     } catch (err) {
@@ -49,17 +50,29 @@ export const useUpdateGameSession = (id: string) => {
       const validMaxMembers =
         maxMembers.value.trim() !== '' &&
         Number.isInteger(parsedMaxMembers) &&
-        parsedMaxMembers > 0;
+        parsedMaxMembers >= 2 &&
+        parsedMaxMembers <= 20;
 
       await updateGameSession(id, {
-        title: title.value,
-        ...(scenarioName.value ? { scenarioName: scenarioName.value } : { scenarioName: null }),
-        ...(validMaxMembers ? { maxMembers: parsedMaxMembers } : { maxMembers: null }),
-        ...(description.value ? { description: description.value } : { description: null }),
-        ...(openUntil.value ? { openUntil: openUntil.value } : { openUntil: null }),
+        ...(title.value?.trim() ? { title: title.value } : {}),
+        ...(scenarioName.value
+          ? { scenarioName: scenarioName.value }
+          : { scenarioName: null }),
+        ...(validMaxMembers
+          ? { maxMembers: parsedMaxMembers }
+          : { maxMembers: null }),
+        ...(description.value
+          ? { description: description.value }
+          : { description: null }),
+        ...(openUntil.value
+          ? { openUntil: openUntil.value }
+          : { openUntil: null }),
       });
 
-      router.push({ name: 'game-sessions-detail', params: { gameSessionId: id } });
+      router.push({
+        name: 'game-sessions-detail',
+        params: { gameSessionId: id },
+      });
     } catch (err) {
       if (err instanceof ApiError) {
         errorMessage.value = err.message;

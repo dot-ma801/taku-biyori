@@ -56,8 +56,8 @@ export const useCreateGameSession = () => {
       }
 
       router.push({
-        name: 'game-session-detail',
-        params: { id: gameSession.id },
+        name: 'game-sessions-detail',
+        params: { gameSessionId: gameSession.id },
       });
     } catch (err) {
       if (err instanceof ApiError) {

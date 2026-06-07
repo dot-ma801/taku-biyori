@@ -4,29 +4,29 @@
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `level` | `'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6'` | `'h2'` | 出力する見出し要素のレベル |
-| `icon` | `Component` | — | Lucide アイコンコンポーネント。省略するとアイコンなしで表示 |
-| `iconColor` | `'primary' \| 'default' \| string` | `'primary'` | アイコンの色。`'primary'` は `--color-primary`、`'default'` は `currentColor`、任意の CSS カラー値も指定可能 |
+| Prop        | Type                                           | Default     | Description                                                                                                  |
+| ----------- | ---------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `level`     | `'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6'` | `'h2'`      | 出力する見出し要素のレベル                                                                                   |
+| `icon`      | `Component`                                    | —           | Lucide アイコンコンポーネント。省略するとアイコンなしで表示                                                  |
+| `iconColor` | `'primary' \| 'default' \| string`             | `'primary'` | アイコンの色。`'primary'` は `--color-primary`、`'default'` は `currentColor`、任意の CSS カラー値も指定可能 |
 
 ## アイコンサイズの自動決定
 
 `level` に応じてアイコンサイズが自動設定されるため、呼び出し側での指定は不要。
 
 | level | アイコンサイズ |
-|-------|-------------|
-| h1 | 28px |
-| h2 | 24px |
-| h3 | 20px |
-| h4 | 18px |
-| h5 | 15px |
-| h6 | 13px |
+| ----- | -------------- |
+| h1    | 28px           |
+| h2    | 24px           |
+| h3    | 20px           |
+| h4    | 18px           |
+| h5    | 15px           |
+| h6    | 13px           |
 
 ## Slots
 
-| Slot | Description |
-|------|-------------|
+| Slot      | Description    |
+| --------- | -------------- |
 | `default` | 見出しテキスト |
 
 ## Usage
@@ -60,11 +60,13 @@
 ## 単体テスト項目
 
 ### レンダリング
+
 - デフォルト props でレンダリングされること
 - デフォルトで h2 要素としてレンダリングされること
 - default スロットのテキストが表示されること
 
 ### level
+
 - `level="h1"` のとき h1 要素としてレンダリングされること
 - `level="h2"` のとき h2 要素としてレンダリングされること
 - `level="h3"` のとき h3 要素としてレンダリングされること
@@ -73,11 +75,13 @@
 - `level="h6"` のとき h6 要素としてレンダリングされること
 
 ### icon
+
 - icon prop を渡したとき `.section-heading__icon` が表示されること
 - icon prop を渡したとき `aria-hidden="true"` が付与されること
 - icon prop がないとき `.section-heading__icon` が表示されないこと
 
 ### iconColor
+
 - `iconColor="primary"` のとき `var(--color-primary)` が適用されること
 - `iconColor="default"` のとき `currentColor` が適用されること
 - 任意の色文字列を渡したとき style に反映されること

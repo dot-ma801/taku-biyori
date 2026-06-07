@@ -36,7 +36,13 @@ const model = defineModel<string>({ default: '' });
     validate-on="blur"
   >
     <label v-if="label" class="textbox__label">{{ label }}</label>
-    <Input.Control :placeholder="placeholder" :min="min" :max="max" :step="step" class="textbox__control" />
+    <Input.Control
+      :placeholder="placeholder"
+      :min="min"
+      :max="max"
+      :step="step"
+      class="textbox__control"
+    />
     <Input.Description v-if="hint" class="textbox__hint">
       {{ hint }}
     </Input.Description>

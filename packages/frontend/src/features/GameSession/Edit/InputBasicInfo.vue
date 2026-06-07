@@ -19,7 +19,11 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
     </template>
 
     <template #default>
-      <BaseTextBox v-model="title" label="タイトル" placeholder="例：【5月】定期開催マダミス会"></BaseTextBox>
+      <BaseTextBox
+        v-model="title"
+        label="タイトル"
+        placeholder="例：【5月】定期開催マダミス会"
+      ></BaseTextBox>
 
       <div class="scenario-info">
         <BaseSectionHeading
@@ -29,8 +33,16 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
         >
           シナリオ情報
         </BaseSectionHeading>
-        <BaseTextBox v-model="scenarioName" label="シナリオタイトル"></BaseTextBox>
-        <BaseTextBox v-model="maxMembers" label="募集人数（自分を含めて）" :type="'number'" min="2"></BaseTextBox>
+        <BaseTextBox
+          v-model="scenarioName"
+          label="シナリオタイトル"
+        ></BaseTextBox>
+        <BaseTextBox
+          v-model="maxMembers"
+          label="募集人数（自分を含めて）"
+          :type="'number'"
+          min="2"
+        ></BaseTextBox>
 
         <BaseTextArea
           label="シナリオ説明"

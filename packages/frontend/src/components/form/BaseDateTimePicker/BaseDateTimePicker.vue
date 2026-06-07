@@ -37,9 +37,12 @@ const model = defineModel<string>({ default: '' });
       {{ hint }}
     </Input.Description>
     <Input.Error v-slot="{ errors }" class="datetimepicker__errors">
-      <span v-for="error in errors" :key="error" class="datetimepicker__error">{{
-        error
-      }}</span>
+      <span
+        v-for="error in errors"
+        :key="error"
+        class="datetimepicker__error"
+        >{{ error }}</span
+      >
     </Input.Error>
   </Input.Root>
 </template>

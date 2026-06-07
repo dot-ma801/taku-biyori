@@ -37,9 +37,7 @@ const selectedDates = computed<string[]>(() => {
 
 // 表示中の年月（選択済み or 今日を基準に初期化）
 const today = new Date();
-const initialDate = Array.isArray(model.value)
-  ? model.value[0]
-  : model.value;
+const initialDate = Array.isArray(model.value) ? model.value[0] : model.value;
 const displayYear = ref(
   initialDate ? parseInt(initialDate.slice(0, 4)) : today.getFullYear(),
 );
@@ -49,8 +47,18 @@ const displayMonth = ref(
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 const MONTHS = [
-  '1月', '2月', '3月', '4月', '5月', '6月',
-  '7月', '8月', '9月', '10月', '11月', '12月',
+  '1月',
+  '2月',
+  '3月',
+  '4月',
+  '5月',
+  '6月',
+  '7月',
+  '8月',
+  '9月',
+  '10月',
+  '11月',
+  '12月',
 ];
 
 // カレンダーに表示する日付セルを生成
@@ -165,7 +173,11 @@ function selectDate(dateStr: string | null) {
           >
             {{ displayLabel ?? placeholder }}
           </span>
-          <CalendarDays :size="14" class="datepicker__trigger-icon" aria-hidden="true" />
+          <CalendarDays
+            :size="14"
+            class="datepicker__trigger-icon"
+            aria-hidden="true"
+          />
         </button>
       </Popover.Activator>
 
@@ -205,7 +217,8 @@ function selectDate(dateStr: string | null) {
                 'datepicker__weekday--sat': wd === '土',
               }"
               role="columnheader"
-            >{{ wd }}</span>
+              >{{ wd }}</span
+            >
           </div>
 
           <!-- 日付グリッド -->
@@ -218,11 +231,15 @@ function selectDate(dateStr: string | null) {
               :class="{
                 'datepicker__cell--empty': !cell.date,
                 'datepicker__cell--today': cell.date === todayStr,
-                'datepicker__cell--selected': cell.date !== null && isSelected(cell.date),
-                'datepicker__cell--disabled': cell.date !== null && isDisabled(cell.date),
+                'datepicker__cell--selected':
+                  cell.date !== null && isSelected(cell.date),
+                'datepicker__cell--disabled':
+                  cell.date !== null && isDisabled(cell.date),
               }"
               :disabled="cell.date === null || isDisabled(cell.date)"
-              :aria-selected="cell.date !== null ? isSelected(cell.date) : undefined"
+              :aria-selected="
+                cell.date !== null ? isSelected(cell.date) : undefined
+              "
               :aria-label="cell.date ?? undefined"
               role="gridcell"
               @click="selectDate(cell.date)"

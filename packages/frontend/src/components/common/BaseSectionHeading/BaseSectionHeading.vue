@@ -25,7 +25,7 @@ const props = withDefaults(
   {
     level: 'h2',
     iconColor: 'primary',
-    textColor: 'default'
+    textColor: 'default',
   },
 );
 

@@ -4,18 +4,18 @@
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `label` | `string` | — | ラベル文字列 |
-| `placeholder` | `string` | `'日付を選択'` | 未選択時のプレースホルダー |
-| `disabled` | `boolean` | `false` | 無効化 |
-| `min` | `string` | — | 選択可能な最小日付（`YYYY-MM-DD`） |
-| `max` | `string` | — | 選択可能な最大日付（`YYYY-MM-DD`） |
+| Prop          | Type      | Default        | Description                        |
+| ------------- | --------- | -------------- | ---------------------------------- |
+| `label`       | `string`  | —              | ラベル文字列                       |
+| `placeholder` | `string`  | `'日付を選択'` | 未選択時のプレースホルダー         |
+| `disabled`    | `boolean` | `false`        | 無効化                             |
+| `min`         | `string`  | —              | 選択可能な最小日付（`YYYY-MM-DD`） |
+| `max`         | `string`  | —              | 選択可能な最大日付（`YYYY-MM-DD`） |
 
 ## Model
 
-| v-model | Type | Description |
-|---------|------|-------------|
+| v-model      | Type     | Description                         |
+| ------------ | -------- | ----------------------------------- |
 | `modelValue` | `string` | 選択された日付（`YYYY-MM-DD` 形式） |
 
 ## Usage
@@ -39,17 +39,21 @@
 ## 単体テスト項目
 
 ### レンダリング
+
 - デフォルト props でレンダリングされること
 - `label` が表示されること
 - `label` が未指定のとき label 要素が表示されないこと
 
 ### トリガーボタン
+
 - 値未選択のときプレースホルダーが表示されること
 - 値が選択済みのとき日付ラベルが表示されること
 
 ### disabled
+
 - `disabled` のときトリガーボタンが無効化されること
 
 ### アクセシビリティ
+
 - トリガーボタンに `aria-label` が付与されていること
 - `label` 未指定でもトリガーボタンに `aria-label` が付与されていること

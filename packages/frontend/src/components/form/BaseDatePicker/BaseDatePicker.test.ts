@@ -42,8 +42,12 @@ describe('BaseDatePicker', () => {
       });
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger-text--placeholder').exists()).toBe(true);
-      expect(wrapper.find('.datepicker__trigger-text').text()).toBe('日付を選択');
+      expect(
+        wrapper.find('.datepicker__trigger-text--placeholder').exists(),
+      ).toBe(true);
+      expect(wrapper.find('.datepicker__trigger-text').text()).toBe(
+        '日付を選択',
+      );
     });
 
     it('値が選択済みのとき日付ラベルが表示される', () => {
@@ -53,8 +57,12 @@ describe('BaseDatePicker', () => {
       });
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger-text').text()).toBe('2025/6/15');
-      expect(wrapper.find('.datepicker__trigger-text--placeholder').exists()).toBe(false);
+      expect(wrapper.find('.datepicker__trigger-text').text()).toBe(
+        '2025/6/15',
+      );
+      expect(
+        wrapper.find('.datepicker__trigger-text--placeholder').exists(),
+      ).toBe(false);
     });
   });
 
@@ -69,7 +77,9 @@ describe('BaseDatePicker', () => {
       });
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger-text').text()).toBe('3件選択中');
+      expect(wrapper.find('.datepicker__trigger-text').text()).toBe(
+        '3件選択中',
+      );
     });
 
     it('multiple=true で1件のみ選択のとき日付ラベルが表示される', () => {
@@ -82,7 +92,9 @@ describe('BaseDatePicker', () => {
       });
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger-text').text()).toBe('2025/6/10');
+      expect(wrapper.find('.datepicker__trigger-text').text()).toBe(
+        '2025/6/10',
+      );
     });
   });
 
@@ -94,7 +106,9 @@ describe('BaseDatePicker', () => {
       });
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger').attributes('disabled')).toBeDefined();
+      expect(
+        wrapper.find('.datepicker__trigger').attributes('disabled'),
+      ).toBeDefined();
     });
   });
 
@@ -106,7 +120,9 @@ describe('BaseDatePicker', () => {
       });
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger').attributes('aria-label')).toBe('開催日');
+      expect(
+        wrapper.find('.datepicker__trigger').attributes('aria-label'),
+      ).toBe('開催日');
     });
 
     it('label 未指定でもトリガーボタンに aria-label が付与されている', () => {
@@ -114,7 +130,9 @@ describe('BaseDatePicker', () => {
       const wrapper = mount(BaseDatePicker);
 
       // Assert
-      expect(wrapper.find('.datepicker__trigger').attributes('aria-label')).toBeTruthy();
+      expect(
+        wrapper.find('.datepicker__trigger').attributes('aria-label'),
+      ).toBeTruthy();
     });
   });
 });

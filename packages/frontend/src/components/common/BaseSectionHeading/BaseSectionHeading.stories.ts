@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
-import { BookOpenText, NotebookPen, Settings } from '@lucide/vue'
-import BaseSectionHeading from './BaseSectionHeading.vue'
+import type { Meta, StoryObj } from '@storybook/vue3';
+import { BookOpenText, NotebookPen, Settings } from '@lucide/vue';
+import BaseSectionHeading from './BaseSectionHeading.vue';
 
 const meta: Meta<typeof BaseSectionHeading> = {
   title: 'Common/BaseSectionHeading',
@@ -20,10 +20,10 @@ const meta: Meta<typeof BaseSectionHeading> = {
     level: 'h2',
     iconColor: 'primary',
   },
-}
+};
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: { icon: NotebookPen },
@@ -32,7 +32,7 @@ export const Default: Story = {
     setup: () => ({ args }),
     template: `<BaseSectionHeading v-bind="args">基本情報</BaseSectionHeading>`,
   }),
-}
+};
 
 export const SubSection: Story = {
   args: { level: 'h5', icon: BookOpenText },
@@ -41,7 +41,7 @@ export const SubSection: Story = {
     setup: () => ({ args }),
     template: `<BaseSectionHeading v-bind="args">シナリオ情報</BaseSectionHeading>`,
   }),
-}
+};
 
 export const WithoutIcon: Story = {
   render: (args) => ({
@@ -49,7 +49,7 @@ export const WithoutIcon: Story = {
     setup: () => ({ args }),
     template: `<BaseSectionHeading v-bind="args">アイコンなし見出し</BaseSectionHeading>`,
   }),
-}
+};
 
 export const IconColorDefault: Story = {
   args: { icon: Settings, iconColor: 'default' },
@@ -58,7 +58,7 @@ export const IconColorDefault: Story = {
     setup: () => ({ args }),
     template: `<BaseSectionHeading v-bind="args">デフォルトカラー</BaseSectionHeading>`,
   }),
-}
+};
 
 export const AllVariants: Story = {
   render: () => ({
@@ -75,4 +75,4 @@ export const AllVariants: Story = {
       </div>
     `,
   }),
-}
+};

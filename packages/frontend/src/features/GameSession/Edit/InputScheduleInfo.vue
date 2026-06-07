@@ -21,12 +21,26 @@ const openUntil = defineModel<string>('openUntil', { default: '' });
     </template>
 
     <template #default>
-      <BaseSwitch class="switch" v-model="selectMultiDays" label="複数の候補日を選択する"></BaseSwitch>
+      <BaseSwitch
+        class="switch"
+        v-model="selectMultiDays"
+        label="複数の候補日を選択する"
+      ></BaseSwitch>
       <div class="contents">
-        <BaseDatePicker v-if="selectMultiDays" label="候補日" multiple></BaseDatePicker>
+        <BaseDatePicker
+          v-if="selectMultiDays"
+          label="候補日"
+          multiple
+        ></BaseDatePicker>
         <BaseDateTimePicker v-else label="開催日時"></BaseDateTimePicker>
-        <BaseDatePicker v-model="openUntil" label="募集締め切り日"></BaseDatePicker>
-        <BaseTextBox label="実施場所" placeholder="例：Discord + ココフォリア"></BaseTextBox>
+        <BaseDatePicker
+          v-model="openUntil"
+          label="募集締め切り日"
+        ></BaseDatePicker>
+        <BaseTextBox
+          label="実施場所"
+          placeholder="例：Discord + ココフォリア"
+        ></BaseTextBox>
       </div>
     </template>
   </BaseCard>

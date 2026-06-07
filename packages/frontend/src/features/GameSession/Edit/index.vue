@@ -12,6 +12,8 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessage: string;
+  /** 更新フローのときのみ渡す */
+  gameSessionId?: string;
 }>();
 
 const submitButtonLabel = computed(() =>
@@ -28,6 +30,8 @@ const scenarioName = defineModel<string>('scenarioName', { default: '' });
 const maxMembers = defineModel<string>('maxMembers', { default: '' });
 const description = defineModel<string>('description', { default: '' });
 const openUntil = defineModel<string>('openUntil', { default: '' });
+const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
+const location = defineModel<string>('location', { default: '' });
 </script>
 
 <template>
@@ -41,7 +45,12 @@ const openUntil = defineModel<string>('openUntil', { default: '' });
       v-model:scenarioName="scenarioName"
       v-model:maxMembers="maxMembers"
     ></InputBasicInfo>
-    <InputScheduleInfo v-model:openUntil="openUntil"></InputScheduleInfo>
+    <InputScheduleInfo
+      :game-session-id="gameSessionId"
+      v-model:openUntil="openUntil"
+      v-model:scheduledAt="scheduledAt"
+      v-model:location="location"
+    ></InputScheduleInfo>
     <InputMemo v-model:description="description"></InputMemo>
   </div>
 

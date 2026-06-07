@@ -757,6 +757,60 @@ describe('DELETE /api/game-sessions/:id/availability-dates/:dateId', () => {
     // Assert
     expect(response.status).toBe(401);
   });
+
+  it('存在しない候補日IDは 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/nonexistent',
+      {
+        method: 'DELETE',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('ホスト以外は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/date-1',
+      {
+        method: 'DELETE',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('別セッションに属する候補日は 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/other-session/availability-dates/date-1',
+      {
+        method: 'DELETE',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
 });
 
 describe('POST /api/game-sessions/:id/availability-dates/:dateId/confirm', () => {
@@ -788,5 +842,53 @@ describe('POST /api/game-sessions/:id/availability-dates/:dateId/confirm', () =>
 
     // Assert
     expect(response.status).toBe(401);
+  });
+
+  it('存在しない候補日IDは 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      confirmAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/nonexistent/confirm',
+      { method: 'POST' },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('ホスト以外は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      confirmAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates/date-1/confirm',
+      { method: 'POST' },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('別セッションに属する候補日は 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      confirmAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/other-session/availability-dates/date-1/confirm',
+      { method: 'POST' },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
   });
 });

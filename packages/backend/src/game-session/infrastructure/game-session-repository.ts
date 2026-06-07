@@ -23,6 +23,7 @@ import {
   gameSessionCandidates,
   gameSessionAnswers,
 } from '@/system/infrastructure/database/game-session-schema';
+import { user } from '@/system/infrastructure/database/schema';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
 import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
@@ -162,6 +163,7 @@ export const createGameSessionRepository = (
         ...getTableColumns(gameSessions),
         memberId: gameSessionMembers.id,
         memberUserId: gameSessionMembers.userId,
+        memberUserName: user.name,
         memberGuestName: gameSessionMembers.guestName,
         memberCharacterName: gameSessionMembers.characterName,
         memberCreatedAt: gameSessionMembers.createdAt,
@@ -171,6 +173,7 @@ export const createGameSessionRepository = (
         gameSessionMembers,
         eq(gameSessionMembers.gameSessionId, gameSessions.id),
       )
+      .leftJoin(user, eq(user.id, gameSessionMembers.userId))
       .where(eq(gameSessions.id, id));
 
     if (rows.length === 0) return null;
@@ -183,6 +186,7 @@ export const createGameSessionRepository = (
       .map((r) => ({
         id: r.memberId!,
         userId: r.memberUserId,
+        userName: r.memberUserName ?? null,
         guestName: r.memberGuestName,
         characterName: r.memberCharacterName,
         joinedAt: r.memberCreatedAt!.toISOString(),

@@ -1,14 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import type { LucideIcon } from '@lucide/vue';
+
 type Variant = 'primary' | 'secondary' | 'ghost';
 type Size = 'sm' | 'md' | 'lg';
 
-withDefaults(
+const ICON_SIZE: Record<Size, number> = {
+  sm: 14,
+  md: 16,
+  lg: 18,
+};
+
+const props = withDefaults(
   defineProps<{
     variant?: Variant;
     size?: Size;
     loading?: boolean;
     disabled?: boolean;
     type?: 'button' | 'submit' | 'reset';
+    leftIcon?: LucideIcon;
+    rightIcon?: LucideIcon;
   }>(),
   {
     variant: 'primary',
@@ -16,6 +27,8 @@ withDefaults(
     type: 'button',
   },
 );
+
+const iconSize = computed(() => ICON_SIZE[props.size]);
 </script>
 
 <template>
@@ -23,6 +36,7 @@ withDefaults(
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
+    :aria-label="loading ? '読み込み中' : undefined"
     :class="[
       'btn',
       `btn--${variant}`,
@@ -31,7 +45,21 @@ withDefaults(
     ]"
   >
     <span v-if="loading" class="btn__spinner" aria-hidden="true" />
-    <slot v-else />
+    <template v-else>
+      <component
+        :is="leftIcon"
+        v-if="leftIcon"
+        :size="iconSize"
+        aria-hidden="true"
+      />
+      <slot />
+      <component
+        :is="rightIcon"
+        v-if="rightIcon"
+        :size="iconSize"
+        aria-hidden="true"
+      />
+    </template>
   </button>
 </template>
 

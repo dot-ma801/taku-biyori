@@ -19,23 +19,11 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
     </template>
 
     <template #default>
-      <BaseTextBox
-        v-model="title"
-        label="タイトル"
-        placeholder="例：【5月】定期開催マダミス会"
-      ></BaseTextBox>
-
-      <div class="scenario-info">
-        <BaseSectionHeading
-          level="h5"
-          :icon="BookOpenText"
-          :icon-color="'default'"
-        >
-          シナリオ情報
-        </BaseSectionHeading>
+      <div class="contents">
         <BaseTextBox
-          v-model="scenarioName"
-          label="シナリオタイトル"
+          v-model="title"
+          label="タイトル"
+          placeholder="例：【5月】定期開催マダミス会"
         ></BaseTextBox>
         <BaseTextBox
           v-model="maxMembers"
@@ -44,18 +32,45 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
           min="2"
         ></BaseTextBox>
 
-        <!-- TODO: Ph2 シナリオ管理機能の実装時に結合する
-        <BaseTextArea
-          label="シナリオ説明"
-          placeholder="シナリオのあらすじなどを記入してください"
-        ></BaseTextArea>
-        -->
+        <div class="scenario-info">
+          <BaseSectionHeading
+            level="h5"
+            :icon="BookOpenText"
+            :icon-color="'default'"
+          >
+            シナリオ情報
+          </BaseSectionHeading>
+          <BaseTextBox
+            v-model="scenarioName"
+            label="シナリオタイトル"
+          ></BaseTextBox>
+
+          <!-- TODO: Ph2 シナリオ管理機能の実装時に結合する
+          <BaseTextArea
+            label="シナリオ説明"
+            placeholder="シナリオのあらすじなどを記入してください"
+          ></BaseTextArea>
+          -->
+        </div>
       </div>
     </template>
   </BaseCard>
 </template>
 
 <style scoped>
+.contents {
+  > * {
+    margin: var(--space-5) 0;
+
+    &:first-child {
+      margin-top: 0;
+    }
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
 .scenario-info {
   /* 枠線 */
   border: 1px dashed var(--color-border-strong);
@@ -66,7 +81,6 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
 
   /* 余白 */
   padding: var(--space-5);
-  margin-top: var(--space-5);
   > * {
     margin: var(--space-5) 0;
 

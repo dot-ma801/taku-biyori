@@ -272,3 +272,70 @@ const scenarioName = computed(() => gameSession.value?.scenarioName ?? '未設�
 
 `'未設定'` のような表示文言は UI の関心事であり、データ取得に集中する composable には含めない。
 composable はフォールバックなしの生データを返し、コンポーネント側の `computed` で表示用に加工する。
+
+### コンポーネントが持っていいもの・composable に寄せるもの
+
+**コンポーネントの責務はテンプレートの構造制御に限定する。**
+
+- ✅ コンポーネントに置く: `v-if` / `v-for` の条件、イベント転送、子コンポーネントへの props マッピング
+- ❌ コンポーネントに置かない: データの変換・集計・導出。「表示のための計算」も含め、判断に迷ったら composable に寄せる
+
+```ts
+// ❌ NG — ScheduleTable.vue の中に計算ロジックを書く
+function getAnswer(date, memberId) { ... }
+function okCount(date) { ... }
+
+// ✅ OK — composable に切り出して toRef で接続する
+const { getAnswer, okCount } = useScheduleView(
+  toRef(props, 'myMemberId'),
+  toRef(props, 'isEditing'),
+  toRef(props, 'draftAnswers'),
+);
+```
+
+### フィーチャー内のディレクトリ構成
+
+**他の機能から使われることを意図しない実装詳細が生まれたら、サブディレクトリを切る。**
+
+外部に公開するエントリポイントは1ファイルに限定し、内部の分割が外に漏れないようにする。
+
+```
+features/GameSession/Detail/
+  Schedule/                     ← 日程調整の実装詳細をまとめたサブディレクトリ
+    ScheduleDisplay.vue         ← 外部から import するのはここだけ
+    ScheduleTable.vue           ← Detail/ の他コンポーネントからは使わない
+    AnswerCell.vue
+    useScheduleDisplay.ts
+    useScheduleEdit.ts
+    useScheduleView.ts
+  index.vue                     ← ScheduleDisplay.vue だけを import する
+  MemberDisplay.vue
+```
+
+### `useSession` の使い方（better-auth）
+
+`createAuthClient`（`better-auth/client` の vanilla クライアント）の `useSession` は nanostores の Atom であり、Vue の `ref` ではないため直接リアクティブに使えない。
+以下のパターンで Vue の `ref` に変換すること。
+
+```ts
+import { useSession } from '@/lib/auth';
+import { ref, onUnmounted } from 'vue';
+
+const sessionData = ref(useSession.get());
+const unsub = useSession.subscribe((v) => { sessionData.value = v; });
+onUnmounted(unsub);
+// → sessionData.value.data?.user?.id でユーザー ID にアクセス
+```
+
+### `noUncheckedIndexedAccess` への対応
+
+`tsconfig` で `noUncheckedIndexedAccess: true` が有効なため、`Record<string, T>` のインデックスアクセスは `T | undefined` になる。
+キーが存在するかどうか不明なルックアップには `Map` + `.get()` を使うと型が明確になる。
+
+```ts
+// ❌ Record のインデックスアクセスは undefined になりうる
+const answer = myAnswers[dateId]; // string | undefined
+
+// ✅ Map の .get() は意図が明確
+const answer = myAnswers.get(dateId); // string | undefined（型は同じだが意図が明示的）
+```

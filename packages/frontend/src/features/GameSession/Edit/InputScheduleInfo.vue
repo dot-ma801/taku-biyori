@@ -31,24 +31,24 @@ const availability = props.gameSessionId
   ? useAvailabilityDates(props.gameSessionId)
   : null;
 
-// 複数日 picker に渡す日付リスト
-const selectedDates = computed<string[]>(() => {
-  if (availability) {
-    return availability.availabilityDates.value.map((d) => d.date);
-  }
-  return pendingDates.value;
+// 複数日 picker 用の writable computed
+// get: API 管理 or ローカル管理の日付リストを返す
+// set: 更新フローは差分を API に送信、新規作成フローはローカルに保持
+const selectedDates = computed<string[]>({
+  get() {
+    if (availability) {
+      return availability.availabilityDates.value.map((d) => d.date);
+    }
+    return pendingDates.value;
+  },
+  set(dates) {
+    if (availability) {
+      availability.syncDates(dates);
+    } else {
+      pendingDates.value = dates;
+    }
+  },
 });
-
-async function onDatesChange(newDates: string | string[]) {
-  const dates = Array.isArray(newDates) ? newDates : [newDates];
-  if (availability) {
-    // 更新フロー: 差分を API に送信
-    await availability.syncDates(dates);
-  } else {
-    // 新規作成フロー: ローカルに保持
-    pendingDates.value = dates;
-  }
-}
 </script>
 
 <template>
@@ -71,8 +71,7 @@ async function onDatesChange(newDates: string | string[]) {
           <BaseDatePicker
             label="候補日"
             multiple
-            :model-value="selectedDates"
-            @update:model-value="onDatesChange"
+            v-model="selectedDates"
           ></BaseDatePicker>
           <p v-if="availability?.errorMessage.value" class="error">
             {{ availability.errorMessage.value }}

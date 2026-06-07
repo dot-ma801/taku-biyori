@@ -1,7 +1,9 @@
 import {
   boolean,
   date,
+  index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -47,35 +49,58 @@ export const gameSessionMembers = pgTable('game_session_members', {
     .$onUpdate(() => new Date()),
 });
 
-export const gameSessionCandidates = pgTable('game_session_candidates', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  gameSessionId: uuid('game_session_id')
-    .notNull()
-    .references(() => gameSessions.id, { onDelete: 'cascade' }),
-  date: date('date').notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const gameSessionCandidates = pgTable(
+  'game_session_candidates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gameSessionId: uuid('game_session_id')
+      .notNull()
+      .references(() => gameSessions.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    gameSessionIdIdx: index('game_session_candidates_game_session_id_idx').on(
+      table.gameSessionId,
+    ),
+  }),
+);
 
-export const gameSessionAnswers = pgTable('game_session_answers', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  candidateId: uuid('candidate_id')
-    .notNull()
-    .references(() => gameSessionCandidates.id, { onDelete: 'cascade' }),
-  memberId: uuid('member_id')
-    .notNull()
-    .references(() => gameSessionMembers.id, { onDelete: 'cascade' }),
-  answer: text('answer', { enum: ['ok', 'maybe', 'ng'] }).notNull(),
-  comment: text('comment'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const availabilityDateAnswerEnum = pgEnum('availability_date_answer', [
+  'ok',
+  'maybe',
+  'ng',
+]);
+
+export const gameSessionAnswers = pgTable(
+  'game_session_answers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => gameSessionCandidates.id, { onDelete: 'cascade' }),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => gameSessionMembers.id, { onDelete: 'cascade' }),
+    answer: availabilityDateAnswerEnum('answer').notNull(),
+    comment: text('comment'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    candidateIdIdx: index('game_session_answers_candidate_id_idx').on(
+      table.candidateId,
+    ),
+    memberIdIdx: index('game_session_answers_member_id_idx').on(table.memberId),
+  }),
+);
 
 export const gameSessionsRelations = relations(
   gameSessions,

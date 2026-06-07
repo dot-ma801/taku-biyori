@@ -22,6 +22,13 @@
       "when": 1780822826309,
       "tag": "0002_brave_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780826738522,
+      "tag": "0003_aromatic_naoko",
+      "breakpoints": true
     }
   ]
 }

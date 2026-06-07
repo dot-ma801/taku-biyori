@@ -91,7 +91,7 @@ export type AvailabilityDateAnswer = z.infer<
 
 export const AvailabilityDateSchema = z.object({
   id: z.string().uuid(),
-  date: z.string(),
+  date: z.iso.date(),
   answers: z.array(AvailabilityDateAnswerSchema),
 });
 export type AvailabilityDate = z.infer<typeof AvailabilityDateSchema>;

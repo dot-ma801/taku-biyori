@@ -44,10 +44,12 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
           min="2"
         ></BaseTextBox>
 
+        <!-- TODO: Ph2 シナリオ管理機能の実装時に結合する
         <BaseTextArea
           label="シナリオ説明"
           placeholder="シナリオのあらすじなどを記入してください"
         ></BaseTextArea>
+        -->
       </div>
     </template>
   </BaseCard>

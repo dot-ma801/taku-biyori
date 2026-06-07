@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { UserRound } from '@lucide/vue';
-import Avatar from 'vue-boring-avatars';
+import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import BasePopover from '@/components/common/BasePopover/BasePopover.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useRouter } from 'vue-router';
@@ -42,7 +42,7 @@ const onClickUserName = () => {
     <!-- ボタン -->
     <template #activator>
       <button class="user-btn">
-        <Avatar :size="30" variant="beam" :name="authStore.user?.name ?? ''" />
+        <UserAvatar />
       </button>
     </template>
 

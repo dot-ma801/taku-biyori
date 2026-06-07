@@ -29,6 +29,7 @@ export const GameSessionSchema = z.object({
   title: z.string(),
   description: z.string().nullable().optional(),
   scenarioName: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
   status: GameSessionStatusSchema,
   isPublished: z.boolean(),
   openUntil: z.string().nullable().optional(),
@@ -45,8 +46,10 @@ export const CreateGameSessionInputSchema = z.object({
   title: z.string().min(1).max(100),
   description: z.string().max(1000).optional(),
   scenarioName: z.string().max(200).optional(),
+  location: z.string().max(200).optional(),
   maxMembers: z.number().int().min(2).max(20).optional(),
   openUntil: z.iso.date().optional(),
+  scheduledAt: z.iso.date().optional(),
 });
 export type CreateGameSessionInput = z.infer<
   typeof CreateGameSessionInputSchema
@@ -57,8 +60,10 @@ export const UpdateGameSessionInputSchema = z
     title: z.string().min(1).max(100).optional(),
     description: z.string().max(1000).nullable().optional(),
     scenarioName: z.string().max(200).nullable().optional(),
+    location: z.string().max(200).nullable().optional(),
     maxMembers: z.number().int().min(2).max(20).nullable().optional(),
     openUntil: z.iso.date().nullable().optional(),
+    scheduledAt: z.iso.date().nullable().optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: '少なくとも1つのフィールドが必要です',
@@ -72,6 +77,30 @@ export const UpdateGameSessionStatusInputSchema = z.object({
 });
 export type UpdateGameSessionStatusInput = z.infer<
   typeof UpdateGameSessionStatusInputSchema
+>;
+
+export const AvailabilityDateAnswerSchema = z.object({
+  id: z.string().uuid(),
+  memberId: z.string().uuid(),
+  answer: z.enum(['ok', 'maybe', 'ng']),
+  comment: z.string().nullable().optional(),
+});
+export type AvailabilityDateAnswer = z.infer<
+  typeof AvailabilityDateAnswerSchema
+>;
+
+export const AvailabilityDateSchema = z.object({
+  id: z.string().uuid(),
+  date: z.string(),
+  answers: z.array(AvailabilityDateAnswerSchema),
+});
+export type AvailabilityDate = z.infer<typeof AvailabilityDateSchema>;
+
+export const CreateAvailabilityDateInputSchema = z.object({
+  date: z.iso.date(),
+});
+export type CreateAvailabilityDateInput = z.infer<
+  typeof CreateAvailabilityDateInputSchema
 >;
 
 export const GameSessionMemberSchema = z.object({

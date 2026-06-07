@@ -53,7 +53,10 @@ const description = computed(() => gameSession.value?.description ?? undefined);
 
     <!-- TODO: シナリオ詳細文が実装されたら表示する -->
     <MemoDisplay :text="description"></MemoDisplay>
-    <ScheduleDisplay></ScheduleDisplay>
+    <ScheduleDisplay
+      :game-session-id="props.gameSessionId"
+      :members="gameSession.members"
+    ></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>
 </template>

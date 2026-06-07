@@ -18,11 +18,13 @@ export type ConfirmAvailabilityDateResult =
 
 export const confirmAvailabilityDate = async (
   repo: ConfirmAvailabilityDateRepository,
+  gameSessionId: string,
   dateId: string,
   userId: string,
 ): Promise<ConfirmAvailabilityDateResult> => {
   const candidate = await repo.findCandidateOwner(dateId);
   if (!candidate) return { type: 'notFound' };
+  if (candidate.gameSessionId !== gameSessionId) return { type: 'notFound' };
 
   const hostUserId = await repo.findHostUserId(candidate.gameSessionId);
   if (!hostUserId) return { type: 'notFound' };

@@ -12,11 +12,13 @@ export type DeleteAvailabilityDateResult =
 
 export const deleteAvailabilityDate = async (
   repo: DeleteAvailabilityDateRepository,
+  gameSessionId: string,
   dateId: string,
   userId: string,
 ): Promise<DeleteAvailabilityDateResult> => {
   const candidate = await repo.findCandidateOwner(dateId);
   if (!candidate) return { type: 'notFound' };
+  if (candidate.gameSessionId !== gameSessionId) return { type: 'notFound' };
 
   const hostUserId = await repo.findHostUserId(candidate.gameSessionId);
   if (!hostUserId) return { type: 'notFound' };

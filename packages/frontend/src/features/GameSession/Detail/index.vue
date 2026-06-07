@@ -3,7 +3,7 @@ defineOptions({ name: 'GameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
-import ScheduleDisplay from '@/features/GameSession/Detail/ScheduleDisplay.vue';
+import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { computed } from 'vue';
 import { Album, UsersRound, UserRoundPlus, SquarePen } from '@lucide/vue';

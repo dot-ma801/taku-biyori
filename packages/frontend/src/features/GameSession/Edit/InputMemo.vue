@@ -29,6 +29,4 @@ const description = defineModel<string>('description', { default: '' });
   </BaseCard>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

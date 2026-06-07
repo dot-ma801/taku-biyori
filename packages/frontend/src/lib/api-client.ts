@@ -26,7 +26,7 @@ type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
-): Promise<T> {
+): Promise<T | undefined> {
   const { body, headers, ...rest } = options;
 
   const res = await fetch(`${apiUrl}${path}`, {
@@ -35,7 +35,7 @@ export async function apiRequest<T>(
       'Content-Type': 'application/json',
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body != null ? JSON.stringify(body) : undefined,
     ...rest,
   });
 
@@ -45,7 +45,7 @@ export async function apiRequest<T>(
   }
 
   if (res.status === 204) {
-    return undefined as T;
+    return undefined;
   }
 
   return res.json() as Promise<T>;

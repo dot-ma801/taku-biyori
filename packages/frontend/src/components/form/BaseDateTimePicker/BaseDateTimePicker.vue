@@ -32,7 +32,12 @@ const model = defineModel<string>({ default: '' });
     validate-on="blur"
   >
     <label v-if="label" class="datetimepicker__label">{{ label }}</label>
-    <Input.Control :min="min" :max="max" class="datetimepicker__control" />
+    <Input.Control
+      :min="min"
+      :max="max"
+      :placeholder="placeholder"
+      class="datetimepicker__control"
+    />
     <Input.Description v-if="hint" class="datetimepicker__hint">
       {{ hint }}
     </Input.Description>

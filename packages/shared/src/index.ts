@@ -30,4 +30,8 @@ export {
   type AvailabilityDate,
   CreateAvailabilityDateInputSchema,
   type CreateAvailabilityDateInput,
+  BulkUpdateAvailabilityDatesInputSchema,
+  type BulkUpdateAvailabilityDatesInput,
+  UpdateAvailabilityDateResponseInputSchema,
+  type UpdateAvailabilityDateResponseInput,
 } from './game-session.js';

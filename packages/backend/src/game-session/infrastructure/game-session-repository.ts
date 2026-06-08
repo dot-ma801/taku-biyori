@@ -14,6 +14,7 @@ import type {
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
+  UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
 } from '@taku-biyori/shared';
 import type { Database } from '@/system/infrastructure/database/client';
@@ -35,6 +36,8 @@ import type { ListAvailabilityDatesRepository } from '@/game-session/application
 import type { AddAvailabilityDateRepository } from '@/game-session/application/add-availability-date';
 import type { DeleteAvailabilityDateRepository } from '@/game-session/application/delete-availability-date';
 import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
+import type { BulkUpdateAvailabilityDatesRepository } from '@/game-session/application/bulk-update-availability-dates';
+import type { UpdateAvailabilityDateResponseRepository } from '@/game-session/application/update-availability-date-response';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -45,7 +48,9 @@ export type GameSessionRepository = ListGameSessionsRepository &
   ListAvailabilityDatesRepository &
   AddAvailabilityDateRepository &
   DeleteAvailabilityDateRepository &
-  ConfirmAvailabilityDateRepository;
+  ConfirmAvailabilityDateRepository &
+  BulkUpdateAvailabilityDatesRepository &
+  UpdateAvailabilityDateResponseRepository;
 
 type GameSessionRow = {
   id: string;
@@ -410,5 +415,80 @@ export const createGameSessionRepository = (
     const session = result[0];
     if (!session) return null;
     return toGameSession(session);
+  },
+
+  async replaceAllDates(
+    gameSessionId: string,
+    dates: string[],
+  ): Promise<AvailabilityDate[]> {
+    return db.transaction(async (tx) => {
+      await tx
+        .delete(gameSessionCandidates)
+        .where(eq(gameSessionCandidates.gameSessionId, gameSessionId));
+
+      if (dates.length === 0) return [];
+
+      const inserted = await tx
+        .insert(gameSessionCandidates)
+        .values(dates.map((date) => ({ gameSessionId, date })))
+        .returning();
+
+      return inserted.map((row) => ({
+        id: row.id,
+        date: row.date,
+        answers: [],
+      }));
+    });
+  },
+
+  async findMemberByUserId(
+    gameSessionId: string,
+    userId: string,
+  ): Promise<string | null> {
+    const row = await db
+      .select({ id: gameSessionMembers.id })
+      .from(gameSessionMembers)
+      .where(
+        and(
+          eq(gameSessionMembers.gameSessionId, gameSessionId),
+          eq(gameSessionMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+    return row[0]?.id ?? null;
+  },
+
+  async upsertAnswer(
+    candidateId: string,
+    memberId: string,
+    input: UpdateAvailabilityDateResponseInput,
+  ): Promise<AvailabilityDateAnswer> {
+    const result = await db
+      .insert(gameSessionAnswers)
+      .values({
+        candidateId,
+        memberId,
+        answer: input.answer,
+        comment: input.comment ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [gameSessionAnswers.candidateId, gameSessionAnswers.memberId],
+        set: {
+          answer: input.answer,
+          comment: input.comment ?? null,
+        },
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('回答の登録に失敗しました');
+
+    const answerValue = row.answer as AvailabilityDateAnswer['answer'];
+    return {
+      id: row.id,
+      memberId: row.memberId,
+      answer: answerValue,
+      comment: row.comment,
+    };
   },
 });

@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
@@ -99,6 +100,9 @@ export const gameSessionAnswers = pgTable(
       table.candidateId,
     ),
     memberIdIdx: index('game_session_answers_member_id_idx').on(table.memberId),
+    candidateMemberUnique: unique(
+      'game_session_answers_candidate_member_unique',
+    ).on(table.candidateId, table.memberId),
   }),
 );
 

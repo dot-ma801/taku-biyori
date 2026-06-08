@@ -50,9 +50,14 @@ export const useCreateGameSession = () => {
 
       // 候補日が選択されていればセッション作成後に一括 PUT
       if (pendingDates.value.length > 0) {
-        await bulkUpdateAvailabilityDates(gameSession.id, {
-          dates: pendingDates.value,
-        });
+        try {
+          await bulkUpdateAvailabilityDates(gameSession.id, {
+            dates: pendingDates.value,
+          });
+        } catch {
+          errorMessage.value =
+            'セッションは作成されましたが、候補日の登録に失敗しました';
+        }
       }
 
       router.push({

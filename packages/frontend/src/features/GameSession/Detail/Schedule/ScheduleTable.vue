@@ -52,7 +52,11 @@ function onCellClick(member: GameSessionMember, dateId: string) {
 }
 
 // キーボード操作でセルを選択（Enter・Space で cellClick を発火）
-function onCellKeydown(e: KeyboardEvent, member: GameSessionMember, dateId: string) {
+function onCellKeydown(
+  e: KeyboardEvent,
+  member: GameSessionMember,
+  dateId: string,
+) {
   if (!isEditingMyCell(member)) return;
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();

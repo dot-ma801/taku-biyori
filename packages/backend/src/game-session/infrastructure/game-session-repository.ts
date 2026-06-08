@@ -502,7 +502,7 @@ export const createGameSessionRepository = (
     gameSessionId: string,
     userId: string,
     input: JoinGameSessionInput,
-  ): Promise<GameSessionMember> {
+  ): Promise<GameSessionMember | null> {
     const result = await db
       .insert(gameSessionMembers)
       .values({
@@ -510,10 +510,12 @@ export const createGameSessionRepository = (
         userId,
         characterName: input.characterName ?? null,
       })
+      .onConflictDoNothing()
       .returning();
 
+    // onConflictDoNothing で競合した場合は空配列が返る
     const row = result[0];
-    if (!row) throw new Error('メンバーの追加に失敗しました');
+    if (!row) return null;
 
     const userRow = await db
       .select({ name: user.name })

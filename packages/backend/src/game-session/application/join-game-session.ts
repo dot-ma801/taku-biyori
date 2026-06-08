@@ -9,11 +9,12 @@ export interface JoinGameSessionRepository {
     gameSessionId: string,
     userId: string,
   ): Promise<string | null>;
+  // null は DB 一意制約違反（同時リクエストによる重複）を表す
   addMember(
     gameSessionId: string,
     userId: string,
     input: JoinGameSessionInput,
-  ): Promise<GameSessionMember>;
+  ): Promise<GameSessionMember | null>;
 }
 
 export type JoinGameSessionResult =
@@ -34,5 +35,8 @@ export const joinGameSession = async (
   if (existingMemberId !== null) return { type: 'alreadyJoined' };
 
   const member = await repo.addMember(gameSessionId, userId, input);
+  // DB 一意制約違反（同時リクエスト）
+  if (member === null) return { type: 'alreadyJoined' };
+
   return { type: 'ok', member };
 };

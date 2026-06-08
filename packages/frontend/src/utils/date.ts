@@ -2,7 +2,11 @@
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
-function parseDateParts(dateStr: string): { year: number; month: number; day: number } {
+function parseDateParts(dateStr: string): {
+  year: number;
+  month: number;
+  day: number;
+} {
   const parts = dateStr.split('-');
   return {
     year: parseInt(parts[0] ?? '0'),

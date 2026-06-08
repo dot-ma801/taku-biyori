@@ -74,9 +74,7 @@ export const useUpdateGameSession = (id: string) => {
         ...(scheduledAt.value
           ? { scheduledAt: scheduledAt.value }
           : { scheduledAt: null }),
-        ...(location.value
-          ? { location: location.value }
-          : { location: null }),
+        ...(location.value ? { location: location.value } : { location: null }),
       });
 
       router.push({

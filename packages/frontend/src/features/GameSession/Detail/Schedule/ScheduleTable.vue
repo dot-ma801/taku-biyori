@@ -49,7 +49,9 @@ function onCellKeydown(e: KeyboardEvent, dateId: string) {
             class="th th--member"
           >
             {{ memberDisplayName(member) }}
-            <span v-if="member.id === myMemberId" class="you-label">（あなた）</span>
+            <span v-if="member.id === myMemberId" class="you-label"
+              >（あなた）</span
+            >
           </th>
           <th scope="col" class="th th--tally">◯ 集計</th>
         </tr>
@@ -62,17 +64,28 @@ function onCellKeydown(e: KeyboardEvent, dateId: string) {
             :key="member.id"
             class="td td--answer"
             :class="{ 'td--editing': member.id === myMemberId && isEditing }"
-            v-bind="member.id === myMemberId && isEditing
-              ? { role: 'button', tabindex: 0 }
-              : {}"
-            @click="member.id === myMemberId && isEditing ? emit('cellClick', date.id) : undefined"
-            @keydown="member.id === myMemberId && isEditing ? onCellKeydown($event, date.id) : undefined"
+            v-bind="
+              member.id === myMemberId && isEditing
+                ? { role: 'button', tabindex: 0 }
+                : {}
+            "
+            @click="
+              member.id === myMemberId && isEditing
+                ? emit('cellClick', date.id)
+                : undefined
+            "
+            @keydown="
+              member.id === myMemberId && isEditing
+                ? onCellKeydown($event, date.id)
+                : undefined
+            "
           >
             <AnswerCell :answer="getAnswer(date, member.id)" />
           </td>
           <td class="td td--tally">
             <span class="tally">
-              <b>{{ okCount(date, members) }}</b><span>/{{ members.length }}</span>
+              <b>{{ okCount(date, members) }}</b
+              ><span>/{{ members.length }}</span>
             </span>
           </td>
         </tr>
@@ -162,7 +175,11 @@ function onCellKeydown(e: KeyboardEvent, dateId: string) {
 }
 
 .td--editing:hover {
-  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 10%,
+    var(--color-surface)
+  );
 }
 
 .td--editing:focus-visible {

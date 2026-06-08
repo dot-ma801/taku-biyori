@@ -17,7 +17,10 @@ export const useScheduleView = (
     return (found?.answer as Answer) ?? null;
   }
 
-  function okCount(date: AvailabilityDate, members: GameSessionMember[]): number {
+  function okCount(
+    date: AvailabilityDate,
+    members: GameSessionMember[],
+  ): number {
     return members.filter((m) => getAnswer(date, m.id) === 'ok').length;
   }
 

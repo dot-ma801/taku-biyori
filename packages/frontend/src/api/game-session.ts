@@ -43,39 +43,39 @@ export function deleteGameSession(id: string): Promise<void> {
 }
 
 export async function listAvailabilityDates(
-  sessionId: string,
+  gameSessionId: string,
 ): Promise<AvailabilityDate[]> {
   return (await apiRequest<AvailabilityDate[]>(
-    `/api/game-sessions/${sessionId}/availability-dates`,
+    `/api/game-sessions/${gameSessionId}/availability-dates`,
   ))!;
 }
 
 export async function addAvailabilityDate(
-  sessionId: string,
+  gameSessionId: string,
   input: CreateAvailabilityDateInput,
 ): Promise<AvailabilityDate> {
   return (await apiRequest<AvailabilityDate>(
-    `/api/game-sessions/${sessionId}/availability-dates`,
+    `/api/game-sessions/${gameSessionId}/availability-dates`,
     { method: 'POST', body: input },
   ))!;
 }
 
 export async function bulkUpdateAvailabilityDates(
-  sessionId: string,
+  gameSessionId: string,
   input: BulkUpdateAvailabilityDatesInput,
 ): Promise<AvailabilityDate[]> {
   return (await apiRequest<AvailabilityDate[]>(
-    `/api/game-sessions/${sessionId}/availability-dates`,
+    `/api/game-sessions/${gameSessionId}/availability-dates`,
     { method: 'PUT', body: input },
   ))!;
 }
 
 export function deleteAvailabilityDate(
-  sessionId: string,
+  gameSessionId: string,
   dateId: string,
 ): Promise<void> {
   return apiRequest<void>(
-    `/api/game-sessions/${sessionId}/availability-dates/${dateId}`,
+    `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}`,
     { method: 'DELETE' },
   );
 }

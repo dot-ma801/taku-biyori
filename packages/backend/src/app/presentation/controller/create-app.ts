@@ -5,6 +5,8 @@ import type {
   CreateGameSessionInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
+  BulkUpdateAvailabilityDatesInput,
+  UpdateAvailabilityDateResponseInput,
 } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
@@ -14,6 +16,8 @@ import type { ListAvailabilityDatesResult } from '@/game-session/application/lis
 import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
 import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
 import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
+import type { BulkUpdateAvailabilityDatesResult } from '@/game-session/application/bulk-update-availability-dates';
+import type { UpdateAvailabilityDateResponseResult } from '@/game-session/application/update-availability-date-response';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '@/health/application/get-health';
@@ -68,6 +72,17 @@ export interface CreateAppOptions {
     dateId: string,
     userId: string,
   ) => Promise<ConfirmAvailabilityDateResult>;
+  bulkUpdateAvailabilityDates: (
+    gameSessionId: string,
+    userId: string,
+    input: BulkUpdateAvailabilityDatesInput,
+  ) => Promise<BulkUpdateAvailabilityDatesResult>;
+  updateAvailabilityDateResponse: (
+    gameSessionId: string,
+    dateId: string,
+    userId: string,
+    input: UpdateAvailabilityDateResponseInput,
+  ) => Promise<UpdateAvailabilityDateResponseResult>;
 }
 
 export const createApp = (options: CreateAppOptions) => {
@@ -97,8 +112,10 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     listAvailabilityDates: options.listAvailabilityDates,
     addAvailabilityDate: options.addAvailabilityDate,
+    bulkUpdateAvailabilityDates: options.bulkUpdateAvailabilityDates,
     deleteAvailabilityDate: options.deleteAvailabilityDate,
     confirmAvailabilityDate: options.confirmAvailabilityDate,
+    updateAvailabilityDateResponse: options.updateAvailabilityDateResponse,
   });
 
   return app;

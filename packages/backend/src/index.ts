@@ -16,6 +16,8 @@ import { listAvailabilityDates } from '@/game-session/application/list-availabil
 import { addAvailabilityDate } from '@/game-session/application/add-availability-date';
 import { deleteAvailabilityDate } from '@/game-session/application/delete-availability-date';
 import { confirmAvailabilityDate } from '@/game-session/application/confirm-availability-date';
+import { bulkUpdateAvailabilityDates } from '@/game-session/application/bulk-update-availability-dates';
+import { updateAvailabilityDateResponse } from '@/game-session/application/update-availability-date-response';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -52,6 +54,16 @@ const app = createApp({
     deleteAvailabilityDate(gameSessionRepo, gameSessionId, dateId, userId),
   confirmAvailabilityDate: (gameSessionId, dateId, userId) =>
     confirmAvailabilityDate(gameSessionRepo, gameSessionId, dateId, userId),
+  bulkUpdateAvailabilityDates: (gameSessionId, userId, input) =>
+    bulkUpdateAvailabilityDates(gameSessionRepo, gameSessionId, userId, input),
+  updateAvailabilityDateResponse: (gameSessionId, dateId, userId, input) =>
+    updateAvailabilityDateResponse(
+      gameSessionRepo,
+      gameSessionId,
+      dateId,
+      userId,
+      input,
+    ),
 });
 
 export default app;

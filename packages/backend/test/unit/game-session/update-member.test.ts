@@ -70,12 +70,10 @@ describe('updateMember', () => {
   it('他セッションのメンバーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberOwner: vi
-        .fn()
-        .mockResolvedValue({
-          gameSessionId: 'other-session',
-          userId: 'user-2',
-        }),
+      findMemberOwner: vi.fn().mockResolvedValue({
+        gameSessionId: 'other-session',
+        userId: 'user-2',
+      }),
     });
 
     // Act

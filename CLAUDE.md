@@ -299,7 +299,7 @@ const { getAnswer, okCount } = useScheduleView(
 
 外部に公開するエントリポイントは1ファイルに限定し、内部の分割が外に漏れないようにする。
 
-```
+```plaintext
 features/GameSession/Detail/
   Schedule/                     ← 日程調整の実装詳細をまとめたサブディレクトリ
     ScheduleDisplay.vue         ← 外部から import するのはここだけ

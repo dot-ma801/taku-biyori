@@ -8,7 +8,7 @@ import { useScheduleEdit } from '@/features/GameSession/Detail/Schedule/useSched
 import type { GameSessionMember } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
 import { CalendarCheck, SquarePen, Check } from '@lucide/vue';
-import { computed, ref, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{
   gameSessionId: string;
@@ -21,10 +21,17 @@ const { availabilityDates, loading, errorMessage } = useScheduleDisplay(
 
 // useSession は nanostores の Atom なので Vue の ref に変換する
 const sessionData = ref(useSession.get());
-const unsubscribeSession = useSession.subscribe((v) => {
-  sessionData.value = v;
+let unsubscribeSession: (() => void) | undefined;
+
+onMounted(() => {
+  unsubscribeSession = useSession.subscribe((v) => {
+    sessionData.value = v;
+  });
 });
-onUnmounted(unsubscribeSession);
+
+onUnmounted(() => {
+  unsubscribeSession?.();
+});
 
 const myMemberId = computed(
   () =>

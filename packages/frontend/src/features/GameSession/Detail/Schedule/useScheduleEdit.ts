@@ -69,6 +69,7 @@ export const useScheduleEdit = (
   return {
     isEditing,
     draftAnswers,
+    hasChanges,
     enterEditMode,
     cycleAnswer,
     submitEdit,

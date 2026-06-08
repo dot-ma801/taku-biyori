@@ -52,8 +52,8 @@ export const registerMemberRoute = (
   });
 
   app.post('/api/game-sessions/:id/members', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     let body: unknown;
     try {
@@ -69,7 +69,7 @@ export const registerMemberRoute = (
 
     const result = await options.joinGameSession(
       c.req.param('id'),
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
 
@@ -81,8 +81,8 @@ export const registerMemberRoute = (
   });
 
   app.post('/api/game-sessions/:id/guest-members', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     let body: unknown;
     try {
@@ -103,8 +103,8 @@ export const registerMemberRoute = (
   });
 
   app.patch('/api/game-sessions/:id/members/:memberId', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     let body: unknown;
     try {
@@ -121,7 +121,7 @@ export const registerMemberRoute = (
     const result = await options.updateMember(
       c.req.param('id'),
       c.req.param('memberId'),
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
 
@@ -131,13 +131,13 @@ export const registerMemberRoute = (
   });
 
   app.delete('/api/game-sessions/:id/members/:memberId', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     const result = await options.leaveGameSession(
       c.req.param('id'),
       c.req.param('memberId'),
-      session.user.id,
+      authSession.user.id,
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);

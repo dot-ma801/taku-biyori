@@ -59,7 +59,7 @@ export const registerMemberRoute = (
     try {
       body = await c.req.json();
     } catch {
-      body = {};
+      return c.json({ error: 'Invalid JSON' }, 400);
     }
 
     const parsed = JoinGameSessionInputSchema.safeParse(body);

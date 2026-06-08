@@ -14,8 +14,11 @@ import type {
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
+  JoinAsGuestInput,
+  JoinGameSessionInput,
   UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
+  UpdateMemberInput,
 } from '@taku-biyori/shared';
 import type { Database } from '@/system/infrastructure/database/client';
 import {
@@ -38,6 +41,11 @@ import type { DeleteAvailabilityDateRepository } from '@/game-session/applicatio
 import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
 import type { BulkUpdateAvailabilityDatesRepository } from '@/game-session/application/bulk-update-availability-dates';
 import type { UpdateAvailabilityDateResponseRepository } from '@/game-session/application/update-availability-date-response';
+import type { ListMembersRepository } from '@/game-session/application/list-members';
+import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
+import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
+import type { UpdateMemberRepository } from '@/game-session/application/update-member';
+import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -50,7 +58,12 @@ export type GameSessionRepository = ListGameSessionsRepository &
   DeleteAvailabilityDateRepository &
   ConfirmAvailabilityDateRepository &
   BulkUpdateAvailabilityDatesRepository &
-  UpdateAvailabilityDateResponseRepository;
+  UpdateAvailabilityDateResponseRepository &
+  ListMembersRepository &
+  JoinGameSessionRepository &
+  JoinAsGuestRepository &
+  UpdateMemberRepository &
+  LeaveGameSessionRepository;
 
 type GameSessionRow = {
   id: string;
@@ -456,6 +469,148 @@ export const createGameSessionRepository = (
       )
       .limit(1);
     return row[0]?.id ?? null;
+  },
+
+  async findMembersByGameSessionId(
+    gameSessionId: string,
+  ): Promise<GameSessionMember[]> {
+    const rows = await db
+      .select({
+        id: gameSessionMembers.id,
+        userId: gameSessionMembers.userId,
+        userName: user.name,
+        guestName: gameSessionMembers.guestName,
+        characterName: gameSessionMembers.characterName,
+        createdAt: gameSessionMembers.createdAt,
+      })
+      .from(gameSessionMembers)
+      .leftJoin(user, eq(user.id, gameSessionMembers.userId))
+      .where(eq(gameSessionMembers.gameSessionId, gameSessionId))
+      .orderBy(gameSessionMembers.createdAt);
+
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      userName: r.userName ?? null,
+      guestName: r.guestName,
+      characterName: r.characterName,
+      joinedAt: r.createdAt.toISOString(),
+    }));
+  },
+
+  async addMember(
+    gameSessionId: string,
+    userId: string,
+    input: JoinGameSessionInput,
+  ): Promise<GameSessionMember> {
+    const result = await db
+      .insert(gameSessionMembers)
+      .values({
+        gameSessionId,
+        userId,
+        characterName: input.characterName ?? null,
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('メンバーの追加に失敗しました');
+
+    const userRow = await db
+      .select({ name: user.name })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      userName: userRow[0]?.name ?? null,
+      guestName: row.guestName,
+      characterName: row.characterName,
+      joinedAt: row.createdAt.toISOString(),
+    };
+  },
+
+  async addGuestMember(
+    gameSessionId: string,
+    input: JoinAsGuestInput,
+  ): Promise<GameSessionMember> {
+    const result = await db
+      .insert(gameSessionMembers)
+      .values({
+        gameSessionId,
+        userId: null,
+        guestName: input.guestName,
+        characterName: input.characterName ?? null,
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('ゲストメンバーの追加に失敗しました');
+
+    return {
+      id: row.id,
+      userId: null,
+      userName: null,
+      guestName: row.guestName,
+      characterName: row.characterName,
+      joinedAt: row.createdAt.toISOString(),
+    };
+  },
+
+  async findMemberOwner(
+    memberId: string,
+  ): Promise<{ gameSessionId: string; userId: string | null } | null> {
+    const row = await db
+      .select({
+        gameSessionId: gameSessionMembers.gameSessionId,
+        userId: gameSessionMembers.userId,
+      })
+      .from(gameSessionMembers)
+      .where(eq(gameSessionMembers.id, memberId))
+      .limit(1);
+    return row[0] ?? null;
+  },
+
+  async updateMemberById(
+    memberId: string,
+    input: UpdateMemberInput,
+  ): Promise<GameSessionMember> {
+    const result = await db
+      .update(gameSessionMembers)
+      .set({
+        ...(input.characterName !== undefined && {
+          characterName: input.characterName,
+        }),
+      })
+      .where(eq(gameSessionMembers.id, memberId))
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('メンバーの更新に失敗しました');
+
+    const userRow = row.userId
+      ? await db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, row.userId))
+          .limit(1)
+      : [];
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      userName: userRow[0]?.name ?? null,
+      guestName: row.guestName,
+      characterName: row.characterName,
+      joinedAt: row.createdAt.toISOString(),
+    };
+  },
+
+  async deleteMemberById(memberId: string): Promise<void> {
+    await db
+      .delete(gameSessionMembers)
+      .where(eq(gameSessionMembers.id, memberId));
   },
 
   async upsertAnswer(

@@ -1,6 +1,6 @@
 {
   "id": "snapshot-0004",
-  "prevId": "snapshot-0004",
+  "prevId": "e45dd2ae-3ed6-44b7-b4e9-3e16c4eceffa",
   "version": "7",
   "dialect": "postgresql",
   "tables": {

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import { NotebookPen, BookOpenText } from '@lucide/vue';
 

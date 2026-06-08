@@ -144,7 +144,11 @@ export const JoinAsGuestInputSchema = z.object({
 });
 export type JoinAsGuestInput = z.infer<typeof JoinAsGuestInputSchema>;
 
-export const UpdateMemberInputSchema = z.object({
-  characterName: z.string().max(100).nullable().optional(),
-});
+export const UpdateMemberInputSchema = z
+  .object({
+    characterName: z.string().max(100).nullable().optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, {
+    message: '少なくとも1つのフィールドが必要です',
+  });
 export type UpdateMemberInput = z.infer<typeof UpdateMemberInputSchema>;

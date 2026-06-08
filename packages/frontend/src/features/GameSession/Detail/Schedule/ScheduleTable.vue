@@ -4,7 +4,7 @@ import AnswerCell from '@/features/GameSession/Detail/Schedule/AnswerCell.vue';
 import { useScheduleView } from '@/features/GameSession/Detail/Schedule/useScheduleView';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
-import { toRef } from 'vue';
+import { computed, toRef } from 'vue';
 
 const props = defineProps<{
   availabilityDates: AvailabilityDate[];
@@ -24,11 +24,36 @@ const { getAnswer, okCount } = useScheduleView(
   toRef(props, 'draftAnswers'),
 );
 
+// 空行の colspan（候補日列 + メンバー列 + 集計列）
+const emptyRowColspan = computed(() => props.members.length + 2);
+
 function memberDisplayName(member: GameSessionMember): string {
   return member.userName ?? member.guestName ?? '（未設定）';
 }
 
-function onCellKeydown(e: KeyboardEvent, dateId: string) {
+// 自分のメンバーかどうか判定
+function isMe(member: GameSessionMember): boolean {
+  return member.id === props.myMemberId;
+}
+
+// 自分のセルが編集モード中かどうか判定
+function isEditingMyCell(member: GameSessionMember): boolean {
+  return isMe(member) && props.isEditing;
+}
+
+// 編集モード中の自分のセルに付与するアクセシビリティ属性
+function editableCellAttrs(member: GameSessionMember) {
+  return isEditingMyCell(member) ? { role: 'button', tabindex: 0 } : {};
+}
+
+// セルクリック時（自分のセルかつ編集モード中のみ cellClick を発火）
+function onCellClick(member: GameSessionMember, dateId: string) {
+  if (isEditingMyCell(member)) emit('cellClick', dateId);
+}
+
+// キーボード操作でセルを選択（Enter・Space で cellClick を発火）
+function onCellKeydown(e: KeyboardEvent, member: GameSessionMember, dateId: string) {
+  if (!isEditingMyCell(member)) return;
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
     emit('cellClick', dateId);
@@ -49,9 +74,7 @@ function onCellKeydown(e: KeyboardEvent, dateId: string) {
             class="th th--member"
           >
             {{ memberDisplayName(member) }}
-            <span v-if="member.id === myMemberId" class="you-label"
-              >（あなた）</span
-            >
+            <span v-if="isMe(member)" class="you-label">（あなた）</span>
           </th>
           <th scope="col" class="th th--tally">◯ 集計</th>
         </tr>
@@ -63,22 +86,10 @@ function onCellKeydown(e: KeyboardEvent, dateId: string) {
             v-for="member in members"
             :key="member.id"
             class="td td--answer"
-            :class="{ 'td--editing': member.id === myMemberId && isEditing }"
-            v-bind="
-              member.id === myMemberId && isEditing
-                ? { role: 'button', tabindex: 0 }
-                : {}
-            "
-            @click="
-              member.id === myMemberId && isEditing
-                ? emit('cellClick', date.id)
-                : undefined
-            "
-            @keydown="
-              member.id === myMemberId && isEditing
-                ? onCellKeydown($event, date.id)
-                : undefined
-            "
+            :class="{ 'td--editing': isEditingMyCell(member) }"
+            v-bind="editableCellAttrs(member)"
+            @click="onCellClick(member, date.id)"
+            @keydown="onCellKeydown($event, member, date.id)"
           >
             <AnswerCell :answer="getAnswer(date, member.id)" />
           </td>
@@ -90,7 +101,7 @@ function onCellKeydown(e: KeyboardEvent, dateId: string) {
           </td>
         </tr>
         <tr v-if="availabilityDates.length === 0">
-          <td :colspan="members.length + 2" class="td td--empty">
+          <td :colspan="emptyRowColspan" class="td td--empty">
             候補日が登録されていません
           </td>
         </tr>

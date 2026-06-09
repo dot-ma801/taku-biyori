@@ -10,6 +10,7 @@ import type {
   JoinGameSessionInput,
   JoinAsGuestInput,
   UpdateMemberInput,
+  UpdateProfileInput,
 } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
@@ -28,6 +29,8 @@ import type { UpdateMemberResult } from '@/game-session/application/update-membe
 import type { LeaveGameSessionResult } from '@/game-session/application/leave-game-session';
 import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
 import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
+import type { GetProfileResult } from '@/profile/application/get-profile';
+import type { UpdateProfileResult } from '@/profile/application/update-profile';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '@/health/application/get-health';
@@ -37,6 +40,7 @@ import { registerGameSessionRoute } from '@/game-session/presentation/controller
 import { registerAvailabilityDateRoute } from '@/game-session/presentation/controller/routes/availability-date-route';
 import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
+import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -118,6 +122,11 @@ export interface CreateAppOptions {
   ) => Promise<LeaveGameSessionResult>;
   getGuestLink: (id: string, userId: string) => Promise<GetGuestLinkResult>;
   getGuestLinkPreview: (token: string) => Promise<GetGuestLinkPreviewResult>;
+  getProfile: (userId: string) => Promise<GetProfileResult>;
+  updateProfile: (
+    userId: string,
+    input: UpdateProfileInput,
+  ) => Promise<UpdateProfileResult>;
 }
 
 export const createApp = (options: CreateAppOptions) => {
@@ -164,6 +173,11 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     getGuestLink: options.getGuestLink,
     getGuestLinkPreview: options.getGuestLinkPreview,
+  });
+  registerProfileRoute(app, {
+    getSession: options.getSession,
+    getProfile: options.getProfile,
+    updateProfile: options.updateProfile,
   });
 
   return app;

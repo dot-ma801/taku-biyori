@@ -159,6 +159,21 @@ describe('PATCH /api/profile', () => {
     expect(response.status).toBe(400);
   });
 
+  it('不正な JSON ボディで 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'invalid-json',
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
   it('userId と入力をユースケースに渡す', async () => {
     // Arrange
     const updateProfile = vi

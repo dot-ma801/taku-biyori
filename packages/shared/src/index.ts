@@ -43,3 +43,9 @@ export {
   GuestLinkResponseSchema,
   type GuestLinkResponse,
 } from './game-session.js';
+export {
+  ProfileResponseSchema,
+  type ProfileResponse,
+  UpdateProfileInputSchema,
+  type UpdateProfileInput,
+} from './profile.js';

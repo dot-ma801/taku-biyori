@@ -28,7 +28,7 @@ export const registerGuestLinkRoute = (
     return c.json({ token: result.token });
   });
 
-  app.get('/join/:token', async (c) => {
+  app.get('/api/join/:token', async (c) => {
     const result = await options.getGuestLinkPreview(c.req.param('token'));
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);

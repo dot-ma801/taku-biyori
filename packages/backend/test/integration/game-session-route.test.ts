@@ -978,7 +978,7 @@ describe('GET /api/game-sessions/:id/guest-link', () => {
   });
 });
 
-describe('GET /join/:token', () => {
+describe('GET /api/join/:token', () => {
   it('有効なトークンなら 200 とセッション情報を返す', async () => {
     // Arrange
     const app = makeApp({
@@ -988,7 +988,7 @@ describe('GET /join/:token', () => {
     });
 
     // Act
-    const response = await app.request('/join/valid-token');
+    const response = await app.request('/api/join/valid-token');
     const body = await response.json();
 
     // Assert
@@ -1003,7 +1003,7 @@ describe('GET /join/:token', () => {
     });
 
     // Act
-    const response = await app.request('/join/invalid-token');
+    const response = await app.request('/api/join/invalid-token');
 
     // Assert
     expect(response.status).toBe(404);
@@ -1019,7 +1019,7 @@ describe('GET /join/:token', () => {
     });
 
     // Act
-    const response = await app.request('/join/valid-token');
+    const response = await app.request('/api/join/valid-token');
 
     // Assert
     expect(response.status).toBe(200);

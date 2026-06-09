@@ -43,7 +43,7 @@
 | `/game-sessions` | セッション一覧 |
 | `/game-sessions/new` | セッション新規作成 |
 | `/game-sessions/[id]` | セッション詳細 |
-| `/join/[token]` | ゲストリンク参加 |
+| `/join/[token]` | ゲストリンク参加（フロントエンドページ） |
 
 ---
 
@@ -55,7 +55,7 @@
 
 | 対象 | 規則 | 理由 |
 |---|---|---|
-| URL | `/game-sessions` | Better Auth との衝突回避。`/join/[token]` のみ例外（ゲスト向けの独立したアクションのため） |
+| URL | `/game-sessions` | Better Auth との衝突回避 |
 | 変数名 | `gameSession` | `session` は Better Auth のセッション変数と衝突するため使用禁止 |
 | 型名 | `GameSession` | Better Auth の `Session` 型と区別するため |
 | DBカラム | スネークケース（例: `host_user_id`） | DB標準的な慣習 |
@@ -356,7 +356,7 @@ confirmed（実施前）
 | メソッド | パス | 概要 |
 |---|---|---|
 | `GET` | `/api/game-sessions/:id/guest-link` | ゲストリンク取得（ホストのみ） |
-| `GET` | `/join/:token` | ゲストリンクプレビュー（未ログイン可） |
+| `GET` | `/api/join/:token` | ゲストリンクプレビュー（未ログイン可） |
 
 #### Profile
 
@@ -407,7 +407,7 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 #### ゲストリンク参加は2ステップ
 当初 `POST /join/:token` 1本でゲスト参加を完結させる設計だったが、以下の理由で分割した。
 
-1. `GET /join/:token` — トークンを受け取り卓の概要を返す（未ログイン可）。フロントがプレビュー画面を表示するために使う。
+1. `GET /api/join/:token` — トークンを受け取り卓の概要を返す（未ログイン可）。フロントがプレビュー画面を表示するために使う。
 2. `POST /api/game-sessions/:id/guest-members` — ゲストとして参加登録する（ログイン済みユーザー）。
 
 ログイン後にリダイレクトされ参加するフローを自然に表現するため。

@@ -26,6 +26,8 @@ import type { JoinGameSessionResult } from '@/game-session/application/join-game
 import type { JoinAsGuestResult } from '@/game-session/application/join-as-guest';
 import type { UpdateMemberResult } from '@/game-session/application/update-member';
 import type { LeaveGameSessionResult } from '@/game-session/application/leave-game-session';
+import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
+import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '@/health/application/get-health';
@@ -34,6 +36,7 @@ import { registerHealthRoute } from '@/health/presentation/controller/routes/hea
 import { registerGameSessionRoute } from '@/game-session/presentation/controller/routes/game-session-route';
 import { registerAvailabilityDateRoute } from '@/game-session/presentation/controller/routes/availability-date-route';
 import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
+import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -113,6 +116,8 @@ export interface CreateAppOptions {
     memberId: string,
     userId: string,
   ) => Promise<LeaveGameSessionResult>;
+  getGuestLink: (id: string, userId: string) => Promise<GetGuestLinkResult>;
+  getGuestLinkPreview: (token: string) => Promise<GetGuestLinkPreviewResult>;
 }
 
 export const createApp = (options: CreateAppOptions) => {
@@ -154,6 +159,11 @@ export const createApp = (options: CreateAppOptions) => {
     joinAsGuest: options.joinAsGuest,
     updateMember: options.updateMember,
     leaveGameSession: options.leaveGameSession,
+  });
+  registerGuestLinkRoute(app, {
+    getSession: options.getSession,
+    getGuestLink: options.getGuestLink,
+    getGuestLinkPreview: options.getGuestLinkPreview,
   });
 
   return app;

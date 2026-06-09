@@ -23,6 +23,8 @@ import { joinGameSession } from '@/game-session/application/join-game-session';
 import { joinAsGuest } from '@/game-session/application/join-as-guest';
 import { updateMember } from '@/game-session/application/update-member';
 import { leaveGameSession } from '@/game-session/application/leave-game-session';
+import { getGuestLink } from '@/game-session/application/get-guest-link';
+import { getGuestLinkPreview } from '@/game-session/application/get-guest-link-preview';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -78,6 +80,8 @@ const app = createApp({
     updateMember(gameSessionRepo, gameSessionId, memberId, userId, input),
   leaveGameSession: (gameSessionId, memberId, userId) =>
     leaveGameSession(gameSessionRepo, gameSessionId, memberId, userId),
+  getGuestLink: (id, userId) => getGuestLink(gameSessionRepo, id, userId),
+  getGuestLinkPreview: (token) => getGuestLinkPreview(gameSessionRepo, token),
 });
 
 export default app;

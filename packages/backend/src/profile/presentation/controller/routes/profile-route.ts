@@ -43,7 +43,7 @@ export const registerProfileRoute = (
 
     const parsed = UpdateProfileInputSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: parsed.error.issues }, 400);
+      return c.json({ error: 'Bad Request' }, 400);
     }
 
     const result = await options.updateProfile(

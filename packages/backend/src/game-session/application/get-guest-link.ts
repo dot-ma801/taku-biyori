@@ -1,7 +1,7 @@
-import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
-
-export interface GetGuestLinkRepository extends GameSessionHostRepository {
-  findGuestLinkToken(id: string): Promise<string | null>;
+export interface GetGuestLinkRepository {
+  findGuestLinkInfo(
+    id: string,
+  ): Promise<{ hostUserId: string; token: string } | null>;
 }
 
 export type GetGuestLinkResult =
@@ -14,12 +14,8 @@ export const getGuestLink = async (
   id: string,
   userId: string,
 ): Promise<GetGuestLinkResult> => {
-  const hostUserId = await repo.findHostUserId(id);
-  if (hostUserId === null) return { type: 'notFound' };
-  if (hostUserId !== userId) return { type: 'forbidden' };
-
-  const token = await repo.findGuestLinkToken(id);
-  if (token === null) return { type: 'notFound' };
-
-  return { type: 'ok', token };
+  const info = await repo.findGuestLinkInfo(id);
+  if (!info) return { type: 'notFound' };
+  if (info.hostUserId !== userId) return { type: 'forbidden' };
+  return { type: 'ok', token: info.token };
 };

@@ -619,13 +619,19 @@ export const createGameSessionRepository = (
       .where(eq(gameSessionMembers.id, memberId));
   },
 
-  async findGuestLinkToken(id: string): Promise<string | null> {
+  async findGuestLinkInfo(
+    id: string,
+  ): Promise<{ hostUserId: string; token: string } | null> {
     const row = await db
-      .select({ guestLinkToken: gameSessions.guestLinkToken })
+      .select({
+        hostUserId: gameSessions.hostUserId,
+        guestLinkToken: gameSessions.guestLinkToken,
+      })
       .from(gameSessions)
       .where(eq(gameSessions.id, id))
       .limit(1);
-    return row[0]?.guestLinkToken ?? null;
+    if (!row[0]) return null;
+    return { hostUserId: row[0].hostUserId, token: row[0].guestLinkToken };
   },
 
   async findByGuestLinkToken(token: string): Promise<GameSession | null> {

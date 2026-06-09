@@ -48,17 +48,17 @@ export const registerGameSessionRoute = (
   options: RegisterGameSessionRouteOptions,
 ): void => {
   app.get('/api/game-sessions', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
-    const sessions = await options.listGameSessions(session.user.id);
+    const sessions = await options.listGameSessions(authSession.user.id);
     return c.json(sessions);
   });
 
   app.post('/api/game-sessions', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
@@ -75,15 +75,15 @@ export const registerGameSessionRoute = (
     }
 
     const gameSession = await options.createGameSession(
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
     return c.json(gameSession, 201);
   });
 
   app.get('/api/game-sessions/:id', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    const userId = session?.user.id ?? null;
+    const authSession = await options.getSession(c.req.raw.headers);
+    const userId = authSession?.user.id ?? null;
 
     const result = await options.getGameSession(c.req.param('id'), userId);
 
@@ -97,8 +97,8 @@ export const registerGameSessionRoute = (
   });
 
   app.patch('/api/game-sessions/:id', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
@@ -116,7 +116,7 @@ export const registerGameSessionRoute = (
 
     const result = await options.updateGameSession(
       c.req.param('id'),
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
 
@@ -126,14 +126,14 @@ export const registerGameSessionRoute = (
   });
 
   app.delete('/api/game-sessions/:id', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
     const result = await options.deleteGameSession(
       c.req.param('id'),
-      session.user.id,
+      authSession.user.id,
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
@@ -142,8 +142,8 @@ export const registerGameSessionRoute = (
   });
 
   app.patch('/api/game-sessions/:id/status', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
@@ -161,7 +161,7 @@ export const registerGameSessionRoute = (
 
     const result = await options.updateGameSessionStatus(
       c.req.param('id'),
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
 

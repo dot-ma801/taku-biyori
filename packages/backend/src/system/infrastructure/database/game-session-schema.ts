@@ -8,9 +8,10 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { user } from '@/system/infrastructure/database/schema';
 
 export const gameSessions = pgTable('game_sessions', {
@@ -35,20 +36,31 @@ export const gameSessions = pgTable('game_sessions', {
     .$onUpdate(() => new Date()),
 });
 
-export const gameSessionMembers = pgTable('game_session_members', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  gameSessionId: uuid('game_session_id')
-    .notNull()
-    .references(() => gameSessions.id, { onDelete: 'cascade' }),
-  userId: text('user_id').references(() => user.id),
-  guestName: text('guest_name'),
-  characterName: text('character_name'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const gameSessionMembers = pgTable(
+  'game_session_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gameSessionId: uuid('game_session_id')
+      .notNull()
+      .references(() => gameSessions.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => user.id),
+    guestName: text('guest_name'),
+    characterName: text('character_name'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    // ログインユーザーの重複参加を防ぐ partial unique index（user_id が NULL のゲストは対象外）
+    userUniqueIdx: uniqueIndex(
+      'game_session_members_game_session_id_user_id_unique',
+    )
+      .on(table.gameSessionId, table.userId)
+      .where(sql`${table.userId} IS NOT NULL`),
+  }),
+);
 
 export const gameSessionCandidates = pgTable(
   'game_session_candidates',

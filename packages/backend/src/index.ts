@@ -18,6 +18,11 @@ import { deleteAvailabilityDate } from '@/game-session/application/delete-availa
 import { confirmAvailabilityDate } from '@/game-session/application/confirm-availability-date';
 import { bulkUpdateAvailabilityDates } from '@/game-session/application/bulk-update-availability-dates';
 import { updateAvailabilityDateResponse } from '@/game-session/application/update-availability-date-response';
+import { listMembers } from '@/game-session/application/list-members';
+import { joinGameSession } from '@/game-session/application/join-game-session';
+import { joinAsGuest } from '@/game-session/application/join-as-guest';
+import { updateMember } from '@/game-session/application/update-member';
+import { leaveGameSession } from '@/game-session/application/leave-game-session';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -64,6 +69,15 @@ const app = createApp({
       userId,
       input,
     ),
+  listMembers: (gameSessionId) => listMembers(gameSessionRepo, gameSessionId),
+  joinGameSession: (gameSessionId, userId, input) =>
+    joinGameSession(gameSessionRepo, gameSessionId, userId, input),
+  joinAsGuest: (gameSessionId, input) =>
+    joinAsGuest(gameSessionRepo, gameSessionId, input),
+  updateMember: (gameSessionId, memberId, userId, input) =>
+    updateMember(gameSessionRepo, gameSessionId, memberId, userId, input),
+  leaveGameSession: (gameSessionId, memberId, userId) =>
+    leaveGameSession(gameSessionRepo, gameSessionId, memberId, userId),
 });
 
 export default app;

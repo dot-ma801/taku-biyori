@@ -62,8 +62,8 @@ export const registerAvailabilityDateRoute = (
   });
 
   app.put('/api/game-sessions/:id/availability-dates', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     let body: unknown;
     try {
@@ -79,7 +79,7 @@ export const registerAvailabilityDateRoute = (
 
     const result = await options.bulkUpdateAvailabilityDates(
       c.req.param('id'),
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
 
@@ -89,8 +89,8 @@ export const registerAvailabilityDateRoute = (
   });
 
   app.post('/api/game-sessions/:id/availability-dates', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     let body: unknown;
     try {
@@ -106,7 +106,7 @@ export const registerAvailabilityDateRoute = (
 
     const result = await options.addAvailabilityDate(
       c.req.param('id'),
-      session.user.id,
+      authSession.user.id,
       parsed.data,
     );
 
@@ -116,13 +116,13 @@ export const registerAvailabilityDateRoute = (
   });
 
   app.delete('/api/game-sessions/:id/availability-dates/:dateId', async (c) => {
-    const session = await options.getSession(c.req.raw.headers);
-    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     const result = await options.deleteAvailabilityDate(
       c.req.param('id'),
       c.req.param('dateId'),
-      session.user.id,
+      authSession.user.id,
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
@@ -133,13 +133,13 @@ export const registerAvailabilityDateRoute = (
   app.post(
     '/api/game-sessions/:id/availability-dates/:dateId/confirm',
     async (c) => {
-      const session = await options.getSession(c.req.raw.headers);
-      if (!session) return c.json({ error: 'Unauthorized' }, 401);
+      const authSession = await options.getSession(c.req.raw.headers);
+      if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
       const result = await options.confirmAvailabilityDate(
         c.req.param('id'),
         c.req.param('dateId'),
-        session.user.id,
+        authSession.user.id,
       );
 
       if (result.type === 'notFound')
@@ -153,8 +153,8 @@ export const registerAvailabilityDateRoute = (
   app.put(
     '/api/game-sessions/:id/availability-dates/:dateId/responses',
     async (c) => {
-      const session = await options.getSession(c.req.raw.headers);
-      if (!session) return c.json({ error: 'Unauthorized' }, 401);
+      const authSession = await options.getSession(c.req.raw.headers);
+      if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
       let body: unknown;
       try {
@@ -171,7 +171,7 @@ export const registerAvailabilityDateRoute = (
       const result = await options.updateAvailabilityDateResponse(
         c.req.param('id'),
         c.req.param('dateId'),
-        session.user.id,
+        authSession.user.id,
         parsed.data,
       );
 

@@ -34,4 +34,10 @@ export {
   type BulkUpdateAvailabilityDatesInput,
   UpdateAvailabilityDateResponseInputSchema,
   type UpdateAvailabilityDateResponseInput,
+  JoinGameSessionInputSchema,
+  type JoinGameSessionInput,
+  JoinAsGuestInputSchema,
+  type JoinAsGuestInput,
+  UpdateMemberInputSchema,
+  type UpdateMemberInput,
 } from './game-session.js';

@@ -16,7 +16,7 @@ const toProfileResponse = (row: {
 }): ProfileResponse => ({
   id: row.id,
   name: row.name,
-  email: row.email ?? '',
+  email: row.email!,
   image: row.image,
 });
 

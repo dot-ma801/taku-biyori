@@ -40,4 +40,6 @@ export {
   type JoinAsGuestInput,
   UpdateMemberInputSchema,
   type UpdateMemberInput,
+  GuestLinkResponseSchema,
+  type GuestLinkResponse,
 } from './game-session.js';

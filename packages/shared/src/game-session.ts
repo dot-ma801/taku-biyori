@@ -152,3 +152,8 @@ export const UpdateMemberInputSchema = z
     message: '少なくとも1つのフィールドが必要です',
   });
 export type UpdateMemberInput = z.infer<typeof UpdateMemberInputSchema>;
+
+export const GuestLinkResponseSchema = z.object({
+  token: z.string(),
+});
+export type GuestLinkResponse = z.infer<typeof GuestLinkResponseSchema>;

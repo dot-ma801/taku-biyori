@@ -11,6 +11,8 @@ import type { ListAvailabilityDatesResult } from '@/game-session/application/lis
 import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
 import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
 import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
+import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
+import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -98,6 +100,8 @@ const makeApp = (
       dateId: string,
       userId: string,
     ) => Promise<ConfirmAvailabilityDateResult>;
+    getGuestLink?: (id: string, userId: string) => Promise<GetGuestLinkResult>;
+    getGuestLinkPreview?: (token: string) => Promise<GetGuestLinkPreviewResult>;
   } = {},
 ) =>
   createApp({
@@ -129,6 +133,23 @@ const makeApp = (
       vi.fn().mockResolvedValue({ type: 'ok' }),
     confirmAvailabilityDate:
       overrides.confirmAvailabilityDate ??
+      vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+    bulkUpdateAvailabilityDates: vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', dates: [] }),
+    updateAvailabilityDateResponse: vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', answer: {} }),
+    listMembers: vi.fn().mockResolvedValue({ type: 'ok', members: [] }),
+    joinGameSession: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    joinAsGuest: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    updateMember: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    leaveGameSession: vi.fn().mockResolvedValue({ type: 'ok' }),
+    getGuestLink:
+      overrides.getGuestLink ??
+      vi.fn().mockResolvedValue({ type: 'ok', token: 'token-abc' }),
+    getGuestLinkPreview:
+      overrides.getGuestLinkPreview ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
   });
 
@@ -890,5 +911,117 @@ describe('POST /api/game-sessions/:id/availability-dates/:dateId/confirm', () =>
 
     // Assert
     expect(response.status).toBe(404);
+  });
+});
+
+describe('GET /api/game-sessions/:id/guest-link', () => {
+  it('ホストが取得すると 200 とトークンを返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLink: vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', token: 'token-abc' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/guest-link',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ token: 'token-abc' });
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/guest-link',
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホスト以外なら 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLink: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/guest-link',
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('セッションが存在しない場合は 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLink: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/nonexistent/guest-link',
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('GET /api/join/:token', () => {
+  it('有効なトークンなら 200 とセッション情報を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLinkPreview: vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+    });
+
+    // Act
+    const response = await app.request('/api/join/valid-token');
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockGameSession);
+  });
+
+  it('無効なトークンなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLinkPreview: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/join/invalid-token');
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('未認証でもアクセスできる', async () => {
+    // Arrange
+    const app = makeApp({
+      getSession: vi.fn().mockResolvedValue(null),
+      getGuestLinkPreview: vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+    });
+
+    // Act
+    const response = await app.request('/api/join/valid-token');
+
+    // Assert
+    expect(response.status).toBe(200);
   });
 });

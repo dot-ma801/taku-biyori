@@ -46,6 +46,8 @@ import type { JoinGameSessionRepository } from '@/game-session/application/join-
 import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
 import type { UpdateMemberRepository } from '@/game-session/application/update-member';
 import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
+import type { GetGuestLinkRepository } from '@/game-session/application/get-guest-link';
+import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -63,7 +65,9 @@ export type GameSessionRepository = ListGameSessionsRepository &
   JoinGameSessionRepository &
   JoinAsGuestRepository &
   UpdateMemberRepository &
-  LeaveGameSessionRepository;
+  LeaveGameSessionRepository &
+  GetGuestLinkRepository &
+  GetGuestLinkPreviewRepository;
 
 type GameSessionRow = {
   id: string;
@@ -613,6 +617,31 @@ export const createGameSessionRepository = (
     await db
       .delete(gameSessionMembers)
       .where(eq(gameSessionMembers.id, memberId));
+  },
+
+  async findGuestLinkInfo(
+    id: string,
+  ): Promise<{ hostUserId: string; token: string } | null> {
+    const row = await db
+      .select({
+        hostUserId: gameSessions.hostUserId,
+        guestLinkToken: gameSessions.guestLinkToken,
+      })
+      .from(gameSessions)
+      .where(eq(gameSessions.id, id))
+      .limit(1);
+    if (!row[0]) return null;
+    return { hostUserId: row[0].hostUserId, token: row[0].guestLinkToken };
+  },
+
+  async findByGuestLinkToken(token: string): Promise<GameSession | null> {
+    const row = await db
+      .select()
+      .from(gameSessions)
+      .where(eq(gameSessions.guestLinkToken, token))
+      .limit(1);
+    if (!row[0]) return null;
+    return toGameSession(row[0]);
   },
 
   async upsertAnswer(

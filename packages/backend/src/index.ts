@@ -25,6 +25,9 @@ import { updateMember } from '@/game-session/application/update-member';
 import { leaveGameSession } from '@/game-session/application/leave-game-session';
 import { getGuestLink } from '@/game-session/application/get-guest-link';
 import { getGuestLinkPreview } from '@/game-session/application/get-guest-link-preview';
+import { createProfileRepository } from '@/profile/infrastructure/profile-repository';
+import { getProfile } from '@/profile/application/get-profile';
+import { updateProfile } from '@/profile/application/update-profile';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -38,6 +41,7 @@ const auth = createAuth({
 });
 
 const gameSessionRepo = createGameSessionRepository(db);
+const profileRepo = createProfileRepository(db);
 
 const app = createApp({
   frontendOrigin: config.frontendOrigin,
@@ -82,6 +86,8 @@ const app = createApp({
     leaveGameSession(gameSessionRepo, gameSessionId, memberId, userId),
   getGuestLink: (id, userId) => getGuestLink(gameSessionRepo, id, userId),
   getGuestLinkPreview: (token) => getGuestLinkPreview(gameSessionRepo, token),
+  getProfile: (userId) => getProfile(profileRepo, userId),
+  updateProfile: (userId, input) => updateProfile(profileRepo, userId, input),
 });
 
 export default app;

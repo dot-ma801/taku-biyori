@@ -16,6 +16,17 @@ describe('formatDateShort', () => {
     // Arrange & Act & Assert
     expect(formatDateShort('2026-12-31')).toBe('12/31');
   });
+
+  it('日付でない文字列の場合は "0/0" を返す', () => {
+    // parseDateParts が month=0, day=0 を返すため
+    expect(formatDateShort('invalid')).toBe('0/0');
+    expect(formatDateShort('')).toBe('0/0');
+  });
+
+  it('範囲外の月はそのまま返す', () => {
+    // バリデーションは呼び出し元（zod）が担うため、ここでは素通し
+    expect(formatDateShort('2026-13-01')).toBe('13/1');
+  });
 });
 
 describe('formatDateWithWeekday', () => {
@@ -57,5 +68,16 @@ describe('formatDateWithWeekday', () => {
   it('月が1桁の場合もゼロ埋めしない', () => {
     // Arrange & Act & Assert
     expect(formatDateWithWeekday('2026-01-01')).toBe('1/1（木）');
+  });
+
+  it('日付でない文字列の場合は曜日が空文字になる', () => {
+    // Invalid Date の getDay() が NaN になるため WEEKDAYS[NaN] は undefined → ''
+    expect(formatDateWithWeekday('invalid')).toBe('0/0（）');
+    expect(formatDateWithWeekday('')).toBe('0/0（）');
+  });
+
+  it('存在しない日付（うるう年でない 2/29）は JS Date がオーバーフローして 3/1 の曜日になる', () => {
+    // new Date(2026, 1, 29) → 2026-03-01（日曜）
+    expect(formatDateWithWeekday('2026-02-29')).toBe('2/29（日）');
   });
 });

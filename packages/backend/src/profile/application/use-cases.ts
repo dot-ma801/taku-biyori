@@ -12,7 +12,15 @@ import { updateProfile } from '@/profile/application/update-profile';
 
 type ProfileRepo = GetProfileRepository & UpdateProfileRepository;
 
-export const createProfileUseCases = (repo: ProfileRepo) => ({
+export interface ProfileUseCases {
+  getProfile(userId: string): Promise<GetProfileResult>;
+  updateProfile(
+    userId: string,
+    input: UpdateProfileInput,
+  ): Promise<UpdateProfileResult>;
+}
+
+export const createProfileUseCases = (repo: ProfileRepo): ProfileUseCases => ({
   getProfile: (userId: string): Promise<GetProfileResult> =>
     getProfile(repo, userId),
   updateProfile: (
@@ -20,5 +28,3 @@ export const createProfileUseCases = (repo: ProfileRepo) => ({
     input: UpdateProfileInput,
   ): Promise<UpdateProfileResult> => updateProfile(repo, userId, input),
 });
-
-export type ProfileUseCases = ReturnType<typeof createProfileUseCases>;

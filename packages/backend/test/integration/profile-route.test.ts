@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
+import type { ProfileUseCases } from '@/profile/application/use-cases';
 import type { ProfileResponse } from '@taku-biyori/shared';
 import type { GetProfileResult } from '@/profile/application/get-profile';
 import type { UpdateProfileResult } from '@/profile/application/update-profile';
@@ -14,21 +15,18 @@ const mockProfile: ProfileResponse = {
   image: null,
 };
 
+const stubGameSession = {} as unknown as GameSessionUseCases;
+
 const makeApp = (
-  overrides: {
+  overrides: Partial<ProfileUseCases> & {
     getSession?: () => Promise<typeof mockSession | null>;
-    getProfile?: (userId: string) => Promise<GetProfileResult>;
-    updateProfile?: (
-      userId: string,
-      input: { name: string },
-    ) => Promise<UpdateProfileResult>;
   } = {},
 ) =>
   createApp({
     frontendOrigin: 'http://localhost:5173',
     authHandler: vi.fn(async () => new Response('ok')),
     getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
-    gameSession: {} as GameSessionUseCases,
+    gameSession: stubGameSession,
     profile: {
       getProfile:
         overrides.getProfile ??
@@ -83,7 +81,7 @@ describe('GET /api/profile', () => {
   it('notFound なら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
-      getProfile: vi.fn().mockResolvedValue({ type: 'notFound' }),
+      getProfile: vi.fn<() => Promise<GetProfileResult>>().mockResolvedValue({ type: 'notFound' }),
     });
 
     // Act
@@ -180,7 +178,7 @@ describe('PATCH /api/profile', () => {
   it('notFound なら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
-      updateProfile: vi.fn().mockResolvedValue({ type: 'notFound' }),
+      updateProfile: vi.fn<() => Promise<UpdateProfileResult>>().mockResolvedValue({ type: 'notFound' }),
     });
 
     // Act

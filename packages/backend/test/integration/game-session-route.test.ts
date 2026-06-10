@@ -54,56 +54,11 @@ const mockAvailabilityDate: AvailabilityDate = {
   answers: [],
 };
 
+const stubProfile = {} as unknown as ProfileUseCases;
+
 const makeApp = (
-  overrides: {
+  overrides: Partial<GameSessionUseCases> & {
     getSession?: () => Promise<typeof mockSession | null>;
-    listGameSessions?: (userId: string) => Promise<GameSessionListItem[]>;
-    createGameSession?: (
-      userId: string,
-      input: unknown,
-    ) => Promise<GameSession>;
-    getGameSession?: (
-      id: string,
-      userId: string | null,
-    ) => Promise<GetGameSessionResult>;
-    updateGameSession?: (
-      id: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<
-      | { type: 'ok'; gameSession: GameSession }
-      | { type: 'notFound' }
-      | { type: 'forbidden' }
-    >;
-    deleteGameSession?: (
-      id: string,
-      userId: string,
-    ) => Promise<{ type: 'ok' } | { type: 'notFound' } | { type: 'forbidden' }>;
-    updateGameSessionStatus?: (
-      id: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<UpdateGameSessionStatusResult>;
-    listAvailabilityDates?: (
-      gameSessionId: string,
-    ) => Promise<ListAvailabilityDatesResult>;
-    addAvailabilityDate?: (
-      gameSessionId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<AddAvailabilityDateResult>;
-    deleteAvailabilityDate?: (
-      gameSessionId: string,
-      dateId: string,
-      userId: string,
-    ) => Promise<DeleteAvailabilityDateResult>;
-    confirmAvailabilityDate?: (
-      gameSessionId: string,
-      dateId: string,
-      userId: string,
-    ) => Promise<ConfirmAvailabilityDateResult>;
-    getGuestLink?: (id: string, userId: string) => Promise<GetGuestLinkResult>;
-    getGuestLinkPreview?: (token: string) => Promise<GetGuestLinkPreviewResult>;
   } = {},
 ) => {
   const gameSession: GameSessionUseCases = {
@@ -133,17 +88,26 @@ const makeApp = (
     confirmAvailabilityDate:
       overrides.confirmAvailabilityDate ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
-    bulkUpdateAvailabilityDates: vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', dates: [] }),
-    updateAvailabilityDateResponse: vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', answer: {} }),
-    listMembers: vi.fn().mockResolvedValue({ type: 'ok', members: [] }),
-    joinGameSession: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
-    joinAsGuest: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
-    updateMember: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
-    leaveGameSession: vi.fn().mockResolvedValue({ type: 'ok' }),
+    bulkUpdateAvailabilityDates:
+      overrides.bulkUpdateAvailabilityDates ??
+      vi.fn().mockResolvedValue({ type: 'ok', dates: [] }),
+    updateAvailabilityDateResponse:
+      overrides.updateAvailabilityDateResponse ??
+      vi.fn().mockResolvedValue({ type: 'ok', answer: {} }),
+    listMembers:
+      overrides.listMembers ??
+      vi.fn().mockResolvedValue({ type: 'ok', members: [] }),
+    joinGameSession:
+      overrides.joinGameSession ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    joinAsGuest:
+      overrides.joinAsGuest ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    updateMember:
+      overrides.updateMember ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    leaveGameSession:
+      overrides.leaveGameSession ?? vi.fn().mockResolvedValue({ type: 'ok' }),
     getGuestLink:
       overrides.getGuestLink ??
       vi.fn().mockResolvedValue({ type: 'ok', token: 'token-abc' }),
@@ -152,17 +116,12 @@ const makeApp = (
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
   };
 
-  const profile: ProfileUseCases = {
-    getProfile: vi.fn(),
-    updateProfile: vi.fn(),
-  };
-
   return createApp({
     frontendOrigin: 'http://localhost:5173',
     authHandler: vi.fn(async () => new Response('ok')),
     getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
     gameSession,
-    profile,
+    profile: stubProfile,
   });
 };
 

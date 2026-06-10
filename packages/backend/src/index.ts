@@ -21,12 +21,15 @@ const auth = createAuth({
   googleClientSecret: config.googleClientSecret,
 });
 
+const gameSessionRepo = createGameSessionRepository(db);
+const profileRepo = createProfileRepository(db);
+
 const app = createApp({
   frontendOrigin: config.frontendOrigin,
   authHandler: (request) => auth.handler(request),
   getSession: (headers) => auth.api.getSession({ headers }),
-  gameSession: createGameSessionUseCases(createGameSessionRepository(db)),
-  profile: createProfileUseCases(createProfileRepository(db)),
+  gameSession: createGameSessionUseCases(gameSessionRepo),
+  profile: createProfileUseCases(profileRepo),
 });
 
 export default app;

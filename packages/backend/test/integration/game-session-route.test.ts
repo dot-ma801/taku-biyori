@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
+import type { GameSessionUseCases } from '@/game-session/application/use-cases';
+import type { ProfileUseCases } from '@/profile/application/use-cases';
 import type {
   GameSessionListItem,
   GameSession,
@@ -103,11 +105,8 @@ const makeApp = (
     getGuestLink?: (id: string, userId: string) => Promise<GetGuestLinkResult>;
     getGuestLinkPreview?: (token: string) => Promise<GetGuestLinkPreviewResult>;
   } = {},
-) =>
-  createApp({
-    frontendOrigin: 'http://localhost:5173',
-    authHandler: vi.fn(async () => new Response('ok')),
-    getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
+) => {
+  const gameSession: GameSessionUseCases = {
     listGameSessions:
       overrides.listGameSessions ?? vi.fn().mockResolvedValue([mockListItem]),
     createGameSession:
@@ -151,7 +150,21 @@ const makeApp = (
     getGuestLinkPreview:
       overrides.getGuestLinkPreview ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+  };
+
+  const profile: ProfileUseCases = {
+    getProfile: vi.fn(),
+    updateProfile: vi.fn(),
+  };
+
+  return createApp({
+    frontendOrigin: 'http://localhost:5173',
+    authHandler: vi.fn(async () => new Response('ok')),
+    getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
+    gameSession,
+    profile,
   });
+};
 
 describe('GET /api/game-sessions', () => {
   it('認証済みなら 200 でセッション一覧を返す', async () => {

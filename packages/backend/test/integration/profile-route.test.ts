@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
+import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileResponse } from '@taku-biyori/shared';
 import type { GetProfileResult } from '@/profile/application/get-profile';
 import type { UpdateProfileResult } from '@/profile/application/update-profile';
@@ -27,31 +28,15 @@ const makeApp = (
     frontendOrigin: 'http://localhost:5173',
     authHandler: vi.fn(async () => new Response('ok')),
     getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
-    listGameSessions: vi.fn().mockResolvedValue([]),
-    createGameSession: vi.fn(),
-    getGameSession: vi.fn(),
-    updateGameSession: vi.fn(),
-    deleteGameSession: vi.fn(),
-    updateGameSessionStatus: vi.fn(),
-    listAvailabilityDates: vi.fn(),
-    addAvailabilityDate: vi.fn(),
-    bulkUpdateAvailabilityDates: vi.fn(),
-    deleteAvailabilityDate: vi.fn(),
-    confirmAvailabilityDate: vi.fn(),
-    updateAvailabilityDateResponse: vi.fn(),
-    listMembers: vi.fn(),
-    joinGameSession: vi.fn(),
-    joinAsGuest: vi.fn(),
-    updateMember: vi.fn(),
-    leaveGameSession: vi.fn(),
-    getGuestLink: vi.fn(),
-    getGuestLinkPreview: vi.fn(),
-    getProfile:
-      overrides.getProfile ??
-      vi.fn().mockResolvedValue({ type: 'ok', profile: mockProfile }),
-    updateProfile:
-      overrides.updateProfile ??
-      vi.fn().mockResolvedValue({ type: 'ok', profile: mockProfile }),
+    gameSession: {} as GameSessionUseCases,
+    profile: {
+      getProfile:
+        overrides.getProfile ??
+        vi.fn().mockResolvedValue({ type: 'ok', profile: mockProfile }),
+      updateProfile:
+        overrides.updateProfile ??
+        vi.fn().mockResolvedValue({ type: 'ok', profile: mockProfile }),
+    },
   });
 
 describe('GET /api/profile', () => {

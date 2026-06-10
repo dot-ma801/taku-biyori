@@ -8,13 +8,6 @@ import type {
   AvailabilityDate,
 } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
-import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
-import type { ListAvailabilityDatesResult } from '@/game-session/application/list-availability-dates';
-import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
-import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
-import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
-import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
-import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
 
 const mockSession = { user: { id: 'user-1' } };
 

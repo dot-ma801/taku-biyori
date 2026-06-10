@@ -81,7 +81,9 @@ describe('GET /api/profile', () => {
   it('notFound なら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
-      getProfile: vi.fn<() => Promise<GetProfileResult>>().mockResolvedValue({ type: 'notFound' }),
+      getProfile: vi
+        .fn<() => Promise<GetProfileResult>>()
+        .mockResolvedValue({ type: 'notFound' }),
     });
 
     // Act
@@ -178,7 +180,9 @@ describe('PATCH /api/profile', () => {
   it('notFound なら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
-      updateProfile: vi.fn<() => Promise<UpdateProfileResult>>().mockResolvedValue({ type: 'notFound' }),
+      updateProfile: vi
+        .fn<() => Promise<UpdateProfileResult>>()
+        .mockResolvedValue({ type: 'notFound' }),
     });
 
     // Act

@@ -125,13 +125,6 @@ export const GameSessionDetailSchema = GameSessionSchema.extend({
 });
 export type GameSessionDetail = z.infer<typeof GameSessionDetailSchema>;
 
-export const BulkUpdateAvailabilityDatesInputSchema = z.object({
-  dates: z.array(z.iso.date()),
-});
-export type BulkUpdateAvailabilityDatesInput = z.infer<
-  typeof BulkUpdateAvailabilityDatesInputSchema
->;
-
 export const UpdateAvailabilityDateResponseInputSchema = z.object({
   answer: z.enum(['ok', 'maybe', 'ng']),
   comment: z.string().max(500).optional(),

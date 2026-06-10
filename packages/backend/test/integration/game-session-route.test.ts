@@ -1,18 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
+import type { GameSessionUseCases } from '@/game-session/application/use-cases';
+import type { ProfileUseCases } from '@/profile/application/use-cases';
 import type {
   GameSessionListItem,
   GameSession,
   AvailabilityDate,
 } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
-import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
-import type { ListAvailabilityDatesResult } from '@/game-session/application/list-availability-dates';
-import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
-import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
-import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
-import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
-import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -52,62 +47,14 @@ const mockAvailabilityDate: AvailabilityDate = {
   answers: [],
 };
 
+const stubProfile = {} as unknown as ProfileUseCases;
+
 const makeApp = (
-  overrides: {
+  overrides: Partial<GameSessionUseCases> & {
     getSession?: () => Promise<typeof mockSession | null>;
-    listGameSessions?: (userId: string) => Promise<GameSessionListItem[]>;
-    createGameSession?: (
-      userId: string,
-      input: unknown,
-    ) => Promise<GameSession>;
-    getGameSession?: (
-      id: string,
-      userId: string | null,
-    ) => Promise<GetGameSessionResult>;
-    updateGameSession?: (
-      id: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<
-      | { type: 'ok'; gameSession: GameSession }
-      | { type: 'notFound' }
-      | { type: 'forbidden' }
-    >;
-    deleteGameSession?: (
-      id: string,
-      userId: string,
-    ) => Promise<{ type: 'ok' } | { type: 'notFound' } | { type: 'forbidden' }>;
-    updateGameSessionStatus?: (
-      id: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<UpdateGameSessionStatusResult>;
-    listAvailabilityDates?: (
-      gameSessionId: string,
-    ) => Promise<ListAvailabilityDatesResult>;
-    addAvailabilityDate?: (
-      gameSessionId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<AddAvailabilityDateResult>;
-    deleteAvailabilityDate?: (
-      gameSessionId: string,
-      dateId: string,
-      userId: string,
-    ) => Promise<DeleteAvailabilityDateResult>;
-    confirmAvailabilityDate?: (
-      gameSessionId: string,
-      dateId: string,
-      userId: string,
-    ) => Promise<ConfirmAvailabilityDateResult>;
-    getGuestLink?: (id: string, userId: string) => Promise<GetGuestLinkResult>;
-    getGuestLinkPreview?: (token: string) => Promise<GetGuestLinkPreviewResult>;
   } = {},
-) =>
-  createApp({
-    frontendOrigin: 'http://localhost:5173',
-    authHandler: vi.fn(async () => new Response('ok')),
-    getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
+) => {
+  const gameSession: GameSessionUseCases = {
     listGameSessions:
       overrides.listGameSessions ?? vi.fn().mockResolvedValue([mockListItem]),
     createGameSession:
@@ -134,24 +81,42 @@ const makeApp = (
     confirmAvailabilityDate:
       overrides.confirmAvailabilityDate ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
-    bulkUpdateAvailabilityDates: vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', dates: [] }),
-    updateAvailabilityDateResponse: vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', answer: {} }),
-    listMembers: vi.fn().mockResolvedValue({ type: 'ok', members: [] }),
-    joinGameSession: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
-    joinAsGuest: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
-    updateMember: vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
-    leaveGameSession: vi.fn().mockResolvedValue({ type: 'ok' }),
+    bulkUpdateAvailabilityDates:
+      overrides.bulkUpdateAvailabilityDates ??
+      vi.fn().mockResolvedValue({ type: 'ok', dates: [] }),
+    updateAvailabilityDateResponse:
+      overrides.updateAvailabilityDateResponse ??
+      vi.fn().mockResolvedValue({ type: 'ok', answer: {} }),
+    listMembers:
+      overrides.listMembers ??
+      vi.fn().mockResolvedValue({ type: 'ok', members: [] }),
+    joinGameSession:
+      overrides.joinGameSession ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    joinAsGuest:
+      overrides.joinAsGuest ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    updateMember:
+      overrides.updateMember ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: {} }),
+    leaveGameSession:
+      overrides.leaveGameSession ?? vi.fn().mockResolvedValue({ type: 'ok' }),
     getGuestLink:
       overrides.getGuestLink ??
       vi.fn().mockResolvedValue({ type: 'ok', token: 'token-abc' }),
     getGuestLinkPreview:
       overrides.getGuestLinkPreview ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+  };
+
+  return createApp({
+    frontendOrigin: 'http://localhost:5173',
+    authHandler: vi.fn(async () => new Response('ok')),
+    getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
+    gameSession,
+    profile: stubProfile,
   });
+};
 
 describe('GET /api/game-sessions', () => {
   it('認証済みなら 200 でセッション一覧を返す', async () => {

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
+import type { GameSessionUseCases } from '@/game-session/application/use-cases';
+import type { ProfileUseCases } from '@/profile/application/use-cases';
+
+const stubGameSession = {} as unknown as GameSessionUseCases;
+const stubProfile = {} as unknown as ProfileUseCases;
 
 describe('createApp', () => {
   it('GET / で疎通確認を返す', async () => {
@@ -8,8 +13,8 @@ describe('createApp', () => {
       frontendOrigin: 'http://localhost:5173',
       authHandler: vi.fn(async () => new Response('ok')),
       getSession: vi.fn().mockResolvedValue(null),
-      listGameSessions: vi.fn().mockResolvedValue([]),
-      createGameSession: vi.fn(),
+      gameSession: stubGameSession,
+      profile: stubProfile,
     });
 
     // Act
@@ -45,8 +50,8 @@ describe('createApp', () => {
       frontendOrigin: 'http://localhost:5173',
       authHandler,
       getSession: vi.fn().mockResolvedValue(null),
-      listGameSessions: vi.fn().mockResolvedValue([]),
-      createGameSession: vi.fn(),
+      gameSession: stubGameSession,
+      profile: stubProfile,
     });
 
     // Act

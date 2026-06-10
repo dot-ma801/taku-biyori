@@ -48,7 +48,8 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     listAvailabilityDates: options.gameSession.listAvailabilityDates,
     addAvailabilityDate: options.gameSession.addAvailabilityDate,
-    bulkUpdateAvailabilityDates: options.gameSession.bulkUpdateAvailabilityDates,
+    bulkUpdateAvailabilityDates:
+      options.gameSession.bulkUpdateAvailabilityDates,
     deleteAvailabilityDate: options.gameSession.deleteAvailabilityDate,
     confirmAvailabilityDate: options.gameSession.confirmAvailabilityDate,
     updateAvailabilityDateResponse:

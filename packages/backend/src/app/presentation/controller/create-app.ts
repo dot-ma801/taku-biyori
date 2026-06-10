@@ -1,36 +1,6 @@
-import type {
-  HealthResponse,
-  GameSessionListItem,
-  GameSession,
-  CreateGameSessionInput,
-  UpdateGameSessionInput,
-  UpdateGameSessionStatusInput,
-  BulkUpdateAvailabilityDatesInput,
-  UpdateAvailabilityDateResponseInput,
-  JoinGameSessionInput,
-  JoinAsGuestInput,
-  UpdateMemberInput,
-  UpdateProfileInput,
-} from '@taku-biyori/shared';
-import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
-import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
-import type { DeleteGameSessionResult } from '@/game-session/application/delete-game-session';
-import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
-import type { ListAvailabilityDatesResult } from '@/game-session/application/list-availability-dates';
-import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
-import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
-import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
-import type { BulkUpdateAvailabilityDatesResult } from '@/game-session/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseResult } from '@/game-session/application/update-availability-date-response';
-import type { ListMembersResult } from '@/game-session/application/list-members';
-import type { JoinGameSessionResult } from '@/game-session/application/join-game-session';
-import type { JoinAsGuestResult } from '@/game-session/application/join-as-guest';
-import type { UpdateMemberResult } from '@/game-session/application/update-member';
-import type { LeaveGameSessionResult } from '@/game-session/application/leave-game-session';
-import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
-import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
-import type { GetProfileResult } from '@/profile/application/get-profile';
-import type { UpdateProfileResult } from '@/profile/application/update-profile';
+import type { HealthResponse } from '@taku-biyori/shared';
+import type { GameSessionUseCases } from '@/game-session/application/use-cases';
+import type { ProfileUseCases } from '@/profile/application/use-cases';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getHealth } from '@/health/application/get-health';
@@ -47,86 +17,8 @@ export interface CreateAppOptions {
   authHandler: (request: Request) => Response | Promise<Response>;
   getHealth?: () => HealthResponse;
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
-  listGameSessions: (userId: string) => Promise<GameSessionListItem[]>;
-  createGameSession: (
-    userId: string,
-    input: CreateGameSessionInput,
-  ) => Promise<GameSession>;
-  getGameSession: (
-    id: string,
-    userId: string | null,
-  ) => Promise<GetGameSessionResult>;
-  updateGameSession: (
-    id: string,
-    userId: string,
-    input: UpdateGameSessionInput,
-  ) => Promise<UpdateGameSessionResult>;
-  deleteGameSession: (
-    id: string,
-    userId: string,
-  ) => Promise<DeleteGameSessionResult>;
-  updateGameSessionStatus: (
-    id: string,
-    userId: string,
-    input: UpdateGameSessionStatusInput,
-  ) => Promise<UpdateGameSessionStatusResult>;
-  listAvailabilityDates: (
-    gameSessionId: string,
-  ) => Promise<ListAvailabilityDatesResult>;
-  addAvailabilityDate: (
-    gameSessionId: string,
-    userId: string,
-    input: { date: string },
-  ) => Promise<AddAvailabilityDateResult>;
-  deleteAvailabilityDate: (
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-  ) => Promise<DeleteAvailabilityDateResult>;
-  confirmAvailabilityDate: (
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-  ) => Promise<ConfirmAvailabilityDateResult>;
-  bulkUpdateAvailabilityDates: (
-    gameSessionId: string,
-    userId: string,
-    input: BulkUpdateAvailabilityDatesInput,
-  ) => Promise<BulkUpdateAvailabilityDatesResult>;
-  updateAvailabilityDateResponse: (
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-    input: UpdateAvailabilityDateResponseInput,
-  ) => Promise<UpdateAvailabilityDateResponseResult>;
-  listMembers: (gameSessionId: string) => Promise<ListMembersResult>;
-  joinGameSession: (
-    gameSessionId: string,
-    userId: string,
-    input: JoinGameSessionInput,
-  ) => Promise<JoinGameSessionResult>;
-  joinAsGuest: (
-    gameSessionId: string,
-    input: JoinAsGuestInput,
-  ) => Promise<JoinAsGuestResult>;
-  updateMember: (
-    gameSessionId: string,
-    memberId: string,
-    userId: string,
-    input: UpdateMemberInput,
-  ) => Promise<UpdateMemberResult>;
-  leaveGameSession: (
-    gameSessionId: string,
-    memberId: string,
-    userId: string,
-  ) => Promise<LeaveGameSessionResult>;
-  getGuestLink: (id: string, userId: string) => Promise<GetGuestLinkResult>;
-  getGuestLinkPreview: (token: string) => Promise<GetGuestLinkPreviewResult>;
-  getProfile: (userId: string) => Promise<GetProfileResult>;
-  updateProfile: (
-    userId: string,
-    input: UpdateProfileInput,
-  ) => Promise<UpdateProfileResult>;
+  gameSession: GameSessionUseCases;
+  profile: ProfileUseCases;
 }
 
 export const createApp = (options: CreateAppOptions) => {
@@ -145,39 +37,40 @@ export const createApp = (options: CreateAppOptions) => {
   registerAuthRoute(app, { authHandler: options.authHandler });
   registerGameSessionRoute(app, {
     getSession: options.getSession,
-    listGameSessions: options.listGameSessions,
-    createGameSession: options.createGameSession,
-    getGameSession: options.getGameSession,
-    updateGameSession: options.updateGameSession,
-    deleteGameSession: options.deleteGameSession,
-    updateGameSessionStatus: options.updateGameSessionStatus,
+    listGameSessions: options.gameSession.listGameSessions,
+    createGameSession: options.gameSession.createGameSession,
+    getGameSession: options.gameSession.getGameSession,
+    updateGameSession: options.gameSession.updateGameSession,
+    deleteGameSession: options.gameSession.deleteGameSession,
+    updateGameSessionStatus: options.gameSession.updateGameSessionStatus,
   });
   registerAvailabilityDateRoute(app, {
     getSession: options.getSession,
-    listAvailabilityDates: options.listAvailabilityDates,
-    addAvailabilityDate: options.addAvailabilityDate,
-    bulkUpdateAvailabilityDates: options.bulkUpdateAvailabilityDates,
-    deleteAvailabilityDate: options.deleteAvailabilityDate,
-    confirmAvailabilityDate: options.confirmAvailabilityDate,
-    updateAvailabilityDateResponse: options.updateAvailabilityDateResponse,
+    listAvailabilityDates: options.gameSession.listAvailabilityDates,
+    addAvailabilityDate: options.gameSession.addAvailabilityDate,
+    bulkUpdateAvailabilityDates: options.gameSession.bulkUpdateAvailabilityDates,
+    deleteAvailabilityDate: options.gameSession.deleteAvailabilityDate,
+    confirmAvailabilityDate: options.gameSession.confirmAvailabilityDate,
+    updateAvailabilityDateResponse:
+      options.gameSession.updateAvailabilityDateResponse,
   });
   registerMemberRoute(app, {
     getSession: options.getSession,
-    listMembers: options.listMembers,
-    joinGameSession: options.joinGameSession,
-    joinAsGuest: options.joinAsGuest,
-    updateMember: options.updateMember,
-    leaveGameSession: options.leaveGameSession,
+    listMembers: options.gameSession.listMembers,
+    joinGameSession: options.gameSession.joinGameSession,
+    joinAsGuest: options.gameSession.joinAsGuest,
+    updateMember: options.gameSession.updateMember,
+    leaveGameSession: options.gameSession.leaveGameSession,
   });
   registerGuestLinkRoute(app, {
     getSession: options.getSession,
-    getGuestLink: options.getGuestLink,
-    getGuestLinkPreview: options.getGuestLinkPreview,
+    getGuestLink: options.gameSession.getGuestLink,
+    getGuestLinkPreview: options.gameSession.getGuestLinkPreview,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,
-    getProfile: options.getProfile,
-    updateProfile: options.updateProfile,
+    getProfile: options.profile.getProfile,
+    updateProfile: options.profile.updateProfile,
   });
 
   return app;

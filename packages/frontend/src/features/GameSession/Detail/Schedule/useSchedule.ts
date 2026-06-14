@@ -1,7 +1,10 @@
 import { ref, computed, onMounted } from 'vue';
 import type { Ref } from 'vue';
 import type { AvailabilityDate } from '@taku-biyori/shared';
-import { listAvailabilityDates, updateAvailabilityDateResponse } from '@/api/game-session';
+import {
+  listAvailabilityDates,
+  updateAvailabilityDateResponse,
+} from '@/api/game-session';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 
 const CYCLE: Record<Answer, Answer> = {

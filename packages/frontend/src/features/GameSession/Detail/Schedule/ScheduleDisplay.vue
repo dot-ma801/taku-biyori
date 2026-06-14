@@ -40,7 +40,7 @@ const myMemberId = computed(
 );
 
 const { isEditing, draftAnswers, enterEditMode, cycleAnswer, submitEdit } =
-  useScheduleEdit(availabilityDates, myMemberId);
+  useScheduleEdit(availabilityDates, myMemberId, props.gameSessionId);
 </script>
 
 <template>

@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import type { Ref } from 'vue';
 import type { AvailabilityDate } from '@taku-biyori/shared';
+import { updateAvailabilityDateResponse } from '@/api/game-session';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 
 const CYCLE: Record<Answer, Answer> = {
@@ -12,6 +13,7 @@ const CYCLE: Record<Answer, Answer> = {
 export const useScheduleEdit = (
   availabilityDates: Ref<AvailabilityDate[]>,
   myMemberId: Ref<string | null>,
+  gameSessionId: string,
 ) => {
   const isEditing = ref(false);
   const draftAnswers = ref<Map<string, Answer>>(new Map());
@@ -54,15 +56,14 @@ export const useScheduleEdit = (
   }
 
   async function submitEdit() {
-    // TODO: バックエンド実装後、差分のみ API に送信する
-    // const changes = [...draftAnswers.value.entries()].filter(
-    //   ([dateId, answer]) => originalAnswers.value.get(dateId) !== answer,
-    // );
-    // await Promise.all(
-    //   changes.map(([dateId, answer]) =>
-    //     updateAvailabilityDateResponse(gameSessionId, dateId, { answer }),
-    //   ),
-    // );
+    const changes = [...draftAnswers.value.entries()].filter(
+      ([dateId, answer]) => originalAnswers.value.get(dateId) !== answer,
+    );
+    await Promise.all(
+      changes.map(([dateId, answer]) =>
+        updateAvailabilityDateResponse(gameSessionId, dateId, { answer }),
+      ),
+    );
     isEditing.value = false;
   }
 

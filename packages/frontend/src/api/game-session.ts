@@ -6,6 +6,7 @@ import type {
   GameSession,
   GameSessionDetail,
   GameSessionListItem,
+  UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
 } from '@taku-biyori/shared';
@@ -66,6 +67,17 @@ export async function bulkUpdateAvailabilityDates(
 ): Promise<AvailabilityDate[]> {
   return (await apiRequest<AvailabilityDate[]>(
     `/api/game-sessions/${gameSessionId}/availability-dates`,
+    { method: 'PUT', body: input },
+  ))!;
+}
+
+export async function updateAvailabilityDateResponse(
+  gameSessionId: string,
+  dateId: string,
+  input: UpdateAvailabilityDateResponseInput,
+): Promise<AvailabilityDate> {
+  return (await apiRequest<AvailabilityDate>(
+    `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}/responses`,
     { method: 'PUT', body: input },
   ))!;
 }

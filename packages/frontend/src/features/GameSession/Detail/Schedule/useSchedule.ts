@@ -1,7 +1,7 @@
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import type { Ref } from 'vue';
 import type { AvailabilityDate } from '@taku-biyori/shared';
-import { updateAvailabilityDateResponse } from '@/api/game-session';
+import { listAvailabilityDates, updateAvailabilityDateResponse } from '@/api/game-session';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 
 const CYCLE: Record<Answer, Answer> = {
@@ -10,12 +10,28 @@ const CYCLE: Record<Answer, Answer> = {
   ng: 'ok',
 };
 
-export const useScheduleEdit = (
-  availabilityDates: Ref<AvailabilityDate[]>,
-  myMemberId: Ref<string | null>,
+export const useSchedule = (
   gameSessionId: string,
-  onSubmitted: () => Promise<void>,
+  myMemberId: Ref<string | null>,
 ) => {
+  const availabilityDates = ref<AvailabilityDate[]>([]);
+  const loading = ref(false);
+  const errorMessage = ref('');
+
+  async function fetch() {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      availabilityDates.value = await listAvailabilityDates(gameSessionId);
+    } catch {
+      errorMessage.value = '候補日の取得に失敗しました';
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  onMounted(fetch);
+
   const isEditing = ref(false);
   const draftAnswers = ref<Map<string, Answer>>(new Map());
 
@@ -65,11 +81,14 @@ export const useScheduleEdit = (
         updateAvailabilityDateResponse(gameSessionId, dateId, { answer }),
       ),
     );
-    await onSubmitted();
+    await fetch();
     isEditing.value = false;
   }
 
   return {
+    availabilityDates,
+    loading,
+    errorMessage,
     isEditing,
     draftAnswers,
     hasChanges,

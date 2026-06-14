@@ -3,8 +3,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/GameSession/Detail/Schedule/ScheduleTable.vue';
-import { useScheduleDisplay } from '@/features/GameSession/Detail/Schedule/useScheduleDisplay';
-import { useScheduleEdit } from '@/features/GameSession/Detail/Schedule/useScheduleEdit';
+import { useSchedule } from '@/features/GameSession/Detail/Schedule/useSchedule';
 import type { GameSessionMember } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
 import { CalendarCheck, SquarePen, Check } from '@lucide/vue';
@@ -14,10 +13,6 @@ const props = defineProps<{
   gameSessionId: string;
   members: GameSessionMember[];
 }>();
-
-const { availabilityDates, loading, errorMessage, fetch } = useScheduleDisplay(
-  props.gameSessionId,
-);
 
 // useSession は nanostores の Atom なので Vue の ref に変換する
 const sessionData = ref(useSession.get());
@@ -39,8 +34,16 @@ const myMemberId = computed(
       ?.id ?? null,
 );
 
-const { isEditing, draftAnswers, enterEditMode, cycleAnswer, submitEdit } =
-  useScheduleEdit(availabilityDates, myMemberId, props.gameSessionId, fetch);
+const {
+  availabilityDates,
+  loading,
+  errorMessage,
+  isEditing,
+  draftAnswers,
+  enterEditMode,
+  cycleAnswer,
+  submitEdit,
+} = useSchedule(props.gameSessionId, myMemberId);
 </script>
 
 <template>

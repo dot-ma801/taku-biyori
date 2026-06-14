@@ -8,9 +8,11 @@ import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGam
 import { computed } from 'vue';
 import { Album, UsersRound, UserRoundPlus, SquarePen } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{ gameSessionId: string }>();
 
+const authStore = useAuthStore();
 const { gameSession, loading, errorMessage, onClickEdit } =
   useGetGameSessionDetail(props.gameSessionId);
 
@@ -20,6 +22,12 @@ const scenarioName = computed(
 );
 const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
+const isMember = computed(
+  () =>
+    gameSession.value?.members.some(
+      (item) => item.userId === authStore.currentUser?.id,
+    ) ?? false,
+);
 </script>
 
 <template>
@@ -44,9 +52,12 @@ const description = computed(() => gameSession.value?.description ?? undefined);
             :left-icon="SquarePen"
             variant="secondary"
             @click="onClickEdit"
-            >セッション編集</BaseButton
           >
-          <BaseButton :left-icon="UserRoundPlus">参加する</BaseButton>
+            セッション編集
+          </BaseButton>
+          <BaseButton v-if="!isMember" :left-icon="UserRoundPlus">
+            参加する
+          </BaseButton>
         </div>
       </div>
     </div>

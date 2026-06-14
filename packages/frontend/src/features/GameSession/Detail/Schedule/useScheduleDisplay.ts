@@ -25,5 +25,6 @@ export const useScheduleDisplay = (gameSessionId: string) => {
     availabilityDates,
     loading,
     errorMessage,
+    fetch,
   };
 };

@@ -15,7 +15,7 @@ const props = defineProps<{
   members: GameSessionMember[];
 }>();
 
-const { availabilityDates, loading, errorMessage } = useScheduleDisplay(
+const { availabilityDates, loading, errorMessage, fetch } = useScheduleDisplay(
   props.gameSessionId,
 );
 
@@ -40,7 +40,7 @@ const myMemberId = computed(
 );
 
 const { isEditing, draftAnswers, enterEditMode, cycleAnswer, submitEdit } =
-  useScheduleEdit(availabilityDates, myMemberId, props.gameSessionId);
+  useScheduleEdit(availabilityDates, myMemberId, props.gameSessionId, fetch);
 </script>
 
 <template>

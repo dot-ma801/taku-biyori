@@ -14,6 +14,7 @@ export const useScheduleEdit = (
   availabilityDates: Ref<AvailabilityDate[]>,
   myMemberId: Ref<string | null>,
   gameSessionId: string,
+  onSubmitted: () => Promise<void>,
 ) => {
   const isEditing = ref(false);
   const draftAnswers = ref<Map<string, Answer>>(new Map());
@@ -64,6 +65,7 @@ export const useScheduleEdit = (
         updateAvailabilityDateResponse(gameSessionId, dateId, { answer }),
       ),
     );
+    await onSubmitted();
     isEditing.value = false;
   }
 

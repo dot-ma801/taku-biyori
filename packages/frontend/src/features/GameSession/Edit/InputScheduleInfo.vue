@@ -2,14 +2,53 @@
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
-import BaseDateTimePicker from '@/components/form/BaseDateTimePicker/BaseDateTimePicker.vue';
 import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import { useAvailabilityDates } from '@/features/GameSession/Edit/useAvailabilityDates';
 import { CalendarDays } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+
+const props = defineProps<{
+  /** 更新フローのときのみ渡す。未指定のとき候補日はローカル管理（pendingDates） */
+  gameSessionId?: string;
+}>();
+
+const openUntil = defineModel<string>('openUntil', { default: '' });
+const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
+const location = defineModel<string>('location', { default: '' });
+/**
+ * 新規作成フロー用の候補日リスト。
+ * gameSessionId がない場合にのみ使用し、セッション作成後に呼び出し元が一括 POST する。
+ */
+const pendingDates = defineModel<string[]>('pendingDates', {
+  default: () => [],
+});
 
 const selectMultiDays = ref(false);
-const openUntil = defineModel<string>('openUntil', { default: '' });
+
+// 更新フロー: API と同期する composable
+const availability = props.gameSessionId
+  ? useAvailabilityDates(props.gameSessionId)
+  : null;
+
+// 複数日 picker 用の writable computed
+// get: API 管理 or ローカル管理の日付リストを返す
+// set: 更新フローは差分を API に送信、新規作成フローはローカルに保持
+const selectedDates = computed<string[]>({
+  get() {
+    if (availability) {
+      return availability.availabilityDates.value.map((d) => d.date);
+    }
+    return pendingDates.value;
+  },
+  set(dates) {
+    if (availability) {
+      availability.syncDates(dates);
+    } else {
+      pendingDates.value = dates;
+    }
+  },
+});
 </script>
 
 <template>
@@ -26,18 +65,32 @@ const openUntil = defineModel<string>('openUntil', { default: '' });
         v-model="selectMultiDays"
         label="複数の候補日を選択する"
       ></BaseSwitch>
+
       <div class="contents">
+        <template v-if="selectMultiDays">
+          <BaseDatePicker
+            label="候補日"
+            multiple
+            v-model="selectedDates"
+          ></BaseDatePicker>
+          <p v-if="availability?.errorMessage.value" class="error">
+            {{ availability.errorMessage.value }}
+          </p>
+        </template>
+
         <BaseDatePicker
-          v-if="selectMultiDays"
-          label="候補日"
-          multiple
+          v-else
+          v-model="scheduledAt"
+          label="開催日"
         ></BaseDatePicker>
-        <BaseDateTimePicker v-else label="開催日時"></BaseDateTimePicker>
+
         <BaseDatePicker
           v-model="openUntil"
           label="募集締め切り日"
         ></BaseDatePicker>
+
         <BaseTextBox
+          v-model="location"
           label="実施場所"
           placeholder="例：Discord + ココフォリア"
         ></BaseTextBox>
@@ -63,5 +116,11 @@ const openUntil = defineModel<string>('openUntil', { default: '' });
       margin-bottom: 0;
     }
   }
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-error);
+  margin-top: var(--space-2);
 }
 </style>

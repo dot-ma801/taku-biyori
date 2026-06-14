@@ -1,7 +1,10 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { createGameSession } from '@/api/game-session';
+import {
+  createGameSession,
+  bulkUpdateAvailabilityDates,
+} from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 
 export const useCreateGameSession = () => {
@@ -12,6 +15,9 @@ export const useCreateGameSession = () => {
   const maxMembers = ref('');
   const description = ref('');
   const openUntil = ref('');
+  const scheduledAt = ref('');
+  const location = ref('');
+  const pendingDates = ref<string[]>([]);
 
   const loading = ref(false);
   const errorMessage = ref('');
@@ -38,11 +44,25 @@ export const useCreateGameSession = () => {
         ...(validMaxMembers && { maxMembers: parsedMaxMembers }),
         ...(description.value && { description: description.value }),
         ...(openUntil.value && { openUntil: openUntil.value }),
+        ...(scheduledAt.value && { scheduledAt: scheduledAt.value }),
+        ...(location.value && { location: location.value }),
       });
 
+      // 候補日が選択されていればセッション作成後に一括 PUT
+      if (pendingDates.value.length > 0) {
+        try {
+          await bulkUpdateAvailabilityDates(gameSession.id, {
+            dates: pendingDates.value,
+          });
+        } catch {
+          errorMessage.value =
+            'セッションは作成されましたが、候補日の登録に失敗しました';
+        }
+      }
+
       router.push({
-        name: 'game-session-detail',
-        params: { id: gameSession.id },
+        name: 'game-sessions-detail',
+        params: { gameSessionId: gameSession.id },
       });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -65,6 +85,9 @@ export const useCreateGameSession = () => {
     maxMembers,
     description,
     openUntil,
+    scheduledAt,
+    location,
+    pendingDates,
     loading,
     errorMessage,
     submit,

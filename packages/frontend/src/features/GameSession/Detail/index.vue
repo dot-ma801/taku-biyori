@@ -3,14 +3,16 @@ defineOptions({ name: 'GameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
-import ScheduleDisplay from '@/features/GameSession/Detail/ScheduleDisplay.vue';
+import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { computed } from 'vue';
 import { Album, UsersRound, UserRoundPlus, SquarePen } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{ gameSessionId: string }>();
 
+const authStore = useAuthStore();
 const { gameSession, loading, errorMessage, onClickEdit } =
   useGetGameSessionDetail(props.gameSessionId);
 
@@ -20,6 +22,12 @@ const scenarioName = computed(
 );
 const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
+const isMember = computed(
+  () =>
+    gameSession.value?.members.some(
+      (item) => item.userId === authStore.currentUser?.id,
+    ) ?? false,
+);
 </script>
 
 <template>
@@ -44,16 +52,22 @@ const description = computed(() => gameSession.value?.description ?? undefined);
             :left-icon="SquarePen"
             variant="secondary"
             @click="onClickEdit"
-            >セッション編集</BaseButton
           >
-          <BaseButton :left-icon="UserRoundPlus">参加する</BaseButton>
+            セッション編集
+          </BaseButton>
+          <BaseButton v-if="!isMember" :left-icon="UserRoundPlus">
+            参加する
+          </BaseButton>
         </div>
       </div>
     </div>
 
     <!-- TODO: シナリオ詳細文が実装されたら表示する -->
     <MemoDisplay :text="description"></MemoDisplay>
-    <ScheduleDisplay></ScheduleDisplay>
+    <ScheduleDisplay
+      :game-session-id="props.gameSessionId"
+      :members="gameSession.members"
+    ></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>
 </template>

@@ -103,6 +103,13 @@ export type CreateAvailabilityDateInput = z.infer<
   typeof CreateAvailabilityDateInputSchema
 >;
 
+export const BulkUpdateAvailabilityDatesInputSchema = z.object({
+  dates: z.array(z.iso.date()),
+});
+export type BulkUpdateAvailabilityDatesInput = z.infer<
+  typeof BulkUpdateAvailabilityDatesInputSchema
+>;
+
 export const GameSessionMemberSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().nullable(),
@@ -117,13 +124,6 @@ export const GameSessionDetailSchema = GameSessionSchema.extend({
   members: z.array(GameSessionMemberSchema),
 });
 export type GameSessionDetail = z.infer<typeof GameSessionDetailSchema>;
-
-export const BulkUpdateAvailabilityDatesInputSchema = z.object({
-  dates: z.array(z.iso.date()),
-});
-export type BulkUpdateAvailabilityDatesInput = z.infer<
-  typeof BulkUpdateAvailabilityDatesInputSchema
->;
 
 export const UpdateAvailabilityDateResponseInputSchema = z.object({
   answer: z.enum(['ok', 'maybe', 'ng']),

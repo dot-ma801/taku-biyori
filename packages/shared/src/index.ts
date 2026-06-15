@@ -44,6 +44,11 @@ export {
   type GuestLinkResponse,
 } from './game-session.js';
 export {
+  type GameSessionRole,
+  type GameSessionAction,
+  canPerform,
+} from './game-session/permissions.js';
+export {
   ProfileResponseSchema,
   type ProfileResponse,
   UpdateProfileInputSchema,

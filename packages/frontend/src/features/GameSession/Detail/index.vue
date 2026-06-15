@@ -7,16 +7,33 @@ import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisp
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { computed } from 'vue';
-import { Album, UsersRound, UserRoundPlus, SquarePen, Globe } from '@lucide/vue';
+import {
+  Album,
+  UsersRound,
+  UserRoundPlus,
+  SquarePen,
+  Globe,
+  Trophy
+} from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{ gameSessionId: string }>();
 
 const authStore = useAuthStore();
-const { gameSession, loading: loadingDetail, errorMessage, onClickEdit } =
-  useGetGameSessionDetail(props.gameSessionId);
-const { publishSession, canPublish, loading: loadingStatus } = useGameSessionStatus(props.gameSessionId, gameSession)
+const {
+  gameSession,
+  loading: loadingDetail,
+  errorMessage,
+  onClickEdit,
+} = useGetGameSessionDetail(props.gameSessionId);
+const {
+  publishSession,
+  canPublish,
+  loading: loadingStatus,
+  completeSession,
+  canComplete
+} = useGameSessionStatus(props.gameSessionId, gameSession);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -49,10 +66,9 @@ const isMember = computed(
           <UsersRound :size="16" />
           <p>募集人数: {{ maxMembers }}</p>
         </div>
-        
+
         <!-- component を分割するか？ -->
         <div class="button-area">
-          
           <BaseButton
             :left-icon="SquarePen"
             variant="secondary"
@@ -67,6 +83,9 @@ const isMember = computed(
             :loading="loadingStatus"
           >
             公開
+          </BaseButton>
+          <BaseButton :left-icon="Trophy" v-if="canComplete" @click="completeSession">
+            セッション完了！
           </BaseButton>
           <BaseButton v-if="!isMember" :left-icon="UserRoundPlus">
             参加する

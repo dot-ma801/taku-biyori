@@ -37,8 +37,13 @@ const {
   completeSession,
   canComplete,
 } = useGameSessionStatus(props.gameSessionId, gameSession);
-const { canJoin, canLeave, join, leave, isMember, loading } =
-  useGameSessionMembership(props.gameSessionId, gameSession);
+const {
+  canJoin,
+  canLeave,
+  join,
+  leave,
+  loading: loadingMember,
+} = useGameSessionMembership(props.gameSessionId, gameSession);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -96,10 +101,21 @@ const gameSessionDateTime = computed(
           >
             セッション完了！
           </BaseButton>
-          <BaseButton v-if="canJoin" :left-icon="UserRoundPlus" @click="join">
+          <BaseButton
+            v-if="canJoin"
+            :left-icon="UserRoundPlus"
+            @click="join"
+            :loading="loadingMember"
+          >
             参加する
           </BaseButton>
-          <BaseButton v-if="canLeave" :left-icon="UserRoundMinus" @click="leave" variant="secondary">
+          <BaseButton
+            v-if="canLeave"
+            :left-icon="UserRoundMinus"
+            @click="leave"
+            variant="secondary"
+            :loading="loadingMember"
+          >
             退出する
           </BaseButton>
         </div>

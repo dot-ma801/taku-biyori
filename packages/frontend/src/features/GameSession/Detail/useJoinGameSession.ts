@@ -2,7 +2,7 @@ import { computed, ref } from 'vue';
 import type { Ref } from 'vue';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import { joinGameSession } from '@/api/game-session';
+import { joinGameSession, leaveGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
@@ -14,18 +14,21 @@ export const useJoinGameSession = (
   const toast = useToast();
   const loading = ref(false);
 
-  const isMember = computed(() => {
-    if (!gameSession.value) return false;
-    return gameSession.value.members.some(
+  const myMember = computed(() =>
+    gameSession.value?.members.find(
       (m) => m.userId === authStore.currentUser?.id,
-    );
-  });
+    ),
+  );
+
+  const isMember = computed(() => !!myMember.value);
 
   const canJoin = computed(
     () =>
       !isMember.value &&
       gameSession.value?.status === GameSessionStatus.open,
   );
+
+  const canLeave = computed(() => isMember.value);
 
   async function join() {
     if (loading.value) return;
@@ -45,5 +48,24 @@ export const useJoinGameSession = (
     }
   }
 
-  return { isMember, canJoin, loading, join };
+  async function leave() {
+    if (loading.value || !myMember.value) return;
+    loading.value = true;
+    const memberId = myMember.value.id;
+    try {
+      await leaveGameSession(gameSessionId, memberId);
+      if (gameSession.value) {
+        gameSession.value = {
+          ...gameSession.value,
+          members: gameSession.value.members.filter((m) => m.id !== memberId),
+        };
+      }
+    } catch {
+      toast.error('退出に失敗しました');
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return { isMember, canJoin, canLeave, loading, join, leave };
 };

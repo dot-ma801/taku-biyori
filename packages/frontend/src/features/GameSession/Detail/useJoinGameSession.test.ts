@@ -7,6 +7,7 @@ import type { GameSessionDetail } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   joinGameSession: vi.fn(),
+  leaveGameSession: vi.fn(),
 }));
 
 vi.mock('@/stores/auth', () => ({
@@ -17,13 +18,25 @@ vi.mock('@/composables/useToast', () => ({
   useToast: vi.fn(() => ({ error: vi.fn() })),
 }));
 
-import { joinGameSession } from '@/api/game-session';
+import { joinGameSession, leaveGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
 const SESSION_ID = 'session-1';
 const USER_ID = 'user-1';
 const HOST_ID = 'host-1';
+const MEMBER_ID = 'member-1';
+
+function makeMember(userId: string | null = USER_ID) {
+  return {
+    id: MEMBER_ID,
+    userId,
+    userName: 'テストユーザー',
+    guestName: null,
+    characterName: null,
+    joinedAt: '2024-01-01T00:00:00Z',
+  };
+}
 
 function makeGameSession(
   overrides: Partial<GameSessionDetail> = {},
@@ -254,5 +267,89 @@ describe('join', () => {
 
     // Assert
     expect(joinGameSession).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('canLeave', () => {
+  it('自分がメンバーの場合は true', () => {
+    const gameSession = ref(makeGameSession({ members: [makeMember()] }));
+
+    // Act
+    const { canLeave } = useJoinGameSession(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canLeave.value).toBe(true);
+  });
+
+  it('自分がメンバーでない場合は false', () => {
+    const gameSession = ref(makeGameSession({ members: [] }));
+
+    // Act
+    const { canLeave } = useJoinGameSession(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canLeave.value).toBe(false);
+  });
+});
+
+describe('leave', () => {
+  it('API を memberId で呼び出してメンバーリストから自分を削除する', async () => {
+    vi.mocked(leaveGameSession).mockResolvedValue(undefined);
+    const gameSession = ref(makeGameSession({ members: [makeMember()] }));
+
+    // Act
+    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    await leave();
+
+    // Assert
+    expect(leaveGameSession).toHaveBeenCalledWith(SESSION_ID, MEMBER_ID);
+    expect(gameSession.value?.members).toHaveLength(0);
+  });
+
+  it('自分がメンバーでない場合は API を呼び出さない', async () => {
+    const gameSession = ref(makeGameSession({ members: [] }));
+
+    // Act
+    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    await leave();
+
+    // Assert
+    expect(leaveGameSession).not.toHaveBeenCalled();
+  });
+
+  it('API が失敗した場合は toast.error を呼び出す', async () => {
+    const toastError = vi.fn();
+    vi.mocked(useToast).mockReturnValue({
+      error: toastError,
+    } as ReturnType<typeof useToast>);
+    vi.mocked(leaveGameSession).mockRejectedValue(new Error('API error'));
+    const gameSession = ref(makeGameSession({ members: [makeMember()] }));
+
+    // Act
+    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    await leave();
+
+    // Assert
+    expect(toastError).toHaveBeenCalledWith('退出に失敗しました');
+  });
+
+  it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
+    let resolveLeave!: () => void;
+    vi.mocked(leaveGameSession).mockReturnValue(
+      new Promise((resolve) => {
+        resolveLeave = () => resolve(undefined);
+      }),
+    );
+    const gameSession = ref(makeGameSession({ members: [makeMember()] }));
+    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+
+    // Act
+    const first = leave();
+    const second = leave();
+    resolveLeave();
+    await Promise.all([first, second]);
+
+    // Assert
+    expect(leaveGameSession).toHaveBeenCalledTimes(1);
   });
 });

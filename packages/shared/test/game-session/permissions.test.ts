@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canPerform } from '@/game-session/permissions';
+import { canPerform, ACTION_POLICIES } from '@/game-session/permissions';
 import type {
   GameSessionAction,
   GameSessionRole,
@@ -16,17 +16,7 @@ const ALL_STATUSES: GameSessionStatus[] = [
   'completed',
 ];
 const ALL_ROLES: GameSessionRole[] = ['host', 'member'];
-const ALL_ACTIONS: GameSessionAction[] = [
-  'leaveSession',
-  'joinSession',
-  'inputScheduleResponse',
-  'addCandidates',
-  'confirmSchedule',
-  'editSession',
-  'publishSession',
-  'completeSession',
-  'deleteSession',
-];
+const ALL_ACTIONS = Object.keys(ACTION_POLICIES) as GameSessionAction[];
 
 // 期待マトリクス: action → 許可される [role, status] の組み合わせ
 const ALLOWED: Record<

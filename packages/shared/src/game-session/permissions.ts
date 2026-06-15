@@ -66,6 +66,8 @@ const ACTION_POLICIES = {
   },
 } as Record<GameSessionAction, ActionPolicy>;
 
+export { ACTION_POLICIES };
+
 export function canPerform(
   action: GameSessionAction,
   status: GameSessionStatus,

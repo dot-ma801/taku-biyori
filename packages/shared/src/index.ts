@@ -46,6 +46,7 @@ export {
 export {
   type GameSessionRole,
   type GameSessionAction,
+  ACTION_POLICIES,
   canPerform,
 } from './game-session/permissions.js';
 export {

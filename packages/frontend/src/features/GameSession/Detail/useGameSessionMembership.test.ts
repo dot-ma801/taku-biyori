@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
-import { useJoinGameSession } from '@/features/GameSession/Detail/useJoinGameSession';
+import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 
@@ -83,7 +83,7 @@ describe('isMember', () => {
     );
 
     // Act
-    const { isMember } = useJoinGameSession(SESSION_ID, gameSession);
+    const { isMember } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(isMember.value).toBe(true);
@@ -93,7 +93,7 @@ describe('isMember', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { isMember } = useJoinGameSession(SESSION_ID, gameSession);
+    const { isMember } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(isMember.value).toBe(false);
@@ -103,7 +103,7 @@ describe('isMember', () => {
     const gameSession = ref<GameSessionDetail | null>(null);
 
     // Act
-    const { isMember } = useJoinGameSession(SESSION_ID, gameSession);
+    const { isMember } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(isMember.value).toBe(false);
@@ -117,7 +117,7 @@ describe('canJoin', () => {
     );
 
     // Act
-    const { canJoin } = useJoinGameSession(SESSION_ID, gameSession);
+    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(canJoin.value).toBe(true);
@@ -141,7 +141,7 @@ describe('canJoin', () => {
     );
 
     // Act
-    const { canJoin } = useJoinGameSession(SESSION_ID, gameSession);
+    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(canJoin.value).toBe(false);
@@ -153,7 +153,7 @@ describe('canJoin', () => {
     );
 
     // Act
-    const { canJoin } = useJoinGameSession(SESSION_ID, gameSession);
+    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(canJoin.value).toBe(false);
@@ -163,7 +163,7 @@ describe('canJoin', () => {
     const gameSession = ref<GameSessionDetail | null>(null);
 
     // Act
-    const { canJoin } = useJoinGameSession(SESSION_ID, gameSession);
+    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(canJoin.value).toBe(false);
@@ -185,7 +185,7 @@ describe('join', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { join } = useJoinGameSession(SESSION_ID, gameSession);
+    const { join } = useGameSessionMembership(SESSION_ID, gameSession);
     await join();
 
     // Assert
@@ -210,7 +210,7 @@ describe('join', () => {
     );
 
     const gameSession = ref(makeGameSession({ members: [] }));
-    const { join, loading } = useJoinGameSession(SESSION_ID, gameSession);
+    const { join, loading } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Act
     const joinPromise = join();
@@ -233,7 +233,7 @@ describe('join', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { join } = useJoinGameSession(SESSION_ID, gameSession);
+    const { join } = useGameSessionMembership(SESSION_ID, gameSession);
     await join();
 
     // Assert
@@ -257,7 +257,7 @@ describe('join', () => {
     );
 
     const gameSession = ref(makeGameSession({ members: [] }));
-    const { join } = useJoinGameSession(SESSION_ID, gameSession);
+    const { join } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Act
     const first = join();
@@ -275,7 +275,7 @@ describe('canLeave', () => {
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { canLeave } = useJoinGameSession(SESSION_ID, gameSession);
+    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(canLeave.value).toBe(true);
@@ -285,7 +285,7 @@ describe('canLeave', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { canLeave } = useJoinGameSession(SESSION_ID, gameSession);
+    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Assert
     expect(canLeave.value).toBe(false);
@@ -298,7 +298,7 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
     await leave();
 
     // Assert
@@ -310,7 +310,7 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
     await leave();
 
     // Assert
@@ -326,7 +326,7 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
     await leave();
 
     // Assert
@@ -341,7 +341,7 @@ describe('leave', () => {
       }),
     );
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
-    const { leave } = useJoinGameSession(SESSION_ID, gameSession);
+    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
 
     // Act
     const first = leave();

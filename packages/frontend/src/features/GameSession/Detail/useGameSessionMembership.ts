@@ -6,7 +6,7 @@ import { joinGameSession, leaveGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
-export const useJoinGameSession = (
+export const useGameSessionMembership = (
   gameSessionId: string,
   gameSession: Ref<GameSessionDetail | null>,
 ) => {

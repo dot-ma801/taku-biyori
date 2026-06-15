@@ -11,6 +11,7 @@ import {
   Album,
   UsersRound,
   UserRoundPlus,
+  CalendarDays,
   SquarePen,
   Globe,
   Trophy
@@ -41,6 +42,7 @@ const scenarioName = computed(
 );
 const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
+const gameSessionDateTime = computed(() => gameSession.value?.scheduledAt ?? '未設定');
 const isMember = computed(
   () =>
     gameSession.value?.members.some(
@@ -63,6 +65,8 @@ const isMember = computed(
         <div class="description">
           <Album :size="16" />
           <p>シナリオ：{{ scenarioName }}</p>
+          <CalendarDays :size="16" />
+          <p>日時：{{ gameSessionDateTime }}</p>
           <UsersRound :size="16" />
           <p>募集人数: {{ maxMembers }}</p>
         </div>

@@ -89,7 +89,9 @@ describe('canPublish', () => {
   it('ホストかつ status が draft のとき true を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.draft }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.draft }),
+    );
 
     // Act
     const { canPublish } = useGameSessionStatus(SESSION_ID, gameSession);
@@ -101,7 +103,9 @@ describe('canPublish', () => {
   it('ホストでも status が draft 以外のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.open }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.open }),
+    );
 
     // Act
     const { canPublish } = useGameSessionStatus(SESSION_ID, gameSession);
@@ -113,7 +117,9 @@ describe('canPublish', () => {
   it('ホスト以外は status が draft でも false を返す', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.draft }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.draft }),
+    );
 
     // Act
     const { canPublish } = useGameSessionStatus(SESSION_ID, gameSession);
@@ -127,7 +133,9 @@ describe('canComplete', () => {
   it('ホストかつ status が today のとき true を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.today }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.today }),
+    );
 
     // Act
     const { canComplete } = useGameSessionStatus(SESSION_ID, gameSession);
@@ -139,7 +147,9 @@ describe('canComplete', () => {
   it('ホストでも status が today 以外のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.confirmed }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.confirmed }),
+    );
 
     // Act
     const { canComplete } = useGameSessionStatus(SESSION_ID, gameSession);
@@ -151,7 +161,9 @@ describe('canComplete', () => {
   it('ホスト以外は status が today でも false を返す', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.today }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.today }),
+    );
 
     // Act
     const { canComplete } = useGameSessionStatus(SESSION_ID, gameSession);
@@ -174,7 +186,9 @@ describe('publishSession', () => {
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
     });
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.draft }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.draft }),
+    );
     const { publishSession } = useGameSessionStatus(SESSION_ID, gameSession);
 
     // Act
@@ -199,7 +213,10 @@ describe('publishSession', () => {
       updatedAt: '2026-01-01T00:00:00Z',
     });
     const gameSession = ref(makeGameSession());
-    const { publishSession, loading } = useGameSessionStatus(SESSION_ID, gameSession);
+    const { publishSession, loading } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+    );
 
     // Act
     await publishSession();
@@ -211,9 +228,14 @@ describe('publishSession', () => {
   it('API エラー時に errorMessage がセットされる', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockRejectedValue(new Error('サーバーエラー'));
+    vi.mocked(updateGameSessionStatus).mockRejectedValue(
+      new Error('サーバーエラー'),
+    );
     const gameSession = ref(makeGameSession());
-    const { publishSession, errorMessage } = useGameSessionStatus(SESSION_ID, gameSession);
+    const { publishSession, errorMessage } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+    );
 
     // Act
     await publishSession();
@@ -236,7 +258,9 @@ describe('completeSession', () => {
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
     });
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.today }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.today }),
+    );
     const { completeSession } = useGameSessionStatus(SESSION_ID, gameSession);
 
     // Act
@@ -248,12 +272,46 @@ describe('completeSession', () => {
     });
   });
 
+  it('成功後に loading が false に戻る', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(updateGameSessionStatus).mockResolvedValue({
+      id: SESSION_ID,
+      title: 'テストセッション',
+      status: GameSessionStatus.completed,
+      isPublished: true,
+      createdBy: HOST_USER_ID,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.today }),
+    );
+    const { completeSession, loading } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+    );
+
+    // Act
+    await completeSession();
+
+    // Assert
+    expect(loading.value).toBe(false);
+  });
+
   it('API エラー時に errorMessage がセットされる', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockRejectedValue(new Error('サーバーエラー'));
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.today }));
-    const { completeSession, errorMessage } = useGameSessionStatus(SESSION_ID, gameSession);
+    vi.mocked(updateGameSessionStatus).mockRejectedValue(
+      new Error('サーバーエラー'),
+    );
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.today }),
+    );
+    const { completeSession, errorMessage } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+    );
 
     // Act
     await completeSession();

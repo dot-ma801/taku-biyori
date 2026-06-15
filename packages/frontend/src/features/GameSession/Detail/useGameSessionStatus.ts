@@ -31,7 +31,12 @@ export const useGameSessionStatus = (
     loading.value = true;
     errorMessage.value = '';
     try {
-      await updateGameSessionStatus(gameSessionId, { status: 'open' });
+      const updated = await updateGameSessionStatus(gameSessionId, {
+        status: 'open',
+      });
+      if (gameSession.value) {
+        gameSession.value = { ...gameSession.value, ...updated };
+      }
     } catch {
       errorMessage.value = '公開に失敗しました';
     } finally {
@@ -43,7 +48,12 @@ export const useGameSessionStatus = (
     loading.value = true;
     errorMessage.value = '';
     try {
-      await updateGameSessionStatus(gameSessionId, { status: 'completed' });
+      const updated = await updateGameSessionStatus(gameSessionId, {
+        status: 'completed',
+      });
+      if (gameSession.value) {
+        gameSession.value = { ...gameSession.value, ...updated };
+      }
     } catch {
       errorMessage.value = '完了への変更に失敗しました';
     } finally {

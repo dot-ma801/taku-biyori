@@ -14,7 +14,7 @@ import {
   CalendarDays,
   SquarePen,
   Globe,
-  Trophy
+  Trophy,
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useAuthStore } from '@/stores/auth';
@@ -33,7 +33,7 @@ const {
   canPublish,
   loading: loadingStatus,
   completeSession,
-  canComplete
+  canComplete,
 } = useGameSessionStatus(props.gameSessionId, gameSession);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
@@ -42,7 +42,9 @@ const scenarioName = computed(
 );
 const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
-const gameSessionDateTime = computed(() => gameSession.value?.scheduledAt ?? '未設定');
+const gameSessionDateTime = computed(
+  () => gameSession.value?.scheduledAt ?? '未設定',
+);
 const isMember = computed(
   () =>
     gameSession.value?.members.some(
@@ -88,7 +90,12 @@ const isMember = computed(
           >
             公開
           </BaseButton>
-          <BaseButton :left-icon="Trophy" v-if="canComplete" @click="completeSession">
+          <BaseButton
+            :left-icon="Trophy"
+            v-if="canComplete"
+            @click="completeSession"
+            :loading="loadingStatus"
+          >
             セッション完了！
           </BaseButton>
           <BaseButton v-if="!isMember" :left-icon="UserRoundPlus">

@@ -4,14 +4,15 @@ import type { GameSessionDetail } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import { updateGameSessionStatus } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
+import { useToast } from '@/composables/useToast';
 
 export const useGameSessionStatus = (
   gameSessionId: string,
   gameSession: Ref<GameSessionDetail | null>,
 ) => {
   const authStore = useAuthStore();
+  const toast = useToast();
   const loading = ref(false);
-  const errorMessage = ref('');
 
   const isHost = computed(
     () =>
@@ -28,8 +29,8 @@ export const useGameSessionStatus = (
   );
 
   async function publishSession() {
+    if (loading.value) return;
     loading.value = true;
-    errorMessage.value = '';
     try {
       const updated = await updateGameSessionStatus(gameSessionId, {
         status: 'open',
@@ -38,15 +39,15 @@ export const useGameSessionStatus = (
         gameSession.value = { ...gameSession.value, ...updated };
       }
     } catch {
-      errorMessage.value = '公開に失敗しました';
+      toast.error('公開に失敗しました');
     } finally {
       loading.value = false;
     }
   }
 
   async function completeSession() {
+    if (loading.value) return;
     loading.value = true;
-    errorMessage.value = '';
     try {
       const updated = await updateGameSessionStatus(gameSessionId, {
         status: 'completed',
@@ -55,7 +56,7 @@ export const useGameSessionStatus = (
         gameSession.value = { ...gameSession.value, ...updated };
       }
     } catch {
-      errorMessage.value = '完了への変更に失敗しました';
+      toast.error('完了への変更に失敗しました');
     } finally {
       loading.value = false;
     }
@@ -66,7 +67,6 @@ export const useGameSessionStatus = (
     canPublish,
     canComplete,
     loading,
-    errorMessage,
     publishSession,
     completeSession,
   };

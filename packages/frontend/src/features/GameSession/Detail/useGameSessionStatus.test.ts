@@ -13,6 +13,11 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }));
 
+const mockToastError = vi.fn();
+vi.mock('@/composables/useToast', () => ({
+  useToast: () => ({ error: mockToastError }),
+}));
+
 import { updateGameSessionStatus } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
@@ -225,23 +230,20 @@ describe('publishSession', () => {
     expect(loading.value).toBe(false);
   });
 
-  it('API エラー時に errorMessage がセットされる', async () => {
+  it('API エラー時に toast.error が呼ばれる', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateGameSessionStatus).mockRejectedValue(
       new Error('サーバーエラー'),
     );
     const gameSession = ref(makeGameSession());
-    const { publishSession, errorMessage } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-    );
+    const { publishSession } = useGameSessionStatus(SESSION_ID, gameSession);
 
     // Act
     await publishSession();
 
     // Assert
-    expect(errorMessage.value).toBe('公開に失敗しました');
+    expect(mockToastError).toHaveBeenCalledWith('公開に失敗しました');
   });
 });
 
@@ -299,7 +301,7 @@ describe('completeSession', () => {
     expect(loading.value).toBe(false);
   });
 
-  it('API エラー時に errorMessage がセットされる', async () => {
+  it('API エラー時に toast.error が呼ばれる', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateGameSessionStatus).mockRejectedValue(
@@ -308,15 +310,12 @@ describe('completeSession', () => {
     const gameSession = ref(
       makeGameSession({ status: GameSessionStatus.today }),
     );
-    const { completeSession, errorMessage } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-    );
+    const { completeSession } = useGameSessionStatus(SESSION_ID, gameSession);
 
     // Act
     await completeSession();
 
     // Assert
-    expect(errorMessage.value).toBe('完了への変更に失敗しました');
+    expect(mockToastError).toHaveBeenCalledWith('完了への変更に失敗しました');
   });
 });

@@ -1,4 +1,4 @@
-import type { GameSessionStatus } from '@/game-session';
+import { GameSessionStatus } from '@/game-session';
 
 export type GameSessionRole = 'host' | 'member';
 
@@ -28,27 +28,20 @@ type ActionPolicy = {
   statuses: GameSessionStatus[];
 };
 
-const ALL_STATUSES: GameSessionStatus[] = [
-  'draft',
-  'open',
-  'scheduling',
-  'confirmed',
-  'today',
-  'completed',
-];
+const ALL_STATUSES = Object.values(GameSessionStatus);
 
 export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   [GameSessionAction.joinSession]: {
     roles: ['member'],
-    statuses: ['open'],
+    statuses: [GameSessionStatus.open],
   },
   [GameSessionAction.leaveSession]: {
     roles: ['member'],
-    statuses: ['open', 'scheduling'],
+    statuses: [GameSessionStatus.open, GameSessionStatus.scheduling],
   },
   [GameSessionAction.inputScheduleResponse]: {
     roles: ['host', 'member'],
-    statuses: ['open', 'scheduling'],
+    statuses: [GameSessionStatus.open, GameSessionStatus.scheduling],
   },
   [GameSessionAction.addCandidates]: {
     roles: ['host'],
@@ -56,23 +49,27 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   },
   [GameSessionAction.confirmSchedule]: {
     roles: ['host'],
-    statuses: ['scheduling'],
+    statuses: [GameSessionStatus.scheduling],
   },
   [GameSessionAction.editSession]: {
     roles: ['host'],
-    statuses: ['draft', 'open', 'scheduling'],
+    statuses: [
+      GameSessionStatus.draft,
+      GameSessionStatus.open,
+      GameSessionStatus.scheduling,
+    ],
   },
   [GameSessionAction.publishSession]: {
     roles: ['host'],
-    statuses: ['draft'],
+    statuses: [GameSessionStatus.draft],
   },
   [GameSessionAction.completeSession]: {
     roles: ['host'],
-    statuses: ['today'],
+    statuses: [GameSessionStatus.today],
   },
   [GameSessionAction.deleteSession]: {
     roles: ['host'],
-    statuses: ['draft'],
+    statuses: [GameSessionStatus.draft],
   },
 };
 

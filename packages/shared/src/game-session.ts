@@ -1,14 +1,21 @@
 import { z } from 'zod';
 
-export const GameSessionStatusSchema = z.enum([
-  'draft',
-  'open',
-  'scheduling',
-  'confirmed',
-  'today',
-  'completed',
-]);
-export type GameSessionStatus = z.infer<typeof GameSessionStatusSchema>;
+export enum GameSessionStatus {
+  /** 非公開 */
+  draft = 'draft',
+  /** 募集中 */
+  open = 'open',
+  /** 日程調整中 */
+  scheduling = 'scheduling',
+  /** 実施前 */
+  confirmed = 'confirmed',
+  /** 当日 */
+  today = 'today',
+  /** 通過済み */
+  completed = 'completed',
+}
+
+export const GameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
 
 export const GameSessionListItemSchema = z.object({
   id: z.string().uuid(),

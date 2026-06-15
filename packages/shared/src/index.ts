@@ -9,7 +9,7 @@ export {
 export { HealthResponseSchema, type HealthResponse } from './health.js';
 export {
   GameSessionStatusSchema,
-  type GameSessionStatus,
+  GameSessionStatus,
   GameSessionListItemSchema,
   type GameSessionListItem,
   GameSessionSchema,
@@ -45,7 +45,7 @@ export {
 } from './game-session.js';
 export {
   type GameSessionRole,
-  type GameSessionAction,
+  GameSessionAction,
   ACTION_POLICIES,
   canPerform,
 } from './game-session/permissions.js';

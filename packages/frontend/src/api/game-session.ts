@@ -104,6 +104,15 @@ export async function joinGameSession(
   ))!;
 }
 
+export function leaveGameSession(
+  id: string,
+  memberId: string,
+): Promise<void> {
+  return apiRequest<void>(`/api/game-sessions/${id}/members/${memberId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function updateGameSessionStatus(
   id: string,
   input: UpdateGameSessionStatusInput,

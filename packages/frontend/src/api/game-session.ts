@@ -6,6 +6,8 @@ import type {
   GameSession,
   GameSessionDetail,
   GameSessionListItem,
+  GameSessionMember,
+  JoinGameSessionInput,
   UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
@@ -90,6 +92,16 @@ export function deleteAvailabilityDate(
     `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}`,
     { method: 'DELETE' },
   );
+}
+
+export async function joinGameSession(
+  id: string,
+  input: JoinGameSessionInput,
+): Promise<GameSessionMember> {
+  return (await apiRequest<GameSessionMember>(
+    `/api/game-sessions/${id}/members`,
+    { method: 'POST', body: input },
+  ))!;
 }
 
 export async function updateGameSessionStatus(

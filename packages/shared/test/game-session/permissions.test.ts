@@ -1,54 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import {
   canPerform,
-  ACTION_POLICIES,
   GameSessionAction,
 } from '@/game-session/permissions';
 import type { GameSessionRole } from '@/game-session/permissions';
-import type { GameSessionStatus } from '@/game-session';
+import { GameSessionStatus } from '@/game-session';
 
-const ALL_STATUSES: GameSessionStatus[] = [
-  'draft',
-  'open',
-  'scheduling',
-  'confirmed',
-  'today',
-  'completed',
-];
+const ALL_STATUSES: GameSessionStatus[] = Object.values(GameSessionStatus);
 const ALL_ROLES: GameSessionRole[] = ['host', 'member'];
-const ALL_ACTIONS = Object.values(
-  ACTION_POLICIES,
-) as unknown as GameSessionAction[];
 
 // 期待マトリクス: action → 許可される [role, status] の組み合わせ
 const ALLOWED: Record<
   GameSessionAction,
   { role: GameSessionRole; status: GameSessionStatus }[]
 > = {
-  [GameSessionAction.joinSession]: [{ role: 'member', status: 'open' }],
+  [GameSessionAction.joinSession]: [{ role: 'member', status: GameSessionStatus.open }],
   [GameSessionAction.leaveSession]: [
-    { role: 'member', status: 'open' },
-    { role: 'member', status: 'scheduling' },
+    { role: 'member', status: GameSessionStatus.open },
+    { role: 'member', status: GameSessionStatus.scheduling },
   ],
   [GameSessionAction.inputScheduleResponse]: [
-    { role: 'host', status: 'open' },
-    { role: 'host', status: 'scheduling' },
-    { role: 'member', status: 'open' },
-    { role: 'member', status: 'scheduling' },
+    { role: 'host', status: GameSessionStatus.open },
+    { role: 'host', status: GameSessionStatus.scheduling },
+    { role: 'member', status: GameSessionStatus.open },
+    { role: 'member', status: GameSessionStatus.scheduling },
   ],
   [GameSessionAction.addCandidates]: ALL_STATUSES.map((status) => ({
     role: 'host' as const,
     status,
   })),
-  [GameSessionAction.confirmSchedule]: [{ role: 'host', status: 'scheduling' }],
+  [GameSessionAction.confirmSchedule]: [{ role: 'host', status: GameSessionStatus.scheduling }],
   [GameSessionAction.editSession]: [
-    { role: 'host', status: 'draft' },
-    { role: 'host', status: 'open' },
-    { role: 'host', status: 'scheduling' },
+    { role: 'host', status: GameSessionStatus.draft },
+    { role: 'host', status: GameSessionStatus.open },
+    { role: 'host', status: GameSessionStatus.scheduling },
   ],
-  [GameSessionAction.publishSession]: [{ role: 'host', status: 'draft' }],
-  [GameSessionAction.completeSession]: [{ role: 'host', status: 'today' }],
-  [GameSessionAction.deleteSession]: [{ role: 'host', status: 'draft' }],
+  [GameSessionAction.publishSession]: [{ role: 'host', status: GameSessionStatus.draft }],
+  [GameSessionAction.completeSession]: [{ role: 'host', status: GameSessionStatus.today }],
+  [GameSessionAction.deleteSession]: [{ role: 'host', status: GameSessionStatus.draft }],
 };
 
 describe('canPerform', () => {

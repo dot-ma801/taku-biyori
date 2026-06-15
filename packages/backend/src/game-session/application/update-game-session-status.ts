@@ -1,6 +1,7 @@
-import type {
-  GameSession,
-  UpdateGameSessionStatusInput,
+import {
+  GameSessionStatus,
+  type GameSession,
+  type UpdateGameSessionStatusInput,
 } from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
@@ -35,14 +36,16 @@ export const updateGameSessionStatus = async (
   const currentStatus = getGameSessionStatus(fields, now);
 
   if (input.status === 'open') {
-    if (currentStatus !== 'draft') return { type: 'invalidTransition' };
+    if (currentStatus !== GameSessionStatus.draft)
+      return { type: 'invalidTransition' };
     const gameSession = await repo.publish(id);
     if (!gameSession) return { type: 'notFound' };
     return { type: 'ok', gameSession };
   }
 
   if (input.status === 'completed') {
-    if (currentStatus !== 'today') return { type: 'invalidTransition' };
+    if (currentStatus !== GameSessionStatus.today)
+      return { type: 'invalidTransition' };
     const gameSession = await repo.complete(id, now);
     if (!gameSession) return { type: 'notFound' };
     return { type: 'ok', gameSession };

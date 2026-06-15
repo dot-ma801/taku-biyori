@@ -1,9 +1,4 @@
-import {
-  GameSessionStatusSchema,
-  type GameSessionStatus,
-} from '@taku-biyori/shared';
-
-const { enum: Status } = GameSessionStatusSchema;
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 export type GameSessionStatusInput = {
   isPublished: boolean;
@@ -16,12 +11,13 @@ export const getGameSessionStatus = (
   session: GameSessionStatusInput,
   now: Date = new Date(),
 ): GameSessionStatus => {
-  if (!session.isPublished) return Status.draft;
-  if (session.openUntil && now < session.openUntil) return Status.open;
-  if (!session.scheduledAt) return Status.scheduling;
-  if (session.completedAt) return Status.completed;
-  if (isToday(session.scheduledAt, now)) return Status.today;
-  return Status.confirmed;
+  if (!session.isPublished) return GameSessionStatus.draft;
+  if (session.openUntil && now < session.openUntil)
+    return GameSessionStatus.open;
+  if (!session.scheduledAt) return GameSessionStatus.scheduling;
+  if (session.completedAt) return GameSessionStatus.completed;
+  if (isToday(session.scheduledAt, now)) return GameSessionStatus.today;
+  return GameSessionStatus.confirmed;
 };
 
 const isToday = (date: Date, now: Date): boolean =>

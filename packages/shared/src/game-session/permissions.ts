@@ -1,4 +1,4 @@
-import { GameSessionStatus } from '@/game-session';
+import { GameSessionStatus } from '@/game-session/status';
 
 export type GameSessionRole = 'host' | 'member';
 

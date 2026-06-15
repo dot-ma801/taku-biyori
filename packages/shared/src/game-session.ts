@@ -1,14 +1,8 @@
 import { z } from 'zod';
+import { GameSessionStatus } from '@/game-session/status';
 
-export const GameSessionStatusSchema = z.enum([
-  'draft',
-  'open',
-  'scheduling',
-  'confirmed',
-  'today',
-  'completed',
-]);
-export type GameSessionStatus = z.infer<typeof GameSessionStatusSchema>;
+export { GameSessionStatus };
+export const GameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
 
 export const GameSessionListItemSchema = z.object({
   id: z.string().uuid(),

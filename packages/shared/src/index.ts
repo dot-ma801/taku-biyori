@@ -9,7 +9,7 @@ export {
 export { HealthResponseSchema, type HealthResponse } from './health.js';
 export {
   GameSessionStatusSchema,
-  type GameSessionStatus,
+  GameSessionStatus,
   GameSessionListItemSchema,
   type GameSessionListItem,
   GameSessionSchema,
@@ -43,6 +43,12 @@ export {
   GuestLinkResponseSchema,
   type GuestLinkResponse,
 } from './game-session.js';
+export {
+  type GameSessionRole,
+  GameSessionAction,
+  ACTION_POLICIES,
+  canPerform,
+} from './game-session/permissions.js';
 export {
   ProfileResponseSchema,
   type ProfileResponse,

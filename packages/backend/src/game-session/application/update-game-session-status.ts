@@ -35,7 +35,7 @@ export const updateGameSessionStatus = async (
 
   const currentStatus = getGameSessionStatus(fields, now);
 
-  if (input.status === 'open') {
+  if (input.status === GameSessionStatus.open) {
     if (currentStatus !== GameSessionStatus.draft)
       return { type: 'invalidTransition' };
     const gameSession = await repo.publish(id);
@@ -43,7 +43,7 @@ export const updateGameSessionStatus = async (
     return { type: 'ok', gameSession };
   }
 
-  if (input.status === 'completed') {
+  if (input.status === GameSessionStatus.completed) {
     if (currentStatus !== GameSessionStatus.today)
       return { type: 'invalidTransition' };
     const gameSession = await repo.complete(id, now);

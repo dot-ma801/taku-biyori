@@ -21,7 +21,7 @@
     "lint:check": "eslint . && oxlint .",
     "format": "prettier --write . --config prettier.config.mjs --ignore-path .prettierignore",
     "format:check": "prettier --check . --config prettier.config.mjs --ignore-path .prettierignore",
-    "test": "echo \"Error: no test specified\""
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -35,6 +35,7 @@
     "oxlint": "~1.50.0",
     "prettier": "3.8.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0"
+    "typescript-eslint": "^8.60.0",
+    "vitest": "^4.0.18"
   }
 }

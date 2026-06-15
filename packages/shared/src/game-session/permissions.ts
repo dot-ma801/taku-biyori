@@ -1,12 +1,4 @@
-// game-session.ts の GameSessionStatus と同一の union。
-// intra-package import は .d.ts 経由で消費側の @/ 解決に失敗するため local に定義する。
-type GameSessionStatus =
-  | 'draft'
-  | 'open'
-  | 'scheduling'
-  | 'confirmed'
-  | 'today'
-  | 'completed';
+import type { GameSessionStatus } from '@/game-session';
 
 export type GameSessionRole = 'host' | 'member';
 

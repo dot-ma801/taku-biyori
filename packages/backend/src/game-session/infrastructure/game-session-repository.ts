@@ -179,6 +179,26 @@ export const createGameSessionRepository = (
     return row[0]?.hostUserId ?? null;
   },
 
+  async findGameSessionStatus(id: string): Promise<string | null> {
+    const row = await db
+      .select({
+        isPublished: gameSessions.isPublished,
+        openUntil: gameSessions.openUntil,
+        scheduledAt: gameSessions.scheduledAt,
+        completedAt: gameSessions.completedAt,
+      })
+      .from(gameSessions)
+      .where(eq(gameSessions.id, id))
+      .limit(1);
+    if (!row[0]) return null;
+    return getGameSessionStatus({
+      isPublished: row[0].isPublished,
+      openUntil: toDateOrNull(row[0].openUntil),
+      scheduledAt: toDateOrNull(row[0].scheduledAt),
+      completedAt: row[0].completedAt,
+    });
+  },
+
   async findDetailById(id: string): Promise<GameSessionDetail | null> {
     const rows = await db
       .select({

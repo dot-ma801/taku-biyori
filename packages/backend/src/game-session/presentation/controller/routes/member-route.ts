@@ -74,6 +74,9 @@ export const registerMemberRoute = (
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    if (result.type === 'sessionNotOpen') {
+      return c.json({ error: 'Session is not open for joining' }, 422);
+    }
     if (result.type === 'alreadyJoined') {
       return c.json({ error: 'Already joined' }, 409);
     }
@@ -144,6 +147,9 @@ export const registerMemberRoute = (
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     if (result.type === 'hostCannotLeave') {
       return c.json({ error: 'Host cannot leave the session' }, 422);
+    }
+    if (result.type === 'sessionNotOpen') {
+      return c.json({ error: 'Session is not open for leaving' }, 422);
     }
     return new Response(null, { status: 204 });
   });

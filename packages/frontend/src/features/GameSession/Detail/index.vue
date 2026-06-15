@@ -11,6 +11,7 @@ import {
   Album,
   UsersRound,
   UserRoundPlus,
+  UserRoundMinus,
   CalendarDays,
   SquarePen,
   Globe,
@@ -95,8 +96,11 @@ const gameSessionDateTime = computed(
           >
             セッション完了！
           </BaseButton>
-          <BaseButton v-if="!isMember" :left-icon="UserRoundPlus" @click="join">
+          <BaseButton v-if="canJoin" :left-icon="UserRoundPlus" @click="join">
             参加する
+          </BaseButton>
+          <BaseButton v-if="canLeave" :left-icon="UserRoundMinus" @click="leave" variant="secondary">
+            退出する
           </BaseButton>
         </div>
       </div>

@@ -239,6 +239,12 @@ pnpm --filter @taku-biyori/backend test
 > **注意**: `@taku-biyori/shared` は `dist/` が存在しないとバックエンドのテストが型解決に失敗する。
 > shared のコードを変更した場合は必ず `build` を再実行すること。
 
+## Git 設定
+
+コミット時は必ず以下の形式を使うこと（git config は変更しない）：
+
+git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" commit -m "..."
+
 ---
 
 ## 開発サーバーの起動

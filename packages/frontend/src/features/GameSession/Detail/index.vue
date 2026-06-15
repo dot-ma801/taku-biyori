@@ -5,16 +5,36 @@ import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
+import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { computed } from 'vue';
-import { Album, UsersRound, UserRoundPlus, SquarePen } from '@lucide/vue';
+import {
+  Album,
+  UsersRound,
+  UserRoundPlus,
+  CalendarDays,
+  SquarePen,
+  Globe,
+  Trophy,
+} from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{ gameSessionId: string }>();
 
 const authStore = useAuthStore();
-const { gameSession, loading, errorMessage, onClickEdit } =
-  useGetGameSessionDetail(props.gameSessionId);
+const {
+  gameSession,
+  loading: loadingDetail,
+  errorMessage,
+  onClickEdit,
+} = useGetGameSessionDetail(props.gameSessionId);
+const {
+  publishSession,
+  canPublish,
+  loading: loadingStatus,
+  completeSession,
+  canComplete,
+} = useGameSessionStatus(props.gameSessionId, gameSession);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -22,6 +42,9 @@ const scenarioName = computed(
 );
 const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
+const gameSessionDateTime = computed(
+  () => gameSession.value?.scheduledAt ?? '未設定',
+);
 const isMember = computed(
   () =>
     gameSession.value?.members.some(
@@ -31,7 +54,7 @@ const isMember = computed(
 </script>
 
 <template>
-  <div v-if="loading">読み込み中...</div>
+  <div v-if="loadingDetail">読み込み中...</div>
   <div v-else-if="errorMessage">{{ errorMessage }}</div>
 
   <div v-else-if="gameSession" class="container">
@@ -44,9 +67,13 @@ const isMember = computed(
         <div class="description">
           <Album :size="16" />
           <p>シナリオ：{{ scenarioName }}</p>
+          <CalendarDays :size="16" />
+          <p>日時：{{ gameSessionDateTime }}</p>
           <UsersRound :size="16" />
           <p>募集人数: {{ maxMembers }}</p>
         </div>
+
+        <!-- component を分割するか？ -->
         <div class="button-area">
           <BaseButton
             :left-icon="SquarePen"
@@ -54,6 +81,22 @@ const isMember = computed(
             @click="onClickEdit"
           >
             セッション編集
+          </BaseButton>
+          <BaseButton
+            :left-icon="Globe"
+            v-if="canPublish"
+            @click="publishSession"
+            :loading="loadingStatus"
+          >
+            公開
+          </BaseButton>
+          <BaseButton
+            :left-icon="Trophy"
+            v-if="canComplete"
+            @click="completeSession"
+            :loading="loadingStatus"
+          >
+            セッション完了！
           </BaseButton>
           <BaseButton v-if="!isMember" :left-icon="UserRoundPlus">
             参加する

@@ -290,6 +290,19 @@ describe('canLeave', () => {
     // Assert
     expect(canLeave.value).toBe(false);
   });
+
+  it('自分がホスト（GM）の場合は false', () => {
+    // Arrange: USER_ID をホストに設定
+    const gameSession = ref(
+      makeGameSession({ createdBy: USER_ID, members: [makeMember()] }),
+    );
+
+    // Act
+    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canLeave.value).toBe(false);
+  });
 });
 
 describe('leave', () => {

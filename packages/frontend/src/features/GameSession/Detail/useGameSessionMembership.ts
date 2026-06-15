@@ -28,7 +28,11 @@ export const useGameSessionMembership = (
       gameSession.value?.status === GameSessionStatus.open,
   );
 
-  const canLeave = computed(() => isMember.value);
+  const isHost = computed(
+    () => gameSession.value?.createdBy === authStore.currentUser?.id,
+  );
+
+  const canLeave = computed(() => isMember.value && !isHost.value);
 
   async function join() {
     if (loading.value) return;

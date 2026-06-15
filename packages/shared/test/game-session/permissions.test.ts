@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { canPerform, ACTION_POLICIES } from '@/game-session/permissions';
-import type {
+import {
+  canPerform,
+  ACTION_POLICIES,
   GameSessionAction,
-  GameSessionRole,
 } from '@/game-session/permissions';
+import type { GameSessionRole } from '@/game-session/permissions';
 import type { GameSessionStatus } from '@/game-session';
 
-// すべてのステータス・ロール・アクション
 const ALL_STATUSES: GameSessionStatus[] = [
   'draft',
   'open',
@@ -16,41 +16,43 @@ const ALL_STATUSES: GameSessionStatus[] = [
   'completed',
 ];
 const ALL_ROLES: GameSessionRole[] = ['host', 'member'];
-const ALL_ACTIONS = Object.keys(ACTION_POLICIES) as GameSessionAction[];
+const ALL_ACTIONS = Object.values(
+  ACTION_POLICIES,
+) as unknown as GameSessionAction[];
 
 // 期待マトリクス: action → 許可される [role, status] の組み合わせ
 const ALLOWED: Record<
   GameSessionAction,
   { role: GameSessionRole; status: GameSessionStatus }[]
 > = {
-  leaveSession: [
+  [GameSessionAction.joinSession]: [{ role: 'member', status: 'open' }],
+  [GameSessionAction.leaveSession]: [
     { role: 'member', status: 'open' },
     { role: 'member', status: 'scheduling' },
   ],
-  joinSession: [{ role: 'member', status: 'open' }],
-  inputScheduleResponse: [
+  [GameSessionAction.inputScheduleResponse]: [
     { role: 'host', status: 'open' },
     { role: 'host', status: 'scheduling' },
     { role: 'member', status: 'open' },
     { role: 'member', status: 'scheduling' },
   ],
-  addCandidates: ALL_STATUSES.map((status) => ({
+  [GameSessionAction.addCandidates]: ALL_STATUSES.map((status) => ({
     role: 'host' as const,
     status,
   })),
-  confirmSchedule: [{ role: 'host', status: 'scheduling' }],
-  editSession: [
+  [GameSessionAction.confirmSchedule]: [{ role: 'host', status: 'scheduling' }],
+  [GameSessionAction.editSession]: [
     { role: 'host', status: 'draft' },
     { role: 'host', status: 'open' },
     { role: 'host', status: 'scheduling' },
   ],
-  publishSession: [{ role: 'host', status: 'draft' }],
-  completeSession: [{ role: 'host', status: 'today' }],
-  deleteSession: [{ role: 'host', status: 'draft' }],
+  [GameSessionAction.publishSession]: [{ role: 'host', status: 'draft' }],
+  [GameSessionAction.completeSession]: [{ role: 'host', status: 'today' }],
+  [GameSessionAction.deleteSession]: [{ role: 'host', status: 'draft' }],
 };
 
 describe('canPerform', () => {
-  for (const action of ALL_ACTIONS) {
+  for (const action of Object.values(GameSessionAction)) {
     describe(`action: ${action}`, () => {
       for (const role of ALL_ROLES) {
         for (const status of ALL_STATUSES) {

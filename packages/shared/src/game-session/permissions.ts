@@ -2,16 +2,26 @@ import type { GameSessionStatus } from '@/game-session';
 
 export type GameSessionRole = 'host' | 'member';
 
-export type GameSessionAction =
-  | 'leaveSession'
-  | 'joinSession'
-  | 'inputScheduleResponse'
-  | 'addCandidates'
-  | 'confirmSchedule'
-  | 'editSession'
-  | 'publishSession'
-  | 'completeSession'
-  | 'deleteSession';
+export enum GameSessionAction {
+  /** 参加 */
+  joinSession = 'joinSession',
+  /** 退出 */
+  leaveSession = 'leaveSession',
+  /** 日程の回答 */
+  inputScheduleResponse = 'inputScheduleResponse',
+  /** 候補日の追加 */
+  addCandidates = 'addCandidates',
+  /** 日程の確定 */
+  confirmSchedule = 'confirmSchedule',
+  /** 詳細の編集 */
+  editSession = 'editSession',
+  /** 公開 */
+  publishSession = 'publishSession',
+  /** 完了 */
+  completeSession = 'completeSession',
+  /** 削除 */
+  deleteSession = 'deleteSession',
+}
 
 type ActionPolicy = {
   roles: GameSessionRole[];
@@ -27,46 +37,44 @@ const ALL_STATUSES: GameSessionStatus[] = [
   'completed',
 ];
 
-const ACTION_POLICIES = {
-  leaveSession: {
-    roles: ['member'],
-    statuses: ['open', 'scheduling'],
-  },
-  joinSession: {
+export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
+  [GameSessionAction.joinSession]: {
     roles: ['member'],
     statuses: ['open'],
   },
-  inputScheduleResponse: {
+  [GameSessionAction.leaveSession]: {
+    roles: ['member'],
+    statuses: ['open', 'scheduling'],
+  },
+  [GameSessionAction.inputScheduleResponse]: {
     roles: ['host', 'member'],
     statuses: ['open', 'scheduling'],
   },
-  addCandidates: {
+  [GameSessionAction.addCandidates]: {
     roles: ['host'],
     statuses: ALL_STATUSES,
   },
-  confirmSchedule: {
+  [GameSessionAction.confirmSchedule]: {
     roles: ['host'],
     statuses: ['scheduling'],
   },
-  editSession: {
+  [GameSessionAction.editSession]: {
     roles: ['host'],
     statuses: ['draft', 'open', 'scheduling'],
   },
-  publishSession: {
+  [GameSessionAction.publishSession]: {
     roles: ['host'],
     statuses: ['draft'],
   },
-  completeSession: {
+  [GameSessionAction.completeSession]: {
     roles: ['host'],
     statuses: ['today'],
   },
-  deleteSession: {
+  [GameSessionAction.deleteSession]: {
     roles: ['host'],
     statuses: ['draft'],
   },
-} as Record<GameSessionAction, ActionPolicy>;
-
-export { ACTION_POLICIES };
+};
 
 export function canPerform(
   action: GameSessionAction,

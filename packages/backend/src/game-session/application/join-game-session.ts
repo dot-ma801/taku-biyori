@@ -5,6 +5,7 @@ import type {
 
 export interface JoinGameSessionRepository {
   gameSessionExists(id: string): Promise<boolean>;
+  findGameSessionStatus(id: string): Promise<string | null>;
   findMemberByUserId(
     gameSessionId: string,
     userId: string,
@@ -20,6 +21,7 @@ export interface JoinGameSessionRepository {
 export type JoinGameSessionResult =
   | { type: 'ok'; member: GameSessionMember }
   | { type: 'notFound' }
+  | { type: 'sessionNotOpen' }
   | { type: 'alreadyJoined' };
 
 export const joinGameSession = async (
@@ -30,6 +32,9 @@ export const joinGameSession = async (
 ): Promise<JoinGameSessionResult> => {
   const exists = await repo.gameSessionExists(gameSessionId);
   if (!exists) return { type: 'notFound' };
+
+  const status = await repo.findGameSessionStatus(gameSessionId);
+  if (status !== 'open') return { type: 'sessionNotOpen' };
 
   const existingMemberId = await repo.findMemberByUserId(gameSessionId, userId);
   if (existingMemberId !== null) return { type: 'alreadyJoined' };

@@ -9,6 +9,7 @@ const makeRepo = (
     .fn()
     .mockResolvedValue({ gameSessionId: 'session-1', userId: 'user-2' }),
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
+  findGameSessionStatus: vi.fn().mockResolvedValue('open'),
   deleteMemberById: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 });
@@ -101,6 +102,24 @@ describe('leaveGameSession', () => {
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('open 以外のステータスのセッションは sessionNotOpen を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi.fn().mockResolvedValue('confirmed'),
+    });
+
+    // Act
+    const result = await leaveGameSession(
+      repo,
+      'session-1',
+      'member-1',
+      'user-2',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'sessionNotOpen' });
   });
 
   it('本人でもホストでもないユーザーは forbidden を返す', async () => {

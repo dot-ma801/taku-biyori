@@ -3,6 +3,7 @@ export interface LeaveGameSessionRepository {
     memberId: string,
   ): Promise<{ gameSessionId: string; userId: string | null } | null>;
   findHostUserId(id: string): Promise<string | null>;
+  findGameSessionStatus(id: string): Promise<string | null>;
   deleteMemberById(memberId: string): Promise<void>;
 }
 
@@ -10,7 +11,8 @@ export type LeaveGameSessionResult =
   | { type: 'ok' }
   | { type: 'notFound' }
   | { type: 'forbidden' }
-  | { type: 'hostCannotLeave' };
+  | { type: 'hostCannotLeave' }
+  | { type: 'sessionNotOpen' };
 
 export const leaveGameSession = async (
   repo: LeaveGameSessionRepository,
@@ -22,6 +24,9 @@ export const leaveGameSession = async (
   if (!memberOwner || memberOwner.gameSessionId !== gameSessionId) {
     return { type: 'notFound' };
   }
+
+  const status = await repo.findGameSessionStatus(gameSessionId);
+  if (status !== 'open') return { type: 'sessionNotOpen' };
 
   const hostUserId = await repo.findHostUserId(gameSessionId);
   const isHost = hostUserId === userId;

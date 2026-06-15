@@ -16,6 +16,7 @@ const makeRepo = (
   overrides: Partial<JoinGameSessionRepository> = {},
 ): JoinGameSessionRepository => ({
   gameSessionExists: vi.fn().mockResolvedValue(true),
+  findGameSessionStatus: vi.fn().mockResolvedValue('open'),
   findMemberByUserId: vi.fn().mockResolvedValue(null),
   addMember: vi.fn().mockResolvedValue(mockMember),
   ...overrides,
@@ -44,6 +45,19 @@ describe('joinGameSession', () => {
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('open 以外のステータスのセッションは sessionNotOpen を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi.fn().mockResolvedValue('confirmed'),
+    });
+
+    // Act
+    const result = await joinGameSession(repo, 'session-1', 'user-2', {});
+
+    // Assert
+    expect(result).toEqual({ type: 'sessionNotOpen' });
   });
 
   it('すでに参加済みのユーザーは alreadyJoined を返す', async () => {

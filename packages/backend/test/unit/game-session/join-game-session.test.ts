@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { joinGameSession } from '@/game-session/application/join-game-session';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
 import type { GameSessionMember } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const mockMember: GameSessionMember = {
   id: 'member-2',
@@ -15,8 +16,7 @@ const mockMember: GameSessionMember = {
 const makeRepo = (
   overrides: Partial<JoinGameSessionRepository> = {},
 ): JoinGameSessionRepository => ({
-  gameSessionExists: vi.fn().mockResolvedValue(true),
-  findGameSessionStatus: vi.fn().mockResolvedValue('open'),
+  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.open),
   findMemberByUserId: vi.fn().mockResolvedValue(null),
   addMember: vi.fn().mockResolvedValue(mockMember),
   ...overrides,
@@ -37,7 +37,7 @@ describe('joinGameSession', () => {
   it('存在しないセッションIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findGameSessionStatus: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -50,7 +50,9 @@ describe('joinGameSession', () => {
   it('open 以外のステータスのセッションは sessionNotOpen を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findGameSessionStatus: vi.fn().mockResolvedValue('confirmed'),
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.confirmed),
     });
 
     // Act

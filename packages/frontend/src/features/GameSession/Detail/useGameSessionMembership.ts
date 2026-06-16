@@ -24,8 +24,7 @@ export const useGameSessionMembership = (
 
   const canJoin = computed(
     () =>
-      !isMember.value &&
-      gameSession.value?.status === GameSessionStatus.open,
+      !isMember.value && gameSession.value?.status === GameSessionStatus.open,
   );
 
   const isHost = computed(
@@ -76,5 +75,5 @@ export const useGameSessionMembership = (
     }
   }
 
-  return { isMember, canJoin, canLeave, loading, join, leave };
+  return { canJoin, canLeave, loading, join, leave };
 };

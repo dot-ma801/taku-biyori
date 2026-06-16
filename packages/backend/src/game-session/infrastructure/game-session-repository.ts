@@ -20,6 +20,7 @@ import type {
   UpdateGameSessionInput,
   UpdateMemberInput,
 } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
@@ -179,24 +180,11 @@ export const createGameSessionRepository = (
     return row[0]?.hostUserId ?? null;
   },
 
-  async findGameSessionStatus(id: string): Promise<string | null> {
-    const row = await db
-      .select({
-        isPublished: gameSessions.isPublished,
-        openUntil: gameSessions.openUntil,
-        scheduledAt: gameSessions.scheduledAt,
-        completedAt: gameSessions.completedAt,
-      })
-      .from(gameSessions)
-      .where(eq(gameSessions.id, id))
-      .limit(1);
-    if (!row[0]) return null;
-    return getGameSessionStatus({
-      isPublished: row[0].isPublished,
-      openUntil: toDateOrNull(row[0].openUntil),
-      scheduledAt: toDateOrNull(row[0].scheduledAt),
-      completedAt: row[0].completedAt,
-    });
+  async findGameSessionStatus(id: string): Promise<GameSessionStatus | null> {
+    // findStatusFields と同一の DB クエリを共通化して再利用する
+    const fields = await this.findStatusFields(id);
+    if (!fields) return null;
+    return getGameSessionStatus(fields);
   },
 
   async findDetailById(id: string): Promise<GameSessionDetail | null> {

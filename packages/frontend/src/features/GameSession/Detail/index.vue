@@ -18,12 +18,10 @@ import {
   Trophy,
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
-import { useAuthStore } from '@/stores/auth';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 
 const props = defineProps<{ gameSessionId: string }>();
 
-const authStore = useAuthStore();
 const {
   gameSession,
   loading: loadingDetail,

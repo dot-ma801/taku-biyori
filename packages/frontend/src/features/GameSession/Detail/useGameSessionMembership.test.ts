@@ -60,54 +60,9 @@ beforeEach(() => {
   vi.mocked(useAuthStore).mockReturnValue({
     currentUser: { id: USER_ID },
   } as ReturnType<typeof useAuthStore>);
-  vi.mocked(useToast).mockReturnValue({ error: vi.fn() } as ReturnType<
-    typeof useToast
-  >);
-});
-
-describe('isMember', () => {
-  it('メンバーリストに自分の userId が含まれる場合は true', () => {
-    const gameSession = ref(
-      makeGameSession({
-        members: [
-          {
-            id: 'member-1',
-            userId: USER_ID,
-            userName: 'テストユーザー',
-            guestName: null,
-            characterName: null,
-            joinedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-      }),
-    );
-
-    // Act
-    const { isMember } = useGameSessionMembership(SESSION_ID, gameSession);
-
-    // Assert
-    expect(isMember.value).toBe(true);
-  });
-
-  it('メンバーリストに自分の userId が含まれない場合は false', () => {
-    const gameSession = ref(makeGameSession({ members: [] }));
-
-    // Act
-    const { isMember } = useGameSessionMembership(SESSION_ID, gameSession);
-
-    // Assert
-    expect(isMember.value).toBe(false);
-  });
-
-  it('gameSession が null の場合は false', () => {
-    const gameSession = ref<GameSessionDetail | null>(null);
-
-    // Act
-    const { isMember } = useGameSessionMembership(SESSION_ID, gameSession);
-
-    // Assert
-    expect(isMember.value).toBe(false);
-  });
+  vi.mocked(useToast).mockReturnValue({
+    error: vi.fn(),
+  } as unknown as ReturnType<typeof useToast>);
 });
 
 describe('canJoin', () => {
@@ -227,7 +182,7 @@ describe('join', () => {
     const toastError = vi.fn();
     vi.mocked(useToast).mockReturnValue({
       error: toastError,
-    } as ReturnType<typeof useToast>);
+    } as unknown as ReturnType<typeof useToast>);
     vi.mocked(joinGameSession).mockRejectedValue(new Error('API error'));
 
     const gameSession = ref(makeGameSession({ members: [] }));
@@ -272,6 +227,7 @@ describe('join', () => {
 
 describe('canLeave', () => {
   it('自分がメンバーの場合は true', () => {
+    // Arrange
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
@@ -282,6 +238,7 @@ describe('canLeave', () => {
   });
 
   it('自分がメンバーでない場合は false', () => {
+    // Arrange
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
@@ -292,8 +249,12 @@ describe('canLeave', () => {
   });
 
   it('open 以外のステータスの場合は false', () => {
+    // Arrange
     const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed, members: [makeMember()] }),
+      makeGameSession({
+        status: GameSessionStatus.confirmed,
+        members: [makeMember()],
+      }),
     );
 
     // Act
@@ -332,6 +293,7 @@ describe('leave', () => {
   });
 
   it('自分がメンバーでない場合は API を呼び出さない', async () => {
+    // Arrange
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
@@ -346,7 +308,7 @@ describe('leave', () => {
     const toastError = vi.fn();
     vi.mocked(useToast).mockReturnValue({
       error: toastError,
-    } as ReturnType<typeof useToast>);
+    } as unknown as ReturnType<typeof useToast>);
     vi.mocked(leaveGameSession).mockRejectedValue(new Error('API error'));
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 

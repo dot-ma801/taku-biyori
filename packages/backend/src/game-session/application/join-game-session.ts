@@ -2,9 +2,11 @@ import type {
   GameSessionMember,
   JoinGameSessionInput,
 } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 export interface JoinGameSessionRepository {
-  gameSessionExists(id: string): Promise<boolean>;
+  // null はセッションが存在しないことを表す
+  findGameSessionStatus(id: string): Promise<GameSessionStatus | null>;
   findMemberByUserId(
     gameSessionId: string,
     userId: string,
@@ -20,6 +22,7 @@ export interface JoinGameSessionRepository {
 export type JoinGameSessionResult =
   | { type: 'ok'; member: GameSessionMember }
   | { type: 'notFound' }
+  | { type: 'sessionNotOpen' }
   | { type: 'alreadyJoined' };
 
 export const joinGameSession = async (
@@ -28,8 +31,10 @@ export const joinGameSession = async (
   userId: string,
   input: JoinGameSessionInput,
 ): Promise<JoinGameSessionResult> => {
-  const exists = await repo.gameSessionExists(gameSessionId);
-  if (!exists) return { type: 'notFound' };
+  // null はセッション非存在として扱い、クエリを1回に統合する
+  const status = await repo.findGameSessionStatus(gameSessionId);
+  if (status === null) return { type: 'notFound' };
+  if (status !== GameSessionStatus.open) return { type: 'sessionNotOpen' };
 
   const existingMemberId = await repo.findMemberByUserId(gameSessionId, userId);
   if (existingMemberId !== null) return { type: 'alreadyJoined' };

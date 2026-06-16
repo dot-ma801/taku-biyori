@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { leaveGameSession } from '@/game-session/application/leave-game-session';
 import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const makeRepo = (
   overrides: Partial<LeaveGameSessionRepository> = {},
@@ -9,6 +10,7 @@ const makeRepo = (
     .fn()
     .mockResolvedValue({ gameSessionId: 'session-1', userId: 'user-2' }),
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
+  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.open),
   deleteMemberById: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 });
@@ -101,6 +103,26 @@ describe('leaveGameSession', () => {
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('open 以外のステータスのセッションは sessionNotOpen を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.confirmed),
+    });
+
+    // Act
+    const result = await leaveGameSession(
+      repo,
+      'session-1',
+      'member-1',
+      'user-2',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'sessionNotOpen' });
   });
 
   it('本人でもホストでもないユーザーは forbidden を返す', async () => {

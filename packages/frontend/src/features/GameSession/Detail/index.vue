@@ -11,17 +11,17 @@ import {
   Album,
   UsersRound,
   UserRoundPlus,
+  UserRoundMinus,
   CalendarDays,
   SquarePen,
   Globe,
   Trophy,
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
-import { useAuthStore } from '@/stores/auth';
+import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 
 const props = defineProps<{ gameSessionId: string }>();
 
-const authStore = useAuthStore();
 const {
   gameSession,
   loading: loadingDetail,
@@ -35,6 +35,13 @@ const {
   completeSession,
   canComplete,
 } = useGameSessionStatus(props.gameSessionId, gameSession);
+const {
+  canJoin,
+  canLeave,
+  join,
+  leave,
+  loading: loadingMember,
+} = useGameSessionMembership(props.gameSessionId, gameSession);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -44,12 +51,6 @@ const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
 const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
-);
-const isMember = computed(
-  () =>
-    gameSession.value?.members.some(
-      (item) => item.userId === authStore.currentUser?.id,
-    ) ?? false,
 );
 </script>
 
@@ -98,8 +99,22 @@ const isMember = computed(
           >
             セッション完了！
           </BaseButton>
-          <BaseButton v-if="!isMember" :left-icon="UserRoundPlus">
+          <BaseButton
+            v-if="canJoin"
+            :left-icon="UserRoundPlus"
+            @click="join"
+            :loading="loadingMember"
+          >
             参加する
+          </BaseButton>
+          <BaseButton
+            v-if="canLeave"
+            :left-icon="UserRoundMinus"
+            @click="leave"
+            variant="secondary"
+            :loading="loadingMember"
+          >
+            退出する
           </BaseButton>
         </div>
       </div>

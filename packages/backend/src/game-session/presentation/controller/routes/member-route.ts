@@ -74,6 +74,9 @@ export const registerMemberRoute = (
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    // sessionNotOpen を alreadyJoined より先にチェックする。
+    // セッションが非公開の場合でも alreadyJoined (409) を返すのは不適切なため、
+    // ステータス不一致を先に検出して 422 を返す。
     if (result.type === 'sessionNotOpen') {
       return c.json({ error: 'Session is not open for joining' }, 422);
     }

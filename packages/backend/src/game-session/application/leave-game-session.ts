@@ -1,9 +1,11 @@
+import { GameSessionStatus } from '@taku-biyori/shared';
+
 export interface LeaveGameSessionRepository {
   findMemberOwner(
     memberId: string,
   ): Promise<{ gameSessionId: string; userId: string | null } | null>;
   findHostUserId(id: string): Promise<string | null>;
-  findGameSessionStatus(id: string): Promise<string | null>;
+  findGameSessionStatus(id: string): Promise<GameSessionStatus | null>;
   deleteMemberById(memberId: string): Promise<void>;
 }
 
@@ -26,7 +28,7 @@ export const leaveGameSession = async (
   }
 
   const status = await repo.findGameSessionStatus(gameSessionId);
-  if (status !== 'open') return { type: 'sessionNotOpen' };
+  if (status !== GameSessionStatus.open) return { type: 'sessionNotOpen' };
 
   const hostUserId = await repo.findHostUserId(gameSessionId);
   const isHost = hostUserId === userId;

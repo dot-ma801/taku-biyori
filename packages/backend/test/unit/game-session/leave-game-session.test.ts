@@ -108,7 +108,9 @@ describe('leaveGameSession', () => {
   it('open 以外のステータスのセッションは sessionNotOpen を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.confirmed),
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.confirmed),
     });
 
     // Act

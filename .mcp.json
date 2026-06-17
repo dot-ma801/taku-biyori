@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "postgres-db": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://app:pass@localhost:5432/taku-biyori"
+      ],
+      "env": {}
+    }
+  }
+}

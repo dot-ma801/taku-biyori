@@ -78,9 +78,7 @@ const goToCreate = () => router.push('/game-sessions/new');
     </div>
 
     <div class="footer-note">
-      <p>
-        ※ このページは仮置きです。まともなトップ画面に変えてください。
-      </p>
+      <p>※ このページは仮置きです。まともなトップ画面に変えてください。</p>
     </div>
   </div>
 </template>

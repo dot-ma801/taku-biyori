@@ -82,7 +82,11 @@ const appearance = computed(() => STATUS_APPEARANCE[props.gameSessionStatus]);
 .status-card {
   --status-color: var(--color-secondary);
   --status-bg: var(--color-surface-muted);
-  --status-bg-subtle: color-mix(in srgb, var(--status-bg) 40%, var(--color-surface));
+  --status-bg-subtle: color-mix(
+    in srgb,
+    var(--status-bg) 40%,
+    var(--color-surface)
+  );
 }
 
 [data-variant='primary'] {

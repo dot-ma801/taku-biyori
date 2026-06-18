@@ -48,5 +48,5 @@ export const useScheduleConfirm = (
     }
   }
 
-  return { isHost, canConfirm, loading, confirmDate };
+  return { canConfirm, loading, confirmDate };
 };

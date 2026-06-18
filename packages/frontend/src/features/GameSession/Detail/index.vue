@@ -19,6 +19,7 @@ import {
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
+import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -121,6 +122,7 @@ const gameSessionDateTime = computed(
     </div>
 
     <!-- TODO: シナリオ詳細文が実装されたら表示する -->
+    <StatusDisplay :game-session-status="gameSession.status"></StatusDisplay>
     <MemoDisplay :text="description"></MemoDisplay>
     <ScheduleDisplay
       :game-session-id="props.gameSessionId"

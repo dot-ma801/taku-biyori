@@ -26,8 +26,11 @@
   --color-text-muted: #5c6978;
 
   --color-success: #1f7348;
+  --color-success-soft: #d3ede1;
   --color-warning: #8c5e00;
+  --color-warning-soft: #faecd0;
   --color-error: #b84040;
+  --color-error-soft: #f5dada;
   --color-info: #005f6b;
 
   --color-dark-background: #1c2026;
@@ -40,6 +43,10 @@
   --color-dark-text: #f2f4f7;
   --color-dark-text-secondary: #cdd3da;
   --color-dark-text-muted: #929aa5;
+
+  --color-dark-success-soft: #1a3028;
+  --color-dark-warning-soft: #3d3018;
+  --color-dark-error-soft: #3a1f1f;
 
   --shadow-sm: 0 2px 6px rgba(31, 35, 40, 0.04);
   --shadow-md: 0 8px 24px rgba(31, 35, 40, 0.06);
@@ -85,8 +92,11 @@
   --color-primary-text: #3db5c5;
   --color-info: #3db5c5;
   --color-success: #54c48c; /* 4.5:1+ on badge bg (color-mix 15% surface) */
+  --color-success-soft: var(--color-dark-success-soft);
   --color-warning: #e8a030; /* 5.01:1 */
+  --color-warning-soft: var(--color-dark-warning-soft);
   --color-error: #f88080; /* 4.55:1 */
+  --color-error-soft: var(--color-dark-error-soft);
 }
 
 body {

@@ -14,18 +14,25 @@ export const useScheduleConfirm = (
   const toast = useToast();
   const loading = ref(false);
 
+  /** ログインユーザーがセッションのホスト（作成者）かどうか */
   const isHost = computed(
     () =>
       !!gameSession.value &&
       gameSession.value.createdBy === authStore.currentUser?.id,
   );
 
+  /** 日程確定操作が可能かどうか。ホストかつ status が scheduling のときのみ true */
   const canConfirm = computed(
     () =>
       isHost.value &&
       gameSession.value?.status === GameSessionStatus.scheduling,
   );
 
+  /**
+   * 指定した候補日を日程として確定する。
+   * 成功後に gameSession の status と scheduledAt を更新する。
+   * loading 中の重複呼び出しは無視する。
+   */
   async function confirmDate(dateId: string) {
     if (loading.value) return;
     loading.value = true;

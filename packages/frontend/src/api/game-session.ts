@@ -119,3 +119,13 @@ export async function updateGameSessionStatus(
     body: input,
   }))!;
 }
+
+export async function confirmAvailabilityDate(
+  gameSessionId: string,
+  dateId: string,
+): Promise<GameSession> {
+  return (await apiRequest<GameSession>(
+    `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}/confirm`,
+    { method: 'POST' },
+  ))!;
+}

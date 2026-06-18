@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
-import { useScheduleConfirm } from '@/features/GameSession/Detail/Schedule/useScheduleConfirm';
+import { useScheduleConfirm } from '@/features/GameSession/Detail/useScheduleConfirm';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 

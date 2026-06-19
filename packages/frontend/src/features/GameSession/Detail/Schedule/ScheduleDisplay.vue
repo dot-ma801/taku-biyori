@@ -6,7 +6,7 @@ import ScheduleTable from '@/features/GameSession/Detail/Schedule/ScheduleTable.
 import { useSchedule } from '@/features/GameSession/Detail/Schedule/useSchedule';
 import type { GameSession, GameSessionDetail } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
-import { CalendarCheck, SquarePen, Check } from '@lucide/vue';
+import { CalendarCheck, SquarePen, Check, RotateCcw } from '@lucide/vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useScheduleConfirm } from '@/features/GameSession/Detail/Schedule/useScheduleConfirm';
 
@@ -34,8 +34,9 @@ onUnmounted(() => {
 
 const myMemberId = computed(
   () =>
-    props.gameSession.members.find((m) => m.userId === sessionData.value.data?.user?.id)
-      ?.id ?? null,
+    props.gameSession.members.find(
+      (m) => m.userId === sessionData.value.data?.user?.id,
+    )?.id ?? null,
 );
 
 const {
@@ -48,6 +49,8 @@ const {
   cycleAnswer,
   submitEdit,
 } = useSchedule(props.gameSession.id, myMemberId);
+
+const selectedDateId = ref<string | null>(null);
 
 const {
   canConfirm,
@@ -78,27 +81,37 @@ const {
         :my-member-id="myMemberId"
         :is-editing="isEditing"
         :draft-answers="draftAnswers"
+        :can-confirm="canConfirm"
+        :selected-date-id="selectedDateId"
         @cell-click="cycleAnswer"
+        @date-select="(id) => (selectedDateId = id)"
       />
       <div v-if="myMemberId" class="actions">
-        <BaseButton
-          v-if="!isEditing"
-          variant="secondary"
-          :left-icon="SquarePen"
-          @click="enterEditMode"
-        >
-          回答を編集する
-        </BaseButton>
+        <template v-if="!isEditing">
+          <BaseButton
+            v-if="canConfirm && selectedDateId"
+            variant="secondary"
+            :left-icon="RotateCcw"
+            class="reset-btn"
+            @click="selectedDateId = null"
+          >
+            選択を解除
+          </BaseButton>
+          <BaseButton variant="secondary" :left-icon="SquarePen" @click="enterEditMode">
+            回答を編集する
+          </BaseButton>
+          <BaseButton
+            v-if="canConfirm"
+            :loading="loadingScheduleConfirm"
+            :left-icon="CalendarCheck"
+            :disabled="!selectedDateId"
+            @click="selectedDateId && confirmDate(selectedDateId)"
+          >
+            開催日を確定
+          </BaseButton>
+        </template>
         <BaseButton v-else :left-icon="Check" @click="submitEdit">
           完了
-        </BaseButton>
-        <BaseButton
-          v-if="canConfirm"
-          :loading="loadingScheduleConfirm"
-          :left-icon="CalendarCheck"
-          @click=""
-        >
-          開催日を確定
         </BaseButton>
       </div>
     </template>
@@ -124,5 +137,12 @@ const {
   display: flex;
   justify-content: flex-end;
   margin-top: var(--space-3);
+  > * {
+    margin: 0 var(--space-1);
+  }
+}
+
+.reset-btn {
+  margin-right: auto;
 }
 </style>

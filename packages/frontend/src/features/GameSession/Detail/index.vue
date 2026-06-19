@@ -7,6 +7,7 @@ import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisp
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { computed } from 'vue';
+
 import {
   Album,
   UsersRound,
@@ -27,6 +28,7 @@ const {
   gameSession,
   loading: loadingDetail,
   errorMessage,
+  patchGameSession,
   onClickEdit,
 } = useGetGameSessionDetail(props.gameSessionId);
 
@@ -59,6 +61,7 @@ const description = computed(() => gameSession.value?.description ?? undefined);
 const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
+
 </script>
 
 <template>
@@ -132,6 +135,7 @@ const gameSessionDateTime = computed(
     <MemoDisplay :text="description"></MemoDisplay>
     <ScheduleDisplay
       :game-session="gameSession"
+      @session-updated="patchGameSession"
     ></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>

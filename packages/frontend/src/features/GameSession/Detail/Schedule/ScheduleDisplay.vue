@@ -4,7 +4,7 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/GameSession/Detail/Schedule/ScheduleTable.vue';
 import { useSchedule } from '@/features/GameSession/Detail/Schedule/useSchedule';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { GameSession, GameSessionDetail } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
 import { CalendarCheck, SquarePen, Check } from '@lucide/vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
@@ -12,6 +12,10 @@ import { useScheduleConfirm } from '@/features/GameSession/Detail/Schedule/useSc
 
 const props = defineProps<{
   gameSession: GameSessionDetail;
+}>();
+
+const emit = defineEmits<{
+  'session-updated': [updated: GameSession];
 }>();
 
 // useSession は nanostores の Atom なので Vue の ref に変換する
@@ -49,7 +53,12 @@ const {
   canConfirm,
   loading: loadingScheduleConfirm,
   confirmDate,
-} = useScheduleConfirm(props.gameSession.id, props.gameSession);
+} = useScheduleConfirm(
+  props.gameSession.id,
+  () => props.gameSession.createdBy,
+  () => props.gameSession.status,
+  (updated) => emit('session-updated', updated),
+);
 </script>
 
 <template>

@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useScheduleConfirm } from '@/features/GameSession/Detail/Schedule/useScheduleConfirm';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   confirmAvailabilityDate: vi.fn(),
@@ -26,26 +24,23 @@ const OTHER_USER_ID = 'other-user-id';
 const SESSION_ID = 'session-id';
 const DATE_ID = 'date-id';
 
-function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
-  return {
-    id: SESSION_ID,
-    title: 'テストセッション',
-    status: GameSessionStatus.scheduling,
-    isPublished: true,
-    createdBy: HOST_USER_ID,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    members: [],
-    ...overrides,
-  };
-}
-
 function setupAuthAs(userId: string) {
   vi.mocked(useAuthStore).mockReturnValue({
     currentUser: { id: userId },
   } as ReturnType<typeof useAuthStore>);
+}
+
+function makeUpdatedSession() {
+  return {
+    id: SESSION_ID,
+    title: 'テストセッション',
+    status: GameSessionStatus.confirmed,
+    isPublished: true,
+    scheduledAt: '2026-06-30',
+    createdBy: HOST_USER_ID,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  };
 }
 
 beforeEach(() => {
@@ -57,12 +52,14 @@ describe('canConfirm', () => {
   it('ホストかつ status が scheduling のとき true を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.scheduling }),
-    );
 
     // Act
-    const { canConfirm } = useScheduleConfirm(SESSION_ID, gameSession);
+    const { canConfirm } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
+    );
 
     // Assert
     expect(canConfirm.value).toBe(true);
@@ -71,12 +68,14 @@ describe('canConfirm', () => {
   it('ホストでも status が scheduling 以外のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
-    );
 
     // Act
-    const { canConfirm } = useScheduleConfirm(SESSION_ID, gameSession);
+    const { canConfirm } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.confirmed,
+      vi.fn(),
+    );
 
     // Assert
     expect(canConfirm.value).toBe(false);
@@ -85,24 +84,14 @@ describe('canConfirm', () => {
   it('ホスト以外は status が scheduling でも false を返す', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.scheduling }),
+
+    // Act
+    const { canConfirm } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
     );
-
-    // Act
-    const { canConfirm } = useScheduleConfirm(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canConfirm.value).toBe(false);
-  });
-
-  it('gameSession が null のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref<GameSessionDetail | null>(null);
-
-    // Act
-    const { canConfirm } = useScheduleConfirm(SESSION_ID, gameSession);
 
     // Assert
     expect(canConfirm.value).toBe(false);
@@ -113,18 +102,13 @@ describe('confirmDate', () => {
   it('confirmAvailabilityDate を正しい引数で呼び出す', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    vi.mocked(confirmAvailabilityDate).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.confirmed,
-      isPublished: true,
-      scheduledAt: '2026-06-30',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(makeGameSession());
-    const { confirmDate } = useScheduleConfirm(SESSION_ID, gameSession);
+    vi.mocked(confirmAvailabilityDate).mockResolvedValue(makeUpdatedSession());
+    const { confirmDate } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
+    );
 
     // Act
     await confirmDate(DATE_ID);
@@ -133,48 +117,35 @@ describe('confirmDate', () => {
     expect(confirmAvailabilityDate).toHaveBeenCalledWith(SESSION_ID, DATE_ID);
   });
 
-  it('成功後に gameSession の status と scheduledAt が更新される', async () => {
+  it('成功後に onConfirmed コールバックが更新データで呼ばれる', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const updatedScheduledAt = '2026-06-30';
-    vi.mocked(confirmAvailabilityDate).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.confirmed,
-      isPublished: true,
-      scheduledAt: updatedScheduledAt,
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(makeGameSession());
-    const { confirmDate } = useScheduleConfirm(SESSION_ID, gameSession);
+    const updated = makeUpdatedSession();
+    vi.mocked(confirmAvailabilityDate).mockResolvedValue(updated);
+    const onConfirmed = vi.fn();
+    const { confirmDate } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      onConfirmed,
+    );
 
     // Act
     await confirmDate(DATE_ID);
 
     // Assert
-    expect(gameSession.value?.status).toBe(GameSessionStatus.confirmed);
-    expect(gameSession.value?.scheduledAt).toBe(updatedScheduledAt);
+    expect(onConfirmed).toHaveBeenCalledWith(updated);
   });
 
   it('成功後に loading が false に戻る', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    vi.mocked(confirmAvailabilityDate).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.confirmed,
-      isPublished: true,
-      scheduledAt: '2026-06-30',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(makeGameSession());
+    vi.mocked(confirmAvailabilityDate).mockResolvedValue(makeUpdatedSession());
     const { confirmDate, loading } = useScheduleConfirm(
       SESSION_ID,
-      gameSession,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
     );
 
     // Act
@@ -190,8 +161,12 @@ describe('confirmDate', () => {
     vi.mocked(confirmAvailabilityDate).mockRejectedValue(
       new Error('サーバーエラー'),
     );
-    const gameSession = ref(makeGameSession());
-    const { confirmDate } = useScheduleConfirm(SESSION_ID, gameSession);
+    const { confirmDate } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
+    );
 
     // Act
     await confirmDate(DATE_ID);
@@ -206,10 +181,11 @@ describe('confirmDate', () => {
     vi.mocked(confirmAvailabilityDate).mockRejectedValue(
       new Error('サーバーエラー'),
     );
-    const gameSession = ref(makeGameSession());
     const { confirmDate, loading } = useScheduleConfirm(
       SESSION_ID,
-      gameSession,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
     );
 
     // Act
@@ -228,8 +204,12 @@ describe('confirmDate', () => {
         resolve = r as () => void;
       }),
     );
-    const gameSession = ref(makeGameSession());
-    const { confirmDate } = useScheduleConfirm(SESSION_ID, gameSession);
+    const { confirmDate } = useScheduleConfirm(
+      SESSION_ID,
+      HOST_USER_ID,
+      GameSessionStatus.scheduling,
+      vi.fn(),
+    );
 
     // Act
     const first = confirmDate(DATE_ID);

@@ -8,6 +8,7 @@ import type { GameSessionDetail } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
 import { CalendarCheck, SquarePen, Check } from '@lucide/vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { useScheduleConfirm } from '@/features/GameSession/Detail/Schedule/useScheduleConfirm';
 
 const props = defineProps<{
   gameSession: GameSessionDetail;
@@ -43,6 +44,12 @@ const {
   cycleAnswer,
   submitEdit,
 } = useSchedule(props.gameSession.id, myMemberId);
+
+const {
+  canConfirm,
+  loading: loadingScheduleConfirm,
+  confirmDate,
+} = useScheduleConfirm(props.gameSession.id, props.gameSession);
 </script>
 
 <template>
@@ -75,6 +82,14 @@ const {
         </BaseButton>
         <BaseButton v-else :left-icon="Check" @click="submitEdit">
           完了
+        </BaseButton>
+        <BaseButton
+          v-if="canConfirm"
+          :loading="loadingScheduleConfirm"
+          :left-icon="CalendarCheck"
+          @click=""
+        >
+          開催日を確定
         </BaseButton>
       </div>
     </template>

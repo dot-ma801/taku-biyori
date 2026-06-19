@@ -29,6 +29,12 @@ const {
   errorMessage,
   onClickEdit,
 } = useGetGameSessionDetail(props.gameSessionId);
+
+// imo: gameSession を配下のあらゆるコンポーネントで使用するから、 provide したほうがいいのでは？
+// provide したコンポーネントの破棄によって、provide したデータも破棄されるから、残存リスクもないし。store使うよりいいのでは？
+// 
+// provide('gameSession', gameSession);
+
 const {
   publishSession,
   canPublish,
@@ -125,8 +131,7 @@ const gameSessionDateTime = computed(
     <StatusDisplay :game-session-status="gameSession.status"></StatusDisplay>
     <MemoDisplay :text="description"></MemoDisplay>
     <ScheduleDisplay
-      :game-session-id="props.gameSessionId"
-      :members="gameSession.members"
+      :game-session="gameSession"
     ></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>

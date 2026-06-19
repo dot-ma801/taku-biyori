@@ -4,14 +4,13 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/GameSession/Detail/Schedule/ScheduleTable.vue';
 import { useSchedule } from '@/features/GameSession/Detail/Schedule/useSchedule';
-import type { GameSessionMember } from '@taku-biyori/shared';
+import type { GameSessionDetail } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
 import { CalendarCheck, SquarePen, Check } from '@lucide/vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{
-  gameSessionId: string;
-  members: GameSessionMember[];
+  gameSession: GameSessionDetail;
 }>();
 
 // useSession は nanostores の Atom なので Vue の ref に変換する
@@ -30,7 +29,7 @@ onUnmounted(() => {
 
 const myMemberId = computed(
   () =>
-    props.members.find((m) => m.userId === sessionData.value.data?.user?.id)
+    props.gameSession.members.find((m) => m.userId === sessionData.value.data?.user?.id)
       ?.id ?? null,
 );
 
@@ -43,7 +42,7 @@ const {
   enterEditMode,
   cycleAnswer,
   submitEdit,
-} = useSchedule(props.gameSessionId, myMemberId);
+} = useSchedule(props.gameSession.id, myMemberId);
 </script>
 
 <template>
@@ -59,7 +58,7 @@ const {
     <template v-else>
       <ScheduleTable
         :availability-dates="availabilityDates"
-        :members="members"
+        :members="props.gameSession.members"
         :my-member-id="myMemberId"
         :is-editing="isEditing"
         :draft-answers="draftAnswers"

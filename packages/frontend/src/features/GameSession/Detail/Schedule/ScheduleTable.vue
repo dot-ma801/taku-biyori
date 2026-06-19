@@ -28,7 +28,9 @@ const { getAnswer, okCount } = useScheduleView(
 );
 
 // 空行の colspan（確定列? + 候補日列 + メンバー列 + 集計列）
-const emptyRowColspan = computed(() => props.members.length + 2 + (props.canConfirm ? 1 : 0));
+const emptyRowColspan = computed(
+  () => props.members.length + 2 + (props.canConfirm ? 1 : 0),
+);
 
 function memberDisplayName(member: GameSessionMember): string {
   return member.userName ?? member.guestName ?? '（未設定）';

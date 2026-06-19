@@ -34,7 +34,7 @@ const {
 
 // imo: gameSession を配下のあらゆるコンポーネントで使用するから、 provide したほうがいいのでは？
 // provide したコンポーネントの破棄によって、provide したデータも破棄されるから、残存リスクもないし。store使うよりいいのでは？
-// 
+//
 // provide('gameSession', gameSession);
 
 const {
@@ -61,7 +61,6 @@ const description = computed(() => gameSession.value?.description ?? undefined);
 const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
-
 </script>
 
 <template>

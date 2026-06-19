@@ -43,12 +43,17 @@ const {
   availabilityDates,
   loading,
   errorMessage,
+  canInputSchedule,
   isEditing,
   draftAnswers,
   enterEditMode,
   cycleAnswer,
   submitEdit,
-} = useSchedule(props.gameSession.id, myMemberId);
+} = useSchedule(
+  props.gameSession.id,
+  myMemberId,
+  () => props.gameSession.status,
+);
 
 const selectedDateId = ref<string | null>(null);
 
@@ -97,7 +102,12 @@ const {
           >
             選択を解除
           </BaseButton>
-          <BaseButton variant="secondary" :left-icon="SquarePen" @click="enterEditMode">
+          <BaseButton
+            v-if="canInputSchedule"
+            variant="secondary"
+            :left-icon="SquarePen"
+            @click="enterEditMode"
+          >
             回答を編集する
           </BaseButton>
           <BaseButton

@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   updateMember: vi.fn(),
@@ -23,11 +23,12 @@ import { useToast } from '@/composables/useToast';
 
 const SESSION_ID = 'session-1';
 const USER_ID = 'user-1';
-const HOST_ID = 'host-1';
 const MEMBER_ID = 'member-1';
 const CHARACTER_NAME = 'アリス';
 
-function makeMember(overrides: Record<string, unknown> = {}) {
+function makeMember(
+  overrides: Partial<GameSessionMember> = {},
+): GameSessionMember {
   return {
     id: MEMBER_ID,
     userId: USER_ID,
@@ -35,22 +36,6 @@ function makeMember(overrides: Record<string, unknown> = {}) {
     guestName: null,
     characterName: CHARACTER_NAME,
     joinedAt: '2024-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
-  return {
-    id: SESSION_ID,
-    title: 'テストセッション',
-    status: GameSessionStatus.open,
-    isPublished: true,
-    createdBy: HOST_ID,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [makeMember()],
     ...overrides,
   };
 }
@@ -69,10 +54,15 @@ beforeEach(() => {
 describe('myMember', () => {
   it('ログインユーザーのメンバー情報を返す', () => {
     // Arrange
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
 
     // Act
-    const { myMember } = useMemberEdit(SESSION_ID, gameSession);
+    const { myMember } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
 
     // Assert
     expect(myMember.value?.id).toBe(MEMBER_ID);
@@ -80,10 +70,15 @@ describe('myMember', () => {
 
   it('メンバーでない場合は undefined を返す', () => {
     // Arrange
-    const gameSession = ref(makeGameSession({ members: [] }));
+    const members = ref<GameSessionMember[]>([]);
 
     // Act
-    const { myMember } = useMemberEdit(SESSION_ID, gameSession);
+    const { myMember } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
 
     // Assert
     expect(myMember.value).toBeUndefined();
@@ -91,53 +86,22 @@ describe('myMember', () => {
 });
 
 describe('canEditCharacterName', () => {
-  it('メンバーかつ open ステータスのとき true', () => {
+  it.each([
+    GameSessionStatus.open,
+    GameSessionStatus.scheduling,
+    GameSessionStatus.confirmed,
+    GameSessionStatus.today,
+  ])('メンバーかつ %s ステータスのとき true', (status) => {
     // Arrange
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.open }),
-    );
+    const members = ref<GameSessionMember[]>([makeMember()]);
 
     // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canEditCharacterName.value).toBe(true);
-  });
-
-  it('メンバーかつ scheduling ステータスのとき true', () => {
-    // Arrange
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.scheduling }),
+    const { canEditCharacterName } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => status,
+      vi.fn(),
     );
-
-    // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canEditCharacterName.value).toBe(true);
-  });
-
-  it('メンバーかつ confirmed ステータスのとき true', () => {
-    // Arrange
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
-    );
-
-    // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canEditCharacterName.value).toBe(true);
-  });
-
-  it('メンバーかつ today ステータスのとき true', () => {
-    // Arrange
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-
-    // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
 
     // Assert
     expect(canEditCharacterName.value).toBe(true);
@@ -145,12 +109,15 @@ describe('canEditCharacterName', () => {
 
   it('completed ステータスのとき false', () => {
     // Arrange
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.completed }),
-    );
+    const members = ref<GameSessionMember[]>([makeMember()]);
 
     // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
+    const { canEditCharacterName } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.completed,
+      vi.fn(),
+    );
 
     // Assert
     expect(canEditCharacterName.value).toBe(false);
@@ -158,21 +125,31 @@ describe('canEditCharacterName', () => {
 
   it('メンバーでない場合は false', () => {
     // Arrange
-    const gameSession = ref(makeGameSession({ members: [] }));
+    const members = ref<GameSessionMember[]>([]);
 
     // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
+    const { canEditCharacterName } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
 
     // Assert
     expect(canEditCharacterName.value).toBe(false);
   });
 
-  it('gameSession が null の場合は false', () => {
+  it('status が undefined の場合は false', () => {
     // Arrange
-    const gameSession = ref<GameSessionDetail | null>(null);
+    const members = ref<GameSessionMember[]>([makeMember()]);
 
     // Act
-    const { canEditCharacterName } = useMemberEdit(SESSION_ID, gameSession);
+    const { canEditCharacterName } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => undefined,
+      vi.fn(),
+    );
 
     // Assert
     expect(canEditCharacterName.value).toBe(false);
@@ -182,10 +159,12 @@ describe('canEditCharacterName', () => {
 describe('startEdit / cancelEdit', () => {
   it('startEdit を呼ぶと isEditing が true になり draftCharacterName が現在値で初期化される', () => {
     // Arrange
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
     const { isEditing, draftCharacterName, startEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
     );
 
     // Act
@@ -198,12 +177,14 @@ describe('startEdit / cancelEdit', () => {
 
   it('startEdit を呼ぶと characterName が null の場合は空文字で初期化される', () => {
     // Arrange
-    const gameSession = ref(
-      makeGameSession({ members: [makeMember({ characterName: null })] }),
-    );
+    const members = ref<GameSessionMember[]>([
+      makeMember({ characterName: null }),
+    ]);
     const { draftCharacterName, startEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
     );
 
     // Act
@@ -215,10 +196,12 @@ describe('startEdit / cancelEdit', () => {
 
   it('cancelEdit を呼ぶと isEditing が false になる', () => {
     // Arrange
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
     const { isEditing, startEdit, cancelEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
     );
     startEdit();
 
@@ -231,15 +214,18 @@ describe('startEdit / cancelEdit', () => {
 });
 
 describe('submitEdit', () => {
-  it('API を呼び出して gameSession のメンバーを更新する', async () => {
+  it('API を呼び出し、更新後メンバーを onUpdated に渡す', async () => {
     // Arrange
     const updatedMember = makeMember({ characterName: '新しい名前' });
     vi.mocked(updateMember).mockResolvedValue(updatedMember);
+    const onUpdated = vi.fn();
 
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
     const { draftCharacterName, startEdit, submitEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      onUpdated,
     );
     startEdit();
     draftCharacterName.value = '新しい名前';
@@ -251,19 +237,18 @@ describe('submitEdit', () => {
     expect(updateMember).toHaveBeenCalledWith(SESSION_ID, MEMBER_ID, {
       characterName: '新しい名前',
     });
-    expect(
-      gameSession.value?.members.find((m) => m.id === MEMBER_ID)
-        ?.characterName,
-    ).toBe('新しい名前');
+    expect(onUpdated).toHaveBeenCalledWith(updatedMember);
   });
 
   it('成功後に isEditing が false になる', async () => {
     // Arrange
     vi.mocked(updateMember).mockResolvedValue(makeMember());
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
     const { isEditing, startEdit, submitEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
     );
     startEdit();
 
@@ -282,10 +267,12 @@ describe('submitEdit', () => {
         resolveUpdate = () => resolve(makeMember());
       }),
     );
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
     const { loading, startEdit, submitEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
     );
     startEdit();
 
@@ -308,8 +295,13 @@ describe('submitEdit', () => {
     } as unknown as ReturnType<typeof useToast>);
     vi.mocked(updateMember).mockRejectedValue(new Error('API error'));
 
-    const gameSession = ref(makeGameSession());
-    const { startEdit, submitEdit } = useMemberEdit(SESSION_ID, gameSession);
+    const members = ref<GameSessionMember[]>([makeMember()]);
+    const { startEdit, submitEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
     startEdit();
 
     // Act
@@ -322,10 +314,12 @@ describe('submitEdit', () => {
   it('API が失敗しても isEditing は true のまま（編集状態を維持する）', async () => {
     // Arrange
     vi.mocked(updateMember).mockRejectedValue(new Error('API error'));
-    const gameSession = ref(makeGameSession());
+    const members = ref<GameSessionMember[]>([makeMember()]);
     const { isEditing, startEdit, submitEdit } = useMemberEdit(
       SESSION_ID,
-      gameSession,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
     );
     startEdit();
 
@@ -336,6 +330,26 @@ describe('submitEdit', () => {
     expect(isEditing.value).toBe(true);
   });
 
+  it('API が失敗した場合は onUpdated を呼び出さない', async () => {
+    // Arrange
+    vi.mocked(updateMember).mockRejectedValue(new Error('API error'));
+    const onUpdated = vi.fn();
+    const members = ref<GameSessionMember[]>([makeMember()]);
+    const { startEdit, submitEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      onUpdated,
+    );
+    startEdit();
+
+    // Act
+    await submitEdit();
+
+    // Assert
+    expect(onUpdated).not.toHaveBeenCalled();
+  });
+
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
     // Arrange
     let resolveUpdate!: () => void;
@@ -344,8 +358,13 @@ describe('submitEdit', () => {
         resolveUpdate = () => resolve(makeMember());
       }),
     );
-    const gameSession = ref(makeGameSession());
-    const { startEdit, submitEdit } = useMemberEdit(SESSION_ID, gameSession);
+    const members = ref<GameSessionMember[]>([makeMember()]);
+    const { startEdit, submitEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
     startEdit();
 
     // Act
@@ -360,8 +379,13 @@ describe('submitEdit', () => {
 
   it('自分のメンバーが存在しない場合は API を呼び出さない', async () => {
     // Arrange
-    const gameSession = ref(makeGameSession({ members: [] }));
-    const { submitEdit } = useMemberEdit(SESSION_ID, gameSession);
+    const members = ref<GameSessionMember[]>([]);
+    const { submitEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
 
     // Act
     await submitEdit();

@@ -1,13 +1,26 @@
 <script setup lang="ts">
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
+import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import type { GameSessionMember } from '@taku-biyori/shared';
-import { UsersRound } from '@lucide/vue';
+import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import { UsersRound, SquarePen } from '@lucide/vue';
+import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
 
 const props = defineProps<{
-  members: GameSessionMember[];
+  gameSession: GameSessionDetail;
 }>();
+
+const emit = defineEmits<{
+  'member-updated': [updated: GameSessionMember];
+}>();
+
+const { canEditCharacterName, startEdit } = useMemberEdit(
+  props.gameSession.id,
+  () => props.gameSession.members,
+  () => props.gameSession.status,
+  (updated) => emit('member-updated', updated),
+);
 </script>
 
 <template>
@@ -16,16 +29,8 @@ const props = defineProps<{
       参加メンバー
     </BaseSectionHeading>
 
-    <div
-      v-for="member in props.members"
-      :key="member.id"
-      class="user-container"
-    >
-      <UserAvatar
-        class="avatar"
-        :size="35"
-        :name="member.userName ?? member.guestName ?? undefined"
-      ></UserAvatar>
+    <div v-for="member in props.gameSession.members" :key="member.id" class="user-container">
+      <UserAvatar class="avatar" :size="35" :name="member.userName ?? member.guestName ?? undefined"></UserAvatar>
 
       <p class="user-name">
         {{ member.userName ?? member.guestName ?? '（未設定）' }}
@@ -34,7 +39,13 @@ const props = defineProps<{
         キャラクター：{{ member.characterName ?? '未設定' }}
       </p>
     </div>
+    <div v-if="canEditCharacterName" class="actions">
+      <BaseButton variant="secondary" :left-icon="SquarePen" @click="startEdit">
+        キャラクターを編集する
+      </BaseButton>
+    </div>
   </BaseCard>
+
 </template>
 
 <style scoped>
@@ -66,6 +77,16 @@ const props = defineProps<{
   .char-name {
     grid-column: 2 / 3;
     grid-row: 2 / 3;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+
+  >* {
+    margin: 0 var(--space-1);
   }
 }
 </style>

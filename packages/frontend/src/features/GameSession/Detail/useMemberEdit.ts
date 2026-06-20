@@ -1,6 +1,6 @@
-import { computed, ref } from 'vue';
-import type { Ref } from 'vue';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import { computed, ref, toValue } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
+import type { GameSessionMember } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import { updateMember } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
@@ -15,7 +15,13 @@ const EDITABLE_STATUSES = new Set<GameSessionStatus>([
 
 export const useMemberEdit = (
   gameSessionId: string,
-  gameSession: Ref<GameSessionDetail | null>,
+  // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
+  //       書き換え可能になり、依存の向き（親→子）が壊れるため。
+  members: MaybeRefOrGetter<GameSessionMember[]>,
+  status: MaybeRefOrGetter<GameSessionStatus | undefined>,
+  // NOTE: 書き込みは callback で所有者（親）に委譲する。composable は
+  //       自分が所有していない状態を直接書き換えない。
+  onUpdated: (updated: GameSessionMember) => void,
 ) => {
   const authStore = useAuthStore();
   const toast = useToast();
@@ -25,18 +31,18 @@ export const useMemberEdit = (
 
   /** ログインユーザー自身のメンバー情報 */
   const myMember = computed(() =>
-    gameSession.value?.members.find(
-      (m) => m.userId === authStore.currentUser?.id,
-    ),
+    toValue(members).find((m) => m.userId === authStore.currentUser?.id),
   );
 
   /** キャラクター名を編集できるか。メンバー登録済みかつセッションが進行中のとき true */
-  const canEditCharacterName = computed(
-    () =>
+  const canEditCharacterName = computed(() => {
+    const currentStatus = toValue(status);
+    return (
       !!myMember.value &&
-      !!gameSession.value &&
-      EDITABLE_STATUSES.has(gameSession.value.status),
-  );
+      currentStatus !== undefined &&
+      EDITABLE_STATUSES.has(currentStatus)
+    );
+  });
 
   /** 編集モードを開始し、現在のキャラクター名で下書きを初期化する */
   function startEdit() {
@@ -51,7 +57,7 @@ export const useMemberEdit = (
 
   /**
    * キャラクター名の変更を送信する。
-   * 成功後に gameSession のメンバー情報を更新し、編集モードを終了する。
+   * 成功後に onUpdated コールバックで更新後メンバーを所有者へ渡し、編集モードを終了する。
    * 失敗時は isEditing を維持したまま toast.error を表示する。
    * loading 中の重複呼び出しは無視する。
    */
@@ -59,18 +65,12 @@ export const useMemberEdit = (
     if (loading.value || !myMember.value) return;
     loading.value = true;
     const memberId = myMember.value.id;
+
     try {
       const updated = await updateMember(gameSessionId, memberId, {
         characterName: draftCharacterName.value || null,
       });
-      if (gameSession.value) {
-        gameSession.value = {
-          ...gameSession.value,
-          members: gameSession.value.members.map((m) =>
-            m.id === memberId ? updated : m,
-          ),
-        };
-      }
+      onUpdated(updated);
       isEditing.value = false;
     } catch {
       toast.error('キャラクター名の更新に失敗しました');

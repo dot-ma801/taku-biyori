@@ -11,6 +11,8 @@ import { computed, ref } from 'vue';
 const props = defineProps<{
   /** 更新フローのときのみ渡す。未指定のとき候補日はローカル管理（pendingDates） */
   gameSessionId?: string;
+  /** 更新フローで日程が確定済みのとき true。候補日セクションを非表示にする */
+  isScheduled?: boolean;
 }>();
 
 const openUntil = defineModel<string>('openUntil', { default: '' });
@@ -25,6 +27,9 @@ const pendingDates = defineModel<string[]>('pendingDates', {
 });
 
 const selectMultiDays = ref(false);
+const effectiveSelectMultiDays = computed(
+  () => !props.isScheduled && selectMultiDays.value,
+);
 
 // 更新フロー: API と同期する composable
 const availability = props.gameSessionId
@@ -61,13 +66,14 @@ const selectedDates = computed<string[]>({
 
     <template #default>
       <BaseSwitch
+        v-if="!props.isScheduled"
         class="switch"
         v-model="selectMultiDays"
         label="複数の候補日を選択する"
       ></BaseSwitch>
 
       <div class="contents">
-        <template v-if="selectMultiDays">
+        <template v-if="effectiveSelectMultiDays">
           <BaseDatePicker
             label="候補日"
             multiple

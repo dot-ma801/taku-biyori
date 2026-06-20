@@ -15,6 +15,7 @@ export const useUpdateGameSession = (id: string) => {
   const scheduledAt = ref('');
   const location = ref('');
 
+  const isScheduled = ref(false);
   const loading = ref(false);
   const errorMessage = ref('');
 
@@ -24,6 +25,7 @@ export const useUpdateGameSession = (id: string) => {
 
     try {
       const gameSession = await getGameSession(id);
+      isScheduled.value = gameSession.scheduledAt != null;
       title.value = gameSession.title;
       scenarioName.value = gameSession.scenarioName ?? '';
       maxMembers.value =
@@ -97,6 +99,7 @@ export const useUpdateGameSession = (id: string) => {
   }
 
   return {
+    isScheduled,
     title,
     scenarioName,
     maxMembers,

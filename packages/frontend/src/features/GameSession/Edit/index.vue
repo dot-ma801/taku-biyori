@@ -14,6 +14,8 @@ const props = defineProps<{
   errorMessage: string;
   /** 更新フローのときのみ渡す */
   gameSessionId?: string;
+  /** 更新フローで日程が確定済みのとき true */
+  isScheduled?: boolean;
 }>();
 
 const submitButtonLabel = computed(() =>
@@ -50,6 +52,7 @@ const pendingDates = defineModel<string[]>('pendingDates', {
     ></InputBasicInfo>
     <InputScheduleInfo
       :game-session-id="gameSessionId"
+      :is-scheduled="isScheduled"
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:location="location"

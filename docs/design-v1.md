@@ -138,7 +138,9 @@
 | `created_at` | `timestamp` | |
 | `updated_at` | `timestamp` | |
 
-> 候補日はホスト（Ph1 では卓を作った人）のみ登録可能。ステータスに関係なくいつでも登録できる。
+> 候補日はホスト（Ph1 では卓を作った人）のみ登録可能。
+> ステータスが `draft`・`open`・`scheduling` のときのみ操作可能（追加・更新・削除）。
+> `scheduled_at` が確定済み（非 `null`）の場合は候補日の変更は不可（`409 Conflict`）。
 
 ---
 
@@ -309,6 +311,14 @@ confirmed（実施前）
 ホストが候補日を1つ選んで確定操作をすると、`game_sessions.scheduled_at` にその日付がセットされる。
 これによりステータスが `scheduling` → `confirmed` に遷移する。
 
+#### 確定後の編集フォームの挙動
+
+日程確定後も編集フォーム（`/edit`）へのアクセスは可能。スケジュールセクションの挙動が変わる:
+
+- 「複数の候補日を選択する」スイッチは非表示（常に単一日モード）
+- 「開催日」フィールドは引き続き編集可能
+- 候補日の追加・更新・削除は API レベルでも禁止（`409 Conflict`）
+
 ---
 
 ## 7. API設計
@@ -346,9 +356,9 @@ confirmed（実施前）
 | メソッド | パス | 概要 |
 |---|---|---|
 | `GET` | `/api/game-sessions/:id/availability-dates` | 候補日一覧（回答含む） |
-| `POST` | `/api/game-sessions/:id/availability-dates` | 候補日を1件追加 |
-| `PUT` | `/api/game-sessions/:id/availability-dates` | 候補日を一括更新（`{ dates }` で全件置き換え、差分は追加/削除） |
-| `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日を1件削除 |
+| `POST` | `/api/game-sessions/:id/availability-dates` | 候補日を1件追加（確定済みは `409`） |
+| `PUT` | `/api/game-sessions/:id/availability-dates` | 候補日を一括更新（`{ dates }` で全件置き換え、差分は追加/削除）（確定済みは `409`） |
+| `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日を1件削除（確定済みは `409`） |
 | `POST` | `/api/game-sessions/:id/availability-dates/:dateId/confirm` | 候補日確定（`scheduled_at` セット） |
 | `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/responses` | 日程回答（◯△×）登録・更新 |
 

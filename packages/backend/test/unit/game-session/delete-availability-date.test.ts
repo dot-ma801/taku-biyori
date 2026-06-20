@@ -6,6 +6,12 @@ const makeRepo = (
   overrides: Partial<DeleteAvailabilityDateRepository> = {},
 ): DeleteAvailabilityDateRepository => ({
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
+  findStatusFields: vi.fn().mockResolvedValue({
+    isPublished: true,
+    openUntil: null,
+    scheduledAt: null,
+    completedAt: null,
+  }),
   findCandidateOwner: vi.fn().mockResolvedValue({ gameSessionId: 'session-1' }),
   deleteDateById: vi.fn().mockResolvedValue(undefined),
   ...overrides,
@@ -82,6 +88,30 @@ describe('deleteAvailabilityDate', () => {
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
+  });
+
+  it('日程が確定済みの場合は conflict を返す', async () => {
+    // Arrange
+    // confirmed ステータス: 公開済み・openUntil が過去・scheduledAt 設定済み・完了なし
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        isPublished: true,
+        openUntil: new Date('2026-01-01'),
+        scheduledAt: new Date('2026-06-30'),
+        completedAt: null,
+      }),
+    });
+
+    // Act
+    const result = await deleteAvailabilityDate(
+      repo,
+      'session-1',
+      'date-1',
+      'user-1',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'conflict' });
   });
 
   it('deleteDateById に dateId を渡す', async () => {

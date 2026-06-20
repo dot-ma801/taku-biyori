@@ -43,6 +43,7 @@ const {
   loading: loadingStatus,
   completeSession,
   canComplete,
+  isHost,
 } = useGameSessionStatus(props.gameSessionId, gameSession);
 const {
   canJoin,
@@ -86,6 +87,7 @@ const gameSessionDateTime = computed(
         <!-- component を分割するか？ -->
         <div class="button-area">
           <BaseButton
+            v-if="isHost"
             :left-icon="SquarePen"
             variant="secondary"
             @click="onClickEdit"

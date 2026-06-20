@@ -36,19 +36,20 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus(input)).toBe('scheduling');
   });
 
-  it('is_published=true かつ open_until=null なら scheduling', () => {
+  it('is_published=true かつ open_until=null なら open（締め切りなし）', () => {
     // Arrange
     const input = { ...base, isPublished: true, openUntil: null };
 
     // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('scheduling');
+    expect(getGameSessionStatus(input)).toBe('open');
   });
 
-  it('scheduled_at が確定済みで当日前なら confirmed', () => {
+  it('open_until が過去かつ scheduled_at が確定済みで当日前なら confirmed', () => {
     // Arrange
     const input = {
       ...base,
       isPublished: true,
+      openUntil: daysFromNow(-7),
       scheduledAt: daysFromNow(7),
     };
 
@@ -56,27 +57,46 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus(input)).toBe('confirmed');
   });
 
-  it('scheduled_at が今日なら today', () => {
+  it('open_until が過去かつ scheduled_at が今日なら today', () => {
     // Arrange
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const input = { ...base, isPublished: true, scheduledAt: today };
+    const input = {
+      ...base,
+      isPublished: true,
+      openUntil: daysFromNow(-1),
+      scheduledAt: today,
+    };
 
     // Act / Assert
     expect(getGameSessionStatus(input)).toBe('today');
   });
 
-  it('completed_at がセット済みなら completed', () => {
+  it('open_until が過去かつ completed_at がセット済みなら completed', () => {
     // Arrange
     const input = {
       ...base,
       isPublished: true,
+      openUntil: daysFromNow(-7),
       scheduledAt: daysFromNow(-1),
       completedAt: new Date(),
     };
 
     // Act / Assert
     expect(getGameSessionStatus(input)).toBe('completed');
+  });
+
+  it('open_until が未来かつ scheduled_at が設定済みでも open（募集期間を優先）', () => {
+    // Arrange
+    const input = {
+      ...base,
+      isPublished: true,
+      openUntil: daysFromNow(3),
+      scheduledAt: daysFromNow(7),
+    };
+
+    // Act / Assert
+    expect(getGameSessionStatus(input)).toBe('open');
   });
 
   it('now を注入して比較できる', () => {

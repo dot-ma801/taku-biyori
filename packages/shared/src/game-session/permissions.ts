@@ -28,8 +28,6 @@ type ActionPolicy = {
   statuses: GameSessionStatus[];
 };
 
-const ALL_STATUSES = Object.values(GameSessionStatus);
-
 export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   [GameSessionAction.joinSession]: {
     roles: ['member'],

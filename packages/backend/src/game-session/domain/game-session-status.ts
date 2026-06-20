@@ -12,12 +12,14 @@ export const getGameSessionStatus = (
   now: Date = new Date(),
 ): GameSessionStatus => {
   if (!session.isPublished) return GameSessionStatus.draft;
-  if (session.openUntil && now < session.openUntil)
+  if (session.scheduledAt) {
+    if (session.completedAt) return GameSessionStatus.completed;
+    if (isToday(session.scheduledAt, now)) return GameSessionStatus.today;
+    return GameSessionStatus.confirmed;
+  }
+  if (!session.openUntil || now < session.openUntil)
     return GameSessionStatus.open;
-  if (!session.scheduledAt) return GameSessionStatus.scheduling;
-  if (session.completedAt) return GameSessionStatus.completed;
-  if (isToday(session.scheduledAt, now)) return GameSessionStatus.today;
-  return GameSessionStatus.confirmed;
+  return GameSessionStatus.scheduling;
 };
 
 const isToday = (date: Date, now: Date): boolean =>

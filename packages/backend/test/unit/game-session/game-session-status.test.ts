@@ -36,12 +36,12 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus(input)).toBe('scheduling');
   });
 
-  it('is_published=true かつ open_until=null なら scheduling', () => {
+  it('is_published=true かつ open_until=null なら open（締め切りなし）', () => {
     // Arrange
     const input = { ...base, isPublished: true, openUntil: null };
 
     // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('scheduling');
+    expect(getGameSessionStatus(input)).toBe('open');
   });
 
   it('scheduled_at が確定済みで当日前なら confirmed', () => {

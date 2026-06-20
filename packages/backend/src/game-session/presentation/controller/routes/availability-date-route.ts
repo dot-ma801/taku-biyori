@@ -85,6 +85,8 @@ export const registerAvailabilityDateRoute = (
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'conflict')
+      return c.json({ error: 'Conflict: already scheduled' }, 409);
     return c.json(result.dates satisfies AvailabilityDate[]);
   });
 
@@ -112,6 +114,8 @@ export const registerAvailabilityDateRoute = (
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'conflict')
+      return c.json({ error: 'Conflict: already scheduled' }, 409);
     return c.json(result.date satisfies AvailabilityDate, 201);
   });
 
@@ -127,6 +131,8 @@ export const registerAvailabilityDateRoute = (
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'conflict')
+      return c.json({ error: 'Conflict: already scheduled' }, 409);
     return new Response(null, { status: 204 });
   });
 

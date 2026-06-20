@@ -4,7 +4,7 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
-import { UsersRound, SquarePen } from '@lucide/vue';
+import { UsersRound, SquarePen, Check } from '@lucide/vue';
 import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
 
 const props = defineProps<{
@@ -15,12 +15,21 @@ const emit = defineEmits<{
   'member-updated': [updated: GameSessionMember];
 }>();
 
-const { canEditCharacterName, startEdit } = useMemberEdit(
-  props.gameSession.id,
-  () => props.gameSession.members,
-  () => props.gameSession.status,
-  (updated) => emit('member-updated', updated),
-);
+const {
+  myMember,
+  canEditCharacterName,
+  isEditing,
+  draftCharacterName,
+  isDirty,
+  loading,
+  startEdit,
+  cancelEdit,
+  submitEdit, } = useMemberEdit(
+    props.gameSession.id,
+    () => props.gameSession.members,
+    () => props.gameSession.status,
+    (updated) => emit('member-updated', updated),
+  );
 </script>
 
 <template>
@@ -35,13 +44,19 @@ const { canEditCharacterName, startEdit } = useMemberEdit(
       <p class="user-name">
         {{ member.userName ?? member.guestName ?? '（未設定）' }}
       </p>
-      <p class="char-name">
+      <p v-if="!isEditing" class="char-name">
         キャラクター：{{ member.characterName ?? '未設定' }}
+      </p>
+      <p v-else class="char-name">
+        キャラクター：編集中
       </p>
     </div>
     <div v-if="canEditCharacterName" class="actions">
-      <BaseButton variant="secondary" :left-icon="SquarePen" @click="startEdit">
+      <BaseButton v-if="canEditCharacterName && !isEditing" variant="secondary" :left-icon="SquarePen" @click="startEdit">
         キャラクターを編集する
+      </BaseButton>
+      <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading">
+        完了
       </BaseButton>
     </div>
   </BaseCard>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
+import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
@@ -47,12 +48,13 @@ const {
       <p v-if="!isEditing" class="char-name">
         キャラクター：{{ member.characterName ?? '未設定' }}
       </p>
-      <p v-else class="char-name">
-        キャラクター：編集中
-      </p>
+
+      <BaseTextBox v-else class="char-name" v-model="draftCharacterName" label="キャラクター名" placeholder="キャラクター名を入力"
+        :disabled="loading"></BaseTextBox>
     </div>
     <div v-if="canEditCharacterName" class="actions">
-      <BaseButton v-if="canEditCharacterName && !isEditing" variant="secondary" :left-icon="SquarePen" @click="startEdit">
+      <BaseButton v-if="canEditCharacterName && !isEditing" variant="secondary" :left-icon="SquarePen"
+        @click="startEdit">
         キャラクターを編集する
       </BaseButton>
       <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading">

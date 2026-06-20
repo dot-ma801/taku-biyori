@@ -1,6 +1,8 @@
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
+import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
 
 export interface DeleteAvailabilityDateRepository extends GameSessionHostRepository {
+  findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
   findCandidateOwner(dateId: string): Promise<{ gameSessionId: string } | null>;
   deleteDateById(dateId: string): Promise<void>;
 }
@@ -8,7 +10,8 @@ export interface DeleteAvailabilityDateRepository extends GameSessionHostReposit
 export type DeleteAvailabilityDateResult =
   | { type: 'ok' }
   | { type: 'notFound' }
-  | { type: 'forbidden' };
+  | { type: 'forbidden' }
+  | { type: 'conflict' };
 
 export const deleteAvailabilityDate = async (
   repo: DeleteAvailabilityDateRepository,
@@ -23,6 +26,10 @@ export const deleteAvailabilityDate = async (
   const hostUserId = await repo.findHostUserId(candidate.gameSessionId);
   if (!hostUserId) return { type: 'notFound' };
   if (hostUserId !== userId) return { type: 'forbidden' };
+
+  const fields = await repo.findStatusFields(candidate.gameSessionId);
+  if (!fields) return { type: 'notFound' };
+  if (fields.scheduledAt !== null) return { type: 'conflict' };
 
   await repo.deleteDateById(dateId);
   return { type: 'ok' };

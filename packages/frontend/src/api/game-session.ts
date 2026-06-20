@@ -11,6 +11,7 @@ import type {
   UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
+  UpdateMemberInput,
 } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
 
@@ -108,6 +109,17 @@ export function leaveGameSession(id: string, memberId: string): Promise<void> {
   return apiRequest<void>(`/api/game-sessions/${id}/members/${memberId}`, {
     method: 'DELETE',
   });
+}
+
+export async function updateMember(
+  gameSessionId: string,
+  memberId: string,
+  input: UpdateMemberInput,
+): Promise<GameSessionMember> {
+  return (await apiRequest<GameSessionMember>(
+    `/api/game-sessions/${gameSessionId}/members/${memberId}`,
+    { method: 'PATCH', body: input },
+  ))!;
 }
 
 export async function updateGameSessionStatus(

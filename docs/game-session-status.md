@@ -4,26 +4,26 @@
 
 ## 導出に使うフィールド
 
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `is_published` | boolean | 公開済みかどうか |
-| `open_until` | Date \| null | 募集締め切り日。null = 締め切りなし |
-| `scheduled_at` | Date \| null | 確定した開催日。null = 未確定 |
-| `completed_at` | Date \| null | 完了日時。null = 未完了 |
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+| 公開済みフラグ | `is_published` | boolean | 公開済みかどうか |
+| 募集締め切り日 | `open_until` | Date \| null | 募集締め切り日。null = 締め切りなし |
+| 確定開催日 | `scheduled_at` | Date \| null | 確定した開催日。null = 未確定 |
+| 完了日時 | `completed_at` | Date \| null | 完了日時。null = 未完了 |
 
 ## 導出フローチャート
 
 ```mermaid
 flowchart TD
-    A([開始]) --> B{is_published?}
+    A([開始]) --> B{公開済み?}
     B -- false --> DRAFT[draft]
-    B -- true --> C{open_until が null\nまたは未来?}
+    B -- true --> C{募集締め切り日 が null\nまたは未来?}
     C -- true --> OPEN[open]
-    C -- false --> D{scheduled_at が\nセット済み?}
+    C -- false --> D{確定開催日 が\nセット済み?}
     D -- false --> SCHEDULING[scheduling]
-    D -- true --> E{completed_at が\nセット済み?}
+    D -- true --> E{完了日時 が\nセット済み?}
     E -- true --> COMPLETED[completed]
-    E -- false --> F{scheduled_at が\n今日?}
+    E -- false --> F{確定開催日 が\n今日?}
     F -- true --> TODAY[today]
     F -- false --> CONFIRMED[confirmed]
 ```

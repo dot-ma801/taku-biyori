@@ -7,6 +7,7 @@ import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisp
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { computed } from 'vue';
+
 import {
   Album,
   UsersRound,
@@ -27,8 +28,15 @@ const {
   gameSession,
   loading: loadingDetail,
   errorMessage,
+  patchGameSession,
   onClickEdit,
 } = useGetGameSessionDetail(props.gameSessionId);
+
+// imo: gameSession を配下のあらゆるコンポーネントで使用するから、 provide したほうがいいのでは？
+// provide したコンポーネントの破棄によって、provide したデータも破棄されるから、残存リスクもないし。store使うよりいいのでは？
+//
+// provide('gameSession', gameSession);
+
 const {
   publishSession,
   canPublish,
@@ -125,8 +133,8 @@ const gameSessionDateTime = computed(
     <StatusDisplay :game-session-status="gameSession.status"></StatusDisplay>
     <MemoDisplay :text="description"></MemoDisplay>
     <ScheduleDisplay
-      :game-session-id="props.gameSessionId"
-      :members="gameSession.members"
+      :game-session="gameSession"
+      @session-updated="patchGameSession"
     ></ScheduleDisplay>
     <MemberDisplay :members="gameSession.members"></MemberDisplay>
   </div>

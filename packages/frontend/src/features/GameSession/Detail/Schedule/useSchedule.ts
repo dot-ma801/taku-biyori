@@ -1,6 +1,7 @@
-import { ref, computed, onMounted } from 'vue';
-import type { Ref } from 'vue';
+import { ref, computed, onMounted, toValue } from 'vue';
+import type { Ref, MaybeRefOrGetter } from 'vue';
 import type { AvailabilityDate } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import {
   listAvailabilityDates,
   updateAvailabilityDateResponse,
@@ -16,6 +17,7 @@ const CYCLE: Record<Answer, Answer> = {
 export const useSchedule = (
   gameSessionId: string,
   myMemberId: Ref<string | null>,
+  status: MaybeRefOrGetter<GameSessionStatus | undefined>,
 ) => {
   const availabilityDates = ref<AvailabilityDate[]>([]);
   const loading = ref(false);
@@ -34,6 +36,11 @@ export const useSchedule = (
   }
 
   onMounted(fetch);
+
+  const canInputSchedule = computed(() => {
+    const s = toValue(status);
+    return s === GameSessionStatus.open || s === GameSessionStatus.scheduling;
+  });
 
   const isEditing = ref(false);
   const draftAnswers = ref<Map<string, Answer>>(new Map());
@@ -92,6 +99,7 @@ export const useSchedule = (
     availabilityDates,
     loading,
     errorMessage,
+    canInputSchedule,
     isEditing,
     draftAnswers,
     hasChanges,

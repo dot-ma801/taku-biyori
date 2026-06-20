@@ -182,6 +182,27 @@ pnpm --filter @taku-biyori/frontend test --run -- src/features/.../useXxx.test.t
 
 ---
 
+## 7. JSDoc を付ける
+
+返り値に含まれる各メンバー（computed・ref・関数）に JSDoc コメントを付ける。
+
+```ts
+/** ログインユーザーがホストかどうか */
+const isHost = computed(...);
+
+/** 操作が可能かどうか。ホストかつ status が xxx のときのみ true */
+const canSomething = computed(...);
+
+/**
+ * 〇〇を実行する。
+ * 成功後に gameSession を更新する。
+ * loading 中の重複呼び出しは無視する。
+ */
+async function doSomething(...) { ... }
+```
+
+---
+
 ## 完了後にすること
 
 - 実装ファイルとテストファイルのパスをユーザーに伝える

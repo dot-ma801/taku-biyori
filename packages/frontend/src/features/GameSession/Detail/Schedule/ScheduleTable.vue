@@ -12,10 +12,13 @@ const props = defineProps<{
   myMemberId: string | null;
   isEditing: boolean;
   draftAnswers: Map<string, Answer>;
+  canConfirm?: boolean;
+  selectedDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
   cellClick: [dateId: string];
+  dateSelect: [dateId: string];
 }>();
 
 const { getAnswer, okCount } = useScheduleView(
@@ -24,8 +27,10 @@ const { getAnswer, okCount } = useScheduleView(
   toRef(props, 'draftAnswers'),
 );
 
-// 空行の colspan（候補日列 + メンバー列 + 集計列）
-const emptyRowColspan = computed(() => props.members.length + 2);
+// 空行の colspan（確定列? + 候補日列 + メンバー列 + 集計列）
+const emptyRowColspan = computed(
+  () => props.members.length + 2 + (props.canConfirm ? 1 : 0),
+);
 
 function memberDisplayName(member: GameSessionMember): string {
   return member.userName ?? member.guestName ?? '（未設定）';
@@ -70,6 +75,7 @@ function onCellKeydown(
     <table class="table">
       <thead>
         <tr>
+          <th v-if="canConfirm" scope="col" class="th th--confirm">確定</th>
           <th scope="col" class="th th--date">候補日程</th>
           <th
             v-for="member in members"
@@ -85,6 +91,16 @@ function onCellKeydown(
       </thead>
       <tbody>
         <tr v-for="date in availabilityDates" :key="date.id" class="tr">
+          <td v-if="canConfirm" class="td td--confirm">
+            <input
+              type="radio"
+              name="confirm-date"
+              :value="date.id"
+              :checked="selectedDateId === date.id"
+              :aria-label="`${formatDateWithWeekday(date.date)} を確定`"
+              @change="emit('dateSelect', date.id)"
+            />
+          </td>
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
           <td
             v-for="member in members"
@@ -140,6 +156,16 @@ function onCellKeydown(
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.th--confirm {
+  text-align: center;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.td--confirm {
+  text-align: center;
 }
 
 .th--date {

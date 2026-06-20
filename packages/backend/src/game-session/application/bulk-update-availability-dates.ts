@@ -2,8 +2,16 @@ import type {
   AvailabilityDate,
   BulkUpdateAvailabilityDatesInput,
 } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
+import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
+
+const ALLOWED_STATUSES = new Set<GameSessionStatus>([
+  GameSessionStatus.draft,
+  GameSessionStatus.open,
+  GameSessionStatus.scheduling,
+]);
 
 export interface BulkUpdateAvailabilityDatesRepository extends GameSessionHostRepository {
   findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
@@ -31,7 +39,8 @@ export const bulkUpdateAvailabilityDates = async (
 
   const fields = await repo.findStatusFields(gameSessionId);
   if (!fields) return { type: 'notFound' };
-  if (fields.scheduledAt !== null) return { type: 'conflict' };
+  if (!ALLOWED_STATUSES.has(getGameSessionStatus(fields)))
+    return { type: 'conflict' };
 
   const dates = await repo.replaceAllDates(gameSessionId, input.dates);
   return { type: 'ok', dates };

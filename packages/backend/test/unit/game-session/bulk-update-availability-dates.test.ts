@@ -81,19 +81,25 @@ describe('bulkUpdateAvailabilityDates', () => {
 
   it('日程が確定済みの場合は conflict を返す', async () => {
     // Arrange
+    // confirmed ステータス: 公開済み・openUntil が過去・scheduledAt 設定済み・完了なし
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: true,
-        openUntil: null,
+        openUntil: new Date('2026-01-01'),
         scheduledAt: new Date('2026-06-30'),
         completedAt: null,
       }),
     });
 
     // Act
-    const result = await bulkUpdateAvailabilityDates(repo, 'session-1', 'user-1', {
-      dates: ['2026-07-01'],
-    });
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'session-1',
+      'user-1',
+      {
+        dates: ['2026-07-01'],
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'conflict' });

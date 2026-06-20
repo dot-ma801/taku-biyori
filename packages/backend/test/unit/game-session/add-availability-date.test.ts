@@ -67,10 +67,11 @@ describe('addAvailabilityDate', () => {
 
   it('日程が確定済みの場合は conflict を返す', async () => {
     // Arrange
+    // confirmed ステータス: 公開済み・openUntil が過去・scheduledAt 設定済み・完了なし
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: true,
-        openUntil: null,
+        openUntil: new Date('2026-01-01'),
         scheduledAt: new Date('2026-06-30'),
         completedAt: null,
       }),

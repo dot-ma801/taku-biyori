@@ -25,7 +25,7 @@ export const useUpdateGameSession = (id: string) => {
 
     try {
       const gameSession = await getGameSession(id);
-      isScheduled.value = gameSession.scheduledAt !== null && gameSession.scheduledAt !== undefined;
+      isScheduled.value = gameSession.scheduledAt != null;
       title.value = gameSession.title;
       scenarioName.value = gameSession.scenarioName ?? '';
       maxMembers.value =

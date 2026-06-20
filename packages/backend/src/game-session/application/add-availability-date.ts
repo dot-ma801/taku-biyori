@@ -2,8 +2,16 @@ import type {
   AvailabilityDate,
   CreateAvailabilityDateInput,
 } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
+import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
+
+const ALLOWED_STATUSES = new Set<GameSessionStatus>([
+  GameSessionStatus.draft,
+  GameSessionStatus.open,
+  GameSessionStatus.scheduling,
+]);
 
 export interface AddAvailabilityDateRepository extends GameSessionHostRepository {
   findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
@@ -28,7 +36,8 @@ export const addAvailabilityDate = async (
 
   const fields = await repo.findStatusFields(gameSessionId);
   if (!fields) return { type: 'notFound' };
-  if (fields.scheduledAt !== null) return { type: 'conflict' };
+  if (!ALLOWED_STATUSES.has(getGameSessionStatus(fields)))
+    return { type: 'conflict' };
 
   const date = await repo.addDate(gameSessionId, input.date);
   return { type: 'ok', date };

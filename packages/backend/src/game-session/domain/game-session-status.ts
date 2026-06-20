@@ -12,13 +12,13 @@ export const getGameSessionStatus = (
   now: Date = new Date(),
 ): GameSessionStatus => {
   if (!session.isPublished) return GameSessionStatus.draft;
+  if (!session.openUntil || now < session.openUntil)
+    return GameSessionStatus.open;
   if (session.scheduledAt) {
     if (session.completedAt) return GameSessionStatus.completed;
     if (isToday(session.scheduledAt, now)) return GameSessionStatus.today;
     return GameSessionStatus.confirmed;
   }
-  if (!session.openUntil || now < session.openUntil)
-    return GameSessionStatus.open;
   return GameSessionStatus.scheduling;
 };
 

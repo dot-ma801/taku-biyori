@@ -365,6 +365,31 @@ export const useEdit = (
 **例外**: composable がその状態の所有者自身（自分で `ref()` を宣言している）の場合のみ、
 内部で `.value =` してよい。props 境界をまたいで受け取った値は書き換えない。
 
+### 「サーバ値」と「編集ドラフト」は別物として管理する
+
+API 由来の値（＝真実）と、UI で編集中の値（＝ドラフト）を**同一の状態にしない**。
+同一視すると「元の値」が残らず変更検知ができず、キャンセルで戻す処理も複雑になる。
+（Pinia などのグローバルストアは使わない方針。下記のコンポーネント所有で完結させる）
+
+データフローは次の3者で固定する。
+
+| 状態 | 所有者 | 渡し方 |
+|---|---|---|
+| original（サーバ値・真実） | 親（fetch した側） | **readonly な props** で子へ下ろす |
+| draft（編集中のコピー） | **子（編集UI）** | 子の中でコピーして持つ |
+| 変更通知 | — | 保存確定値を **emit** で親へ返す |
+
+- original は props（実質 readonly）で配るだけ。子は決して書き換えない
+- draft は子の中で original から**コピー**して作る
+  （オブジェクトなら `structuredClone`、文字列など**プリミティブはそのまま代入でコピー扱い**。
+  不要な deepcopy はしない）
+- 変更検知は `isDirty = draft !== baseline` で行う。
+  保存ボタンの活性判定など UI の関心事なら**子側で**比較する
+  （親で判定したいときは emit した object と親が持つ original を比較）
+- ⚠️ **罠**: 再取得などで original（prop）が変わったら draft は古いまま取り残される。
+  `watch(() => props.original, reset)` で draft を作り直すか `:key` で再マウントする
+- 参考実装: `useMemberEdit.ts`（`baseline` / `draftCharacterName` / `isDirty`）
+
 ### `useSession` の使い方（better-auth）
 
 `createAuthClient`（`better-auth/client` の vanilla クライアント）の `useSession` は nanostores の Atom であり、Vue の `ref` ではないため直接リアクティブに使えない。

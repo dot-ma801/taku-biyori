@@ -63,6 +63,33 @@ description: >
   内部で `.value =` してよい。props 境界をまたいで受け取った `Ref` は書き換えない
 - 参考実装: `useScheduleConfirm.ts`（getter + callback）、`useMemberEdit.ts`
 
+### 「サーバ値」と「編集ドラフト」を分ける
+
+API 由来の値（真実）と、編集中の値（ドラフト）を**同じ状態にしない**。
+分けることで変更検知（`isDirty`）が単純になり、キャンセルはドラフト破棄だけで済む。
+（Pinia などのグローバルストアは使わない。コンポーネント所有で完結させる）
+
+| 状態 | 所有 | composable での扱い |
+|---|---|---|
+| baseline（サーバ値） | 親（props で配る） | getter で受けて `computed` で参照 |
+| draft（編集中） | 子（編集UI） | composable 内で `ref` を持つ |
+
+```ts
+// baseline は読み取り元（getter）から導出、draft は composable が所有
+const baseline = computed(() => toValue(member)?.characterName ?? '');
+const draft = ref('');
+const isDirty = computed(() => draft.value !== baseline.value);
+
+function startEdit() {
+  draft.value = baseline.value; // baseline からコピーして編集開始
+}
+```
+
+- 変更検知は `isDirty = draft !== baseline` を `computed` で公開する
+- プリミティブは代入でコピー扱い。オブジェクトを編集するなら `structuredClone` で連動を切る
+- 保存成功時は API 返り値を `onUpdated` で親へ返し、親が baseline（真実）を差し替える
+- 参考実装: `useMemberEdit.ts`（`baseline` / `draftCharacterName` / `isDirty`）
+
 ---
 
 ## 3. テストを先に書く（Red フェーズ）

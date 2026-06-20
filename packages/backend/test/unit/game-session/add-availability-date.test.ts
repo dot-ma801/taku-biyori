@@ -13,6 +13,12 @@ const makeRepo = (
   overrides: Partial<AddAvailabilityDateRepository> = {},
 ): AddAvailabilityDateRepository => ({
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
+  findStatusFields: vi.fn().mockResolvedValue({
+    isPublished: true,
+    openUntil: null,
+    scheduledAt: null,
+    completedAt: null,
+  }),
   addDate: vi.fn().mockResolvedValue(mockDate),
   ...overrides,
 });
@@ -57,6 +63,26 @@ describe('addAvailabilityDate', () => {
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
+  });
+
+  it('日程が確定済みの場合は conflict を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        isPublished: true,
+        openUntil: null,
+        scheduledAt: new Date('2026-06-30'),
+        completedAt: null,
+      }),
+    });
+
+    // Act
+    const result = await addAvailabilityDate(repo, 'session-1', 'user-1', {
+      date: '2026-07-01',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'conflict' });
   });
 
   it('addDate に gameSessionId と date を渡す', async () => {

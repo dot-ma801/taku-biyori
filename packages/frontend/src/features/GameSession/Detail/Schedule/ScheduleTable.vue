@@ -97,6 +97,7 @@ function onCellKeydown(
               name="confirm-date"
               :value="date.id"
               :checked="selectedDateId === date.id"
+              :aria-label="`${formatDateWithWeekday(date.date)} を確定`"
               @change="emit('dateSelect', date.id)"
             />
           </td>

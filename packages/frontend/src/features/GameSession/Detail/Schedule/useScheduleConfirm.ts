@@ -34,7 +34,7 @@ export const useScheduleConfirm = (
    * loading 中の重複呼び出しは無視する。
    */
   async function confirmDate(dateId: string) {
-    if (loading.value) return;
+    if (loading.value || !canConfirm.value) return;
     loading.value = true;
     try {
       const updated = await confirmAvailabilityDate(gameSessionId, dateId);

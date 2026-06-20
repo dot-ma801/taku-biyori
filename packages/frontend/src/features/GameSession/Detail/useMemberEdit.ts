@@ -44,9 +44,18 @@ export const useMemberEdit = (
     );
   });
 
+  /**
+   * 編集の基準値（サーバ由来の現在のキャラクター名）。
+   * draft（編集中の値）と分けて保持し、変更検知の比較対象にする。
+   */
+  const baseline = computed(() => myMember.value?.characterName ?? '');
+
+  /** draft が baseline から変化しているか（保存ボタンの活性判定などに使う） */
+  const isDirty = computed(() => draftCharacterName.value !== baseline.value);
+
   /** 編集モードを開始し、現在のキャラクター名で下書きを初期化する */
   function startEdit() {
-    draftCharacterName.value = myMember.value?.characterName ?? '';
+    draftCharacterName.value = baseline.value;
     isEditing.value = true;
   }
 
@@ -84,6 +93,7 @@ export const useMemberEdit = (
     canEditCharacterName,
     isEditing,
     draftCharacterName,
+    isDirty,
     loading,
     startEdit,
     cancelEdit,

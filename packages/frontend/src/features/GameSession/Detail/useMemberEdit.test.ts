@@ -213,6 +213,62 @@ describe('startEdit / cancelEdit', () => {
   });
 });
 
+describe('isDirty', () => {
+  it('draft が baseline と同じなら false', () => {
+    // Arrange
+    const members = ref<GameSessionMember[]>([makeMember()]);
+    const { isDirty, startEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
+
+    // Act
+    startEdit(); // baseline と同じ値で初期化される
+
+    // Assert
+    expect(isDirty.value).toBe(false);
+  });
+
+  it('draft を baseline から変更すると true', () => {
+    // Arrange
+    const members = ref<GameSessionMember[]>([makeMember()]);
+    const { isDirty, draftCharacterName, startEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
+    startEdit();
+
+    // Act
+    draftCharacterName.value = '別の名前';
+
+    // Assert
+    expect(isDirty.value).toBe(true);
+  });
+
+  it('characterName が null のメンバーで draft が空文字なら false', () => {
+    // Arrange
+    const members = ref<GameSessionMember[]>([
+      makeMember({ characterName: null }),
+    ]);
+    const { isDirty, startEdit } = useMemberEdit(
+      SESSION_ID,
+      members,
+      () => GameSessionStatus.open,
+      vi.fn(),
+    );
+
+    // Act
+    startEdit(); // null → '' で初期化される
+
+    // Assert
+    expect(isDirty.value).toBe(false);
+  });
+});
+
 describe('submitEdit', () => {
   it('API を呼び出し、更新後メンバーを onUpdated に渡す', async () => {
     // Arrange

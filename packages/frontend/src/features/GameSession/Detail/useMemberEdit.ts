@@ -19,6 +19,7 @@ export const useMemberEdit = (
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
   members: MaybeRefOrGetter<GameSessionMember[]>,
   status: MaybeRefOrGetter<GameSessionStatus | undefined>,
+  createdBy: MaybeRefOrGetter<string>,
   // NOTE: 書き込みは callback で所有者（親）に委譲する。composable は
   //       自分が所有していない状態を直接書き換えない。
   onUpdated: (updated: GameSessionMember) => void,
@@ -27,35 +28,54 @@ export const useMemberEdit = (
   const toast = useToast();
   const loading = ref(false);
   const isEditing = ref(false);
-  const draftCharacterName = ref('');
 
-  /** ログインユーザー自身のメンバー情報 */
-  const myMember = computed(() =>
-    toValue(members).find((m) => m.userId === authStore.currentUser?.id),
+  /**
+   * 編集ドラフト（memberId → キャラクター名）。
+   * サーバ値（members）とは分離して保持し、変更検知・キャンセルを成立させる。
+   * この ref はこの composable が所有するので、v-model 経由の書き込みを許可する
+   * （`v-model="draftCharacterNames[member.id]"`）。
+   */
+  const draftCharacterNames = ref<Record<string, string>>({});
+
+  /** 指定メンバーのドラフト値（未初期化なら空文字） */
+  function draftOf(memberId: string) {
+    return draftCharacterNames.value[memberId] ?? '';
+  }
+
+  /** ログインユーザーがこのセッションのホスト（GM）か */
+  const isHost = computed(
+    () =>
+      !!authStore.currentUser &&
+      toValue(createdBy) === authStore.currentUser.id,
   );
 
-  /** キャラクター名を編集できるか。メンバー登録済みかつセッションが進行中のとき true */
+  /** キャラクター名を編集できるか。GM かつセッションが進行中のとき true */
   const canEditCharacterName = computed(() => {
     const currentStatus = toValue(status);
     return (
-      !!myMember.value &&
+      isHost.value &&
       currentStatus !== undefined &&
       EDITABLE_STATUSES.has(currentStatus)
     );
   });
 
-  /**
-   * 編集の基準値（サーバ由来の現在のキャラクター名）。
-   * draft（編集中の値）と分けて保持し、変更検知の比較対象にする。
-   */
-  const baseline = computed(() => myMember.value?.characterName ?? '');
+  /** 指定メンバーのサーバ由来キャラクター名（基準値・空文字フォールバック） */
+  function baselineOf(member: GameSessionMember) {
+    return member.characterName ?? '';
+  }
 
-  /** draft が baseline から変化しているか（保存ボタンの活性判定などに使う） */
-  const isDirty = computed(() => draftCharacterName.value !== baseline.value);
+  /** いずれかのメンバーのドラフトが基準値から変化しているか */
+  const isDirty = computed(() =>
+    toValue(members).some((m) => draftOf(m.id) !== baselineOf(m)),
+  );
 
-  /** 編集モードを開始し、現在のキャラクター名で下書きを初期化する */
+  /** 編集モードを開始し、全メンバーの現在値で下書きを初期化する */
   function startEdit() {
-    draftCharacterName.value = baseline.value;
+    const next: Record<string, string> = {};
+    for (const m of toValue(members)) {
+      next[m.id] = baselineOf(m);
+    }
+    draftCharacterNames.value = next;
     isEditing.value = true;
   }
 
@@ -65,21 +85,25 @@ export const useMemberEdit = (
   }
 
   /**
-   * キャラクター名の変更を送信する。
-   * 成功後に onUpdated コールバックで更新後メンバーを所有者へ渡し、編集モードを終了する。
+   * 変更があったメンバーのキャラクター名をまとめて送信する。
+   * 各成功ごとに onUpdated コールバックで更新後メンバーを所有者へ渡す。
    * 失敗時は isEditing を維持したまま toast.error を表示する。
    * loading 中の重複呼び出しは無視する。
    */
   async function submitEdit() {
-    if (loading.value || !myMember.value) return;
+    if (loading.value) return;
     loading.value = true;
-    const memberId = myMember.value.id;
 
     try {
-      const updated = await updateMember(gameSessionId, memberId, {
-        characterName: draftCharacterName.value || null,
-      });
-      onUpdated(updated);
+      const changed = toValue(members).filter(
+        (m) => draftOf(m.id) !== baselineOf(m),
+      );
+      for (const member of changed) {
+        const updated = await updateMember(gameSessionId, member.id, {
+          characterName: draftOf(member.id) || null,
+        });
+        onUpdated(updated);
+      }
       isEditing.value = false;
     } catch {
       toast.error('キャラクター名の更新に失敗しました');
@@ -89,12 +113,11 @@ export const useMemberEdit = (
   }
 
   return {
-    myMember,
     canEditCharacterName,
     isEditing,
-    draftCharacterName,
     isDirty,
     loading,
+    draftCharacterNames,
     startEdit,
     cancelEdit,
     submitEdit,

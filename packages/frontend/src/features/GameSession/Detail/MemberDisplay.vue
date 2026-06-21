@@ -17,20 +17,20 @@ const emit = defineEmits<{
 }>();
 
 const {
-  myMember,
   canEditCharacterName,
   isEditing,
-  draftCharacterName,
   isDirty,
   loading,
+  draftCharacterNames,
   startEdit,
-  cancelEdit,
-  submitEdit, } = useMemberEdit(
-    props.gameSession.id,
-    () => props.gameSession.members,
-    () => props.gameSession.status,
-    (updated) => emit('member-updated', updated),
-  );
+  submitEdit,
+} = useMemberEdit(
+  props.gameSession.id,
+  () => props.gameSession.members,
+  () => props.gameSession.status,
+  () => props.gameSession.createdBy,
+  (updated) => emit('member-updated', updated),
+);
 </script>
 
 <template>
@@ -39,8 +39,16 @@ const {
       参加メンバー
     </BaseSectionHeading>
 
-    <div v-for="member in props.gameSession.members" :key="member.id" class="user-container">
-      <UserAvatar class="avatar" :size="35" :name="member.userName ?? member.guestName ?? undefined"></UserAvatar>
+    <div
+      v-for="member in props.gameSession.members"
+      :key="member.id"
+      class="user-container"
+    >
+      <UserAvatar
+        class="avatar"
+        :size="35"
+        :name="member.userName ?? member.guestName ?? undefined"
+      ></UserAvatar>
 
       <p class="user-name">
         {{ member.userName ?? member.guestName ?? '（未設定）' }}
@@ -49,20 +57,35 @@ const {
         キャラクター：{{ member.characterName ?? '未設定' }}
       </p>
 
-      <BaseTextBox v-else class="char-name" v-model="draftCharacterName" label="キャラクター名" placeholder="キャラクター名を入力"
-        :disabled="loading"></BaseTextBox>
+      <BaseTextBox
+        v-else
+        class="char-name"
+        v-model="draftCharacterNames[member.id]"
+        label="キャラクター名"
+        placeholder="キャラクター名を入力"
+        :disabled="loading"
+      ></BaseTextBox>
     </div>
     <div v-if="canEditCharacterName" class="actions">
-      <BaseButton v-if="canEditCharacterName && !isEditing" variant="secondary" :left-icon="SquarePen"
-        @click="startEdit">
+      <BaseButton
+        v-if="canEditCharacterName && !isEditing"
+        variant="secondary"
+        :left-icon="SquarePen"
+        @click="startEdit"
+      >
         キャラクターを編集する
       </BaseButton>
-      <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading">
+      <BaseButton
+        v-else
+        :left-icon="Check"
+        @click="submitEdit"
+        :loading="loading"
+        :disabled="!isDirty"
+      >
         完了
       </BaseButton>
     </div>
   </BaseCard>
-
 </template>
 
 <style scoped>
@@ -102,7 +125,7 @@ const {
   justify-content: flex-end;
   margin-top: var(--space-3);
 
-  >* {
+  > * {
     margin: 0 var(--space-1);
   }
 }

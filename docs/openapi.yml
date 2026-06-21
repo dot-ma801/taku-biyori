@@ -436,14 +436,19 @@ paths:
   /api/game-sessions/{id}/guest-members:
     parameters:
       - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/GuestToken'
 
     post:
       tags: [GameSessionMembers]
-      summary: ゲストリンク経由でメンバー参加
+      summary: ゲストリンク経由でメンバー参加（完全匿名）
       description: |
-        ゲストリンク経由でセッションにメンバーとして参加する。
-        認証不要。`user_id` は null として登録され、`guest_name` に入力した名前を使用する。
-        ステータスが `confirmed` 以降は参加不可。
+        ゲスト招待リンク経由でセッションにメンバーとして参加する。**認証不要**。
+        `user_id` は null として登録され、`guest_name` に入力した名前を使用する。
+
+        - `X-Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
+        - 参加できるのは `status === open` のときのみ（通常参加と同条件）。それ以外は `422`。
+        - **重複参加を許容**する（本人確認手段がないため。同名でも別レコードになる）。
+        - 満員（maxMembers）チェックは行わない（通常参加にも無いため揃える）。
       operationId: joinGameSessionAsGuest
       security: []
       requestBody:
@@ -461,14 +466,20 @@ paths:
                 $ref: '#/components/schemas/GameSessionMember'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '409':
-          description: すでに参加済み
+        '403':
+          description: X-Guest-Token が卓のトークンと一致しない
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '423':
-          $ref: '#/components/responses/Locked'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: 卓が参加受付状態（open）でない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game-sessions/{id}/members/{memberId}:
     parameters:
@@ -637,21 +648,15 @@ paths:
 
     put:
       tags: [Schedules]
-      summary: 日程回答を登録・更新（◯△×）
+      summary: 日程回答を登録・更新（◯△×・ログインユーザー）
       description: |
-        メンバーが候補日に対して回答する。既存の回答があれば上書き。
-        ステータスが `confirmed` 以降は回答不可。
-
-        ## 認証あり（ログインユーザー）
+        ログインユーザーが候補日に対して回答する。既存の回答があれば上書き。
         Cookie のセッション情報からユーザーを解決し、そのユーザーに紐づく
-        メンバーレコードを自動で特定する。`memberId` は省略可。
+        メンバーレコードを自動で特定する。**自分の回答のみ**編集可。
 
-        ## 認証なし（ゲスト）
-        `memberId` は必須。指定した `memberId` が `user_id=null`（ゲスト）で
-        あることをサーバー側で検証する。`user_id != null` のメンバーを指定した
-        場合は `403` を返す。
+        ゲスト（`user_id = null`）の回答はこのエンドポイントでは行わない。
+        ゲストは `PUT .../guest-responses` を使う。
       operationId: upsertAvailabilityResponse
-      security: []
       requestBody:
         required: true
         content:
@@ -673,6 +678,50 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '423':
           $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/availability-dates/{dateId}/guest-responses:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/DateId'
+      - $ref: '#/components/parameters/GuestToken'
+
+    put:
+      tags: [Schedules]
+      summary: ゲストの日程回答を登録・更新（◯△×・完全匿名）
+      description: |
+        ゲストが候補日に対して回答する。既存の回答があれば上書き。**認証不要**。
+
+        - `X-Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
+        - `memberId` は必須。指定した `memberId` がその卓の
+          **ゲストメンバー（`user_id = null`）**であることをサーバーで検証する。
+          `user_id != null`（ログイン参加者）のメンバーを指定した場合は `403`。
+        - 本人確認はしないため、トークンさえ持っていれば**どのゲストでも全ゲスト列を編集可**
+          （調整さん方式）。
+      operationId: upsertGuestAvailabilityResponse
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestUpsertAvailabilityResponseInput'
+      responses:
+        '200':
+          description: 登録・更新後の回答
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: トークン不一致、または非ゲストメンバーの回答を編集しようとした
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ========== Guest Links ==========
 
@@ -701,32 +750,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /join/{token}:
-    parameters:
-      - name: token
-        in: path
-        required: true
-        description: ゲストリンクのトークン（nanoid等で生成した推測困難な文字列）
-        schema:
-          type: string
-
-    get:
-      tags: [GuestLinks]
-      summary: ゲストリンクプレビュー
-      description: |
-        トークンに紐づく卓の概要を返す。未ログインユーザーも参照可能。
-        参加するにはログインが必要。
-      operationId: previewGuestLink
-      security: []
-      responses:
-        '200':
-          description: 卓のプレビュー情報
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GuestLinkPreview'
-        '404':
-          $ref: '#/components/responses/NotFound'
+  # NOTE: 旧 GET /join/{token}（ゲストリンクプレビュー）と専用ページ /join/[token] は廃止。
+  #       ゲストはログインユーザーと同じ卓詳細画面 /game-sessions/:id（GET /api/game-sessions/:id）を使う。
+  #       閲覧はトークン不要・公開済み前提。トークンは参加/回答 API の X-Guest-Token でのみ使う。
 
   # ========== Profile ==========
 
@@ -808,6 +834,17 @@ components:
       schema:
         type: string
         format: uuid
+
+    GuestToken:
+      name: X-Guest-Token
+      in: header
+      required: true
+      description: |
+        ゲスト招待リンクのトークン（game_sessions.guest_link_token）。
+        ゲストの参加・回答を認可する capability として扱う。
+        サーバーは対象の卓の guest_link_token と一致するか検証し、不一致なら 403 を返す。
+      schema:
+        type: string
 
   # ========== Responses ==========
   responses:
@@ -1296,11 +1333,27 @@ components:
     UpsertAvailabilityResponseInput:
       type: object
       required: [answer]
+      description: |
+        ログインユーザー用。回答対象メンバーは Cookie のセッションから自動解決するため
+        memberId は受け取らない（自分の回答のみ編集可）。
+      properties:
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
+        comment:
+          type: string
+          maxLength: 200
+
+    GuestUpsertAvailabilityResponseInput:
+      type: object
+      required: [memberId, answer]
+      description: |
+        ゲスト用。memberId 必須。指定したメンバーはその卓のゲストメンバー
+        （user_id = null）でなければならない。認可は X-Guest-Token ヘッダーで行う。
       properties:
         memberId:
           type: string
           format: uuid
-          description: ゲストが回答対象メンバーを明示する場合に指定。ログインユーザーは省略可（Cookie から自動解決）
+          description: 回答対象のゲストメンバー（game_session_members.id, user_id = null）
         answer:
           $ref: '#/components/schemas/ScheduleAnswer'
         comment:
@@ -1311,36 +1364,13 @@ components:
 
     GuestLink:
       type: object
-      required: [token, url]
+      required: [token]
       properties:
         token:
           type: string
-          description: nanoid等で生成した推測困難なトークン
-        url:
-          type: string
-          format: uri
-          example: https://example.com/join/v2f8xK3pQr
-          description: フロントエンドの参加URL
-
-    GuestLinkPreview:
-      type: object
-      description: 未ログインユーザーも参照可能な卓の概要
-      required: [gameSessionId, title, status]
-      properties:
-        gameSessionId:
-          type: string
-          format: uuid
-        title:
-          type: string
-          example: 蒼き月の夜卓
-        scenarioName:
-          type: [string, 'null']
-        status:
-          $ref: '#/components/schemas/GameSessionStatus'
-        memberCount:
-          type: integer
-        maxMembers:
-          type: [integer, 'null']
+          description: |
+            推測困難なゲスト招待トークン（game_sessions.guest_link_token）。
+            フロントはこれを使い `/game-sessions/{id}?token={token}` 形式の招待リンクを組み立てて配る。
 
     # ---------- Profile ----------
 

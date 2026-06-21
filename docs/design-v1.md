@@ -42,8 +42,7 @@
 | `/profile/setting` | プロフィール設定 |
 | `/game-sessions` | セッション一覧 |
 | `/game-sessions/new` | セッション新規作成 |
-| `/game-sessions/[id]` | セッション詳細 |
-| `/join/[token]` | ゲストリンク参加（フロントエンドページ） |
+| `/game-sessions/[id]` | セッション詳細（ゲストもこの画面を使う。ゲスト招待は `/game-sessions/[id]?token=<guest_link_token>` 付きリンクで配る） |
 
 ---
 
@@ -297,6 +296,10 @@ confirmed（実施前）
 | ログインユーザー | アカウントで登録 | プロフィールの name を自動使用 |
 | ゲストユーザー | ゲストリンクを踏んで名前を入力 | 入力した名前（`guest_name`） |
 
+> ゲスト参加は**完全匿名（ログイン不要）**。`user_id` は `null` で登録する。
+> 本人確認の手段を持たないため**重複参加を許容**する（同名でも別レコードとして登録される。調整さんと同方針）。
+> 参加可能なのは `status === open` のときのみ（通常参加と同条件）。
+
 ### 日程調整の回答権限
 
 | ユーザー種別 | 編集できる回答 |
@@ -305,6 +308,8 @@ confirmed（実施前）
 | ゲストユーザー | セッション内の全ゲストの回答（本人確認不可のため） |
 
 > ゲストの回答は全員分が編集可能な状態でそのまま表示される。
+> ゲストの回答は専用エンドポイント `guest-responses` 経由で行い、`X-Guest-Token` ヘッダーでトークン検証する。
+> ログイン参加者の回答（`user_id != null`）はゲスト経路からは編集できない。
 
 ### 日程確定
 
@@ -347,7 +352,7 @@ confirmed（実施前）
 |---|---|---|
 | `GET` | `/api/game-sessions/:id/members` | メンバー一覧取得 |
 | `POST` | `/api/game-sessions/:id/members` | メンバー参加（ログインユーザー） |
-| `POST` | `/api/game-sessions/:id/guest-members` | ゲストリンク経由でメンバー参加 |
+| `POST` | `/api/game-sessions/:id/guest-members` | ゲストリンク経由でメンバー参加（認証不要・`X-Guest-Token` ヘッダー必須） |
 | `PATCH` | `/api/game-sessions/:id/members/:memberId` | メンバー情報更新（キャラクター名） |
 | `DELETE` | `/api/game-sessions/:id/members/:memberId` | メンバー退出 |
 
@@ -360,14 +365,14 @@ confirmed（実施前）
 | `PUT` | `/api/game-sessions/:id/availability-dates` | 候補日を一括更新（`{ dates }` で全件置き換え、差分は追加/削除）（確定済みは `409`） |
 | `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日を1件削除（確定済みは `409`） |
 | `POST` | `/api/game-sessions/:id/availability-dates/:dateId/confirm` | 候補日確定（`scheduled_at` セット） |
-| `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/responses` | 日程回答（◯△×）登録・更新 |
+| `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/responses` | 日程回答（◯△×）登録・更新（ログインユーザー。自分の回答のみ） |
+| `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/guest-responses` | ゲストの日程回答（認証不要・`X-Guest-Token` 必須・`memberId` 指定で全ゲスト分を編集可） |
 
 #### Guest Links
 
 | メソッド | パス | 概要 |
 |---|---|---|
-| `GET` | `/api/game-sessions/:id/guest-link` | ゲストリンク取得（ホストのみ） |
-| `GET` | `/api/join/:token` | ゲストリンクプレビュー（未ログイン可） |
+| `GET` | `/api/game-sessions/:id/guest-link` | ゲストリンク取得（ホストのみ）。返ったトークンで `/game-sessions/:id?token=...` を組み立てて配る |
 
 #### Profile
 
@@ -415,13 +420,48 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 #### セッション一覧は全件返す
 `GET /game-sessions` はホストの卓・参加中の卓を区別せず全件返す。絞り込みはフロント側で実装する。
 
-#### ゲストリンク参加は2ステップ
-当初 `POST /join/:token` 1本でゲスト参加を完結させる設計だったが、以下の理由で分割した。
+#### ゲスト参加は「完全匿名 + トークンリンクのみ」で、専用ページを持たない
 
-1. `GET /api/join/:token` — トークンを受け取り卓の概要を返す（未ログイン可）。フロントがプレビュー画面を表示するために使う。
-2. `POST /api/game-sessions/:id/guest-members` — ゲストとして参加登録する（ログイン済みユーザー）。
+旧設計（`GET /api/join/:token` でプレビュー → `/join/[token]` 専用ページ →
+ログイン済みユーザーが `POST .../guest-members`）は破棄した。
+ゲストは**ログインせずに名前だけで参加できる**ことを要件としたため、
+以下の方針に確定した。
 
-ログイン後にリダイレクトされ参加するフローを自然に表現するため。
+**方針**
+- ゲスト専用ページ（`/join/[token]`）と専用プレビューAPI（`GET /api/join/:token`）は**作らない**。
+- ゲストもログインユーザーと**同じ卓詳細画面** `/game-sessions/:id` を使う。
+  - 閲覧は既存の `GET /api/game-sessions/:id`（公開済みなら未ログインで閲覧可）に乗る。トークン不要。
+- ホストは `GET /api/game-sessions/:id/guest-link` でトークンを取得し、
+  `/game-sessions/:id?token=<guest_link_token>` という形のリンクを配る。
+- **秘匿性はトークンのみで担保**する。トークンを知らなければ参加・回答ができない。
+
+**トークンの扱い（REST方針）**
+- トークンは「参加・回答を認可する資格情報（capability）」として扱う。
+- リンク（`?token=`）に載るのは配布のため不可避だが、**API 呼び出しでは
+  `X-Guest-Token` ヘッダーに載せ替える**。クエリやボディに認可キーを置くのは避ける
+  （クエリはログ・履歴・Referer に残りやすく、ボディはリソース表現に鍵が混ざるため）。
+- `Authorization: Bearer` ではなく専用ヘッダー名にして better-auth の認証と区別する。
+
+**ゲストが使うエンドポイント**
+| 操作 | エンドポイント | 認証 | トークン | 主なエラー |
+|---|---|---|---|---|
+| 閲覧 | `GET /api/game-sessions/:id` | 不要（公開済み前提） | 不要 | 非公開は 401/403 |
+| 参加 | `POST /api/game-sessions/:id/guest-members` | 不要 | `X-Guest-Token` 必須 | token不一致 403 / `open`以外 422 / 卓なし 404 |
+| 回答 | `PUT /api/game-sessions/:id/availability-dates/:dateId/guest-responses` | 不要 | `X-Guest-Token` 必須 | token不一致 403 / 非ゲストmemberId 403 / 卓・日付なし 404 |
+
+- 参加 body: `{ guestName, characterName? }`（`user_id` は null 登録）。**重複参加は許容**（dup チェックなし）。
+- 回答 body: `{ memberId, answer, comment? }`。`memberId` がその卓の**ゲストメンバー（`user_id = null`）**であることを検証。
+  本人確認はしないため、**どのゲストでも全ゲスト列を編集可**（調整さん方式）。
+- キャラ名編集（`PATCH .../members/:memberId`）と退出（`DELETE .../members/:memberId`）は
+  **ホストのみ**（現状維持）。ゲスト自身はこれらを行えない。
+
+**参加可能状態は通常参加と揃える**
+- 通常参加（`POST .../members`）が `status === open` のみ許可（それ以外は 422）なので、ゲスト参加も同条件。
+- `maxMembers` の満員チェックは通常参加にも無いため、ゲスト参加にも入れない（入れるなら Ph2 で両方に）。
+
+**フロントのガード**
+- 不正・不可能な操作（非 `open` での参加、トークン無しでの参加/回答、ホスト専用操作）は
+  サーバが適切な HTTP ステータスで拒否しつつ、フロントでも極力ボタン等を出さない。
 
 ---
 

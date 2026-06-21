@@ -21,7 +21,7 @@ export const useGuestJoin = (
   const loading = ref(false);
 
   /** ゲスト名の入力ドラフト（この composable が所有するため v-model 可） */
-  const guestName = ref('');
+  const guestName = ref('fixme');
   /** キャラクター名の入力ドラフト（任意。この composable が所有する） */
   const characterName = ref('');
 
@@ -43,8 +43,12 @@ export const useGuestJoin = (
    */
   async function join() {
     if (loading.value) return;
+    debugger
     const currentToken = toValue(token);
-    if (!currentToken || !canSubmit.value) return;
+    if (!currentToken || !canSubmit.value){
+      toast.error('招待用リンクからのみ参加が可能です')
+      return;
+    };
     loading.value = true;
     try {
       const member = await joinAsGuest(gameSessionId, currentToken, {

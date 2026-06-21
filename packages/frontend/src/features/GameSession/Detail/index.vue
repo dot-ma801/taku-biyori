@@ -7,7 +7,7 @@ import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisp
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { computed } from 'vue';
-
+import { useRoute } from 'vue-router';
 import {
   Album,
   UsersRound,
@@ -24,8 +24,15 @@ import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameS
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import type { GameSessionMember } from '@taku-biyori/shared';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
+import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{ gameSessionId: string }>();
+
+const route = useRoute();
+const token = route.query.token?.toString() ?? '';
+
+const authStore = useAuthStore();
 
 const {
   gameSession,
@@ -51,7 +58,7 @@ const {
 const {
   canJoin,
   canLeave,
-  join,
+  join: joinUser,
   leave,
   loading: loadingMember,
 } = useGameSessionMembership(props.gameSessionId, gameSession);
@@ -63,6 +70,21 @@ const {
   props.gameSessionId,
   () => gameSession.value?.createdBy ?? '',
   () => gameSession.value?.status,
+);
+const {
+  guestName,
+  characterName,
+  hasToken,
+  canGuestJoin,
+  canSubmit,
+  loading,
+  join: joinGuest,
+} = useGuestJoin(
+  props.gameSessionId,
+  () => token,
+  () => gameSession.value?.status,
+  // TODO: ゲスト参加フォームを配線したら、参加した member を反映する処理に差し替える
+  () => {},
 );
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
@@ -85,6 +107,14 @@ function onMemberUpdated(updated: GameSessionMember) {
     ),
   });
 }
+
+const join = () => {
+  if (authStore.currentUser) {
+    joinUser();
+  } else {
+    joinGuest();
+  }
+};
 </script>
 
 <template>

@@ -40,5 +40,5 @@ export const useGuestLink = (gameSessionId: string) => {
     }
   }
 
-  return { guestLink, loading, copyGuestLink };
+  return { loading, copyGuestLink };
 };

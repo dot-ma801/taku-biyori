@@ -17,11 +17,13 @@ import {
   SquarePen,
   Globe,
   Trophy,
+  Share2,
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import type { GameSessionMember } from '@taku-biyori/shared';
+import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -53,6 +55,10 @@ const {
   leave,
   loading: loadingMember,
 } = useGameSessionMembership(props.gameSessionId, gameSession);
+const {
+  loading: loadingGuestLink,
+  copyGuestLink,
+} = useGuestLink(props.gameSessionId);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -106,11 +112,20 @@ function onMemberUpdated(updated: GameSessionMember) {
           >
             セッション編集
           </BaseButton>
+          <!-- secondary でいいか？ -->
+          <BaseButton
+            v-if="isHost"
+            :left-icon="Share2"
+            variant="secondary"
+            @click="copyGuestLink"
+          >
+            招待リンクを取得
+          </BaseButton>
           <BaseButton
             :left-icon="Globe"
             v-if="canPublish"
             @click="publishSession"
-            :loading="loadingStatus"
+            :loading="loadingGuestLink"
           >
             公開
           </BaseButton>

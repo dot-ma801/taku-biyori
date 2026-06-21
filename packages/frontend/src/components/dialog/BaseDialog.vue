@@ -29,12 +29,10 @@ defineProps<{
         <slot />
       </div>
 
-      <!-- actions slot: 各ボタンを Dialog.Close でラップして自動クローズ -->
-      <div v-if="$slots.actions" class="dialog__actions">
-        <Dialog.Close as-child>
-          <slot name="actions" />
-        </Dialog.Close>
-      </div>
+      <!-- actions slot: Dialog.Close を div としてレンダリングし、領域内クリックで自動クローズ -->
+      <Dialog.Close v-if="$slots.actions" as="div" class="dialog__actions">
+        <slot name="actions" />
+      </Dialog.Close>
     </Dialog.Content>
   </Dialog.Root>
 </template>

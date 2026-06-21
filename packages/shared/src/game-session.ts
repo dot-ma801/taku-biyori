@@ -127,6 +127,15 @@ export type UpdateAvailabilityDateResponseInput = z.infer<
   typeof UpdateAvailabilityDateResponseInputSchema
 >;
 
+// ゲストの日程回答。本人確認手段がないため、どのゲスト列を更新するかを memberId で明示する。
+export const GuestUpdateAvailabilityDateResponseInputSchema =
+  UpdateAvailabilityDateResponseInputSchema.extend({
+    memberId: z.string().uuid(),
+  });
+export type GuestUpdateAvailabilityDateResponseInput = z.infer<
+  typeof GuestUpdateAvailabilityDateResponseInputSchema
+>;
+
 export const JoinGameSessionInputSchema = z.object({
   characterName: z.string().max(100).optional(),
 });
@@ -151,3 +160,9 @@ export const GuestLinkResponseSchema = z.object({
   token: z.string(),
 });
 export type GuestLinkResponse = z.infer<typeof GuestLinkResponseSchema>;
+
+/**
+ * ゲストの参加・回答を認可するトークンを送るヘッダー名。
+ * トークンは capability（資格情報）として扱い、クエリやボディではなくこのヘッダーで送る。
+ */
+export const GUEST_TOKEN_HEADER = 'X-Guest-Token';

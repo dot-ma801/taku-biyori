@@ -53,7 +53,7 @@ const {
 
       <p v-if="!isEditing">
         <span v-if="member.characterName"> {{ member.characterName }}
-          <span class="user-name">@</span>
+          <span class="user-name">@ </span>
         </span>
         <span class="user-name">{{ member.userName }}</span>
       </p>

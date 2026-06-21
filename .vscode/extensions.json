@@ -2,6 +2,7 @@
     "recommendations": [
         "vue.volar",
         "pranaygp.vscode-css-peek",
-        "42crunch.vscode-openapi"
+        "42crunch.vscode-openapi",
+        "vunguyentuan.vscode-css-variables"
     ]
 }

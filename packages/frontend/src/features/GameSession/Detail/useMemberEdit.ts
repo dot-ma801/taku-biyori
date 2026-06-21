@@ -92,6 +92,10 @@ export const useMemberEdit = (
    */
   async function submitEdit() {
     if (loading.value) return;
+    if (!isDirty.value) {
+      isEditing.value = false;
+      return;
+    }
     loading.value = true;
 
     try {

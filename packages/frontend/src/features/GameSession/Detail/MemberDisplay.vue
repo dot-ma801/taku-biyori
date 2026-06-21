@@ -69,7 +69,7 @@ const {
         @click="startEdit">
         キャラクターを編集する
       </BaseButton>
-      <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading" :disabled="!isDirty">
+      <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading">
         完了
       </BaseButton>
     </div>

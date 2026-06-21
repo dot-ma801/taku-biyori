@@ -120,27 +120,27 @@ describe('startEdit / cancelEdit', () => {
       makeMember(),
       makeMember({ id: MEMBER_ID_2, userId: 'user-2', characterName: 'ボブ' }),
     ];
-    const { isEditing, draftCharacterNames, startEdit } = setup({ members });
+    const { isEditing, draftOf, startEdit } = setup({ members });
 
     // Act
     startEdit();
 
     // Assert
     expect(isEditing.value).toBe(true);
-    expect(draftCharacterNames.value[MEMBER_ID]).toBe(CHARACTER_NAME);
-    expect(draftCharacterNames.value[MEMBER_ID_2]).toBe('ボブ');
+    expect(draftOf(MEMBER_ID)).toBe(CHARACTER_NAME);
+    expect(draftOf(MEMBER_ID_2)).toBe('ボブ');
   });
 
   it('characterName が null のメンバーは空文字で初期化される', () => {
     // Arrange
     const members = [makeMember({ characterName: null })];
-    const { draftCharacterNames, startEdit } = setup({ members });
+    const { draftOf, startEdit } = setup({ members });
 
     // Act
     startEdit();
 
     // Assert
-    expect(draftCharacterNames.value[MEMBER_ID]).toBe('');
+    expect(draftOf(MEMBER_ID)).toBe('');
   });
 
   it('cancelEdit を呼ぶと isEditing が false になる', () => {
@@ -174,11 +174,11 @@ describe('isDirty', () => {
       makeMember(),
       makeMember({ id: MEMBER_ID_2, userId: 'user-2', characterName: 'ボブ' }),
     ];
-    const { isDirty, draftCharacterNames, startEdit } = setup({ members });
+    const { isDirty, setDraft, startEdit } = setup({ members });
     startEdit();
 
     // Act
-    draftCharacterNames.value[MEMBER_ID_2] = '別の名前';
+    setDraft(MEMBER_ID_2, '別の名前');
 
     // Assert
     expect(isDirty.value).toBe(true);
@@ -204,11 +204,11 @@ describe('submitEdit', () => {
     vi.mocked(updateMember).mockResolvedValue(updatedMember);
     const onUpdated = vi.fn();
 
-    const { draftCharacterNames, startEdit, submitEdit } = setup({
+    const { setDraft, startEdit, submitEdit } = setup({
       onUpdated,
     });
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     await submitEdit();
@@ -229,10 +229,10 @@ describe('submitEdit', () => {
       makeMember(),
       makeMember({ id: MEMBER_ID_2, userId: 'user-2', characterName: 'ボブ' }),
     ];
-    const { draftCharacterNames, startEdit, submitEdit } = setup({ members });
+    const { setDraft, startEdit, submitEdit } = setup({ members });
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新A';
-    draftCharacterNames.value[MEMBER_ID_2] = '新B';
+    setDraft(MEMBER_ID, '新A');
+    setDraft(MEMBER_ID_2, '新B');
 
     // Act
     await submitEdit();
@@ -254,9 +254,9 @@ describe('submitEdit', () => {
       makeMember({ id: MEMBER_ID_2, userId: 'user-2', characterName: 'ボブ' }),
     ];
     vi.mocked(updateMember).mockResolvedValue(makeMember());
-    const { draftCharacterNames, startEdit, submitEdit } = setup({ members });
+    const { setDraft, startEdit, submitEdit } = setup({ members });
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新A'; // member-1 のみ変更
+    setDraft(MEMBER_ID, '新A'); // member-1 のみ変更
 
     // Act
     await submitEdit();
@@ -271,9 +271,9 @@ describe('submitEdit', () => {
   it('空文字に変更した場合は characterName: null を送る', async () => {
     // Arrange
     vi.mocked(updateMember).mockResolvedValue(makeMember());
-    const { draftCharacterNames, startEdit, submitEdit } = setup();
+    const { setDraft, startEdit, submitEdit } = setup();
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '';
+    setDraft(MEMBER_ID, '');
 
     // Act
     await submitEdit();
@@ -299,9 +299,9 @@ describe('submitEdit', () => {
   it('成功後に isEditing が false になる', async () => {
     // Arrange
     vi.mocked(updateMember).mockResolvedValue(makeMember());
-    const { isEditing, draftCharacterNames, startEdit, submitEdit } = setup();
+    const { isEditing, setDraft, startEdit, submitEdit } = setup();
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     await submitEdit();
@@ -318,9 +318,9 @@ describe('submitEdit', () => {
         resolveUpdate = () => resolve(makeMember());
       }),
     );
-    const { loading, draftCharacterNames, startEdit, submitEdit } = setup();
+    const { loading, setDraft, startEdit, submitEdit } = setup();
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     const promise = submitEdit();
@@ -341,9 +341,9 @@ describe('submitEdit', () => {
     } as unknown as ReturnType<typeof useToast>);
     vi.mocked(updateMember).mockRejectedValue(new Error('API error'));
 
-    const { draftCharacterNames, startEdit, submitEdit } = setup();
+    const { setDraft, startEdit, submitEdit } = setup();
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     await submitEdit();
@@ -357,9 +357,9 @@ describe('submitEdit', () => {
   it('API が失敗しても isEditing は true のまま（編集状態を維持する）', async () => {
     // Arrange
     vi.mocked(updateMember).mockRejectedValue(new Error('API error'));
-    const { isEditing, draftCharacterNames, startEdit, submitEdit } = setup();
+    const { isEditing, setDraft, startEdit, submitEdit } = setup();
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     await submitEdit();
@@ -372,11 +372,11 @@ describe('submitEdit', () => {
     // Arrange
     vi.mocked(updateMember).mockRejectedValue(new Error('API error'));
     const onUpdated = vi.fn();
-    const { draftCharacterNames, startEdit, submitEdit } = setup({
+    const { setDraft, startEdit, submitEdit } = setup({
       onUpdated,
     });
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     await submitEdit();
@@ -393,9 +393,9 @@ describe('submitEdit', () => {
         resolveUpdate = () => resolve(makeMember());
       }),
     );
-    const { draftCharacterNames, startEdit, submitEdit } = setup();
+    const { setDraft, startEdit, submitEdit } = setup();
     startEdit();
-    draftCharacterNames.value[MEMBER_ID] = '新しい名前';
+    setDraft(MEMBER_ID, '新しい名前');
 
     // Act
     const first = submitEdit();

@@ -28,9 +28,9 @@ const emit = defineEmits<{
 const {
   canEditCharacterName,
   isEditing,
-  isDirty,
   loading,
-  draftCharacterNames,
+  draftOf,
+  setDraft,
   startEdit,
   submitEdit,
 } = useMemberEdit(
@@ -48,28 +48,51 @@ const {
       参加メンバー
     </BaseSectionHeading>
 
-    <div v-for="member in displayMembers" :key="member.id" class="user-container">
-      <UserAvatar class="avatar" :size="35" :name="member.userName"></UserAvatar>
+    <div
+      v-for="member in displayMembers"
+      :key="member.id"
+      class="user-container"
+    >
+      <UserAvatar
+        class="avatar"
+        :size="35"
+        :name="member.userName"
+      ></UserAvatar>
 
       <p v-if="!isEditing">
-        <span v-if="member.characterName"> {{ member.characterName }}
+        <span v-if="member.characterName">
+          {{ member.characterName }}
           <span class="user-name">@ </span>
         </span>
         <span class="user-name">{{ member.userName }}</span>
       </p>
 
       <div class="edit-char-name" v-else>
-        <BaseTextBox v-model="draftCharacterNames[member.id]" placeholder="キャラクター名を入力" :disabled="loading">
+        <BaseTextBox
+          :model-value="draftOf(member.id)"
+          @update:model-value="(v) => setDraft(member.id, v)"
+          placeholder="キャラクター名を入力"
+          :disabled="loading"
+        >
         </BaseTextBox>
         <span class="user-name">@ {{ member.userName }}</span>
       </div>
     </div>
     <div v-if="canEditCharacterName" class="actions">
-      <BaseButton v-if="canEditCharacterName && !isEditing" variant="secondary" :left-icon="SquarePen"
-        @click="startEdit">
+      <BaseButton
+        v-if="canEditCharacterName && !isEditing"
+        variant="secondary"
+        :left-icon="SquarePen"
+        @click="startEdit"
+      >
         キャラクターを編集する
       </BaseButton>
-      <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading">
+      <BaseButton
+        v-else
+        :left-icon="Check"
+        @click="submitEdit"
+        :loading="loading"
+      >
         完了
       </BaseButton>
     </div>
@@ -108,7 +131,7 @@ const {
   justify-content: flex-end;
   margin-top: var(--space-3);
 
-  >* {
+  > * {
     margin: 0 var(--space-1);
   }
 }

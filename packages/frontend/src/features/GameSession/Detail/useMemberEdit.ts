@@ -35,11 +35,16 @@ export const useMemberEdit = (
    * この ref はこの composable が所有するので、v-model 経由の書き込みを許可する
    * （`v-model="draftCharacterNames[member.id]"`）。
    */
-  const draftCharacterNames = ref<Record<string, string>>({});
+  const draftCharacterNames = ref<Map<string, string>>(new Map());
 
   /** 指定メンバーのドラフト値（未初期化なら空文字） */
   function draftOf(memberId: string) {
-    return draftCharacterNames.value[memberId] ?? '';
+    return draftCharacterNames.value.get(memberId) ?? '';
+  }
+
+  /** 指定メンバーのドラフト値を更新する */
+  function setDraft(memberId: string, value: string) {
+    draftCharacterNames.value.set(memberId, value);
   }
 
   /** ログインユーザーがこのセッションのホスト（GM）か */
@@ -71,9 +76,9 @@ export const useMemberEdit = (
 
   /** 編集モードを開始し、全メンバーの現在値で下書きを初期化する */
   function startEdit() {
-    const next: Record<string, string> = {};
+    const next = new Map<string, string>();
     for (const m of toValue(members)) {
-      next[m.id] = baselineOf(m);
+      next.set(m.id, baselineOf(m));
     }
     draftCharacterNames.value = next;
     isEditing.value = true;
@@ -121,7 +126,8 @@ export const useMemberEdit = (
     isEditing,
     isDirty,
     loading,
-    draftCharacterNames,
+    draftOf,
+    setDraft,
     startEdit,
     cancelEdit,
     submitEdit,

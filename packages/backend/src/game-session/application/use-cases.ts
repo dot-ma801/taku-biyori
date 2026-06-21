@@ -148,6 +148,7 @@ export interface GameSessionUseCases {
   ): Promise<JoinGameSessionResult>;
   joinAsGuest(
     gameSessionId: string,
+    token: string,
     input: JoinAsGuestInput,
   ): Promise<JoinAsGuestResult>;
   updateMember(
@@ -239,8 +240,10 @@ export const createGameSessionUseCases = (
     joinGameSession(repo, gameSessionId, userId, input),
   joinAsGuest: (
     gameSessionId: string,
+    token: string,
     input: JoinAsGuestInput,
-  ): Promise<JoinAsGuestResult> => joinAsGuest(repo, gameSessionId, input),
+  ): Promise<JoinAsGuestResult> =>
+    joinAsGuest(repo, gameSessionId, token, input),
   updateMember: (
     gameSessionId: string,
     memberId: string,

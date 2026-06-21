@@ -6,6 +6,7 @@ import type {
   UpdateMemberInput,
 } from '@taku-biyori/shared';
 import {
+  GUEST_TOKEN_HEADER,
   JoinAsGuestInputSchema,
   JoinGameSessionInputSchema,
   UpdateMemberInputSchema,
@@ -26,6 +27,7 @@ export interface RegisterMemberRouteOptions {
   ) => Promise<JoinGameSessionResult>;
   joinAsGuest: (
     gameSessionId: string,
+    token: string,
     input: JoinAsGuestInput,
   ) => Promise<JoinAsGuestResult>;
   updateMember: (
@@ -86,9 +88,9 @@ export const registerMemberRoute = (
     return c.json(result.member satisfies GameSessionMember, 201);
   });
 
+  // ゲスト参加は完全匿名。認証は不要で、X-Guest-Token ヘッダーで認可する。
   app.post('/api/game-sessions/:id/guest-members', async (c) => {
-    const authSession = await options.getSession(c.req.raw.headers);
-    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
+    const token = c.req.header(GUEST_TOKEN_HEADER) ?? '';
 
     let body: unknown;
     try {
@@ -102,9 +104,19 @@ export const registerMemberRoute = (
       return c.json({ error: parsed.error.issues }, 400);
     }
 
-    const result = await options.joinAsGuest(c.req.param('id'), parsed.data);
+    const result = await options.joinAsGuest(
+      c.req.param('id'),
+      token,
+      parsed.data,
+    );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    if (result.type === 'invalidToken') {
+      return c.json({ error: 'Invalid guest token' }, 403);
+    }
+    if (result.type === 'sessionNotOpen') {
+      return c.json({ error: 'Session is not open for joining' }, 422);
+    }
     return c.json(result.member satisfies GameSessionMember, 201);
   });
 

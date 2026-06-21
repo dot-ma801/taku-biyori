@@ -96,7 +96,7 @@ const {
 .user-container {
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: auto auto;
   align-items: center;
 
   border-top: solid 2px var(--color-border);

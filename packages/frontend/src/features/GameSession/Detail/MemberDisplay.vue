@@ -39,49 +39,28 @@ const {
       参加メンバー
     </BaseSectionHeading>
 
-    <div
-      v-for="member in props.gameSession.members"
-      :key="member.id"
-      class="user-container"
-    >
-      <UserAvatar
-        class="avatar"
-        :size="35"
-        :name="member.userName ?? member.guestName ?? undefined"
-      ></UserAvatar>
+    <div v-for="member in props.gameSession.members" :key="member.id" class="user-container">
+      <UserAvatar class="avatar" :size="35" :name="member.userName ?? member.guestName ?? undefined"></UserAvatar>
 
-      <p class="user-name">
-        {{ member.userName ?? member.guestName ?? '（未設定）' }}
-      </p>
-      <p v-if="!isEditing" class="char-name">
-        キャラクター：{{ member.characterName ?? '未設定' }}
+      <p v-if="!isEditing">
+        <span v-if="member.characterName"> {{ member.characterName }}
+          <span class="user-name">@</span>
+        </span>
+        <span class="user-name">{{ member.userName ?? member.guestName ?? '（未設定）' }}</span>
       </p>
 
-      <BaseTextBox
-        v-else
-        class="char-name"
-        v-model="draftCharacterNames[member.id]"
-        label="キャラクター名"
-        placeholder="キャラクター名を入力"
-        :disabled="loading"
-      ></BaseTextBox>
+      <div class="edit-char-name" v-else>
+        <BaseTextBox v-model="draftCharacterNames[member.id]" placeholder="キャラクター名を入力" :disabled="loading">
+        </BaseTextBox>
+        <span class="user-name">@ {{ member.userName ?? member.guestName ?? '（未設定）' }}</span>
+      </div>
     </div>
     <div v-if="canEditCharacterName" class="actions">
-      <BaseButton
-        v-if="canEditCharacterName && !isEditing"
-        variant="secondary"
-        :left-icon="SquarePen"
-        @click="startEdit"
-      >
+      <BaseButton v-if="canEditCharacterName && !isEditing" variant="secondary" :left-icon="SquarePen"
+        @click="startEdit">
         キャラクターを編集する
       </BaseButton>
-      <BaseButton
-        v-else
-        :left-icon="Check"
-        @click="submitEdit"
-        :loading="loading"
-        :disabled="!isDirty"
-      >
+      <BaseButton v-else :left-icon="Check" @click="submitEdit" :loading="loading" :disabled="!isDirty">
         完了
       </BaseButton>
     </div>
@@ -96,28 +75,23 @@ const {
 .user-container {
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
   align-items: center;
 
-  border-top: solid 2px var(--color-border);
-
+  gap: var(--space-2);
   padding: var(--space-2);
 
-  .avatar {
-    grid-column: 1 / 2;
-    grid-row: 1 / 3;
-    margin: var(--space-2);
-  }
+  border-top: solid 2px var(--color-border);
+}
 
-  .user-name {
-    grid-column: 2 / 3;
-    grid-row: 1 / 2;
-  }
+.edit-char-name {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+}
 
-  .char-name {
-    grid-column: 2 / 3;
-    grid-row: 2 / 3;
-  }
+.user-name {
+  color: var(--color-text-muted);
 }
 
 .actions {
@@ -125,7 +99,7 @@ const {
   justify-content: flex-end;
   margin-top: var(--space-3);
 
-  > * {
+  >* {
     margin: 0 var(--space-1);
   }
 }

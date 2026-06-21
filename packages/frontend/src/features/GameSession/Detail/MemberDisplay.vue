@@ -7,10 +7,19 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
 import { UsersRound, SquarePen, Check } from '@lucide/vue';
 import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
+import { computed } from 'vue';
 
 const props = defineProps<{
   gameSession: GameSessionDetail;
 }>();
+
+const displayMembers = computed(() =>
+  props.gameSession.members.map((member) => ({
+    id: member.id,
+    characterName: member.characterName,
+    userName: member.userName ?? member.guestName ?? '（未設定）',
+  })),
+);
 
 const emit = defineEmits<{
   'member-updated': [updated: GameSessionMember];
@@ -39,20 +48,20 @@ const {
       参加メンバー
     </BaseSectionHeading>
 
-    <div v-for="member in props.gameSession.members" :key="member.id" class="user-container">
-      <UserAvatar class="avatar" :size="35" :name="member.userName ?? member.guestName ?? undefined"></UserAvatar>
+    <div v-for="member in displayMembers" :key="member.id" class="user-container">
+      <UserAvatar class="avatar" :size="35" :name="member.userName"></UserAvatar>
 
       <p v-if="!isEditing">
         <span v-if="member.characterName"> {{ member.characterName }}
           <span class="user-name">@</span>
         </span>
-        <span class="user-name">{{ member.userName ?? member.guestName ?? '（未設定）' }}</span>
+        <span class="user-name">{{ member.userName }}</span>
       </p>
 
       <div class="edit-char-name" v-else>
         <BaseTextBox v-model="draftCharacterNames[member.id]" placeholder="キャラクター名を入力" :disabled="loading">
         </BaseTextBox>
-        <span class="user-name">@ {{ member.userName ?? member.guestName ?? '（未設定）' }}</span>
+        <span class="user-name">@ {{ member.userName }}</span>
       </div>
     </div>
     <div v-if="canEditCharacterName" class="actions">

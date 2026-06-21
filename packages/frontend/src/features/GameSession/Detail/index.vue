@@ -6,7 +6,7 @@ import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   Album,
@@ -26,6 +26,7 @@ import type { GameSessionMember } from '@taku-biyori/shared';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
 import { useAuthStore } from '@/stores/auth';
+import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -33,6 +34,8 @@ const route = useRoute();
 const token = route.query.token?.toString() ?? '';
 
 const authStore = useAuthStore();
+
+const guestJoinDialogModel = ref(false)
 
 const {
   gameSession,
@@ -112,7 +115,8 @@ const join = () => {
   if (authStore.currentUser) {
     joinUser();
   } else {
-    joinGuest();
+    guestJoinDialogModel.value = true;
+    // joinGuest();
   }
 };
 </script>
@@ -205,6 +209,7 @@ const join = () => {
       :game-session="gameSession"
       @member-updated="onMemberUpdated"
     ></MemberDisplay>
+    <GuestJoinDialog v-model="guestJoinDialogModel"></GuestJoinDialog>
   </div>
 </template>
 

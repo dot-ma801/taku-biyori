@@ -57,8 +57,13 @@ const {
 } = useGameSessionMembership(props.gameSessionId, gameSession);
 const {
   loading: loadingGuestLink,
+  canIssueGuestLink,
   copyGuestLink,
-} = useGuestLink(props.gameSessionId);
+} = useGuestLink(
+  props.gameSessionId,
+  () => gameSession.value?.members ?? [],
+  () => gameSession.value?.status,
+);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -114,10 +119,11 @@ function onMemberUpdated(updated: GameSessionMember) {
           </BaseButton>
           <!-- secondary でいいか？ -->
           <BaseButton
-            v-if="isHost"
+            v-if="canIssueGuestLink"
             :left-icon="Share2"
             variant="secondary"
             @click="copyGuestLink"
+            :loading="loadingGuestLink"
           >
             招待リンクを取得
           </BaseButton>
@@ -125,7 +131,7 @@ function onMemberUpdated(updated: GameSessionMember) {
             :left-icon="Globe"
             v-if="canPublish"
             @click="publishSession"
-            :loading="loadingGuestLink"
+            :loading="loadingStatus"
           >
             公開
           </BaseButton>

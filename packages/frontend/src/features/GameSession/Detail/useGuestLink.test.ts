@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
+import { GameSessionStatus } from '@taku-biyori/shared';
+import type { GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   getGuestLink: vi.fn(),
+}));
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: vi.fn(),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -12,14 +19,37 @@ vi.mock('@/composables/useToast', () => ({
 }));
 
 import { getGuestLink } from '@/api/game-session';
+import { useAuthStore } from '@/stores/auth';
 
 const SESSION_ID = 'session-1';
 const TOKEN = 'guest-token-abc';
+const USER_ID = 'user-1';
 
 const writeText = vi.fn();
 
+function makeMembers(userId: string | null = USER_ID): GameSessionMember[] {
+  return [
+    {
+      id: 'member-1',
+      userId,
+      userName: 'テストユーザー',
+      guestName: null,
+      characterName: null,
+      joinedAt: '2026-01-01T00:00:00Z',
+    },
+  ];
+}
+
+function setupAuthAs(userId: string | null) {
+  vi.mocked(useAuthStore).mockReturnValue({
+    currentUser: userId ? { id: userId } : null,
+  } as ReturnType<typeof useAuthStore>);
+}
+
 beforeEach(() => {
+  setActivePinia(createPinia());
   vi.clearAllMocks();
+  setupAuthAs(USER_ID);
   writeText.mockResolvedValue(undefined);
   Object.assign(navigator, { clipboard: { writeText } });
   // window.location.origin を固定する
@@ -29,11 +59,68 @@ beforeEach(() => {
   });
 });
 
+describe('canIssueGuestLink', () => {
+  it('参加メンバーかつ status が open のとき true', () => {
+    // Act
+    const { canIssueGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
+
+    // Assert
+    expect(canIssueGuestLink.value).toBe(true);
+  });
+
+  it('参加していないユーザーのとき false', () => {
+    // Arrange: members に自分が含まれない
+    const { canIssueGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers('other-user'),
+      GameSessionStatus.open,
+    );
+
+    // Assert
+    expect(canIssueGuestLink.value).toBe(false);
+  });
+
+  it('status が open 以外のとき false', () => {
+    // Act
+    const { canIssueGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.scheduling,
+    );
+
+    // Assert
+    expect(canIssueGuestLink.value).toBe(false);
+  });
+
+  it('未ログインのとき false', () => {
+    // Arrange
+    setupAuthAs(null);
+
+    // Act
+    const { canIssueGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
+
+    // Assert
+    expect(canIssueGuestLink.value).toBe(false);
+  });
+});
+
 describe('copyGuestLink', () => {
   it('getGuestLink を gameSessionId で呼び出す', async () => {
     // Arrange
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
-    const { copyGuestLink } = useGuestLink(SESSION_ID);
+    const { copyGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
 
     // Act
     await copyGuestLink();
@@ -45,21 +132,28 @@ describe('copyGuestLink', () => {
   it('取得したトークンから招待リンクを組み立ててクリップボードへコピーする', async () => {
     // Arrange
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
-    const { copyGuestLink, guestLink } = useGuestLink(SESSION_ID);
+    const { copyGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
 
     // Act
     await copyGuestLink();
 
     // Assert
     const expected = `https://example.com/game-sessions/${SESSION_ID}?token=${TOKEN}`;
-    expect(guestLink.value).toBe(expected);
     expect(writeText).toHaveBeenCalledWith(expected);
   });
 
   it('成功時に success トーストを表示する', async () => {
     // Arrange
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
-    const { copyGuestLink } = useGuestLink(SESSION_ID);
+    const { copyGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
 
     // Act
     await copyGuestLink();
@@ -73,7 +167,11 @@ describe('copyGuestLink', () => {
   it('成功後に loading が false に戻る', async () => {
     // Arrange
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
-    const { copyGuestLink, loading } = useGuestLink(SESSION_ID);
+    const { copyGuestLink, loading } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
 
     // Act
     await copyGuestLink();
@@ -85,7 +183,11 @@ describe('copyGuestLink', () => {
   it('API エラー時に error トーストを表示する', async () => {
     // Arrange
     vi.mocked(getGuestLink).mockRejectedValue(new Error('サーバーエラー'));
-    const { copyGuestLink } = useGuestLink(SESSION_ID);
+    const { copyGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
 
     // Act
     await copyGuestLink();
@@ -96,6 +198,21 @@ describe('copyGuestLink', () => {
     );
   });
 
+  it('発行条件を満たさないとき（非メンバー）は API を呼ばない', async () => {
+    // Arrange
+    const { copyGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers('other-user'),
+      GameSessionStatus.open,
+    );
+
+    // Act
+    await copyGuestLink();
+
+    // Assert
+    expect(getGuestLink).not.toHaveBeenCalled();
+  });
+
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
     let resolve!: (v: { token: string }) => void;
@@ -104,7 +221,11 @@ describe('copyGuestLink', () => {
         resolve = r;
       }),
     );
-    const { copyGuestLink } = useGuestLink(SESSION_ID);
+    const { copyGuestLink } = useGuestLink(
+      SESSION_ID,
+      makeMembers(),
+      GameSessionStatus.open,
+    );
 
     // Act
     const first = copyGuestLink();

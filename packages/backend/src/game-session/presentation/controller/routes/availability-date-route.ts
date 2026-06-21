@@ -9,6 +9,8 @@ import type {
 import {
   BulkUpdateAvailabilityDatesInputSchema,
   CreateAvailabilityDateInputSchema,
+  GUEST_TOKEN_HEADER,
+  GuestUpdateAvailabilityDateResponseInputSchema,
   UpdateAvailabilityDateResponseInputSchema,
 } from '@taku-biyori/shared';
 import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
@@ -17,6 +19,7 @@ import type { ConfirmAvailabilityDateResult } from '@/game-session/application/c
 import type { ListAvailabilityDatesResult } from '@/game-session/application/list-availability-dates';
 import type { BulkUpdateAvailabilityDatesResult } from '@/game-session/application/bulk-update-availability-dates';
 import type { UpdateAvailabilityDateResponseResult } from '@/game-session/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseResult } from '@/game-session/application/update-guest-availability-date-response';
 
 export interface RegisterAvailabilityDateRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
@@ -49,6 +52,13 @@ export interface RegisterAvailabilityDateRouteOptions {
     userId: string,
     input: UpdateAvailabilityDateResponseInput,
   ) => Promise<UpdateAvailabilityDateResponseResult>;
+  updateGuestAvailabilityDateResponse: (
+    gameSessionId: string,
+    dateId: string,
+    token: string,
+    memberId: string,
+    input: UpdateAvailabilityDateResponseInput,
+  ) => Promise<UpdateGuestAvailabilityDateResponseResult>;
 }
 
 export const registerAvailabilityDateRoute = (
@@ -183,6 +193,44 @@ export const registerAvailabilityDateRoute = (
 
       if (result.type === 'notFound')
         return c.json({ error: 'Not Found' }, 404);
+      if (result.type === 'forbidden')
+        return c.json({ error: 'Forbidden' }, 403);
+      return c.json(result.answer satisfies AvailabilityDateAnswer);
+    },
+  );
+
+  // ゲストの日程回答。認証不要、X-Guest-Token ヘッダーで認可する。
+  app.put(
+    '/api/game-sessions/:id/availability-dates/:dateId/guest-responses',
+    async (c) => {
+      const token = c.req.header(GUEST_TOKEN_HEADER) ?? '';
+
+      let body: unknown;
+      try {
+        body = await c.req.json();
+      } catch {
+        return c.json({ error: 'Invalid JSON' }, 400);
+      }
+
+      const parsed =
+        GuestUpdateAvailabilityDateResponseInputSchema.safeParse(body);
+      if (!parsed.success) {
+        return c.json({ error: parsed.error.issues }, 400);
+      }
+
+      const { memberId, ...input } = parsed.data;
+      const result = await options.updateGuestAvailabilityDateResponse(
+        c.req.param('id'),
+        c.req.param('dateId'),
+        token,
+        memberId,
+        input,
+      );
+
+      if (result.type === 'notFound')
+        return c.json({ error: 'Not Found' }, 404);
+      if (result.type === 'invalidToken')
+        return c.json({ error: 'Invalid guest token' }, 403);
       if (result.type === 'forbidden')
         return c.json({ error: 'Forbidden' }, 403);
       return c.json(result.answer satisfies AvailabilityDateAnswer);

@@ -54,6 +54,8 @@ export const createApp = (options: CreateAppOptions) => {
     confirmAvailabilityDate: options.gameSession.confirmAvailabilityDate,
     updateAvailabilityDateResponse:
       options.gameSession.updateAvailabilityDateResponse,
+    updateGuestAvailabilityDateResponse:
+      options.gameSession.updateGuestAvailabilityDateResponse,
   });
   registerMemberRoute(app, {
     getSession: options.getSession,

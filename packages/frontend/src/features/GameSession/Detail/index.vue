@@ -61,7 +61,7 @@ const {
   copyGuestLink,
 } = useGuestLink(
   props.gameSessionId,
-  () => gameSession.value?.members ?? [],
+  () => gameSession.value?.createdBy ?? '',
   () => gameSession.value?.status,
 );
 

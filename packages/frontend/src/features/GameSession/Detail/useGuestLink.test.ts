@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   getGuestLink: vi.fn(),
@@ -23,22 +22,10 @@ import { useAuthStore } from '@/stores/auth';
 
 const SESSION_ID = 'session-1';
 const TOKEN = 'guest-token-abc';
-const USER_ID = 'user-1';
+const HOST_ID = 'host-1';
+const OTHER_ID = 'other-1';
 
 const writeText = vi.fn();
-
-function makeMembers(userId: string | null = USER_ID): GameSessionMember[] {
-  return [
-    {
-      id: 'member-1',
-      userId,
-      userName: 'テストユーザー',
-      guestName: null,
-      characterName: null,
-      joinedAt: '2026-01-01T00:00:00Z',
-    },
-  ];
-}
 
 function setupAuthAs(userId: string | null) {
   vi.mocked(useAuthStore).mockReturnValue({
@@ -49,7 +36,7 @@ function setupAuthAs(userId: string | null) {
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
-  setupAuthAs(USER_ID);
+  setupAuthAs(HOST_ID);
   writeText.mockResolvedValue(undefined);
   Object.assign(navigator, { clipboard: { writeText } });
   // window.location.origin を固定する
@@ -60,11 +47,11 @@ beforeEach(() => {
 });
 
 describe('canIssueGuestLink', () => {
-  it('参加メンバーかつ status が open のとき true', () => {
+  it('ホストかつ status が open のとき true', () => {
     // Act
     const { canIssueGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -72,11 +59,14 @@ describe('canIssueGuestLink', () => {
     expect(canIssueGuestLink.value).toBe(true);
   });
 
-  it('参加していないユーザーのとき false', () => {
-    // Arrange: members に自分が含まれない
+  it('ホスト以外のユーザーのとき false', () => {
+    // Arrange: ログインユーザーがホストでない
+    setupAuthAs(OTHER_ID);
+
+    // Act
     const { canIssueGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers('other-user'),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -88,7 +78,7 @@ describe('canIssueGuestLink', () => {
     // Act
     const { canIssueGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.scheduling,
     );
 
@@ -103,7 +93,7 @@ describe('canIssueGuestLink', () => {
     // Act
     const { canIssueGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -118,7 +108,7 @@ describe('copyGuestLink', () => {
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -134,7 +124,7 @@ describe('copyGuestLink', () => {
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -151,7 +141,7 @@ describe('copyGuestLink', () => {
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -169,7 +159,7 @@ describe('copyGuestLink', () => {
     vi.mocked(getGuestLink).mockResolvedValue({ token: TOKEN });
     const { copyGuestLink, loading } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -185,7 +175,7 @@ describe('copyGuestLink', () => {
     vi.mocked(getGuestLink).mockRejectedValue(new Error('サーバーエラー'));
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -198,11 +188,12 @@ describe('copyGuestLink', () => {
     );
   });
 
-  it('発行条件を満たさないとき（非メンバー）は API を呼ばない', async () => {
+  it('発行条件を満たさないとき（非ホスト）は API を呼ばない', async () => {
     // Arrange
+    setupAuthAs(OTHER_ID);
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers('other-user'),
+      HOST_ID,
       GameSessionStatus.open,
     );
 
@@ -223,7 +214,7 @@ describe('copyGuestLink', () => {
     );
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
-      makeMembers(),
+      HOST_ID,
       GameSessionStatus.open,
     );
 

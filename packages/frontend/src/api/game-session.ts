@@ -7,12 +7,16 @@ import type {
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
+  GuestLinkResponse,
+  GuestUpdateAvailabilityDateResponseInput,
+  JoinAsGuestInput,
   JoinGameSessionInput,
   UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
   UpdateMemberInput,
 } from '@taku-biyori/shared';
+import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
 
 export async function listGameSessions(): Promise<GameSessionListItem[]> {
@@ -139,5 +143,46 @@ export async function confirmAvailabilityDate(
   return (await apiRequest<GameSession>(
     `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}/confirm`,
     { method: 'POST' },
+  ))!;
+}
+
+// ---------- ゲスト（完全匿名）フロー ----------
+
+/** ホストがゲスト招待用のトークンを取得する。 */
+export async function getGuestLink(
+  gameSessionId: string,
+): Promise<GuestLinkResponse> {
+  return (await apiRequest<GuestLinkResponse>(
+    `/api/game-sessions/${gameSessionId}/guest-link`,
+  ))!;
+}
+
+/**
+ * ゲストとして卓に参加する。認証不要で、トークンは X-Guest-Token ヘッダーで送る。
+ */
+export async function joinAsGuest(
+  gameSessionId: string,
+  token: string,
+  input: JoinAsGuestInput,
+): Promise<GameSessionMember> {
+  return (await apiRequest<GameSessionMember>(
+    `/api/game-sessions/${gameSessionId}/guest-members`,
+    { method: 'POST', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
+  ))!;
+}
+
+/**
+ * ゲストとして日程候補に回答する。認証不要で、トークンは X-Guest-Token ヘッダーで送る。
+ * input には対象ゲスト列を示す memberId を含める。
+ */
+export async function updateGuestAvailabilityDateResponse(
+  gameSessionId: string,
+  dateId: string,
+  token: string,
+  input: GuestUpdateAvailabilityDateResponseInput,
+): Promise<AvailabilityDate> {
+  return (await apiRequest<AvailabilityDate>(
+    `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}/guest-responses`,
+    { method: 'PUT', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
   ))!;
 }

@@ -21,6 +21,7 @@ import {
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
+import type { GameSessionMember } from '@taku-biyori/shared';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -62,6 +63,17 @@ const description = computed(() => gameSession.value?.description ?? undefined);
 const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
+
+// 子（MemberDisplay）からは更新後メンバーを受け取るだけ。
+// gameSession を所有するのはこの親なので、書き換えは patchGameSession に集約する。
+function onMemberUpdated(updated: GameSessionMember) {
+  if (!gameSession.value) return;
+  patchGameSession({
+    members: gameSession.value.members.map((m) =>
+      m.id === updated.id ? updated : m,
+    ),
+  });
+}
 </script>
 
 <template>
@@ -138,7 +150,10 @@ const gameSessionDateTime = computed(
       :game-session="gameSession"
       @session-updated="patchGameSession"
     ></ScheduleDisplay>
-    <MemberDisplay :members="gameSession.members"></MemberDisplay>
+    <MemberDisplay
+      :game-session="gameSession"
+      @member-updated="onMemberUpdated"
+    ></MemberDisplay>
   </div>
 </template>
 

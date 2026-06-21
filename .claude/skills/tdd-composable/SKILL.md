@@ -36,9 +36,59 @@ description: >
 調査結果をもとに以下を決める。
 
 - **ファイル名**: lowerCamelCase（例: `useGameSessionStatus.ts`）
-- **引数**: 必要な `Ref<T>` を受け取る設計にする（`onMounted` 内で fetch する場合は id だけでもよい）
+- **引数**: 後述の「引数設計の原則」に従う（`onMounted` 内で fetch する場合は id だけでもよい）
 - **返り値**: `{ 状態refs, 操作関数 }` の形で返す
 - **テスト境界**: どの依存をモックするか（API関数、Piniaストア）
+
+### 引数設計の原則 ⚠️ 重要
+
+**composable の引数で `Ref<T>` を要求してはいけない。**
+依存（とくに書き込みの向き）は常に「呼び出し側 → composable」の一方向に保つ。
+`Ref` を渡すと `.value =` で呼び出し側の状態を composable が書き換えられてしまい、
+親が所有する状態を子側のロジックが勝手に変える（Vue の一方向データフロー違反）につながる。
+
+関心事ごとに引数の形を分ける。
+
+| 関心事 | ❌ 良くない | ✅ こうする |
+|---|---|---|
+| 読み取り | `Ref<T>` を要求 | `MaybeRefOrGetter<T>` を受け `toValue()` で読む |
+| 書き込み | 受け取った `Ref` に代入 | `onXxx` コールバックで所有者に委譲する |
+| 状態の所有 | あちこちで `.value =` | `ref()` を宣言した場所（親）だけが書き換える |
+
+- 読み取りを `MaybeRefOrGetter` にすると、呼び出し側が ref / computed / getter / props の
+  どれを持っていても渡せる（props 由来の値も受けられる）
+- 更新結果は `onUpdated(updated)` のようなコールバックで返し、
+  親コンポーネントが `patchXxx` などで自分の `ref` を差し替える
+- 例外: composable がその状態の**所有者自身**（`ref` を自分で宣言している）の場合のみ
+  内部で `.value =` してよい。props 境界をまたいで受け取った `Ref` は書き換えない
+- 参考実装: `useScheduleConfirm.ts`（getter + callback）、`useMemberEdit.ts`
+
+### 「サーバ値」と「編集ドラフト」を分ける
+
+API 由来の値（真実）と、編集中の値（ドラフト）を**同じ状態にしない**。
+分けることで変更検知（`isDirty`）が単純になり、キャンセルはドラフト破棄だけで済む。
+（Pinia などのグローバルストアは使わない。コンポーネント所有で完結させる）
+
+| 状態 | 所有 | composable での扱い |
+|---|---|---|
+| baseline（サーバ値） | 親（props で配る） | getter で受けて `computed` で参照 |
+| draft（編集中） | 子（編集UI） | composable 内で `ref` を持つ |
+
+```ts
+// baseline は読み取り元（getter）から導出、draft は composable が所有
+const baseline = computed(() => toValue(member)?.characterName ?? '');
+const draft = ref('');
+const isDirty = computed(() => draft.value !== baseline.value);
+
+function startEdit() {
+  draft.value = baseline.value; // baseline からコピーして編集開始
+}
+```
+
+- 変更検知は `isDirty = draft !== baseline` を `computed` で公開する
+- プリミティブは代入でコピー扱い。オブジェクトを編集するなら `structuredClone` で連動を切る
+- 保存成功時は API 返り値を `onUpdated` で親へ返し、親が baseline（真実）を差し替える
+- 参考実装: `useMemberEdit.ts`（`baseline` / `draftCharacterName` / `isDirty`）
 
 ---
 
@@ -126,27 +176,31 @@ pnpm --filter @taku-biyori/frontend test --run -- src/features/.../useXxx.test.t
 ### 基本構造
 
 ```ts
-import { computed, ref } from 'vue';
-import type { Ref } from 'vue';
+import { computed, ref, toValue } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
 import type { SomeType } from '@taku-biyori/shared';
 import { someApiFunction } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 export const useXxx = (
   id: string,
-  data: Ref<SomeType | null>,
+  // 読み取りは getter で受ける（Ref は要求しない）
+  data: MaybeRefOrGetter<SomeType | null>,
+  // 書き込みは callback で所有者に委譲する
+  onUpdated: (updated: SomeType) => void,
 ) => {
   const authStore = useAuthStore();
   const loading = ref(false);
   const errorMessage = ref('');
 
-  const derivedValue = computed(() => ...);
+  const derivedValue = computed(() => toValue(data)?.someField);
 
   async function doSomething() {
     loading.value = true;
     errorMessage.value = '';
     try {
-      await someApiFunction(id, { ... });
+      const updated = await someApiFunction(id, { ... });
+      onUpdated(updated); // 親に更新を依頼する（自分では書き換えない）
     } catch {
       errorMessage.value = 'エラーメッセージ（日本語）';
     } finally {

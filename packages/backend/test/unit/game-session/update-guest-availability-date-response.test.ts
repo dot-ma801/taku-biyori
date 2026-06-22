@@ -94,12 +94,10 @@ describe('updateGuestAvailabilityDateResponse', () => {
   it('候補日が別セッションに属する場合は notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findCandidateOwner: vi
-        .fn()
-        .mockResolvedValue({
-          gameSessionId: 'other-session',
-          date: '2025-10-01',
-        }),
+      findCandidateOwner: vi.fn().mockResolvedValue({
+        gameSessionId: 'other-session',
+        date: '2025-10-01',
+      }),
     });
 
     // Act

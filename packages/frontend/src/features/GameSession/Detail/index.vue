@@ -192,6 +192,7 @@ const join = () => {
       v-model="guestJoinDialogModel"
       :game-session-id="gameSession.id"
       :game-session-status="gameSession.status"
+      @onGuestJoined="onMemberUpdated"
     ></GuestJoinDialog>
   </div>
 </template>

@@ -37,6 +37,9 @@ const {
   loading: loadingDetail,
   errorMessage,
   patchGameSession,
+  addMember,
+  removeMember,
+  updateMember,
   onClickEdit,
 } = useGetGameSessionDetail(props.gameSessionId);
 
@@ -59,7 +62,12 @@ const {
   join: joinUser,
   leave,
   loading: loadingMember,
-} = useGameSessionMembership(props.gameSessionId, gameSession);
+} = useGameSessionMembership(
+  props.gameSessionId,
+  () => gameSession.value,
+  addMember,
+  removeMember,
+);
 const {
   loading: loadingGuestLink,
   canIssueGuestLink,
@@ -80,15 +88,11 @@ const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
 
-// 子（MemberDisplay）からは更新後メンバーを受け取るだけ。
-// gameSession を所有するのはこの親なので、書き換えは patchGameSession に集約する。
-function onMemberUpdated(updated: GameSessionMember) {
-  if (!gameSession.value) return;
-  patchGameSession({
-    members: gameSession.value.members.map((m) =>
-      m.id === updated.id ? updated : m,
-    ),
-  });
+// ゲスト参加：メンバー追加（composable に委譲）＋ この SFC が所有する
+// ダイアログの開閉という UI 状態の制御だけをここで行う。
+function onGuestJoined(member: GameSessionMember) {
+  addMember(member);
+  guestJoinDialogModel.value = false;
 }
 
 const join = () => {
@@ -186,13 +190,13 @@ const join = () => {
     ></ScheduleDisplay>
     <MemberDisplay
       :game-session="gameSession"
-      @member-updated="onMemberUpdated"
+      @member-updated="updateMember"
     ></MemberDisplay>
     <GuestJoinDialog
       v-model="guestJoinDialogModel"
       :game-session-id="gameSession.id"
       :game-session-status="gameSession.status"
-      @onGuestJoined="onMemberUpdated"
+      @guest-joined="onGuestJoined"
     ></GuestJoinDialog>
   </div>
 </template>

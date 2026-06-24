@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import { GameSessionStatus } from '@taku-biyori/shared';
@@ -54,6 +55,17 @@ function makeGameSession(
   };
 }
 
+// 書き込みは callback で親へ委譲する契約なので、テストでは spy を渡して検証する。
+function setup(gameSession: MaybeRefOrGetter<GameSessionDetail | null>) {
+  const onJoined = vi.fn();
+  const onLeft = vi.fn();
+  return {
+    onJoined,
+    onLeft,
+    ...useGameSessionMembership(SESSION_ID, gameSession, onJoined, onLeft),
+  };
+}
+
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
@@ -72,7 +84,7 @@ describe('canJoin', () => {
     );
 
     // Act
-    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canJoin } = setup(gameSession);
 
     // Assert
     expect(canJoin.value).toBe(true);
@@ -82,21 +94,12 @@ describe('canJoin', () => {
     const gameSession = ref(
       makeGameSession({
         status: GameSessionStatus.open,
-        members: [
-          {
-            id: 'member-1',
-            userId: USER_ID,
-            userName: 'テストユーザー',
-            guestName: null,
-            characterName: null,
-            joinedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
+        members: [makeMember()],
       }),
     );
 
     // Act
-    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canJoin } = setup(gameSession);
 
     // Assert
     expect(canJoin.value).toBe(false);
@@ -108,7 +111,7 @@ describe('canJoin', () => {
     );
 
     // Act
-    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canJoin } = setup(gameSession);
 
     // Assert
     expect(canJoin.value).toBe(false);
@@ -118,7 +121,7 @@ describe('canJoin', () => {
     const gameSession = ref<GameSessionDetail | null>(null);
 
     // Act
-    const { canJoin } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canJoin } = setup(gameSession);
 
     // Assert
     expect(canJoin.value).toBe(false);
@@ -126,46 +129,31 @@ describe('canJoin', () => {
 });
 
 describe('join', () => {
-  it('API を呼び出して gameSession のメンバーリストを更新する', async () => {
-    const newMember = {
-      id: 'member-1',
-      userId: USER_ID,
-      userName: 'テストユーザー',
-      guestName: null,
-      characterName: null,
-      joinedAt: '2024-01-01T00:00:00Z',
-    };
+  it('API を呼び出して onJoined に新メンバーを渡す', async () => {
+    const newMember = makeMember();
     vi.mocked(joinGameSession).mockResolvedValue(newMember);
 
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { join } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { join, onJoined } = setup(gameSession);
     await join();
 
     // Assert
     expect(joinGameSession).toHaveBeenCalledWith(SESSION_ID, {});
-    expect(gameSession.value?.members).toContainEqual(newMember);
+    expect(onJoined).toHaveBeenCalledWith(newMember);
   });
 
   it('API 呼び出し中は loading が true になる', async () => {
     let resolveJoin!: () => void;
     vi.mocked(joinGameSession).mockReturnValue(
       new Promise((resolve) => {
-        resolveJoin = () =>
-          resolve({
-            id: 'member-1',
-            userId: USER_ID,
-            userName: null,
-            guestName: null,
-            characterName: null,
-            joinedAt: '2024-01-01T00:00:00Z',
-          });
+        resolveJoin = () => resolve(makeMember());
       }),
     );
 
     const gameSession = ref(makeGameSession({ members: [] }));
-    const { join, loading } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { join, loading } = setup(gameSession);
 
     // Act
     const joinPromise = join();
@@ -188,31 +176,24 @@ describe('join', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { join } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { join, onJoined } = setup(gameSession);
     await join();
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('参加に失敗しました');
+    expect(onJoined).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
     let resolveJoin!: () => void;
     vi.mocked(joinGameSession).mockReturnValue(
       new Promise((resolve) => {
-        resolveJoin = () =>
-          resolve({
-            id: 'member-1',
-            userId: USER_ID,
-            userName: null,
-            guestName: null,
-            characterName: null,
-            joinedAt: '2024-01-01T00:00:00Z',
-          });
+        resolveJoin = () => resolve(makeMember());
       }),
     );
 
     const gameSession = ref(makeGameSession({ members: [] }));
-    const { join } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { join } = setup(gameSession);
 
     // Act
     const first = join();
@@ -231,7 +212,7 @@ describe('canLeave', () => {
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canLeave } = setup(gameSession);
 
     // Assert
     expect(canLeave.value).toBe(true);
@@ -242,7 +223,7 @@ describe('canLeave', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canLeave } = setup(gameSession);
 
     // Assert
     expect(canLeave.value).toBe(false);
@@ -258,7 +239,7 @@ describe('canLeave', () => {
     );
 
     // Act
-    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canLeave } = setup(gameSession);
 
     // Assert
     expect(canLeave.value).toBe(false);
@@ -271,7 +252,7 @@ describe('canLeave', () => {
     );
 
     // Act
-    const { canLeave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { canLeave } = setup(gameSession);
 
     // Assert
     expect(canLeave.value).toBe(false);
@@ -279,17 +260,17 @@ describe('canLeave', () => {
 });
 
 describe('leave', () => {
-  it('API を memberId で呼び出してメンバーリストから自分を削除する', async () => {
+  it('API を memberId で呼び出して onLeft に memberId を渡す', async () => {
     vi.mocked(leaveGameSession).mockResolvedValue(undefined);
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { leave, onLeft } = setup(gameSession);
     await leave();
 
     // Assert
     expect(leaveGameSession).toHaveBeenCalledWith(SESSION_ID, MEMBER_ID);
-    expect(gameSession.value?.members).toHaveLength(0);
+    expect(onLeft).toHaveBeenCalledWith(MEMBER_ID);
   });
 
   it('自分がメンバーでない場合は API を呼び出さない', async () => {
@@ -297,11 +278,12 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { leave, onLeft } = setup(gameSession);
     await leave();
 
     // Assert
     expect(leaveGameSession).not.toHaveBeenCalled();
+    expect(onLeft).not.toHaveBeenCalled();
   });
 
   it('API が失敗した場合は toast.error を呼び出す', async () => {
@@ -313,11 +295,12 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { leave, onLeft } = setup(gameSession);
     await leave();
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('退出に失敗しました');
+    expect(onLeft).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
@@ -328,7 +311,7 @@ describe('leave', () => {
       }),
     );
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
-    const { leave } = useGameSessionMembership(SESSION_ID, gameSession);
+    const { leave } = setup(gameSession);
 
     // Act
     const first = leave();

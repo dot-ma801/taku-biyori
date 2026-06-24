@@ -17,7 +17,7 @@ const route = useRoute();
 const token = route.query.token?.toString() ?? '';
 
 const emit = defineEmits<{
-  onGuestJoined : [member: GameSessionMember];
+  guestJoined: [member: GameSessionMember];
 }>();
 
 const {
@@ -28,16 +28,20 @@ const {
   props.gameSessionId,
   () => token,
   () => props.gameSessionStatus,
-  // TODO: ゲスト参加フォームを配線したら、参加した member を反映する処理に差し替える
-  (member: GameSessionMember) => emit('onGuestJoined', member),
+  // 参加成功後の新メンバーを親へ渡す（書き込みは親に委譲）
+  (member: GameSessionMember) => emit('guestJoined', member),
 );
 </script>
 
 <template>
-  <BaseDialog v-model="model" title="名前を入力" description="ゲストユーザ名を入力してください。キャラクター名は別途登録されます。">
+  <BaseDialog
+    v-model="model"
+    title="名前を入力"
+    description="ゲストユーザ名を入力してください。キャラクター名は別途登録されます。"
+  >
     <BaseTextBox label="ゲストユーザ名" v-model="guestName"></BaseTextBox>
     <template #actions>
-      <BaseButton variant="ghost">キャンセル</BaseButton>
+      <BaseButton variant="ghost" @click="model = false">キャンセル</BaseButton>
       <BaseButton variant="primary" @click="joinGuest" :loading="loading">
         参加する
       </BaseButton>

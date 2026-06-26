@@ -5,7 +5,6 @@ import { GameSessionStatus } from '@taku-biyori/shared';
 import { updateGuestAvailabilityDateResponse } from '@/api/game-session';
 import { useToast } from '@/composables/useToast';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
-import { useRoute } from 'vue-router';
 
 const CYCLE: Record<Answer, Answer> = {
   ok: 'maybe',
@@ -27,6 +26,8 @@ interface DraftAnswer {
  */
 export const useGuestSchedule = (
   gameSessionId: string,
+  // NOTE: token は招待リンク（?token=）由来。読み取りは getter で受ける。
+  token: MaybeRefOrGetter<string | null>,
   availabilityDates: MaybeRefOrGetter<AvailabilityDate[]>,
   status: MaybeRefOrGetter<GameSessionStatus | undefined>,
   onUpdated: (date: AvailabilityDate) => void,
@@ -34,9 +35,6 @@ export const useGuestSchedule = (
   const toast = useToast();
   const loading = ref(false);
   const isEditing = ref(false);
-
-  const route = useRoute();
-  const token = route.query.token?.toString() ?? '';
 
   /**
    * 編集ドラフト（`${memberId}::${dateId}` → 回答）。
@@ -48,6 +46,18 @@ export const useGuestSchedule = (
   function keyOf(memberId: string, dateId: string): string {
     return `${memberId}::${dateId}`;
   }
+
+  /**
+   * 表示用ドラフト。`${memberId}::${dateId}` → 回答。
+   * ScheduleTable に渡して編集中セルの描画に使う（メンバー編集と同じキー形式に揃える）。
+   */
+  const draftAnswerMap = computed<Map<string, Answer>>(() => {
+    const map = new Map<string, Answer>();
+    for (const { memberId, dateId, answer } of draftAnswers.value.values()) {
+      map.set(keyOf(memberId, dateId), answer);
+    }
+    return map;
+  });
 
   /** 招待トークンが付与されているか */
   const hasToken = computed(() => !!toValue(token));
@@ -151,6 +161,7 @@ export const useGuestSchedule = (
     hasToken,
     canEditGuestSchedule,
     hasChanges,
+    draftAnswers: draftAnswerMap,
     currentAnswerOf,
     cycleAnswer,
     enterEditMode,

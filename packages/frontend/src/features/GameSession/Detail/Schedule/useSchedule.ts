@@ -37,6 +37,12 @@ export const useSchedule = (
 
   onMounted(fetch);
 
+  // 候補日1件をサーバ値で差し替える（ゲスト回答更新の反映用。availabilityDates の所有者として更新する）
+  function patchAvailabilityDate(updated: AvailabilityDate) {
+    const i = availabilityDates.value.findIndex((d) => d.id === updated.id);
+    if (i !== -1) availabilityDates.value[i] = updated;
+  }
+
   const canInputSchedule = computed(() => {
     const s = toValue(status);
     return s === GameSessionStatus.open || s === GameSessionStatus.scheduling;
@@ -106,5 +112,6 @@ export const useSchedule = (
     enterEditMode,
     cycleAnswer,
     submitEdit,
+    patchAvailabilityDate,
   };
 };

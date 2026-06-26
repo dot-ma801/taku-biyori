@@ -10,20 +10,21 @@ const props = defineProps<{
   availabilityDates: AvailabilityDate[];
   members: GameSessionMember[];
   myMemberId: string | null;
-  isEditing: boolean;
+  // いま編集可能なメンバー列の id 一覧
+  editableMemberIds: string[];
+  // 編集中ドラフト。`${memberId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
   canConfirm?: boolean;
   selectedDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
-  cellClick: [dateId: string];
+  cellClick: [memberId: string, dateId: string];
   dateSelect: [dateId: string];
 }>();
 
 const { getAnswer, okCount } = useScheduleView(
-  toRef(props, 'myMemberId'),
-  toRef(props, 'isEditing'),
+  toRef(props, 'editableMemberIds'),
   toRef(props, 'draftAnswers'),
 );
 
@@ -36,24 +37,24 @@ function memberDisplayName(member: GameSessionMember): string {
   return member.userName ?? member.guestName ?? '（未設定）';
 }
 
-// 自分のメンバーかどうか判定
+// 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
 function isMe(member: GameSessionMember): boolean {
   return member.id === props.myMemberId;
 }
 
-// 自分のセルが編集モード中かどうか判定
-function isEditingMyCell(member: GameSessionMember): boolean {
-  return isMe(member) && props.isEditing;
+// このメンバー列のセルがいま編集可能か
+function isCellEditable(member: GameSessionMember): boolean {
+  return props.editableMemberIds.includes(member.id);
 }
 
-// 編集モード中の自分のセルに付与するアクセシビリティ属性
+// 編集可能なセルに付与するアクセシビリティ属性
 function editableCellAttrs(member: GameSessionMember) {
-  return isEditingMyCell(member) ? { role: 'button', tabindex: 0 } : {};
+  return isCellEditable(member) ? { role: 'button', tabindex: 0 } : {};
 }
 
-// セルクリック時（自分のセルかつ編集モード中のみ cellClick を発火）
+// セルクリック時（編集可能なセルのみ cellClick を発火）
 function onCellClick(member: GameSessionMember, dateId: string) {
-  if (isEditingMyCell(member)) emit('cellClick', dateId);
+  if (isCellEditable(member)) emit('cellClick', member.id, dateId);
 }
 
 // キーボード操作でセルを選択（Enter・Space で cellClick を発火）
@@ -62,10 +63,10 @@ function onCellKeydown(
   member: GameSessionMember,
   dateId: string,
 ) {
-  if (!isEditingMyCell(member)) return;
+  if (!isCellEditable(member)) return;
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    emit('cellClick', dateId);
+    emit('cellClick', member.id, dateId);
   }
 }
 </script>
@@ -106,7 +107,7 @@ function onCellKeydown(
             v-for="member in members"
             :key="member.id"
             class="td td--answer"
-            :class="{ 'td--editing': isEditingMyCell(member) }"
+            :class="{ 'td--editing': isCellEditable(member) }"
             v-bind="editableCellAttrs(member)"
             @click="onCellClick(member, date.id)"
             @keydown="onCellKeydown($event, member, date.id)"

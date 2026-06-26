@@ -30,7 +30,8 @@ export const useGuestSchedule = (
   token: MaybeRefOrGetter<string | null>,
   availabilityDates: MaybeRefOrGetter<AvailabilityDate[]>,
   status: MaybeRefOrGetter<GameSessionStatus | undefined>,
-  onUpdated: (date: AvailabilityDate) => void,
+  // サーバが SSOT。更新成功後に所有者へ「再取得」を依頼する（クライアント側で状態を組み立てない）。
+  onUpdated: () => void | Promise<void>,
 ) => {
   const toast = useToast();
   const loading = ref(false);
@@ -118,7 +119,7 @@ export const useGuestSchedule = (
 
   /**
    * サーバ値と異なるドラフトをまとめて送信する。
-   * 各成功ごとに onUpdated で更新後の候補日を親へ渡す。
+   * 全件成功後に onUpdated を呼び、サーバ（SSOT）から候補日を再取得させる。
    * トークン未設定・変更なし・loading 中の呼び出しは無視する。
    */
   async function submitEdit() {
@@ -138,14 +139,15 @@ export const useGuestSchedule = (
     loading.value = true;
     try {
       for (const { memberId, dateId, answer } of changes) {
-        const updated = await updateGuestAvailabilityDateResponse(
+        await updateGuestAvailabilityDateResponse(
           gameSessionId,
           dateId,
           currentToken,
           { memberId, answer },
         );
-        onUpdated(updated);
       }
+      // サーバを SSOT とし、更新後の真の状態を所有者に再取得させる
+      await onUpdated();
       draftAnswers.value = new Map();
       isEditing.value = false;
     } catch {

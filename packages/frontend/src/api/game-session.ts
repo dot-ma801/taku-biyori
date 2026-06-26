@@ -1,5 +1,6 @@
 import type {
   AvailabilityDate,
+  AvailabilityDateAnswer,
   BulkUpdateAvailabilityDatesInput,
   CreateAvailabilityDateInput,
   CreateGameSessionInput,
@@ -82,8 +83,8 @@ export async function updateAvailabilityDateResponse(
   gameSessionId: string,
   dateId: string,
   input: UpdateAvailabilityDateResponseInput,
-): Promise<AvailabilityDate> {
-  return (await apiRequest<AvailabilityDate>(
+): Promise<AvailabilityDateAnswer> {
+  return (await apiRequest<AvailabilityDateAnswer>(
     `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}/responses`,
     { method: 'PUT', body: input },
   ))!;
@@ -180,8 +181,8 @@ export async function updateGuestAvailabilityDateResponse(
   dateId: string,
   token: string,
   input: GuestUpdateAvailabilityDateResponseInput,
-): Promise<AvailabilityDate> {
-  return (await apiRequest<AvailabilityDate>(
+): Promise<AvailabilityDateAnswer> {
+  return (await apiRequest<AvailabilityDateAnswer>(
     `/api/game-sessions/${gameSessionId}/availability-dates/${dateId}/guest-responses`,
     { method: 'PUT', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
   ))!;

@@ -52,7 +52,7 @@ const {
   enterEditMode,
   cycleAnswer,
   submitEdit,
-  patchAvailabilityDate,
+  refetch: refetchSchedule,
 } = useSchedule(
   props.gameSession.id,
   myMemberId,
@@ -78,7 +78,7 @@ const {
   token,
   availabilityDates,
   () => props.gameSession.status,
-  patchAvailabilityDate,
+  refetchSchedule,
 );
 
 const selectedDateId = ref<string | null>(null);

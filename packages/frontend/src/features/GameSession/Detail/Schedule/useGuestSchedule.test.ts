@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { useGuestSchedule } from '@/features/GameSession/Detail/Schedule/useGuestSchedule';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { AvailabilityDate } from '@taku-biyori/shared';
+import type {
+  AvailabilityDate,
+  AvailabilityDateAnswer,
+} from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   updateGuestAvailabilityDateResponse: vi.fn(),
@@ -30,6 +33,16 @@ function makeDates(): AvailabilityDate[] {
       ],
     },
   ];
+}
+
+// API（PUT guest-responses）は更新後の回答1件を返す
+function makeAnswer(): AvailabilityDateAnswer {
+  return {
+    id: 'ans-1',
+    memberId: GUEST_MEMBER_ID,
+    answer: 'maybe',
+    comment: null,
+  };
 }
 
 beforeEach(() => {
@@ -220,8 +233,9 @@ describe('hasChanges', () => {
 describe('submitEdit', () => {
   it('変更したセルを memberId 付きで API 送信する', async () => {
     // Arrange
-    const updated = makeDates()[0]!;
-    vi.mocked(updateGuestAvailabilityDateResponse).mockResolvedValue(updated);
+    vi.mocked(updateGuestAvailabilityDateResponse).mockResolvedValue(
+      makeAnswer(),
+    );
     const { cycleAnswer, submitEdit } = useGuestSchedule(
       SESSION_ID,
       TOKEN,
@@ -243,10 +257,11 @@ describe('submitEdit', () => {
     );
   });
 
-  it('成功時に onUpdated を更新後の日付で呼び出す', async () => {
+  it('成功後にサーバ再取得(onUpdated)を1度だけ呼び出す', async () => {
     // Arrange
-    const updated = makeDates()[0]!;
-    vi.mocked(updateGuestAvailabilityDateResponse).mockResolvedValue(updated);
+    vi.mocked(updateGuestAvailabilityDateResponse).mockResolvedValue(
+      makeAnswer(),
+    );
     const onUpdated = vi.fn();
     const { cycleAnswer, submitEdit } = useGuestSchedule(
       SESSION_ID,
@@ -260,14 +275,15 @@ describe('submitEdit', () => {
     cycleAnswer(GUEST_MEMBER_ID, DATE_ID);
     await submitEdit();
 
-    // Assert
-    expect(onUpdated).toHaveBeenCalledWith(updated);
+    // Assert: サーバが SSOT。クライアントで状態を組み立てず再取得させる
+    expect(onUpdated).toHaveBeenCalledTimes(1);
+    expect(onUpdated).toHaveBeenCalledWith();
   });
 
   it('成功後に isEditing が false になる', async () => {
     // Arrange
     vi.mocked(updateGuestAvailabilityDateResponse).mockResolvedValue(
-      makeDates()[0]!,
+      makeAnswer(),
     );
     const { cycleAnswer, submitEdit, isEditing, enterEditMode } =
       useGuestSchedule(
@@ -345,7 +361,7 @@ describe('submitEdit', () => {
 
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
-    let resolve!: (d: AvailabilityDate) => void;
+    let resolve!: (a: AvailabilityDateAnswer) => void;
     vi.mocked(updateGuestAvailabilityDateResponse).mockReturnValue(
       new Promise((r) => {
         resolve = r;
@@ -363,7 +379,7 @@ describe('submitEdit', () => {
     // Act
     const first = submitEdit();
     await submitEdit();
-    resolve(makeDates()[0]!);
+    resolve(makeAnswer());
     await first;
 
     // Assert

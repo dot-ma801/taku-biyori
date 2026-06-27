@@ -22,9 +22,6 @@ export const useGuestLink = (
   /** API 取得・コピー処理中かどうか */
   const loading = ref(false);
 
-  /** 直近に組み立てたゲスト招待リンク（コピー成功後に保持する） */
-  const guestLink = ref('');
-
   /** ログインユーザーがこのセッションのホストか */
   const isHost = computed(
     () =>
@@ -48,6 +45,7 @@ export const useGuestLink = (
   /**
    * ゲスト招待用トークンを取得し、招待リンクを組み立ててクリップボードにコピーする。
    * 発行条件を満たさない場合・loading 中の重複呼び出しは無視する。
+   * navigator.clipboard が未対応の環境ではエラーログを出す。
    */
   async function copyGuestLink() {
     if (loading.value || !canIssueGuestLink.value) return;
@@ -55,7 +53,13 @@ export const useGuestLink = (
     try {
       const { token } = await getGuestLink(gameSessionId);
       const link = buildLink(token);
-      guestLink.value = link;
+      if (!navigator.clipboard) {
+        console.error(
+          'navigator.clipboard は未対応の環境です。クリップボードへのコピーをスキップします。',
+        );
+        toast.error('ゲストリンクの取得に失敗しました');
+        return;
+      }
       await navigator.clipboard.writeText(link);
       toast.success('ゲストリンクをコピーしました');
     } catch {

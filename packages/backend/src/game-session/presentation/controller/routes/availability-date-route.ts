@@ -199,7 +199,7 @@ export const registerAvailabilityDateRoute = (
     },
   );
 
-  // ゲストの日程回答。認証不要、X-Guest-Token ヘッダーで認可する。
+  // ゲストの日程回答。認証不要、Guest-Token ヘッダーで認可する。
   app.put(
     '/api/game-sessions/:id/availability-dates/:dateId/guest-responses',
     async (c) => {

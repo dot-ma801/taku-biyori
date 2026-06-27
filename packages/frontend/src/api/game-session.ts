@@ -159,7 +159,7 @@ export async function getGuestLink(
 }
 
 /**
- * ゲストとして卓に参加する。認証不要で、トークンは X-Guest-Token ヘッダーで送る。
+ * ゲストとして卓に参加する。認証不要で、トークンは Guest-Token ヘッダーで送る。
  */
 export async function joinAsGuest(
   gameSessionId: string,
@@ -173,7 +173,7 @@ export async function joinAsGuest(
 }
 
 /**
- * ゲストとして日程候補に回答する。認証不要で、トークンは X-Guest-Token ヘッダーで送る。
+ * ゲストとして日程候補に回答する。認証不要で、トークンは Guest-Token ヘッダーで送る。
  * input には対象ゲスト列を示す memberId を含める。
  */
 export async function updateGuestAvailabilityDateResponse(

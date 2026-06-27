@@ -88,7 +88,7 @@ export const registerMemberRoute = (
     return c.json(result.member satisfies GameSessionMember, 201);
   });
 
-  // ゲスト参加は完全匿名。認証は不要で、X-Guest-Token ヘッダーで認可する。
+  // ゲスト参加は完全匿名。認証は不要で、Guest-Token ヘッダーで認可する。
   app.post('/api/game-sessions/:id/guest-members', async (c) => {
     const token = c.req.header(GUEST_TOKEN_HEADER) ?? '';
 

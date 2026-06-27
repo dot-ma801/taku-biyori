@@ -438,9 +438,18 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 **トークンの扱い（REST方針）**
 - トークンは「参加・回答を認可する資格情報（capability）」として扱う。
 - リンク（`?token=`）に載るのは配布のため不可避だが、**API 呼び出しでは
-  `X-Guest-Token` ヘッダーに載せ替える**。クエリやボディに認可キーを置くのは避ける
+  `Guest-Token` ヘッダーに載せ替える**。クエリやボディに認可キーを置くのは避ける
   （クエリはログ・履歴・Referer に残りやすく、ボディはリソース表現に鍵が混ざるため）。
 - `Authorization: Bearer` ではなく専用ヘッダー名にして better-auth の認証と区別する。
+
+**Referer 漏洩対策（緩和策）**
+- `?token=` 付き URL が Referer ヘッダーを通じて外部リンク先に漏洩するリスクがある。
+- 緩和策として以下のどちらか（または両方）を適用する：
+  1. ページに `<meta name="referrer" content="no-referrer">` を付与するか、
+     レスポンスヘッダーに `Referrer-Policy: no-referrer` を設定してトークンを漏らさない。
+  2. ゲストが卓詳細画面を開いた際に `history.replaceState({}, '', '/game-sessions/:id')` で
+     URL から `?token=` を削除し、ブラウザ履歴・Referer にトークンが残らないようにする。
+- フロントが Vue Router のナビゲーションガードや `onMounted` でリプレースを行うのが最小コスト。
 
 **ゲストが使うエンドポイント**
 | 操作 | エンドポイント | 認証 | トークン | 主なエラー |

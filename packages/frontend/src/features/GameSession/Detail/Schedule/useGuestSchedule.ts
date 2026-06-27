@@ -119,7 +119,8 @@ export const useGuestSchedule = (
 
   /**
    * サーバ値と異なるドラフトをまとめて送信する。
-   * 全件成功後に onUpdated を呼び、サーバ（SSOT）から候補日を再取得させる。
+   * 並列送信し、1件でも失敗したときは error トーストを出してから onUpdated を呼ぶ。
+   * 途中失敗による半 commit を避けるため、成否によらず親状態を再同期させる。
    * トークン未設定・変更なし・loading 中の呼び出しは無視する。
    */
   async function submitEdit() {
@@ -138,15 +139,26 @@ export const useGuestSchedule = (
 
     loading.value = true;
     try {
-      for (const { memberId, dateId, answer } of changes) {
-        await updateGuestAvailabilityDateResponse(
-          gameSessionId,
-          dateId,
-          currentToken,
-          { memberId, answer },
-        );
+      const results = await Promise.allSettled(
+        changes.map(({ memberId, dateId, answer }) =>
+          updateGuestAvailabilityDateResponse(gameSessionId, dateId, currentToken, {
+            memberId,
+            answer,
+          }),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected');
+      if (failed.length > 0) {
+        for (const r of failed) {
+          if (r.status === 'rejected') {
+            console.error('日程回答の更新に失敗しました', r.reason);
+          }
+        }
+        toast.error('日程回答の更新に失敗しました');
       }
-      // サーバを SSOT とし、更新後の真の状態を所有者に再取得させる
+
+      // 成否によらず親状態を再同期して半 commit 状態を解消する
       await onUpdated();
       draftAnswers.value = new Map();
       isEditing.value = false;

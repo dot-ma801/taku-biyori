@@ -359,6 +359,28 @@ describe('submitEdit', () => {
     expect(mockToastError).toHaveBeenCalledWith('日程回答の更新に失敗しました');
   });
 
+  it('API エラー時でも onUpdated を呼んで親状態を再同期する', async () => {
+    // Arrange
+    vi.mocked(updateGuestAvailabilityDateResponse).mockRejectedValue(
+      new Error('サーバーエラー'),
+    );
+    const onUpdated = vi.fn();
+    const { cycleAnswer, submitEdit } = useGuestSchedule(
+      SESSION_ID,
+      TOKEN,
+      makeDates(),
+      GameSessionStatus.open,
+      onUpdated,
+    );
+
+    // Act
+    cycleAnswer(GUEST_MEMBER_ID, DATE_ID);
+    await submitEdit();
+
+    // Assert: 半 commit 解消のため失敗時にも再取得する
+    expect(onUpdated).toHaveBeenCalledTimes(1);
+  });
+
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
     let resolve!: (a: AvailabilityDateAnswer) => void;

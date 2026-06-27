@@ -1,6 +1,5 @@
 import { computed, onMounted, ref } from 'vue';
 import type { GameSessionListItem } from '@taku-biyori/shared';
-import { GameSessionStatus } from '@taku-biyori/shared';
 import { listGameSessions } from '@/api/game-session';
 
 export const useHomeData = () => {
@@ -13,24 +12,12 @@ export const useHomeData = () => {
   /** エラーメッセージ */
   const errorMessage = ref('');
 
-  /**
-   * 募集中の公開セッション。
-   * isPublished=true かつ status=open のセッションが対象。
-   */
   const publicSessions = computed(() =>
-    allSessions.value.filter(
-      (s) => s.isPublished && s.status === GameSessionStatus.open,
-    ),
+    allSessions.value.filter((s) => s.role === null),
   );
 
-  /**
-   * 自分が関わるセッション。
-   * 非公開、または open 以外のステータスのセッションが対象。
-   */
   const mySessions = computed(() =>
-    allSessions.value.filter(
-      (s) => !s.isPublished || s.status !== GameSessionStatus.open,
-    ),
+    allSessions.value.filter((s) => s.role !== null),
   );
 
   /**

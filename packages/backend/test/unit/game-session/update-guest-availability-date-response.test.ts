@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { updateGuestAvailabilityDateResponse } from '@/game-session/application/update-guest-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseRepository } from '@/game-session/application/update-guest-availability-date-response';
 import type { AvailabilityDateAnswer } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const TOKEN = 'guest-token-abc';
 
@@ -15,6 +16,7 @@ const mockAnswer: AvailabilityDateAnswer = {
 const makeRepo = (
   overrides: Partial<UpdateGuestAvailabilityDateResponseRepository> = {},
 ): UpdateGuestAvailabilityDateResponseRepository => ({
+  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.open),
   findGuestLinkToken: vi.fn().mockResolvedValue(TOKEN),
   findCandidateOwner: vi
     .fn()
@@ -140,5 +142,93 @@ describe('updateGuestAvailabilityDateResponse', () => {
       answer: 'maybe',
       comment: 'たぶん行ける',
     });
+  });
+
+  it('status が open のとき回答できる', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.open),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'ok', answer: mockAnswer });
+  });
+
+  it('status が scheduling のとき回答できる', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.scheduling),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'ok', answer: mockAnswer });
+  });
+
+  it('status が confirmed のとき locked を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.confirmed),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'locked' });
+  });
+
+  it('status が completed のとき locked を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.completed),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'locked' });
+  });
+
+  it('status が draft のとき locked を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.draft),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'locked' });
+  });
+
+  it('status が today のとき locked を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue(GameSessionStatus.today),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'locked' });
   });
 });

@@ -134,35 +134,13 @@ describe('join', () => {
   it('joinAsGuest を token とトリムした入力値で呼び出す', async () => {
     // Arrange
     vi.mocked(joinAsGuest).mockResolvedValue(makeGuestMember());
-    const { guestName, characterName, join } = useGuestJoin(
-      SESSION_ID,
-      TOKEN,
-      GameSessionStatus.open,
-      vi.fn(),
-    );
-    guestName.value = '  ゲスト太郎  ';
-    characterName.value = '  探偵  ';
-
-    // Act
-    await join();
-
-    // Assert
-    expect(joinAsGuest).toHaveBeenCalledWith(SESSION_ID, TOKEN, {
-      guestName: 'ゲスト太郎',
-      characterName: '探偵',
-    });
-  });
-
-  it('キャラクター名が空のときは characterName を undefined で送る', async () => {
-    // Arrange
-    vi.mocked(joinAsGuest).mockResolvedValue(makeGuestMember());
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
       GameSessionStatus.open,
       vi.fn(),
     );
-    guestName.value = 'ゲスト太郎';
+    guestName.value = '  ゲスト太郎  ';
 
     // Act
     await join();
@@ -170,7 +148,6 @@ describe('join', () => {
     // Assert
     expect(joinAsGuest).toHaveBeenCalledWith(SESSION_ID, TOKEN, {
       guestName: 'ゲスト太郎',
-      characterName: undefined,
     });
   });
 
@@ -179,14 +156,13 @@ describe('join', () => {
     const newMember = makeGuestMember();
     vi.mocked(joinAsGuest).mockResolvedValue(newMember);
     const onJoined = vi.fn();
-    const { guestName, characterName, join } = useGuestJoin(
+    const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
       GameSessionStatus.open,
       onJoined,
     );
     guestName.value = 'ゲスト太郎';
-    characterName.value = '探偵';
 
     // Act
     await join();
@@ -194,7 +170,6 @@ describe('join', () => {
     // Assert
     expect(onJoined).toHaveBeenCalledWith(newMember);
     expect(guestName.value).toBe('');
-    expect(characterName.value).toBe('');
   });
 
   it('ゲスト名が空のときは API を呼ばない', async () => {

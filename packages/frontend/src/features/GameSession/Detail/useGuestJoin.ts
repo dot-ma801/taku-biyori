@@ -22,8 +22,6 @@ export const useGuestJoin = (
 
   /** ゲスト名の入力ドラフト（この composable が所有するため v-model 可） */
   const guestName = ref('');
-  /** キャラクター名の入力ドラフト（任意。この composable が所有する） */
-  const characterName = ref('');
 
   /** 招待トークンが付与されているか（招待リンク経由のアクセスか） */
   const hasToken = computed(() => !!toValue(token));
@@ -52,11 +50,9 @@ export const useGuestJoin = (
     try {
       const member = await joinAsGuest(gameSessionId, currentToken, {
         guestName: guestName.value.trim(),
-        characterName: characterName.value.trim() || undefined,
       });
       onJoined(member);
       guestName.value = '';
-      characterName.value = '';
       toast.success('参加しました');
     } catch {
       toast.error('参加に失敗しました');
@@ -67,7 +63,6 @@ export const useGuestJoin = (
 
   return {
     guestName,
-    characterName,
     hasToken,
     canGuestJoin,
     canSubmit,

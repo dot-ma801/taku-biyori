@@ -557,7 +557,7 @@ export const createGameSessionRepository = (
         gameSessionId,
         userId: null,
         guestName: input.guestName,
-        characterName: input.characterName ?? null,
+        characterName: null,
       })
       .returning();
 

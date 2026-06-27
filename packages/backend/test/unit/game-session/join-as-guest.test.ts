@@ -115,13 +115,11 @@ describe('joinAsGuest', () => {
     // Act
     await joinAsGuest(repo, 'session-1', TOKEN, {
       guestName: 'ゲスト太郎',
-      characterName: '被害者',
     });
 
     // Assert
     expect(addGuestMember).toHaveBeenCalledWith('session-1', {
       guestName: 'ゲスト太郎',
-      characterName: '被害者',
     });
   });
 });

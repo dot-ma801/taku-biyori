@@ -133,6 +133,7 @@ export const useGuestSchedule = (
         originalAnswerOf(memberId, dateId) !== answer,
     );
     if (changes.length === 0) {
+      draftAnswers.value = new Map();
       isEditing.value = false;
       return;
     }

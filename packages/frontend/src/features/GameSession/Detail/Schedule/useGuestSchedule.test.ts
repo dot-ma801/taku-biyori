@@ -320,6 +320,30 @@ describe('submitEdit', () => {
     expect(updateGuestAvailabilityDateResponse).not.toHaveBeenCalled();
   });
 
+  it('変更なし退出時にドラフトもクリアされる', async () => {
+    // Arrange: ドラフトをセルと同じ値（ok->maybe->ng->ok）に戻して変更なし状態に
+    const { cycleAnswer, draftAnswers, isEditing, enterEditMode, submitEdit } =
+      useGuestSchedule(
+        SESSION_ID,
+        TOKEN,
+        makeDates(),
+        GameSessionStatus.open,
+        vi.fn(),
+      );
+    enterEditMode();
+    // ok -> maybe -> ng -> ok （元に戻す）
+    cycleAnswer(GUEST_MEMBER_ID, DATE_ID);
+    cycleAnswer(GUEST_MEMBER_ID, DATE_ID);
+    cycleAnswer(GUEST_MEMBER_ID, DATE_ID);
+
+    // Act
+    await submitEdit();
+
+    // Assert: ドラフトがクリアされ isEditing も false になる
+    expect(draftAnswers.value.size).toBe(0);
+    expect(isEditing.value).toBe(false);
+  });
+
   it('token が null のときは API を呼ばない', async () => {
     // Arrange
     const { cycleAnswer, submitEdit } = useGuestSchedule(

@@ -50,6 +50,7 @@ const {
   isEditing,
   draftAnswers,
   enterEditMode,
+  cancelEdit,
   cycleAnswer,
   submitEdit,
   refetch: refetchSchedule,
@@ -138,6 +139,12 @@ function startScheduleEdit() {
   else if (canEditGuestSchedule.value) enterEditModeGuestSchedule();
 }
 
+// 「キャンセル」：編集モードに応じてキャンセルする
+function cancelScheduleEdit() {
+  if (isEditingGuestSchedule.value) cancelGuestEdit();
+  else cancelEdit();
+}
+
 // 「完了」：編集モードに応じて送信する
 function finishScheduleEdit() {
   if (isEditingGuestSchedule.value) submitGuestEdit();
@@ -151,6 +158,10 @@ const finishLoading = computed(
 const finishDisabled = computed(
   () => isEditingGuestSchedule.value && !hasGuestChanges.value,
 );
+
+// template 内の式を computed に切り出す（CLAUDE.md ルール）
+const displayMemberId = computed(() => myMemberId.value || canEditGuestSchedule.value);
+const canEditSchedule = computed(() => canInputSchedule.value || canEditGuestSchedule.value);
 </script>
 
 <template>
@@ -175,13 +186,12 @@ const finishDisabled = computed(
         @cell-click="onCellClick"
         @date-select="(id) => (selectedDateId = id)"
       />
-      <div v-if="myMemberId || canEditGuestSchedule" class="actions">
+      <div v-if="displayMemberId" class="actions">
         <template v-if="isScheduleEditing">
           <BaseButton
-            v-if="isEditingGuestSchedule"
             variant="secondary"
             :left-icon="RotateCcw"
-            @click="cancelGuestEdit"
+            @click="cancelScheduleEdit"
           >
             キャンセル
           </BaseButton>
@@ -205,7 +215,7 @@ const finishDisabled = computed(
             選択を解除
           </BaseButton>
           <BaseButton
-            v-if="canInputSchedule || canEditGuestSchedule"
+            v-if="canEditSchedule"
             variant="secondary"
             :left-icon="SquarePen"
             @click="startScheduleEdit"

@@ -68,6 +68,11 @@ export const useSchedule = (
     isEditing.value = true;
   }
 
+  function cancelEdit() {
+    draftAnswers.value = new Map();
+    isEditing.value = false;
+  }
+
   // 現在の回答（draftを優先、なければoriginal）を返す
   function currentAnswer(dateId: string): Answer | null {
     return (
@@ -104,6 +109,7 @@ export const useSchedule = (
     draftAnswers,
     hasChanges,
     enterEditMode,
+    cancelEdit,
     cycleAnswer,
     submitEdit,
     // サーバを SSOT とし、ゲスト回答更新後などに候補日を再取得するために公開する

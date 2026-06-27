@@ -14,7 +14,6 @@ const props = defineProps<{
 }>();
 
 const route = useRoute();
-const token = route.query.token?.toString() ?? '';
 
 const emit = defineEmits<{
   guestJoined: [member: GameSessionMember];
@@ -26,7 +25,8 @@ const {
   join: joinGuest,
 } = useGuestJoin(
   props.gameSessionId,
-  () => token,
+  // getter で渡すことで route.query の変化をリアクティブに追従する
+  () => route.query.token?.toString() ?? null,
   () => props.gameSessionStatus,
   // 参加成功後の新メンバーを親へ渡す（書き込みは親に委譲）
   (member: GameSessionMember) => emit('guestJoined', member),

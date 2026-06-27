@@ -308,7 +308,7 @@ confirmed（実施前）
 | ゲストユーザー | セッション内の全ゲストの回答（本人確認不可のため） |
 
 > ゲストの回答は全員分が編集可能な状態でそのまま表示される。
-> ゲストの回答は専用エンドポイント `guest-responses` 経由で行い、`X-Guest-Token` ヘッダーでトークン検証する。
+> ゲストの回答は専用エンドポイント `guest-responses` 経由で行い、`Guest-Token` ヘッダーでトークン検証する。
 > ログイン参加者の回答（`user_id != null`）はゲスト経路からは編集できない。
 
 ### 日程確定
@@ -352,7 +352,7 @@ confirmed（実施前）
 |---|---|---|
 | `GET` | `/api/game-sessions/:id/members` | メンバー一覧取得 |
 | `POST` | `/api/game-sessions/:id/members` | メンバー参加（ログインユーザー） |
-| `POST` | `/api/game-sessions/:id/guest-members` | ゲストリンク経由でメンバー参加（認証不要・`X-Guest-Token` ヘッダー必須） |
+| `POST` | `/api/game-sessions/:id/guest-members` | ゲストリンク経由でメンバー参加（認証不要・`Guest-Token` ヘッダー必須） |
 | `PATCH` | `/api/game-sessions/:id/members/:memberId` | メンバー情報更新（キャラクター名） |
 | `DELETE` | `/api/game-sessions/:id/members/:memberId` | メンバー退出 |
 
@@ -366,7 +366,7 @@ confirmed（実施前）
 | `DELETE` | `/api/game-sessions/:id/availability-dates/:dateId` | 候補日を1件削除（確定済みは `409`） |
 | `POST` | `/api/game-sessions/:id/availability-dates/:dateId/confirm` | 候補日確定（`scheduled_at` セット） |
 | `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/responses` | 日程回答（◯△×）登録・更新（ログインユーザー。自分の回答のみ） |
-| `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/guest-responses` | ゲストの日程回答（認証不要・`X-Guest-Token` 必須・`memberId` 指定で全ゲスト分を編集可） |
+| `PUT` | `/api/game-sessions/:id/availability-dates/:dateId/guest-responses` | ゲストの日程回答（認証不要・`Guest-Token` 必須・`memberId` 指定で全ゲスト分を編集可） |
 
 #### Guest Links
 
@@ -452,13 +452,16 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 - フロントが Vue Router のナビゲーションガードや `onMounted` でリプレースを行うのが最小コスト。
 
 **ゲストが使うエンドポイント**
+
 | 操作 | エンドポイント | 認証 | トークン | 主なエラー |
 |---|---|---|---|---|
 | 閲覧 | `GET /api/game-sessions/:id` | 不要（公開済み前提） | 不要 | 非公開は 401/403 |
-| 参加 | `POST /api/game-sessions/:id/guest-members` | 不要 | `X-Guest-Token` 必須 | token不一致 403 / `open`以外 422 / 卓なし 404 |
-| 回答 | `PUT /api/game-sessions/:id/availability-dates/:dateId/guest-responses` | 不要 | `X-Guest-Token` 必須 | token不一致 403 / 非ゲストmemberId 403 / 卓・日付なし 404 |
+| 参加 | `POST /api/game-sessions/:id/guest-members` | 不要 | `Guest-Token` 必須 | token不一致 403 / `open`以外 422 / 卓なし 404 |
+| 回答 | `PUT /api/game-sessions/:id/availability-dates/:dateId/guest-responses` | 不要 | `Guest-Token` 必須 | token不一致 403 / 非ゲストmemberId 403 / 卓・日付なし 404 |
 
-- 参加 body: `{ guestName, characterName? }`（`user_id` は null 登録）。**重複参加は許容**（dup チェックなし）。
+
+
+- 参加 body: `{ guestName }`（`user_id` は null 登録）。**重複参加は許容**（dup チェックなし）。
 - 回答 body: `{ memberId, answer, comment? }`。`memberId` がその卓の**ゲストメンバー（`user_id = null`）**であることを検証。
   本人確認はしないため、**どのゲストでも全ゲスト列を編集可**（調整さん方式）。
 - キャラ名編集（`PATCH .../members/:memberId`）と退出（`DELETE .../members/:memberId`）は

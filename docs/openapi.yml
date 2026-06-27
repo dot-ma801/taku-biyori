@@ -445,7 +445,7 @@ paths:
         ゲスト招待リンク経由でセッションにメンバーとして参加する。**認証不要**。
         `user_id` は null として登録され、`guest_name` に入力した名前を使用する。
 
-        - `X-Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
+        - `Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
         - 参加できるのは `status === open` のときのみ（通常参加と同条件）。それ以外は `422`。
         - **重複参加を許容**する（本人確認手段がないため。同名でも別レコードになる）。
         - 満員（maxMembers）チェックは行わない（通常参加にも無いため揃える）。
@@ -467,7 +467,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
-          description: X-Guest-Token が卓のトークンと一致しない
+          description: Guest-Token が卓のトークンと一致しない
           content:
             application/json:
               schema:
@@ -691,7 +691,7 @@ paths:
       description: |
         ゲストが候補日に対して回答する。既存の回答があれば上書き。**認証不要**。
 
-        - `X-Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
+        - `Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
         - `memberId` は必須。指定した `memberId` がその卓の
           **ゲストメンバー（`user_id = null`）**であることをサーバーで検証する。
           `user_id != null`（ログイン参加者）のメンバーを指定した場合は `403`。
@@ -711,7 +711,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AvailabilityResponse'
+                type: object
+                required: [id, memberId, answer]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: availability_responses.id（回答レコード自体のID）
+                  memberId:
+                    type: string
+                    format: uuid
+                    description: game_session_members.id（ゲストメンバーID）
+                  answer:
+                    $ref: '#/components/schemas/ScheduleAnswer'
+                  comment:
+                    type: string
+                    nullable: true
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -842,7 +857,7 @@ components:
         format: uuid
 
     GuestToken:
-      name: X-Guest-Token
+      name: Guest-Token
       in: header
       required: true
       description: |
@@ -1268,9 +1283,6 @@ components:
           type: string
           maxLength: 50
           description: ゲストの表示名（game_session_members.guest_name に保存）
-        characterName:
-          type: string
-          maxLength: 50
 
     UpdateGameSessionMemberInput:
       type: object
@@ -1354,7 +1366,7 @@ components:
       required: [memberId, answer]
       description: |
         ゲスト用。memberId 必須。指定したメンバーはその卓のゲストメンバー
-        （user_id = null）でなければならない。認可は X-Guest-Token ヘッダーで行う。
+        （user_id = null）でなければならない。認可は Guest-Token ヘッダーで行う。
       properties:
         memberId:
           type: string

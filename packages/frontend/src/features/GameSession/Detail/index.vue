@@ -6,8 +6,7 @@ import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
-import { computed } from 'vue';
-
+import { computed, ref } from 'vue';
 import {
   Album,
   UsersRound,
@@ -17,19 +16,33 @@ import {
   SquarePen,
   Globe,
   Trophy,
+  Share2,
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import type { GameSessionMember } from '@taku-biyori/shared';
+import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
+import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
+import { useAuthStore } from '@/stores/auth';
+import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
+import { useRoute } from 'vue-router';
 
 const props = defineProps<{ gameSessionId: string }>();
+
+const authStore = useAuthStore();
+const route = useRoute();
+
+const guestJoinDialogModel = ref(false);
 
 const {
   gameSession,
   loading: loadingDetail,
   errorMessage,
   patchGameSession,
+  addMember,
+  removeMember,
+  updateMember,
   onClickEdit,
 } = useGetGameSessionDetail(props.gameSessionId);
 
@@ -49,10 +62,36 @@ const {
 const {
   canJoin,
   canLeave,
-  join,
+  join: joinUser,
   leave,
   loading: loadingMember,
-} = useGameSessionMembership(props.gameSessionId, gameSession);
+} = useGameSessionMembership(
+  props.gameSessionId,
+  () => gameSession.value,
+  addMember,
+  removeMember,
+);
+const {
+  loading: loadingGuestLink,
+  canIssueGuestLink,
+  copyGuestLink,
+} = useGuestLink(
+  props.gameSessionId,
+  () => gameSession.value?.createdBy ?? null,
+  () => gameSession.value?.status,
+);
+
+// ゲスト参加可否（未ログイン時のみ意味を持つ）。トークンなし・status 非 open では表示しない。
+const { canGuestJoin } = useGuestJoin(
+  props.gameSessionId,
+  () => route.query.token?.toString() ?? null,
+  () => gameSession.value?.status,
+  // ダイアログ内でも join を持つため、ここでは canGuestJoin のみ使い onJoined は空実装
+  () => {},
+);
+
+/** ログインユーザーとして参加可能、またはゲストとして参加可能（招待リンク経由）か */
+const canJoinAny = computed(() => canJoin.value || canGuestJoin.value);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -64,16 +103,20 @@ const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
 
-// 子（MemberDisplay）からは更新後メンバーを受け取るだけ。
-// gameSession を所有するのはこの親なので、書き換えは patchGameSession に集約する。
-function onMemberUpdated(updated: GameSessionMember) {
-  if (!gameSession.value) return;
-  patchGameSession({
-    members: gameSession.value.members.map((m) =>
-      m.id === updated.id ? updated : m,
-    ),
-  });
+// ゲスト参加：メンバー追加（composable に委譲）＋ この SFC が所有する
+// ダイアログの開閉という UI 状態の制御だけをここで行う。
+function onGuestJoined(member: GameSessionMember) {
+  addMember(member);
+  guestJoinDialogModel.value = false;
 }
+
+const join = () => {
+  if (authStore.currentUser) {
+    joinUser();
+  } else {
+    guestJoinDialogModel.value = true;
+  }
+};
 </script>
 
 <template>
@@ -106,6 +149,16 @@ function onMemberUpdated(updated: GameSessionMember) {
           >
             セッション編集
           </BaseButton>
+          <!-- secondary でいいか？ -->
+          <BaseButton
+            v-if="canIssueGuestLink"
+            :left-icon="Share2"
+            variant="secondary"
+            @click="copyGuestLink"
+            :loading="loadingGuestLink"
+          >
+            招待リンクを取得
+          </BaseButton>
           <BaseButton
             :left-icon="Globe"
             v-if="canPublish"
@@ -123,7 +176,7 @@ function onMemberUpdated(updated: GameSessionMember) {
             セッション完了！
           </BaseButton>
           <BaseButton
-            v-if="canJoin"
+            v-if="canJoinAny"
             :left-icon="UserRoundPlus"
             @click="join"
             :loading="loadingMember"
@@ -152,8 +205,14 @@ function onMemberUpdated(updated: GameSessionMember) {
     ></ScheduleDisplay>
     <MemberDisplay
       :game-session="gameSession"
-      @member-updated="onMemberUpdated"
+      @member-updated="updateMember"
     ></MemberDisplay>
+    <GuestJoinDialog
+      v-model="guestJoinDialogModel"
+      :game-session-id="gameSession.id"
+      :game-session-status="gameSession.status"
+      @guest-joined="onGuestJoined"
+    ></GuestJoinDialog>
   </div>
 </template>
 

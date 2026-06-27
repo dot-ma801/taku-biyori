@@ -34,6 +34,8 @@ export {
   type BulkUpdateAvailabilityDatesInput,
   UpdateAvailabilityDateResponseInputSchema,
   type UpdateAvailabilityDateResponseInput,
+  GuestUpdateAvailabilityDateResponseInputSchema,
+  type GuestUpdateAvailabilityDateResponseInput,
   JoinGameSessionInputSchema,
   type JoinGameSessionInput,
   JoinAsGuestInputSchema,
@@ -42,6 +44,7 @@ export {
   type UpdateMemberInput,
   GuestLinkResponseSchema,
   type GuestLinkResponse,
+  GUEST_TOKEN_HEADER,
 } from './game-session.js';
 export {
   type GameSessionRole,

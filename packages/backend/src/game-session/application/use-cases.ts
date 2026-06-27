@@ -21,6 +21,7 @@ import type { DeleteAvailabilityDateResult } from '@/game-session/application/de
 import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
 import type { BulkUpdateAvailabilityDatesResult } from '@/game-session/application/bulk-update-availability-dates';
 import type { UpdateAvailabilityDateResponseResult } from '@/game-session/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseResult } from '@/game-session/application/update-guest-availability-date-response';
 import type { ListMembersResult } from '@/game-session/application/list-members';
 import type { JoinGameSessionResult } from '@/game-session/application/join-game-session';
 import type { JoinAsGuestResult } from '@/game-session/application/join-as-guest';
@@ -40,6 +41,7 @@ import type { DeleteAvailabilityDateRepository } from '@/game-session/applicatio
 import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
 import type { BulkUpdateAvailabilityDatesRepository } from '@/game-session/application/bulk-update-availability-dates';
 import type { UpdateAvailabilityDateResponseRepository } from '@/game-session/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseRepository } from '@/game-session/application/update-guest-availability-date-response';
 import type { ListMembersRepository } from '@/game-session/application/list-members';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
 import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
@@ -59,6 +61,7 @@ import { deleteAvailabilityDate } from '@/game-session/application/delete-availa
 import { confirmAvailabilityDate } from '@/game-session/application/confirm-availability-date';
 import { bulkUpdateAvailabilityDates } from '@/game-session/application/bulk-update-availability-dates';
 import { updateAvailabilityDateResponse } from '@/game-session/application/update-availability-date-response';
+import { updateGuestAvailabilityDateResponse } from '@/game-session/application/update-guest-availability-date-response';
 import { listMembers } from '@/game-session/application/list-members';
 import { joinGameSession } from '@/game-session/application/join-game-session';
 import { joinAsGuest } from '@/game-session/application/join-as-guest';
@@ -79,6 +82,7 @@ type GameSessionRepo = ListGameSessionsRepository &
   ConfirmAvailabilityDateRepository &
   BulkUpdateAvailabilityDatesRepository &
   UpdateAvailabilityDateResponseRepository &
+  UpdateGuestAvailabilityDateResponseRepository &
   ListMembersRepository &
   JoinGameSessionRepository &
   JoinAsGuestRepository &
@@ -140,6 +144,13 @@ export interface GameSessionUseCases {
     userId: string,
     input: UpdateAvailabilityDateResponseInput,
   ): Promise<UpdateAvailabilityDateResponseResult>;
+  updateGuestAvailabilityDateResponse(
+    gameSessionId: string,
+    dateId: string,
+    token: string,
+    memberId: string,
+    input: UpdateAvailabilityDateResponseInput,
+  ): Promise<UpdateGuestAvailabilityDateResponseResult>;
   listMembers(gameSessionId: string): Promise<ListMembersResult>;
   joinGameSession(
     gameSessionId: string,
@@ -148,6 +159,7 @@ export interface GameSessionUseCases {
   ): Promise<JoinGameSessionResult>;
   joinAsGuest(
     gameSessionId: string,
+    token: string,
     input: JoinAsGuestInput,
   ): Promise<JoinAsGuestResult>;
   updateMember(
@@ -229,6 +241,21 @@ export const createGameSessionUseCases = (
     input: UpdateAvailabilityDateResponseInput,
   ): Promise<UpdateAvailabilityDateResponseResult> =>
     updateAvailabilityDateResponse(repo, gameSessionId, dateId, userId, input),
+  updateGuestAvailabilityDateResponse: (
+    gameSessionId: string,
+    dateId: string,
+    token: string,
+    memberId: string,
+    input: UpdateAvailabilityDateResponseInput,
+  ): Promise<UpdateGuestAvailabilityDateResponseResult> =>
+    updateGuestAvailabilityDateResponse(
+      repo,
+      gameSessionId,
+      dateId,
+      token,
+      memberId,
+      input,
+    ),
   listMembers: (gameSessionId: string): Promise<ListMembersResult> =>
     listMembers(repo, gameSessionId),
   joinGameSession: (
@@ -239,8 +266,10 @@ export const createGameSessionUseCases = (
     joinGameSession(repo, gameSessionId, userId, input),
   joinAsGuest: (
     gameSessionId: string,
+    token: string,
     input: JoinAsGuestInput,
-  ): Promise<JoinAsGuestResult> => joinAsGuest(repo, gameSessionId, input),
+  ): Promise<JoinAsGuestResult> =>
+    joinAsGuest(repo, gameSessionId, token, input),
   updateMember: (
     gameSessionId: string,
     memberId: string,

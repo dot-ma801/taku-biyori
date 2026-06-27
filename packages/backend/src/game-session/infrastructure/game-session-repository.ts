@@ -42,6 +42,7 @@ import type { DeleteAvailabilityDateRepository } from '@/game-session/applicatio
 import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
 import type { BulkUpdateAvailabilityDatesRepository } from '@/game-session/application/bulk-update-availability-dates';
 import type { UpdateAvailabilityDateResponseRepository } from '@/game-session/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseRepository } from '@/game-session/application/update-guest-availability-date-response';
 import type { ListMembersRepository } from '@/game-session/application/list-members';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
 import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
@@ -62,6 +63,7 @@ export type GameSessionRepository = ListGameSessionsRepository &
   ConfirmAvailabilityDateRepository &
   BulkUpdateAvailabilityDatesRepository &
   UpdateAvailabilityDateResponseRepository &
+  UpdateGuestAvailabilityDateResponseRepository &
   ListMembersRepository &
   JoinGameSessionRepository &
   JoinAsGuestRepository &
@@ -555,7 +557,7 @@ export const createGameSessionRepository = (
         gameSessionId,
         userId: null,
         guestName: input.guestName,
-        characterName: input.characterName ?? null,
+        characterName: null,
       })
       .returning();
 
@@ -640,6 +642,33 @@ export const createGameSessionRepository = (
       .limit(1);
     if (!row[0]) return null;
     return { hostUserId: row[0].hostUserId, token: row[0].guestLinkToken };
+  },
+
+  async findGuestLinkToken(id: string): Promise<string | null> {
+    const row = await db
+      .select({ guestLinkToken: gameSessions.guestLinkToken })
+      .from(gameSessions)
+      .where(eq(gameSessions.id, id))
+      .limit(1);
+    return row[0]?.guestLinkToken ?? null;
+  },
+
+  async isGuestMember(
+    gameSessionId: string,
+    memberId: string,
+  ): Promise<boolean> {
+    const row = await db
+      .select({ userId: gameSessionMembers.userId })
+      .from(gameSessionMembers)
+      .where(
+        and(
+          eq(gameSessionMembers.id, memberId),
+          eq(gameSessionMembers.gameSessionId, gameSessionId),
+          isNull(gameSessionMembers.userId),
+        ),
+      )
+      .limit(1);
+    return row[0] !== undefined;
   },
 
   async findByGuestLinkToken(token: string): Promise<GameSession | null> {

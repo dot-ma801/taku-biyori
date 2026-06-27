@@ -15,6 +15,7 @@ export const GameSessionListItemSchema = z.object({
   scheduledAt: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  role: z.enum(['host', 'member']).nullable(),
 });
 export type GameSessionListItem = z.infer<typeof GameSessionListItemSchema>;
 

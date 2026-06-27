@@ -160,8 +160,12 @@ const finishDisabled = computed(
 );
 
 // template 内の式を computed に切り出す（CLAUDE.md ルール）
-const displayMemberId = computed(() => myMemberId.value || canEditGuestSchedule.value);
-const canEditSchedule = computed(() => canInputSchedule.value || canEditGuestSchedule.value);
+const displayMemberId = computed(
+  () => myMemberId.value || canEditGuestSchedule.value,
+);
+const canEditSchedule = computed(
+  () => canInputSchedule.value || canEditGuestSchedule.value,
+);
 </script>
 
 <template>

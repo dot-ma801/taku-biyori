@@ -25,7 +25,9 @@ export const useGuestLink = (
   /** ログインユーザーがこのセッションのホストか */
   const isHost = computed(() => {
     const cb = toValue(createdBy);
-    return !!authStore.currentUser && cb !== null && cb === authStore.currentUser.id;
+    return (
+      !!authStore.currentUser && cb !== null && cb === authStore.currentUser.id
+    );
   });
 
   /**

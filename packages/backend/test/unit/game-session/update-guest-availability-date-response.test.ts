@@ -205,9 +205,7 @@ describe('updateGuestAvailabilityDateResponse', () => {
   it('status が draft のとき locked を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findGameSessionStatus: vi
-        .fn()
-        .mockResolvedValue(GameSessionStatus.draft),
+      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.draft),
     });
 
     // Act
@@ -220,9 +218,7 @@ describe('updateGuestAvailabilityDateResponse', () => {
   it('status が today のとき locked を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findGameSessionStatus: vi
-        .fn()
-        .mockResolvedValue(GameSessionStatus.today),
+      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.today),
     });
 
     // Act

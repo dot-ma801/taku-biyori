@@ -234,7 +234,10 @@ export const registerAvailabilityDateRoute = (
       if (result.type === 'forbidden')
         return c.json({ error: 'Forbidden' }, 403);
       if (result.type === 'locked')
-        return c.json({ error: 'Locked: session is not open for responses' }, 423);
+        return c.json(
+          { error: 'Locked: session is not open for responses' },
+          423,
+        );
       return c.json(result.answer satisfies AvailabilityDateAnswer);
     },
   );

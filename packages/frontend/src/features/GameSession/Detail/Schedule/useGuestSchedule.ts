@@ -141,10 +141,15 @@ export const useGuestSchedule = (
     try {
       const results = await Promise.allSettled(
         changes.map(({ memberId, dateId, answer }) =>
-          updateGuestAvailabilityDateResponse(gameSessionId, dateId, currentToken, {
-            memberId,
-            answer,
-          }),
+          updateGuestAvailabilityDateResponse(
+            gameSessionId,
+            dateId,
+            currentToken,
+            {
+              memberId,
+              answer,
+            },
+          ),
         ),
       );
 

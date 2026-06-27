@@ -143,7 +143,6 @@ export type JoinGameSessionInput = z.infer<typeof JoinGameSessionInputSchema>;
 
 export const JoinAsGuestInputSchema = z.object({
   guestName: z.string().min(1).max(100),
-  characterName: z.string().max(100).optional(),
 });
 export type JoinAsGuestInput = z.infer<typeof JoinAsGuestInputSchema>;
 

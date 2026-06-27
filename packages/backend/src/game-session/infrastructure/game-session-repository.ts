@@ -5,6 +5,7 @@ import {
   exists,
   isNull,
   or,
+  sql,
   getTableColumns,
 } from 'drizzle-orm';
 import type {
@@ -88,7 +89,10 @@ type GameSessionRow = {
   updatedAt: Date;
 };
 
-type ListRow = GameSessionRow & { memberCount: number };
+type ListRow = GameSessionRow & {
+  memberCount: number;
+  userMemberId: string | null;
+};
 
 const toDateOrNull = (s: string | null): Date | null =>
   s ? new Date(s) : null;
@@ -115,7 +119,10 @@ const toGameSession = (row: GameSessionRow): GameSession => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-const toListItem = (row: ListRow): GameSessionListItem => ({
+const toListItem = (
+  row: ListRow,
+  userId: string,
+): GameSessionListItem => ({
   id: row.id,
   title: row.title,
   scenarioName: row.scenarioName,
@@ -131,6 +138,12 @@ const toListItem = (row: ListRow): GameSessionListItem => ({
   scheduledAt: row.scheduledAt,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
+  role:
+    row.hostUserId === userId
+      ? 'host'
+      : row.userMemberId !== null
+        ? 'member'
+        : null,
 });
 
 export const createGameSessionRepository = (
@@ -141,6 +154,12 @@ export const createGameSessionRepository = (
       .select({
         ...getTableColumns(gameSessions),
         memberCount: count(gameSessionMembers.id),
+        userMemberId: sql<string | null>`(
+          SELECT id FROM game_session_members
+          WHERE game_session_id = ${gameSessions.id}
+            AND user_id = ${userId}
+          LIMIT 1
+        )`,
       })
       .from(gameSessions)
       .leftJoin(
@@ -161,15 +180,22 @@ export const createGameSessionRepository = (
                 ),
               ),
           ),
+          and(
+            eq(gameSessions.isPublished, true),
+            or(
+              isNull(gameSessions.openUntil),
+              sql`${gameSessions.openUntil} > CURRENT_DATE`,
+            ),
+          ),
         ),
       )
       .groupBy(gameSessions.id);
 
     return rows.map((row) =>
-      toListItem({
-        ...row,
-        memberCount: Number(row.memberCount),
-      }),
+      toListItem(
+        { ...row, memberCount: Number(row.memberCount) },
+        userId,
+      ),
     );
   },
 

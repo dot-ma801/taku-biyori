@@ -13,7 +13,7 @@ import { useToast } from '@/composables/useToast';
  */
 export const useGuestLink = (
   gameSessionId: string,
-  createdBy: MaybeRefOrGetter<string>,
+  createdBy: MaybeRefOrGetter<string | null>,
   status: MaybeRefOrGetter<GameSessionStatus | undefined>,
 ) => {
   const authStore = useAuthStore();
@@ -23,11 +23,10 @@ export const useGuestLink = (
   const loading = ref(false);
 
   /** ログインユーザーがこのセッションのホストか */
-  const isHost = computed(
-    () =>
-      !!authStore.currentUser &&
-      toValue(createdBy) === authStore.currentUser.id,
-  );
+  const isHost = computed(() => {
+    const cb = toValue(createdBy);
+    return !!authStore.currentUser && cb !== null && cb === authStore.currentUser.id;
+  });
 
   /**
    * ゲスト招待リンクを発行できるか。ボタンの出し分けに使う。

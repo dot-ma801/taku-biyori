@@ -23,12 +23,15 @@ import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameS
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import type { GameSessionMember } from '@taku-biyori/shared';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
+import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
 import { useAuthStore } from '@/stores/auth';
 import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
+import { useRoute } from 'vue-router';
 
 const props = defineProps<{ gameSessionId: string }>();
 
 const authStore = useAuthStore();
+const route = useRoute();
 
 const guestJoinDialogModel = ref(false);
 
@@ -77,6 +80,18 @@ const {
   () => gameSession.value?.createdBy ?? '',
   () => gameSession.value?.status,
 );
+
+// ゲスト参加可否（未ログイン時のみ意味を持つ）。トークンなし・status 非 open では表示しない。
+const { canGuestJoin } = useGuestJoin(
+  props.gameSessionId,
+  () => route.query.token?.toString() ?? null,
+  () => gameSession.value?.status,
+  // ダイアログ内でも join を持つため、ここでは canGuestJoin のみ使い onJoined は空実装
+  () => {},
+);
+
+/** ログインユーザーとして参加可能、またはゲストとして参加可能（招待リンク経由）か */
+const canJoinAny = computed(() => canJoin.value || canGuestJoin.value);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -161,7 +176,7 @@ const join = () => {
             セッション完了！
           </BaseButton>
           <BaseButton
-            v-if="canJoin"
+            v-if="canJoinAny"
             :left-icon="UserRoundPlus"
             @click="join"
             :loading="loadingMember"

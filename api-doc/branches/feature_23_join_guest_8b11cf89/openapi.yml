@@ -722,6 +722,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '423':
+          description: セッションが確定済み・完了済みなど回答不可能な状態（Locked）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ========== Guest Links ==========
 
@@ -752,7 +758,7 @@ paths:
 
   # NOTE: 旧 GET /join/{token}（ゲストリンクプレビュー）と専用ページ /join/[token] は廃止。
   #       ゲストはログインユーザーと同じ卓詳細画面 /game-sessions/:id（GET /api/game-sessions/:id）を使う。
-  #       閲覧はトークン不要・公開済み前提。トークンは参加/回答 API の X-Guest-Token でのみ使う。
+  #       閲覧はトークン不要・公開済み前提。トークンは参加/回答 API の Guest-Token ヘッダーでのみ使う。
 
   # ========== Profile ==========
 

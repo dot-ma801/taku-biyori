@@ -42,8 +42,12 @@ export const useGuestJoin = (
   async function join() {
     if (loading.value) return;
     const currentToken = toValue(token);
-    if (!currentToken || !canSubmit.value) {
+    if (!currentToken) {
       toast.error('招待用リンクからのみ参加が可能です');
+      return;
+    }
+    if (!canSubmit.value) {
+      toast.error('ゲストユーザ名を入力してください');
       return;
     }
     loading.value = true;

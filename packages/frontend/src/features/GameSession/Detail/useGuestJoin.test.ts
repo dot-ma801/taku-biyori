@@ -188,6 +188,43 @@ describe('join', () => {
     expect(joinAsGuest).not.toHaveBeenCalled();
   });
 
+  it('ゲスト名が空のときは「ゲストユーザ名を入力してください」トーストを表示する', async () => {
+    // Arrange
+    const { join } = useGuestJoin(
+      SESSION_ID,
+      TOKEN,
+      GameSessionStatus.open,
+      vi.fn(),
+    );
+
+    // Act
+    await join();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalledWith(
+      'ゲストユーザ名を入力してください',
+    );
+  });
+
+  it('token が null のときは「招待用リンクからのみ参加が可能です」トーストを表示する', async () => {
+    // Arrange
+    const { guestName, join } = useGuestJoin(
+      SESSION_ID,
+      null,
+      GameSessionStatus.open,
+      vi.fn(),
+    );
+    guestName.value = 'ゲスト太郎';
+
+    // Act
+    await join();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalledWith(
+      '招待用リンクからのみ参加が可能です',
+    );
+  });
+
   it('token が null のときは API を呼ばない', async () => {
     // Arrange
     const { guestName, join } = useGuestJoin(

@@ -23,6 +23,7 @@ export type JoinAsGuestResult =
  * - トークンがセッションの guest_link_token と一致しなければ invalidToken（403 相当）
  * - status が open でなければ sessionNotOpen（422 相当・通常参加と同条件）
  * 本人確認手段がないため重複参加は許容する（dup チェックを行わない）。
+ * status 取得とトークン取得を並列化してレイテンシを削減する。
  */
 export const joinAsGuest = async (
   repo: JoinAsGuestRepository,
@@ -30,10 +31,13 @@ export const joinAsGuest = async (
   token: string,
   input: JoinAsGuestInput,
 ): Promise<JoinAsGuestResult> => {
-  const status = await repo.findGameSessionStatus(gameSessionId);
+  const [status, storedToken] = await Promise.all([
+    repo.findGameSessionStatus(gameSessionId),
+    repo.findGuestLinkToken(gameSessionId),
+  ]);
+
   if (status === null) return { type: 'notFound' };
 
-  const storedToken = await repo.findGuestLinkToken(gameSessionId);
   if (storedToken === null || storedToken !== token) {
     return { type: 'invalidToken' };
   }

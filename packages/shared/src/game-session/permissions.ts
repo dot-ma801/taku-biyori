@@ -71,7 +71,11 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   },
   [GameSessionAction.deleteSession]: {
     roles: ['host'],
-    statuses: [GameSessionStatus.draft],
+    statuses: [
+      GameSessionStatus.draft,
+      GameSessionStatus.open,
+      GameSessionStatus.scheduling,
+    ],
   },
 };
 

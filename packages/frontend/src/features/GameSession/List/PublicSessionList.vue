@@ -3,10 +3,10 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { Calendar, UsersRound } from '@lucide/vue';
-import { useHomeData } from '@/features/Home/useHomeData';
+import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
 import { computed } from 'vue';
 
-const { publicSessions } = useHomeData();
+const { publicSessions } = useGameSessionList();
 
 const formattedPublishSessions = computed(() => {
   return [...publicSessions.value].map((item) => ({

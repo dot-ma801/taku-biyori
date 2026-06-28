@@ -2,7 +2,7 @@ import { computed, onMounted, ref } from 'vue';
 import type { GameSessionListItem } from '@taku-biyori/shared';
 import { listGameSessions } from '@/api/game-session';
 
-export const useHomeData = () => {
+export const useGameSessionList = () => {
   /** 全セッション（APIレスポンスそのまま） */
   const allSessions = ref<GameSessionListItem[]>([]);
 

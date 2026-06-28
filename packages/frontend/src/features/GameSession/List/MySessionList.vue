@@ -3,7 +3,7 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
-import { useHomeData } from '@/features/Home/useHomeData';
+import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import {
   Bookmark,
@@ -16,7 +16,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const { mySessions } = useHomeData();
+const { mySessions } = useGameSessionList();
 
 const STATUS_ORDER: Record<GameSessionStatus, number> = {
   [GameSessionStatus.today]: 0,

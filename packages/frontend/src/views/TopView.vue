@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import Home from '@/features/Home/index.vue'
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+router.replace({ name: 'game-sessions-list' });
 </script>
 
-<template>
-  <Home></Home>
-</template>
+<template></template>
 
 <style scoped>
 </style>

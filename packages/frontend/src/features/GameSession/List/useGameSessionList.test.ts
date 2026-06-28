@@ -7,7 +7,7 @@ vi.mock('@/api/game-session', () => ({
 }));
 
 import { listGameSessions } from '@/api/game-session';
-import { useHomeData } from '@/features/Home/useHomeData';
+import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
 
 const mockListGameSessions = vi.mocked(listGameSessions);
 
@@ -23,6 +23,7 @@ function makeSession(
     openUntil: null,
     memberCount: 1,
     scheduledAt: null,
+    role: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,
@@ -33,14 +34,14 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('useHomeData', () => {
+describe('useGameSessionList', () => {
   describe('データ取得', () => {
     it('マウント時に listGameSessions を呼び出す', async () => {
       // Arrange
       mockListGameSessions.mockResolvedValue([]);
 
       // Act
-      const { fetch } = useHomeData();
+      const { fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -53,7 +54,7 @@ describe('useHomeData', () => {
       mockListGameSessions.mockResolvedValue(sessions);
 
       // Act
-      const { allSessions, fetch } = useHomeData();
+      const { allSessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -70,7 +71,7 @@ describe('useHomeData', () => {
       );
 
       // Act
-      const { loading, fetch } = useHomeData();
+      const { loading, fetch } = useGameSessionList();
       const fetchPromise = fetch();
 
       // Assert（ローディング中）
@@ -88,7 +89,7 @@ describe('useHomeData', () => {
       mockListGameSessions.mockRejectedValue(new Error('Network error'));
 
       // Act
-      const { errorMessage, fetch } = useHomeData();
+      const { errorMessage, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -100,7 +101,7 @@ describe('useHomeData', () => {
       mockListGameSessions.mockRejectedValue(new Error('Network error'));
 
       // Act
-      const { loading, fetch } = useHomeData();
+      const { loading, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -108,29 +109,15 @@ describe('useHomeData', () => {
     });
   });
 
-  describe('publicSessions（募集中の公開セッション）', () => {
-    it('isPublished=true かつ status=open のセッションのみ含む', async () => {
+  describe('publicSessions（自分が関わっていないセッション）', () => {
+    it('role=null のセッションのみ含む', async () => {
       // Arrange
-      const publicSession = makeSession({
-        isPublished: true,
-        status: GameSessionStatus.open,
-      });
-      const draftSession = makeSession({
-        isPublished: false,
-        status: GameSessionStatus.draft,
-      });
-      const confirmedPublicSession = makeSession({
-        isPublished: true,
-        status: GameSessionStatus.confirmed,
-      });
-      mockListGameSessions.mockResolvedValue([
-        publicSession,
-        draftSession,
-        confirmedPublicSession,
-      ]);
+      const publicSession = makeSession({ role: null });
+      const mySession = makeSession({ role: 'host' });
+      mockListGameSessions.mockResolvedValue([publicSession, mySession]);
 
       // Act
-      const { publicSessions, fetch } = useHomeData();
+      const { publicSessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -139,12 +126,10 @@ describe('useHomeData', () => {
 
     it('該当セッションがない場合は空配列になる', async () => {
       // Arrange
-      mockListGameSessions.mockResolvedValue([
-        makeSession({ isPublished: false, status: GameSessionStatus.draft }),
-      ]);
+      mockListGameSessions.mockResolvedValue([makeSession({ role: 'host' })]);
 
       // Act
-      const { publicSessions, fetch } = useHomeData();
+      const { publicSessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -153,48 +138,39 @@ describe('useHomeData', () => {
   });
 
   describe('mySessions（自分が関わるセッション）', () => {
-    it('isPublished=false のセッションを含む', async () => {
+    it('role=host のセッションを含む', async () => {
       // Arrange
-      const mySession = makeSession({
-        isPublished: false,
-        status: GameSessionStatus.draft,
-      });
+      const mySession = makeSession({ role: 'host' });
       mockListGameSessions.mockResolvedValue([mySession]);
 
       // Act
-      const { mySessions, fetch } = useHomeData();
+      const { mySessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
       expect(mySessions.value).toContainEqual(mySession);
     });
 
-    it('isPublished=true かつ status が open 以外のセッションを含む', async () => {
+    it('role=member のセッションを含む', async () => {
       // Arrange
-      const confirmedSession = makeSession({
-        isPublished: true,
-        status: GameSessionStatus.confirmed,
-      });
-      mockListGameSessions.mockResolvedValue([confirmedSession]);
+      const mySession = makeSession({ role: 'member' });
+      mockListGameSessions.mockResolvedValue([mySession]);
 
       // Act
-      const { mySessions, fetch } = useHomeData();
+      const { mySessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
-      expect(mySessions.value).toContainEqual(confirmedSession);
+      expect(mySessions.value).toContainEqual(mySession);
     });
 
-    it('isPublished=true かつ status=open のセッションは含まない', async () => {
+    it('role=null のセッションは含まない', async () => {
       // Arrange
-      const publicSession = makeSession({
-        isPublished: true,
-        status: GameSessionStatus.open,
-      });
+      const publicSession = makeSession({ role: null });
       mockListGameSessions.mockResolvedValue([publicSession]);
 
       // Act
-      const { mySessions, fetch } = useHomeData();
+      const { mySessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -207,18 +183,18 @@ describe('useHomeData', () => {
       // Arrange
       const near = makeSession({
         scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 1日後
-        isPublished: false,
+        role: 'host',
         status: GameSessionStatus.confirmed,
       });
       const far = makeSession({
         scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // 7日後
-        isPublished: false,
+        role: 'host',
         status: GameSessionStatus.confirmed,
       });
       mockListGameSessions.mockResolvedValue([far, near]);
 
       // Act
-      const { nextSession, fetch } = useHomeData();
+      const { nextSession, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -229,13 +205,13 @@ describe('useHomeData', () => {
       // Arrange
       const past = makeSession({
         scheduledAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1時間前
-        isPublished: false,
+        role: 'host',
         status: GameSessionStatus.completed,
       });
       mockListGameSessions.mockResolvedValue([past]);
 
       // Act
-      const { nextSession, fetch } = useHomeData();
+      const { nextSession, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -246,30 +222,29 @@ describe('useHomeData', () => {
       // Arrange
       const noDate = makeSession({
         scheduledAt: null,
-        isPublished: false,
+        role: 'host',
         status: GameSessionStatus.scheduling,
       });
       mockListGameSessions.mockResolvedValue([noDate]);
 
       // Act
-      const { nextSession, fetch } = useHomeData();
+      const { nextSession, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
       expect(nextSession.value).toBeNull();
     });
 
-    it('publicSession は nextSession の対象外になる', async () => {
+    it('role=null のセッションは nextSession の対象外になる', async () => {
       // Arrange
       const publicSession = makeSession({
         scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
-        isPublished: true,
-        status: GameSessionStatus.open,
+        role: null,
       });
       mockListGameSessions.mockResolvedValue([publicSession]);
 
       // Act
-      const { nextSession, fetch } = useHomeData();
+      const { nextSession, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
@@ -281,7 +256,7 @@ describe('useHomeData', () => {
       mockListGameSessions.mockResolvedValue([]);
 
       // Act
-      const { nextSession, fetch } = useHomeData();
+      const { nextSession, fetch } = useGameSessionList();
       await fetch();
 
       // Assert

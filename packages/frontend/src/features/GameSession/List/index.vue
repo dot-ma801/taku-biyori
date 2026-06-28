@@ -1,8 +1,8 @@
 <script setup lang="ts">
-defineOptions({ name: 'Home' });
+defineOptions({ name: 'GameSessionList' });
 import BaseButton from '@/components/button/BaseButton.vue';
-import MySessionList from '@/features/Home/MySessionList.vue';
-import PublicSessionList from '@/features/Home/PublicSessionList.vue';
+import MySessionList from '@/features/GameSession/List/MySessionList.vue';
+import PublicSessionList from '@/features/GameSession/List/PublicSessionList.vue';
 import { Plus } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 

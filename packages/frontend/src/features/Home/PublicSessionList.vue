@@ -26,18 +26,23 @@ const formattedPublishSessions = computed(() => {
   </BaseSectionHeading>
 
   <BaseCard v-for="item in formattedPublishSessions">
-    <div>
-      <GameSessionStatusBadge :status="item.status"></GameSessionStatusBadge>
-      <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
-    </div>
+    <div class="header-area">
+      <GameSessionStatusBadge
+        class="item1"
+        :status="item.status"
+      ></GameSessionStatusBadge>
+      <BaseSectionHeading class="item2" level="h3">{{
+        item.title
+      }}</BaseSectionHeading>
 
-    <p class="remaining">
-      残り
-      <span class="remaining-member-number">
-        {{ item.formattedRemainingMembers }}
-      </span>
-      枠
-    </p>
+      <p class="remaining">
+        残り
+        <span class="remaining-member-number">
+          {{ item.formattedRemainingMembers }}
+        </span>
+        枠
+      </p>
+    </div>
 
     <div class="session-meta">
       <span class="meta-group">
@@ -54,6 +59,27 @@ const formattedPublishSessions = computed(() => {
 </template>
 
 <style scoped>
+.header-area {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: var(--space-2);
+
+  .item1 {
+    grid-column: 1/2;
+    grid-row: 1/2;
+    justify-self: start;
+  }
+  .item2 {
+    grid-column: 1/2;
+    grid-row: 2/3;
+  }
+  .remaining {
+    grid-column: 2/3;
+    grid-row: 1/3;
+  }
+}
+
 .remaining {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);

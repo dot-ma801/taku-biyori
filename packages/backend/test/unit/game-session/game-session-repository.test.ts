@@ -63,7 +63,9 @@ const makeTransactionDb = (sessionRow: unknown) => {
 describe('findByUserId', () => {
   it('DB の行を GameSessionListItem に変換して返す', async () => {
     // Arrange
-    const db = makeSelectDb([{ ...mockSessionRow, memberCount: 1 }]);
+    const db = makeSelectDb([
+      { ...mockSessionRow, memberCount: 1, userMemberId: null },
+    ]);
     const repo = createGameSessionRepository(db);
 
     // Act
@@ -79,12 +81,53 @@ describe('findByUserId', () => {
       memberCount: 1,
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z',
+      role: 'host',
     });
+  });
+
+  it('hostUserId が一致しない行は role: member になる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        hostUserId: 'other-user',
+        memberCount: 2,
+        userMemberId: 'member-uuid',
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]).toMatchObject({ role: 'member' });
+  });
+
+  it('userMemberId が null の行は role: null になる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        hostUserId: 'other-user',
+        memberCount: 1,
+        userMemberId: null,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]).toMatchObject({ role: null });
   });
 
   it('memberCount が文字列で返ってきても number に変換する', async () => {
     // Arrange
-    const db = makeSelectDb([{ ...mockSessionRow, memberCount: '3' }]);
+    const db = makeSelectDb([
+      { ...mockSessionRow, memberCount: '3', userMemberId: null },
+    ]);
     const repo = createGameSessionRepository(db);
 
     // Act
@@ -93,6 +136,39 @@ describe('findByUserId', () => {
     // Assert
     expect(typeof result[0]?.memberCount).toBe('number');
     expect(result[0]?.memberCount).toBe(3);
+  });
+
+  it('maxPlayers が maxMembers にマッピングされる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      { ...mockSessionRow, maxPlayers: 6, memberCount: 2, userMemberId: null },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]?.maxMembers).toBe(6);
+  });
+
+  it('maxPlayers が null のとき maxMembers は null になる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        maxPlayers: null,
+        memberCount: 1,
+        userMemberId: null,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]?.maxMembers).toBeNull();
   });
 
   it('行が空なら空配列を返す', async () => {

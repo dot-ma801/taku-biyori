@@ -37,8 +37,6 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
   min-height: 0;
   padding: var(--space-4);
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .footer {

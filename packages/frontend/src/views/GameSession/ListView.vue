@@ -1,7 +1,9 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import GameSessionList from '@/features/GameSession/List/index.vue';
+</script>
 
 <template>
-  <h1>GameSession/ListView.vue</h1>
+  <GameSessionList />
 </template>
 
 <style></style>

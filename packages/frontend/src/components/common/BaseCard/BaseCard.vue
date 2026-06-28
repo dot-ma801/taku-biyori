@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { RouterLink, type RouteLocationRaw } from 'vue-router';
+
 withDefaults(
   defineProps<{
     title?: string;
     subtitle?: string;
     noPadding?: boolean;
     hoverable?: boolean;
+    link?: { to: RouteLocationRaw; label: string };
   }>(),
   {},
 );
@@ -14,9 +17,15 @@ withDefaults(
   <div
     :class="[
       'card',
-      { 'card--hoverable': hoverable, 'card--no-padding': noPadding },
+      { 'card--hoverable': hoverable || !!link, 'card--no-padding': noPadding },
     ]"
   >
+    <RouterLink
+      v-if="link"
+      :to="link.to"
+      class="card__link"
+      :aria-label="link.label"
+    />
     <div v-if="title || subtitle || $slots.header" class="card__header">
       <slot name="header">
         <div>
@@ -36,12 +45,28 @@ withDefaults(
 
 <style scoped>
 .card {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   font-family: var(--font-family-base);
   overflow: hidden;
+}
+
+.card__link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+/* Stretched-link: link オーバーレイより上にインタラクティブ要素を出してクリック可能にする */
+.card__actions {
+  z-index: 2;
+}
+.card__body
+  :is(a, button, [role='button'], input, select, textarea, label, summary) {
+  position: relative;
+  z-index: 2;
 }
 .card--hoverable {
   transition:
@@ -80,6 +105,7 @@ withDefaults(
 }
 
 .card__actions {
+  position: relative;
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border);
   display: flex;

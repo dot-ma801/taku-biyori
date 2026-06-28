@@ -2,7 +2,11 @@ import { computed, ref } from 'vue';
 import type { Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { GameSessionDetail } from '@taku-biyori/shared';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import {
+  GameSessionStatus,
+  GameSessionAction,
+  canPerform,
+} from '@taku-biyori/shared';
 import {
   deleteGameSession,
   updateGameSessionStatus,
@@ -40,8 +44,29 @@ export const useGameSessionStatus = (
     () => isHost.value && gameSession.value?.status === GameSessionStatus.today,
   );
 
-  /** 削除可能か。ホストのときのみ true（削除 API がホスト限定のため） */
-  const canDelete = computed(() => isHost.value);
+  /**
+   * 削除可能か。次の全条件を満たすときのみ true。
+   * - ホストである（削除 API がホスト限定）
+   * - ステータスが ACTION_POLICIES の deleteSession に含まれる
+   *   （draft / open / scheduling。confirmed 以降は参加者の予定が確定しているため不可）
+   * - 自分以外のメンバーがいない（参加者がいる卓を勝手に消さない）
+   */
+  const canDelete = computed(() => {
+    const session = gameSession.value;
+    if (!session) {
+      return false;
+    }
+    if (!canPerform(GameSessionAction.deleteSession, session.status, 'host')) {
+      return false;
+    }
+    if (!isHost.value) {
+      return false;
+    }
+    const others = session.members.filter(
+      (m) => m.userId !== authStore.currentUser?.id,
+    );
+    return others.length === 0;
+  });
 
   /**
    * 卓を公開する（draft → open）。

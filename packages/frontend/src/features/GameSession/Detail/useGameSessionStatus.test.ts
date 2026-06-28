@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   updateGameSessionStatus: vi.fn(),
@@ -32,6 +32,22 @@ const HOST_USER_ID = 'host-user-id';
 const OTHER_USER_ID = 'other-user-id';
 const SESSION_ID = 'session-id';
 
+function makeMember(overrides: Partial<GameSessionMember> = {}): GameSessionMember {
+  return {
+    id: 'member-id',
+    userId: null,
+    userName: null,
+    guestName: 'ゲスト',
+    characterName: null,
+    joinedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function hostMember(): GameSessionMember {
+  return makeMember({ id: 'host-member', userId: HOST_USER_ID, userName: 'host' });
+}
+
 function makeGameSession(
   overrides: Partial<GameSessionDetail> = {},
 ): GameSessionDetail {
@@ -43,7 +59,7 @@ function makeGameSession(
     createdBy: HOST_USER_ID,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
-    members: [],
+    members: [hostMember()],
     ...overrides,
   };
 }
@@ -328,16 +344,141 @@ describe('completeSession', () => {
 });
 
 describe('canDelete', () => {
-  it('ホストのとき true を返す', () => {
+  it('ホストかつ draft かつ自分以外のメンバーがいないとき true を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession());
+    const gameSession = ref(
+      makeGameSession({
+        status: GameSessionStatus.draft,
+        members: [hostMember()],
+      }),
+    );
 
     // Act
     const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
 
     // Assert
     expect(canDelete.value).toBe(true);
+  });
+
+  it('ホストかつ open かつ自分以外のメンバーがいないとき true を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        status: GameSessionStatus.open,
+        members: [hostMember()],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(true);
+  });
+
+  it('ホストかつ scheduling かつ自分以外のメンバーがいないとき true を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        status: GameSessionStatus.scheduling,
+        members: [hostMember()],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(true);
+  });
+
+  it('ホストでも自分以外のログインメンバーがいるとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        members: [
+          hostMember(),
+          makeMember({ id: 'm2', userId: 'other-user' }),
+        ],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('ホストでもゲストメンバーがいるとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        members: [hostMember(), makeMember({ id: 'g1', userId: null })],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('ホストでも status が confirmed のとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        status: GameSessionStatus.confirmed,
+        members: [hostMember()],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('ホストでも status が today のとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        status: GameSessionStatus.today,
+        members: [hostMember()],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('ホストでも status が completed のとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        status: GameSessionStatus.completed,
+        members: [hostMember()],
+      }),
+    );
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
   });
 
   it('ホスト以外のとき false を返す', () => {
@@ -459,6 +600,26 @@ describe('deleteSession', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
     const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(deleteGameSession).not.toHaveBeenCalled();
+  });
+
+  it('自分以外のメンバーがいるときは API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        members: [
+          hostMember(),
+          makeMember({ id: 'm2', userId: 'other-user' }),
+        ],
+      }),
+    );
     const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
 
     // Act

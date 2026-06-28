@@ -99,7 +99,11 @@ const onClickOpen = (id: string) => {
       <ChevronDown :size="16" />
       更に見る（{{ hiddenCount }}件）
     </button>
-    <button v-else class="expand-button" @click="isExpanded = false">
+    <button
+      v-else-if="hasMore && isExpanded"
+      class="expand-button"
+      @click="isExpanded = false"
+    >
       <ChevronUp :size="16" />
       閉じる
     </button>

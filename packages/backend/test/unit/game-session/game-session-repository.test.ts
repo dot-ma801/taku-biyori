@@ -138,6 +138,34 @@ describe('findByUserId', () => {
     expect(result[0]?.memberCount).toBe(3);
   });
 
+  it('maxPlayers が maxMembers にマッピングされる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      { ...mockSessionRow, maxPlayers: 6, memberCount: 2, userMemberId: null },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]?.maxMembers).toBe(6);
+  });
+
+  it('maxPlayers が null のとき maxMembers は null になる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      { ...mockSessionRow, maxPlayers: null, memberCount: 1, userMemberId: null },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]?.maxMembers).toBeNull();
+  });
+
   it('行が空なら空配列を返す', async () => {
     // Arrange
     const db = makeSelectDb([]);

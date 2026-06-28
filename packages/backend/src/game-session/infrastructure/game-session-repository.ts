@@ -135,6 +135,7 @@ const toListItem = (
   isPublished: row.isPublished,
   openUntil: row.openUntil,
   memberCount: row.memberCount,
+  maxMembers: row.maxPlayers,
   scheduledAt: row.scheduledAt,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),

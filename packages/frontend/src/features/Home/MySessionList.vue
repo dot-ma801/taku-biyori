@@ -4,6 +4,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { useHomeData } from '@/features/Home/useHomeData';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import { Bookmark, Calendar, UsersRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -11,13 +12,29 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const { mySessions } = useHomeData();
 
-const formattedDate = computed(() => {
-  return mySessions.value.map((item) => item.scheduledAt ?? '調整中');
-});
+const STATUS_ORDER: Record<GameSessionStatus, number> = {
+  [GameSessionStatus.today]: 0,
+  [GameSessionStatus.confirmed]: 1,
+  [GameSessionStatus.scheduling]: 2,
+  [GameSessionStatus.open]: 3,
+  [GameSessionStatus.draft]: 4,
+  [GameSessionStatus.completed]: 5,
+};
 
-const formattedMaxMembers = computed(() => {
-  return mySessions.value.map((item) => item.maxMembers ?? '-');
-});
+// FIXME: これは、バックエンド側でやるべきでは？ > issue を起票したらその番号を付記すること
+const formattedMySessions = computed(() =>
+  [...mySessions.value].sort(
+    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
+  ),
+);
+
+const formattedDate = computed(() =>
+  formattedMySessions.value.map((item) => item.scheduledAt ?? '調整中'),
+);
+
+const formattedMaxMembers = computed(() =>
+  formattedMySessions.value.map((item) => item.maxMembers ?? '-'),
+);
 
 const onClickOpen = (id: string) => {
   router.push({
@@ -35,7 +52,7 @@ const onClickOpen = (id: string) => {
       あなたのセッション
     </BaseSectionHeading>
 
-    <div v-for="(item, idx) in mySessions" class="item">
+    <div v-for="(item, idx) in formattedMySessions" class="item">
       <div>
         <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
         <div class="session-meta">

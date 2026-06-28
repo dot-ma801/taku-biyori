@@ -28,10 +28,10 @@ const formattedPublishSessions = computed(() => {
   <BaseCard v-for="item in formattedPublishSessions">
     <div class="header-area">
       <GameSessionStatusBadge
-        class="item1"
+        class="status-badge"
         :status="item.status"
       ></GameSessionStatusBadge>
-      <BaseSectionHeading class="item2" level="h3">{{
+      <BaseSectionHeading level="h3">{{
         item.title
       }}</BaseSectionHeading>
 
@@ -62,21 +62,14 @@ const formattedPublishSessions = computed(() => {
 .header-area {
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
   gap: var(--space-2);
 
-  .item1 {
-    grid-column: 1/2;
-    grid-row: 1/2;
+  .status-badge {
     justify-self: start;
   }
-  .item2 {
-    grid-column: 1/2;
-    grid-row: 2/3;
-  }
   .remaining {
-    grid-column: 2/3;
-    grid-row: 1/3;
+    grid-column: 2;
+    grid-row: 1 / span 2;
   }
 }
 

@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { RouterLink, type RouteLocationRaw } from 'vue-router';
+
 withDefaults(
   defineProps<{
     title?: string;
     subtitle?: string;
     noPadding?: boolean;
     hoverable?: boolean;
+    link?: { to: RouteLocationRaw; label: string };
   }>(),
   {},
 );
@@ -14,9 +17,10 @@ withDefaults(
   <div
     :class="[
       'card',
-      { 'card--hoverable': hoverable, 'card--no-padding': noPadding },
+      { 'card--hoverable': hoverable || !!link, 'card--no-padding': noPadding },
     ]"
   >
+    <RouterLink v-if="link" :to="link.to" class="card__link" :aria-label="link.label" />
     <div v-if="title || subtitle || $slots.header" class="card__header">
       <slot name="header">
         <div>
@@ -36,12 +40,18 @@ withDefaults(
 
 <style scoped>
 .card {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   font-family: var(--font-family-base);
   overflow: hidden;
+}
+
+.card__link {
+  position: absolute;
+  inset: 0;
 }
 .card--hoverable {
   transition:

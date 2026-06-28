@@ -21,15 +21,19 @@ const onClickOpen = (id: string) => {
 
 <template>
   <BaseCard>
-    <BaseSectionHeading class="heading" level="h3" :icon="Bookmark">
+    <BaseSectionHeading level="h3" :icon="Bookmark">
       あなたのセッション
     </BaseSectionHeading>
 
     <div v-for="item in mySessions" class="item">
-      <p>{{ item.title }}</p>
-      <p>{{ item.scheduledAt }}</p>
-      <p>{{ item.memberCount }} 人</p>
-      <p>{{ item.status }}</p>
+      <div>
+        <div class="title-area">
+          <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
+          <p>{{ item.status }}</p>
+        </div>
+        <p>{{ item.scheduledAt }} / {{ item.memberCount }} 人</p>
+      </div>
+
       <BaseButton @click="onClickOpen(item.id)">開く</BaseButton>
     </div>
   </BaseCard>
@@ -37,7 +41,19 @@ const onClickOpen = (id: string) => {
 
 <style scoped>
 .item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: var(--space-2);
+
   border-bottom: 1px solid var(--color-border);
+
+  .title-area{
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
 
   :last-child {
     border-bottom: none;

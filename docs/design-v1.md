@@ -426,7 +426,7 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 
 この基準に基づき、空き枠表示のために `maxMembers` を一覧レスポンスに追加した。
 追加 DB コストはゼロ（`max_players` カラムはクエリですでに取得済みだったため）。
-詳細は [ADR 0002](../adr/0002-game-session-list-max-members.md) を参照。
+詳細は [ADR 0002](./adr/0002-game-session-list-max-members.md) を参照。
 
 #### ゲスト参加は「完全匿名 + トークンリンクのみ」で、専用ページを持たない
 

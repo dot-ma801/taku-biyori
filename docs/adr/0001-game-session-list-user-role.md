@@ -69,7 +69,7 @@ const publicSessions = computed(() =>
 
 | 条件 | `role` の値 |
 |------|------------|
-| セッションの `createdBy` が自分 | `'host'` |
+| セッションの `hostUserId`（DBカラム `host_user_id`）が自分 | `'host'` |
 | メンバーテーブルに自分の `userId` が存在する | `'member'` |
 | 上記以外（公開セッションを閲覧している） | `null` |
 | 未ログイン | すべて `null` |

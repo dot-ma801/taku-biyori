@@ -12,6 +12,7 @@ export const GameSessionListItemSchema = z.object({
   isPublished: z.boolean(),
   openUntil: z.string().nullable().optional(),
   memberCount: z.number().int(),
+  maxMembers: z.number().int().nullable().optional(),
   scheduledAt: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),

@@ -31,9 +31,7 @@ const formattedPublishSessions = computed(() => {
         class="status-badge"
         :status="item.status"
       ></GameSessionStatusBadge>
-      <BaseSectionHeading level="h3">{{
-        item.title
-      }}</BaseSectionHeading>
+      <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
 
       <p class="remaining">
         残り
@@ -44,17 +42,19 @@ const formattedPublishSessions = computed(() => {
       </p>
     </div>
 
-    <div class="session-meta">
-      <span class="meta-group">
-        <Calendar :size="16" />
-        <p>{{ item.formattedDate }}</p>
-      </span>
-      <span class="meta-group">
-        <UsersRound :size="16" />
-        <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
-      </span>
+    <div class="content-area">
+      <div class="session-meta">
+        <span class="meta-group">
+          <Calendar :size="16" />
+          <p>{{ item.formattedDate }}</p>
+        </span>
+        <span class="meta-group">
+          <UsersRound :size="16" />
+          <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
+        </span>
+      </div>
+      <BaseButton>参加する</BaseButton>
     </div>
-    <BaseButton>参加する</BaseButton>
   </BaseCard>
 </template>
 
@@ -63,6 +63,8 @@ const formattedPublishSessions = computed(() => {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--space-2);
+
+  margin-bottom: var(--space-2);
 
   .status-badge {
     justify-self: start;
@@ -81,6 +83,11 @@ const formattedPublishSessions = computed(() => {
     font-size: var(--font-size-lg);
     color: var(--color-primary-text);
   }
+}
+
+.content-area {
+  display: flex;
+  justify-content: space-between;
 }
 
 .session-meta {

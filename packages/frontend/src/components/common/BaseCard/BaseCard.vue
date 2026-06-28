@@ -57,6 +57,16 @@ withDefaults(
 .card__link {
   position: absolute;
   inset: 0;
+  z-index: 1;
+}
+/* Stretched-link: link オーバーレイより上にインタラクティブ要素を出してクリック可能にする */
+.card__actions {
+  z-index: 2;
+}
+.card__body
+  :is(a, button, [role='button'], input, select, textarea, label, summary) {
+  position: relative;
+  z-index: 2;
 }
 .card--hoverable {
   transition:
@@ -95,6 +105,7 @@ withDefaults(
 }
 
 .card__actions {
+  position: relative;
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border);
   display: flex;

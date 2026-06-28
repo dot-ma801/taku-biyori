@@ -41,7 +41,7 @@ const sessionLink = (item: { id: string; title: string }) => ({
       ></GameSessionStatusBadge>
       <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
 
-      <p class="remaining">
+      <p v-if="item.formattedRemainingMembers != null" class="remaining">
         残り
         <span class="remaining-member-number">
           {{ item.formattedRemainingMembers }}

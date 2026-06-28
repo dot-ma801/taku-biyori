@@ -2,12 +2,22 @@
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { useHomeData } from '@/features/Home/useHomeData';
-import { Bookmark } from '@lucide/vue';
+import { Bookmark, Calendar, UsersRound } from '@lucide/vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const { mySessions } = useHomeData();
+
+const formattedDate = computed(() => {
+  return mySessions.value.map((item) => item.scheduledAt ?? '調整中');
+});
+
+const formattedMaxMembers = computed(() => {
+  return mySessions.value.map((item) => item.maxMembers ?? '-');
+});
 
 const onClickOpen = (id: string) => {
   router.push({
@@ -25,16 +35,22 @@ const onClickOpen = (id: string) => {
       あなたのセッション
     </BaseSectionHeading>
 
-    <div v-for="item in mySessions" class="item">
+    <div v-for="(item, idx) in mySessions" class="item">
       <div>
-        <div class="title-area">
-          <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
-          <p>{{ item.status }}</p>
+        <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
+        <div class="session-meta">
+          <Calendar :size="16" />
+          <p>{{ formattedDate[idx] }}</p>
+          <UsersRound :size="16"/>
+          <p>{{ item.memberCount }}/{{ formattedMaxMembers[idx] }}</p>
         </div>
-        <p>{{ item.scheduledAt }} / {{ item.memberCount }} 人</p>
       </div>
-
-      <BaseButton @click="onClickOpen(item.id)">開く</BaseButton>
+      <div class="right-area">
+        <GameSessionStatusBadge :status="item.status" />
+        <BaseButton variant="secondary" @click="onClickOpen(item.id)">
+          開く
+        </BaseButton>
+      </div>
     </div>
   </BaseCard>
 </template>
@@ -49,14 +65,20 @@ const onClickOpen = (id: string) => {
 
   border-bottom: 1px solid var(--color-border);
 
-  .title-area{
+  .right-area {
     display: flex;
     align-items: center;
     gap: var(--space-2);
   }
+}
 
-  :last-child {
-    border-bottom: none;
-  }
+.item:last-child {
+  border-bottom: none;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 </style>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import BaseButton from '@/components/button/BaseButton.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { Calendar, UsersRound } from '@lucide/vue';
 import { useHomeData } from '@/features/Home/useHomeData';
@@ -18,6 +17,11 @@ const formattedPublishSessions = computed(() => {
       item.maxMembers != null ? item.maxMembers - item.memberCount : null,
   }));
 });
+
+const sessionLink = (item: { id: string; title: string }) => ({
+  to: { name: 'game-sessions-detail', params: { gameSessionId: item.id } },
+  label: `${item.title} の詳細を見る`,
+});
 </script>
 
 <template>
@@ -25,7 +29,11 @@ const formattedPublishSessions = computed(() => {
     募集中のセッション
   </BaseSectionHeading>
 
-  <BaseCard v-for="item in formattedPublishSessions">
+  <BaseCard
+    v-for="item in formattedPublishSessions"
+    :key="item.id"
+    :link="sessionLink(item)"
+  >
     <div class="header-area">
       <GameSessionStatusBadge
         class="status-badge"
@@ -53,7 +61,6 @@ const formattedPublishSessions = computed(() => {
           <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
         </span>
       </div>
-      <BaseButton>参加する</BaseButton>
     </div>
   </BaseCard>
 </template>

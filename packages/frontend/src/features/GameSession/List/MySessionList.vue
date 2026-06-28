@@ -3,8 +3,8 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
-import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
 import { GameSessionStatus } from '@taku-biyori/shared';
+import type { GameSessionListItem } from '@taku-biyori/shared';
 import {
   Bookmark,
   Calendar,
@@ -15,8 +15,11 @@ import {
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+const props = defineProps<{
+  mySessions: GameSessionListItem[];
+}>();
+
 const router = useRouter();
-const { mySessions } = useGameSessionList();
 
 const STATUS_ORDER: Record<GameSessionStatus, number> = {
   [GameSessionStatus.today]: 0,
@@ -31,7 +34,7 @@ const INITIAL_VISIBLE_COUNT = 3;
 const isExpanded = ref(false);
 
 const formattedMySessions = computed(() =>
-  [...mySessions.value]
+  [...props.mySessions]
     // FIXME: これは、バックエンド側でやるべきでは？ > issue を起票したらその番号を付記すること
     .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
     .map((item) => ({

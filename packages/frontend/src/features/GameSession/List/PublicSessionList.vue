@@ -3,13 +3,15 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { Calendar, UsersRound } from '@lucide/vue';
-import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
+import type { GameSessionListItem } from '@taku-biyori/shared';
 import { computed } from 'vue';
 
-const { publicSessions } = useGameSessionList();
+const props = defineProps<{
+  publicSessions: GameSessionListItem[];
+}>();
 
 const formattedPublishSessions = computed(() => {
-  return [...publicSessions.value].map((item) => ({
+  return [...props.publicSessions].map((item) => ({
     ...item,
     formattedDate: item.scheduledAt ?? '調整中',
     formattedMaxMembers: item.maxMembers ?? '-',

@@ -31,7 +31,7 @@ const onClickOpen = (id: string) => {
 
 <template>
   <BaseCard>
-    <BaseSectionHeading level="h3" :icon="Bookmark">
+    <BaseSectionHeading class="card-header" level="h3" :icon="Bookmark">
       あなたのセッション
     </BaseSectionHeading>
 
@@ -39,10 +39,14 @@ const onClickOpen = (id: string) => {
       <div>
         <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
         <div class="session-meta">
-          <Calendar :size="16" />
-          <p>{{ formattedDate[idx] }}</p>
-          <UsersRound :size="16"/>
-          <p>{{ item.memberCount }}/{{ formattedMaxMembers[idx] }}</p>
+          <span class="meta-group">
+            <Calendar :size="16" />
+            <p>{{ formattedDate[idx] }}</p>
+          </span>
+          <span class="meta-group">
+            <UsersRound :size="16" />
+            <p>{{ item.memberCount }}/{{ formattedMaxMembers[idx] }}</p>
+          </span>
         </div>
       </div>
       <div class="right-area">
@@ -56,6 +60,11 @@ const onClickOpen = (id: string) => {
 </template>
 
 <style scoped>
+.card-header {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .item {
   display: flex;
   align-items: center;
@@ -79,6 +88,15 @@ const onClickOpen = (id: string) => {
 .session-meta {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+
+  .meta-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
 }
 </style>

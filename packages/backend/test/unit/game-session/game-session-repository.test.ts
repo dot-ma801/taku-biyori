@@ -155,7 +155,12 @@ describe('findByUserId', () => {
   it('maxPlayers が null のとき maxMembers は null になる', async () => {
     // Arrange
     const db = makeSelectDb([
-      { ...mockSessionRow, maxPlayers: null, memberCount: 1, userMemberId: null },
+      {
+        ...mockSessionRow,
+        maxPlayers: null,
+        memberCount: 1,
+        userMemberId: null,
+      },
     ]);
     const repo = createGameSessionRepository(db);
 

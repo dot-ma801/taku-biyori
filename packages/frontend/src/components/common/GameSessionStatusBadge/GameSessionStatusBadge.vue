@@ -56,17 +56,29 @@ const variant = computed(() => VARIANT_MAP[props.status]);
 }
 
 .status-badge--primary {
-  background: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 15%,
+    var(--color-surface)
+  );
   color: var(--color-primary);
 }
 
 .status-badge--warning {
-  background: color-mix(in srgb, var(--color-warning) 15%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-warning) 15%,
+    var(--color-surface)
+  );
   color: var(--color-warning);
 }
 
 .status-badge--success {
-  background: color-mix(in srgb, var(--color-success) 15%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-success) 15%,
+    var(--color-surface)
+  );
   color: var(--color-success);
 }
 

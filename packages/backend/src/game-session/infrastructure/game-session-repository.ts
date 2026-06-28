@@ -119,10 +119,7 @@ const toGameSession = (row: GameSessionRow): GameSession => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-const toListItem = (
-  row: ListRow,
-  userId: string,
-): GameSessionListItem => ({
+const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
   id: row.id,
   title: row.title,
   scenarioName: row.scenarioName,
@@ -193,10 +190,7 @@ export const createGameSessionRepository = (
       .groupBy(gameSessions.id);
 
     return rows.map((row) =>
-      toListItem(
-        { ...row, memberCount: Number(row.memberCount) },
-        userId,
-      ),
+      toListItem({ ...row, memberCount: Number(row.memberCount) }, userId),
     );
   },
 

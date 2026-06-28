@@ -9,13 +9,15 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 const onClickCreate = () => {
-  router.push({name: 'game-sessions-new'})
-}
+  router.push({ name: 'game-sessions-new' });
+};
 </script>
 
 <template>
   <div class="container">
-    <BaseButton class="create-btn" :left-icon="Plus" @click="onClickCreate">セッションを作成</BaseButton>
+    <BaseButton class="create-btn" :left-icon="Plus" @click="onClickCreate"
+      >セッションを作成</BaseButton
+    >
     <MySessionList></MySessionList>
     <PublicSessionList></PublicSessionList>
   </div>

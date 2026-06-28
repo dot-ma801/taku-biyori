@@ -7,8 +7,8 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 ## Props
 
-| Prop | Type | Description |
-|------|------|-------------|
+| Prop     | Type                | Description                          |
+| -------- | ------------------- | ------------------------------------ |
 | `status` | `GameSessionStatus` | 表示するゲームセッションのステータス |
 
 ## Usage
@@ -19,14 +19,14 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 ## ステータスとバリアントの対応
 
-| ステータス | ラベル | バリアント |
-|---|---|---|
-| `draft` | 非公開 | muted（グレー） |
-| `open` | 募集中 | primary（ティール） |
+| ステータス   | ラベル     | バリアント          |
+| ------------ | ---------- | ------------------- |
+| `draft`      | 非公開     | muted（グレー）     |
+| `open`       | 募集中     | primary（ティール） |
 | `scheduling` | 日程調整中 | warning（オレンジ） |
-| `confirmed` | 実施前 | success（グリーン） |
-| `today` | 当日 | error（レッド） |
-| `completed` | 通過済み | muted（グレー） |
+| `confirmed`  | 実施前     | success（グリーン） |
+| `today`      | 当日       | error（レッド）     |
+| `completed`  | 通過済み   | muted（グレー）     |
 
 `today` にのみ error（赤）を使い、当日開催の緊急感を他ステータスと区別する。  
 バリアントのマッピングは `features/GameSession/Detail/StatusDisplay.vue` の設計方針に準拠している。
@@ -41,9 +41,11 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 ## 単体テスト項目
 
 ### レンダリング
+
 - `status` props を渡してレンダリングされること
 
 ### ラベル
+
 - `draft` のとき「非公開」と表示されること
 - `open` のとき「募集中」と表示されること
 - `scheduling` のとき「日程調整中」と表示されること
@@ -52,6 +54,7 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 - `completed` のとき「通過済み」と表示されること
 
 ### バリアント
+
 - `draft` のとき `status-badge--muted` クラスが付与されること
 - `open` のとき `status-badge--primary` クラスが付与されること
 - `scheduling` のとき `status-badge--warning` クラスが付与されること

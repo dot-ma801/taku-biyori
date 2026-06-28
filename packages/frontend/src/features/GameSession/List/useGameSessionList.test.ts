@@ -187,7 +187,9 @@ describe('useGameSessionList', () => {
         status: GameSessionStatus.confirmed,
       });
       const far = makeSession({
-        scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // 7日後
+        scheduledAt: new Date(
+          Date.now() + 1000 * 60 * 60 * 24 * 7,
+        ).toISOString(), // 7日後
         role: 'host',
         status: GameSessionStatus.confirmed,
       });

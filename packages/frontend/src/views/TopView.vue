@@ -5,7 +5,8 @@ const router = useRouter();
 router.replace({ name: 'game-sessions-list' });
 </script>
 
-<template></template>
+<template>
+  <div></div>
+</template>
 
-<style scoped>
-</style>
+<style scoped></style>

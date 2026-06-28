@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import GameSessionStatusBadge from './GameSessionStatusBadge.vue';
+import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 
 describe('GameSessionStatusBadge', () => {
   describe('レンダリング', () => {

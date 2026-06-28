@@ -20,7 +20,12 @@ withDefaults(
       { 'card--hoverable': hoverable || !!link, 'card--no-padding': noPadding },
     ]"
   >
-    <RouterLink v-if="link" :to="link.to" class="card__link" :aria-label="link.label" />
+    <RouterLink
+      v-if="link"
+      :to="link.to"
+      class="card__link"
+      :aria-label="link.label"
+    />
     <div v-if="title || subtitle || $slots.header" class="card__header">
       <slot name="header">
         <div>

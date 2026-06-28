@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import GameSessionStatusBadge from './GameSessionStatusBadge.vue';
+import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 
 const meta: Meta<typeof GameSessionStatusBadge> = {
   title: 'Common/GameSessionStatusBadge',
@@ -24,10 +24,16 @@ export const Default: Story = {};
 
 export const Draft: Story = { args: { status: GameSessionStatus.draft } };
 export const Open: Story = { args: { status: GameSessionStatus.open } };
-export const Scheduling: Story = { args: { status: GameSessionStatus.scheduling } };
-export const Confirmed: Story = { args: { status: GameSessionStatus.confirmed } };
+export const Scheduling: Story = {
+  args: { status: GameSessionStatus.scheduling },
+};
+export const Confirmed: Story = {
+  args: { status: GameSessionStatus.confirmed },
+};
 export const Today: Story = { args: { status: GameSessionStatus.today } };
-export const Completed: Story = { args: { status: GameSessionStatus.completed } };
+export const Completed: Story = {
+  args: { status: GameSessionStatus.completed },
+};
 
 export const AllStatuses: Story = {
   render: () => ({

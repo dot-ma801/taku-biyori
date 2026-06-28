@@ -5,8 +5,14 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { useHomeData } from '@/features/Home/useHomeData';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import { Bookmark, Calendar, UsersRound } from '@lucide/vue';
-import { computed } from 'vue';
+import {
+  Bookmark,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  UsersRound,
+} from '@lucide/vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -21,20 +27,31 @@ const STATUS_ORDER: Record<GameSessionStatus, number> = {
   [GameSessionStatus.completed]: 5,
 };
 
-// FIXME: これは、バックエンド側でやるべきでは？ > issue を起票したらその番号を付記すること
+const INITIAL_VISIBLE_COUNT = 3;
+const isExpanded = ref(false);
+
 const formattedMySessions = computed(() =>
-  [...mySessions.value].sort(
-    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
-  ),
+  [...mySessions.value]
+    // FIXME: これは、バックエンド側でやるべきでは？ > issue を起票したらその番号を付記すること
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+    .map((item) => ({
+      ...item,
+      formattedDate: item.scheduledAt ?? '調整中',
+      formattedMaxMembers: item.maxMembers ?? '-',
+    })),
 );
 
-const formattedDate = computed(() =>
-  formattedMySessions.value.map((item) => item.scheduledAt ?? '調整中'),
+const visibleSessions = computed(() =>
+  isExpanded.value
+    ? formattedMySessions.value
+    : formattedMySessions.value.slice(0, INITIAL_VISIBLE_COUNT),
 );
 
-const formattedMaxMembers = computed(() =>
-  formattedMySessions.value.map((item) => item.maxMembers ?? '-'),
+const hiddenCount = computed(
+  () => formattedMySessions.value.length - INITIAL_VISIBLE_COUNT,
 );
+
+const hasMore = computed(() => hiddenCount.value > 0);
 
 const onClickOpen = (id: string) => {
   router.push({
@@ -52,17 +69,17 @@ const onClickOpen = (id: string) => {
       あなたのセッション
     </BaseSectionHeading>
 
-    <div v-for="(item, idx) in formattedMySessions" class="item">
+    <div v-for="item in visibleSessions" :key="item.id" class="item">
       <div>
         <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
         <div class="session-meta">
           <span class="meta-group">
             <Calendar :size="16" />
-            <p>{{ formattedDate[idx] }}</p>
+            <p>{{ item.formattedDate }}</p>
           </span>
           <span class="meta-group">
             <UsersRound :size="16" />
-            <p>{{ item.memberCount }}/{{ formattedMaxMembers[idx] }}</p>
+            <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
           </span>
         </div>
       </div>
@@ -73,6 +90,19 @@ const onClickOpen = (id: string) => {
         </BaseButton>
       </div>
     </div>
+
+    <button
+      v-if="hasMore && !isExpanded"
+      class="expand-button"
+      @click="isExpanded = true"
+    >
+      <ChevronDown :size="16" />
+      更に見る（{{ hiddenCount }}件）
+    </button>
+    <button v-else class="expand-button" @click="isExpanded = false">
+      <ChevronUp :size="16" />
+      閉じる
+    </button>
   </BaseCard>
 </template>
 
@@ -100,6 +130,27 @@ const onClickOpen = (id: string) => {
 
 .item:last-child {
   border-bottom: none;
+}
+
+.expand-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+
+  width: 100%;
+  padding: var(--space-2);
+
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    color: var(--color-text);
+  }
 }
 
 .session-meta {

@@ -138,6 +138,12 @@ export const registerGameSessionRoute = (
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'invalidStatus') {
+      return c.json({ error: 'Cannot delete session in this status' }, 409);
+    }
+    if (result.type === 'hasMember') {
+      return c.json({ error: 'Cannot delete session with members' }, 409);
+    }
     return new Response(null, { status: 204 });
   });
 

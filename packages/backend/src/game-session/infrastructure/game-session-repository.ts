@@ -281,6 +281,22 @@ export const createGameSessionRepository = (
     await db.delete(gameSessions).where(eq(gameSessions.id, id));
   },
 
+  async countOtherMembers(id: string, hostUserId: string): Promise<number> {
+    const result = await db
+      .select({ cnt: count() })
+      .from(gameSessionMembers)
+      .where(
+        and(
+          eq(gameSessionMembers.gameSessionId, id),
+          or(
+            isNull(gameSessionMembers.userId),
+            sql`${gameSessionMembers.userId} != ${hostUserId}`,
+          ),
+        ),
+      );
+    return result[0]?.cnt ?? 0;
+  },
+
   async findStatusFields(id: string) {
     const row = await db
       .select({

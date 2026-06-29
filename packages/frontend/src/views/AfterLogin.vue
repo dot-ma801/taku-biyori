@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import BaseProgress from '@/components/common/BaseProgress/BaseProgress.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+import { onMounted, watch } from 'vue';
 
+const router = useRouter();
 const authStore = useAuthStore();
+
 authStore.initSession();
 
-// TODO: 実装する
-if (authStore.isAuthenticated) {
-  // ログイン成功
-  // router.push()
-} else {
-  // ログイン失敗
-  // router.push()
-}
+onMounted(async () => {
+  await authStore.initSession();
+  if (authStore.isAuthenticated) {
+    router.push({ name: 'game-sessions-list' });
+  } else {
+    // ログイン失敗時の遷移
+  }
+});
 </script>
 
 <template>

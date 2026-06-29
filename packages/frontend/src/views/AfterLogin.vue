@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import BaseProgress from '@/components/common/BaseProgress/BaseProgress.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useToast } from '@/composables/useToast';
 import { useRouter } from 'vue-router';
-import { onMounted, watch } from 'vue';
+import { onMounted } from 'vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
-
-authStore.initSession();
+const toast = useToast();
 
 onMounted(async () => {
   await authStore.initSession();
   if (authStore.isAuthenticated) {
     router.push({ name: 'game-sessions-list' });
   } else {
-    // ログイン失敗時の遷移
+    toast.error('ログインに失敗しました。もう一度お試しください。');
+    router.push({ name: 'login' });
   }
 });
 </script>

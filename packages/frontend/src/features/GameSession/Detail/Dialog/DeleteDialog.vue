@@ -2,14 +2,14 @@
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseDialog from '@/components/dialog/BaseDialog.vue';
 
-const model = defineModel();
+const model = defineModel<boolean>();
 
 const emit = defineEmits<{
-  onClickDelete: [];
+  delete: [];
 }>();
 
 const onClickDelete = () => {
-  emit('onClickDelete');
+  emit('delete');
 };
 </script>
 
@@ -27,5 +27,3 @@ const onClickDelete = () => {
     </template>
   </BaseDialog>
 </template>
-
-<style scoped></style>

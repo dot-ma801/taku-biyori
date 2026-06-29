@@ -149,8 +149,8 @@ const join = () => {
           <BaseButton
             v-if="canDelete"
             :left-icon="Trash"
-            @click="() => (deleteDialogModel = true)"
             variant="danger"
+            @click="deleteDialogModel = true"
           >
             削除
           </BaseButton>
@@ -229,7 +229,7 @@ const join = () => {
     ></GuestJoinDialog>
     <DeleteDialog
       v-model="deleteDialogModel"
-      @on-click-delete="deleteSession"
+      @delete="deleteSession"
     ></DeleteDialog>
   </div>
 </template>

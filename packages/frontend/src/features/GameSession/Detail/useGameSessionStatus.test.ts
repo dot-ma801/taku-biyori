@@ -350,140 +350,85 @@ describe('completeSession', () => {
 });
 
 describe('canDelete', () => {
-  it('ホストかつ draft かつ自分以外のメンバーがいないとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.draft,
-        members: [hostMember()],
-      }),
-    );
+  // canDelete は「ステータス policy」「他メンバーの存在」「ロール/null チェック」という
+  // 3 つの独立した軸の AND で決まる。軸ごとに describe を分けることで、どの軸の境界が
+  // 壊れたかをテスト名から即座に特定できる。
 
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+  // 軸1: ステータス policy
+  // 「ホスト × 自分以外メンバーなし」を満たした上で、status だけを振って許可境界を網羅する。
+  // 削除を許可するのは draft / open / scheduling、禁止するのは confirmed / today / completed。
+  // describe.each で表形式にすることで、policy の真理値表を一覧で読めるようにする。
+  // 将来ステータスや許可条件が増減した場合も、ここの配列に 1 行追加するだけで網羅できる。
+  describe.each([
+    { status: GameSessionStatus.draft, expected: true },
+    { status: GameSessionStatus.open, expected: true },
+    { status: GameSessionStatus.scheduling, expected: true },
+    { status: GameSessionStatus.confirmed, expected: false },
+    { status: GameSessionStatus.today, expected: false },
+    { status: GameSessionStatus.completed, expected: false },
+  ])('ステータス policy (status=$status)', ({ status, expected }) => {
+    it(`ホストかつ自分以外のメンバーがいないとき ${expected} を返す`, () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const gameSession = ref(
+        makeGameSession({
+          status,
+          members: [hostMember()],
+        }),
+      );
 
-    // Assert
-    expect(canDelete.value).toBe(true);
+      // Act
+      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+      // Assert
+      expect(canDelete.value).toBe(expected);
+    });
   });
 
-  it('ホストかつ open かつ自分以外のメンバーがいないとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.open,
-        members: [hostMember()],
-      }),
-    );
+  // 軸2: 他メンバーの存在
+  // ステータスが許可される open でも、自分以外のメンバーが 1 人でもいれば削除不可。
+  // 「他人」にはログイン済みユーザとゲスト（userId=null）の両方が含まれることを
+  // 別ケースとして担保しておく（ゲスト判定漏れの回帰防止）。
+  describe('他メンバーの存在 (status=open, ホスト)', () => {
+    it('自分以外のログインメンバーがいるとき false を返す', () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const gameSession = ref(
+        makeGameSession({
+          members: [
+            hostMember(),
+            makeMember({ id: 'm2', userId: 'other-user' }),
+          ],
+        }),
+      );
 
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+      // Act
+      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
 
-    // Assert
-    expect(canDelete.value).toBe(true);
+      // Assert
+      expect(canDelete.value).toBe(false);
+    });
+
+    it('ゲストメンバーがいるとき false を返す', () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const gameSession = ref(
+        makeGameSession({
+          members: [hostMember(), makeMember({ id: 'g1', userId: null })],
+        }),
+      );
+
+      // Act
+      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+      // Assert
+      expect(canDelete.value).toBe(false);
+    });
   });
 
-  it('ホストかつ scheduling かつ自分以外のメンバーがいないとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.scheduling,
-        members: [hostMember()],
-      }),
-    );
-
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canDelete.value).toBe(true);
-  });
-
-  it('ホストでも自分以外のログインメンバーがいるとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        members: [hostMember(), makeMember({ id: 'm2', userId: 'other-user' })],
-      }),
-    );
-
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-
-  it('ホストでもゲストメンバーがいるとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        members: [hostMember(), makeMember({ id: 'g1', userId: null })],
-      }),
-    );
-
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-
-  it('ホストでも status が confirmed のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.confirmed,
-        members: [hostMember()],
-      }),
-    );
-
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-
-  it('ホストでも status が today のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.today,
-        members: [hostMember()],
-      }),
-    );
-
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-
-  it('ホストでも status が completed のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.completed,
-        members: [hostMember()],
-      }),
-    );
-
-    // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-
+  // 軸3: 前提条件（ロール / セッション存在）
+  // ステータスやメンバー条件を評価する以前のガード。
+  // ホストでない／セッション未取得（null）のときは無条件で false。
   it('ホスト以外のとき false を返す', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);

@@ -649,5 +649,7 @@ describe('deleteSession', () => {
 
     // Assert
     expect(deleteGameSession).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
   });
 });

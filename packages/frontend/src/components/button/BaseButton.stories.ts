@@ -6,7 +6,7 @@ const meta: Meta<typeof BaseButton> = {
   component: BaseButton,
   tags: ['autodocs'],
   argTypes: {
-    variant: { control: 'select', options: ['primary', 'secondary', 'ghost'] },
+    variant: { control: 'select', options: ['primary', 'secondary', 'ghost', 'danger'] },
     size: { control: 'select', options: ['sm', 'md', 'lg'] },
     type: { control: 'select', options: ['button', 'submit', 'reset'] },
   },
@@ -85,6 +85,15 @@ export const Disabled: Story = {
   }),
 };
 
+export const Danger: Story = {
+  args: { variant: 'danger' },
+  render: (args) => ({
+    components: { BaseButton },
+    setup: () => ({ args }),
+    template: '<BaseButton v-bind="args">削除</BaseButton>',
+  }),
+};
+
 export const AllVariants: Story = {
   render: () => ({
     components: { BaseButton },
@@ -93,6 +102,7 @@ export const AllVariants: Story = {
         <BaseButton variant="primary">Primary</BaseButton>
         <BaseButton variant="secondary">Secondary</BaseButton>
         <BaseButton variant="ghost">Ghost</BaseButton>
+        <BaseButton variant="danger">Danger</BaseButton>
         <BaseButton variant="primary" size="sm">Small</BaseButton>
         <BaseButton variant="primary" size="lg">Large</BaseButton>
         <BaseButton variant="primary" :loading="true">Loading</BaseButton>

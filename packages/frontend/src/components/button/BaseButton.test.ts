@@ -26,7 +26,7 @@ describe('BaseButton', () => {
   });
 
   describe('variant', () => {
-    it.each(['primary', 'secondary', 'ghost'] as const)(
+    it.each(['primary', 'secondary', 'ghost', 'danger'] as const)(
       'variant="%s" のとき .btn--%s クラスが付与される',
       (variant) => {
         // Arrange & Act

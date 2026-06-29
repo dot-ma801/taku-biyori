@@ -6,7 +6,7 @@
 
 | Prop       | Type                                  | Default     | Description                              |
 | ---------- | ------------------------------------- | ----------- | ---------------------------------------- |
-| `variant`  | `'primary' \| 'secondary' \| 'ghost'` | `'primary'` | 表示スタイル                             |
+| `variant`  | `'primary' \| 'secondary' \| 'ghost' \| 'danger'` | `'primary'` | 表示スタイル                             |
 | `size`     | `'sm' \| 'md' \| 'lg'`                | `'md'`      | サイズ                                   |
 | `loading`  | `boolean`                             | `false`     | ローディングスピナーを表示し操作を無効化 |
 | `disabled` | `boolean`                             | `false`     | 操作を無効化                             |
@@ -18,6 +18,7 @@
 <BaseButton variant="primary" @click="submit">保存</BaseButton>
 <BaseButton variant="secondary" @click="cancel">キャンセル</BaseButton>
 <BaseButton variant="ghost">詳細</BaseButton>
+<BaseButton variant="danger" @click="remove">削除する</BaseButton>
 <BaseButton :loading="isSaving">保存中...</BaseButton>
 <BaseButton type="submit" variant="primary">送信</BaseButton>
 ```
@@ -29,6 +30,7 @@
 | `primary`   | 画面上の最重要アクション（1 画面に 1 つ） |
 | `secondary` | サブアクション（outlined スタイル）       |
 | `ghost`     | 補助的な操作（最も目立たない）            |
+| `danger`    | 削除など破壊的アクションの確定ボタン      |
 
 ## Design Notes
 
@@ -48,6 +50,7 @@
 - `variant="primary"` のとき `.btn--primary` クラスが付与されること
 - `variant="secondary"` のとき `.btn--secondary` クラスが付与されること
 - `variant="ghost"` のとき `.btn--ghost` クラスが付与されること
+- `variant="danger"` のとき `.btn--danger` クラスが付与されること
 
 ### size
 

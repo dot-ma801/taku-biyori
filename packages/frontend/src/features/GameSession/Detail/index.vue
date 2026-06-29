@@ -17,6 +17,7 @@ import {
   Globe,
   Trophy,
   Share2,
+  Trash,
 } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
@@ -26,6 +27,7 @@ import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
 import { useAuthStore } from '@/stores/auth';
 import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
+import DeleteDialog from '@/features/GameSession/Detail/Dialog/DeleteDialog.vue';
 import { useRoute } from 'vue-router';
 
 const props = defineProps<{ gameSessionId: string }>();
@@ -34,6 +36,7 @@ const authStore = useAuthStore();
 const route = useRoute();
 
 const guestJoinDialogModel = ref(false);
+const deleteDialogModel = ref(false);
 
 const {
   gameSession,
@@ -52,12 +55,14 @@ const {
 // provide('gameSession', gameSession);
 
 const {
-  publishSession,
-  canPublish,
-  loading: loadingStatus,
-  completeSession,
-  canComplete,
   isHost,
+  canPublish,
+  canComplete,
+  canDelete,
+  loading: loadingStatus,
+  publishSession,
+  completeSession,
+  deleteSession,
 } = useGameSessionStatus(props.gameSessionId, gameSession);
 const {
   canJoin,
@@ -142,6 +147,14 @@ const join = () => {
         <!-- component を分割するか？ -->
         <div class="button-area">
           <BaseButton
+            v-if="canDelete"
+            :left-icon="Trash"
+            @click="() => deleteDialogModel = true"
+            variant="danger"
+          >
+            削除
+          </BaseButton>
+          <BaseButton
             v-if="isHost"
             :left-icon="SquarePen"
             variant="secondary"
@@ -207,12 +220,17 @@ const join = () => {
       :game-session="gameSession"
       @member-updated="updateMember"
     ></MemberDisplay>
+
     <GuestJoinDialog
       v-model="guestJoinDialogModel"
       :game-session-id="gameSession.id"
       :game-session-status="gameSession.status"
       @guest-joined="onGuestJoined"
     ></GuestJoinDialog>
+    <DeleteDialog
+      v-model="deleteDialogModel"
+      @on-click-delete="deleteSession"
+    ></DeleteDialog>
   </div>
 </template>
 

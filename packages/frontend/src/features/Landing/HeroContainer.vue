@@ -3,6 +3,17 @@ defineOptions({ name: 'LandingPage' });
 import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { Plus, UserPlus2 } from '@lucide/vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const onClickCreate = () => {
+  router.push({ name: 'game-sessions-new' });
+};
+
+const onClickToList = () => {
+  router.push({ name: 'game-sessions-list' });
+};
 </script>
 
 <template>
@@ -17,9 +28,20 @@ import { Plus, UserPlus2 } from '@lucide/vue';
     </div>
 
     <div class="button-area">
-      <BaseButton size="lg" :left-icon="Plus" variant="primary">卓を立てる</BaseButton>
-      <BaseButton size="lg" :left-icon="UserPlus2" variant="secondary">
-        募集中の卓に参加する
+      <BaseButton
+        size="lg"
+        :left-icon="Plus"
+        variant="primary"
+        @click="onClickCreate"
+        >卓を立てる</BaseButton
+      >
+      <BaseButton
+        size="lg"
+        :left-icon="UserPlus2"
+        variant="secondary"
+        @click="onClickToList"
+      >
+        募集中の卓を見る
       </BaseButton>
     </div>
 

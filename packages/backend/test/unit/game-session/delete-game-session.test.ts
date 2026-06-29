@@ -3,16 +3,23 @@ import { deleteGameSession } from '@/game-session/application/delete-game-sessio
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
 import { GameSessionStatus } from '@taku-biyori/shared';
 
+// makeRepo:
+// `executeWithLock` のモックは「コールバックを同期的にそのまま実行する」スタブを既定とする。
+// 実 DB ではここでトランザクション境界 + 行ロックが張られるが、ユニットテストでは
+// application 層の判定ロジックが lockedRepo 経由で正しく走ることだけ検証したいため
+// トランザクションの中身は素通しで良い。
 function makeRepo(
   overrides: Partial<DeleteGameSessionRepository> = {},
 ): DeleteGameSessionRepository {
-  return {
+  const repo: DeleteGameSessionRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
     findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.draft),
     countOtherMembers: vi.fn().mockResolvedValue(0),
     deleteById: vi.fn().mockResolvedValue(undefined),
+    executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
     ...overrides,
   };
+  return repo;
 }
 
 describe('deleteGameSession', () => {
@@ -148,5 +155,43 @@ describe('deleteGameSession', () => {
     // Assert
     expect(result).toEqual({ type: 'hasMember' });
     expect(repo.deleteById).not.toHaveBeenCalled();
+  });
+
+  describe('TOCTOU 対策（トランザクション + 行ロック）', () => {
+    it('検証と削除を `executeWithLock` の中で 1 回のスコープにまとめる', async () => {
+      // Arrange
+      const repo = makeRepo();
+
+      // Act
+      await deleteGameSession(repo, 'session-1', 'user-1');
+
+      // Assert: トランザクション境界は session-1 に対して 1 回だけ開く
+      expect(repo.executeWithLock).toHaveBeenCalledTimes(1);
+      expect(repo.executeWithLock).toHaveBeenCalledWith(
+        'session-1',
+        expect.any(Function),
+      );
+    });
+
+    it('`executeWithLock` が結果を返したらその値をそのまま返す', async () => {
+      // Arrange
+      // ロックが取れずに早期 return するなど、infra 側で完結するケースを想定し
+      // コールバックを評価せず固定の結果を返すスタブを差し込む。
+      const repo = makeRepo({
+        executeWithLock: vi
+          .fn()
+          .mockResolvedValue({ type: 'notFound' } as const),
+      });
+
+      // Act
+      const result = await deleteGameSession(repo, 'session-1', 'user-1');
+
+      // Assert: コールバックが評価されなければ内部の検証もすべてスキップされる
+      expect(result).toEqual({ type: 'notFound' });
+      expect(repo.findHostUserId).not.toHaveBeenCalled();
+      expect(repo.findGameSessionStatus).not.toHaveBeenCalled();
+      expect(repo.countOtherMembers).not.toHaveBeenCalled();
+      expect(repo.deleteById).not.toHaveBeenCalled();
+    });
   });
 });

@@ -53,15 +53,14 @@ export const useGameSessionStatus = (
     if (!session) {
       return false;
     }
-    if (!canPerform(GameSessionAction.deleteSession, session.status, 'host')) {
-      return false;
-    }
     if (!isHost.value) {
       return false;
     }
-    const others = session.members.filter(
-      (m) => m.userId !== authStore.currentUser?.id,
-    );
+    if (!canPerform(GameSessionAction.deleteSession, session.status, 'host')) {
+      return false;
+    }
+    const myUserId = authStore.currentUser?.id;
+    const others = session.members.filter((m) => m.userId !== myUserId);
     return others.length === 0;
   });
 
@@ -71,7 +70,9 @@ export const useGameSessionStatus = (
    * loading 中の重複呼び出しは無視する。
    */
   async function publishSession() {
-    if (loading.value) return;
+    if (loading.value || loadingDelete.value) {
+      return;
+    }
     loading.value = true;
     try {
       const updated = await updateGameSessionStatus(gameSessionId, {
@@ -93,7 +94,9 @@ export const useGameSessionStatus = (
    * loading 中の重複呼び出しは無視する。
    */
   async function completeSession() {
-    if (loading.value) return;
+    if (loading.value || loadingDelete.value) {
+      return;
+    }
     loading.value = true;
     try {
       const updated = await updateGameSessionStatus(gameSessionId, {
@@ -114,19 +117,20 @@ export const useGameSessionStatus = (
    * 削除可否を満たさない場合・loadingDelete 中の重複呼び出しは無視する。
    */
   async function deleteSession() {
-    if (loadingDelete.value || !canDelete.value) {
+    if (loading.value || loadingDelete.value || !canDelete.value) {
       return;
     }
     loadingDelete.value = true;
     try {
       await deleteGameSession(gameSessionId);
-      toast.success('卓を削除しました');
-      router.push({ name: 'game-sessions-list' });
     } catch {
       toast.error('卓の削除に失敗しました');
+      return;
     } finally {
       loadingDelete.value = false;
     }
+    toast.success('卓を削除しました');
+    await router.push({ name: 'game-sessions-list' });
   }
 
   return {

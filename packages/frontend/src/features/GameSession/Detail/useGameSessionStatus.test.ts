@@ -32,7 +32,9 @@ const HOST_USER_ID = 'host-user-id';
 const OTHER_USER_ID = 'other-user-id';
 const SESSION_ID = 'session-id';
 
-function makeMember(overrides: Partial<GameSessionMember> = {}): GameSessionMember {
+function makeMember(
+  overrides: Partial<GameSessionMember> = {},
+): GameSessionMember {
   return {
     id: 'member-id',
     userId: null,
@@ -45,7 +47,11 @@ function makeMember(overrides: Partial<GameSessionMember> = {}): GameSessionMemb
 }
 
 function hostMember(): GameSessionMember {
-  return makeMember({ id: 'host-member', userId: HOST_USER_ID, userName: 'host' });
+  return makeMember({
+    id: 'host-member',
+    userId: HOST_USER_ID,
+    userName: 'host',
+  });
 }
 
 function makeGameSession(
@@ -400,10 +406,7 @@ describe('canDelete', () => {
     setupAuthAs(HOST_USER_ID);
     const gameSession = ref(
       makeGameSession({
-        members: [
-          hostMember(),
-          makeMember({ id: 'm2', userId: 'other-user' }),
-        ],
+        members: [hostMember(), makeMember({ id: 'm2', userId: 'other-user' })],
       }),
     );
 
@@ -614,10 +617,7 @@ describe('deleteSession', () => {
     setupAuthAs(HOST_USER_ID);
     const gameSession = ref(
       makeGameSession({
-        members: [
-          hostMember(),
-          makeMember({ id: 'm2', userId: 'other-user' }),
-        ],
+        members: [hostMember(), makeMember({ id: 'm2', userId: 'other-user' })],
       }),
     );
     const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);

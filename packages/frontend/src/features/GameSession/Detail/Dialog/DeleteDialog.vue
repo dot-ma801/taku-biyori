@@ -9,8 +9,8 @@ const emit = defineEmits<{
 }>();
 
 const onClickDelete = () => {
-  emit('onClickDelete')
-}
+  emit('onClickDelete');
+};
 </script>
 
 <template>

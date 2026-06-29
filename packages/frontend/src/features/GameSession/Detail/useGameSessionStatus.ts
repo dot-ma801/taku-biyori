@@ -7,10 +7,7 @@ import {
   GameSessionAction,
   canPerform,
 } from '@taku-biyori/shared';
-import {
-  deleteGameSession,
-  updateGameSessionStatus,
-} from '@/api/game-session';
+import { deleteGameSession, updateGameSessionStatus } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 

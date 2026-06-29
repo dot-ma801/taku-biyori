@@ -149,7 +149,7 @@ const join = () => {
           <BaseButton
             v-if="canDelete"
             :left-icon="Trash"
-            @click="() => deleteDialogModel = true"
+            @click="() => (deleteDialogModel = true)"
             variant="danger"
           >
             削除

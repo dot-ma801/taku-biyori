@@ -17,7 +17,10 @@ import RoadmapContainer from '@/features/Landing/RoadmapContainer.vue';
 .base-container {
   display: flex;
   flex-direction: column;
+  gap: var(--space-7);
 
-  gap: var(--space-6);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
 }
 </style>

@@ -44,6 +44,8 @@ const ALLOWED: Record<
   ],
   [GameSessionAction.deleteSession]: [
     { role: 'host', status: GameSessionStatus.draft },
+    { role: 'host', status: GameSessionStatus.open },
+    { role: 'host', status: GameSessionStatus.scheduling },
   ],
 };
 

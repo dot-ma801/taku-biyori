@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import type { LucideIcon } from '@lucide/vue';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 const ICON_SIZE: Record<Size, number> = {
@@ -135,6 +135,16 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   color: var(--color-text);
 }
 
+/* danger */
+.btn--danger {
+  background-color: var(--color-error);
+  color: #ffffff;
+  border-color: var(--color-error);
+}
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(0.88);
+}
+
 /* active (push) */
 .btn--primary:active:not(:disabled) {
   background-color: var(--color-primary-strong);
@@ -147,6 +157,9 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
 .btn--ghost:active:not(:disabled) {
   background-color: var(--color-surface-muted);
   color: var(--color-text);
+}
+.btn--danger:active:not(:disabled) {
+  filter: brightness(0.8);
 }
 
 /* disabled / loading */

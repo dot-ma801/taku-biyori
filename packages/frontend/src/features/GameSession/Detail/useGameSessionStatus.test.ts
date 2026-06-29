@@ -3,27 +3,56 @@ import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   updateGameSessionStatus: vi.fn(),
+  deleteGameSession: vi.fn(),
 }));
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }));
 
+const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 vi.mock('@/composables/useToast', () => ({
-  useToast: () => ({ error: mockToastError }),
+  useToast: () => ({ success: mockToastSuccess, error: mockToastError }),
 }));
 
-import { updateGameSessionStatus } from '@/api/game-session';
+const mockRouterPush = vi.fn();
+vi.mock('vue-router', () => ({
+  useRouter: vi.fn(() => ({ push: mockRouterPush })),
+}));
+
+import { updateGameSessionStatus, deleteGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 const HOST_USER_ID = 'host-user-id';
 const OTHER_USER_ID = 'other-user-id';
 const SESSION_ID = 'session-id';
+
+function makeMember(
+  overrides: Partial<GameSessionMember> = {},
+): GameSessionMember {
+  return {
+    id: 'member-id',
+    userId: null,
+    userName: null,
+    guestName: 'ゲスト',
+    characterName: null,
+    joinedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function hostMember(): GameSessionMember {
+  return makeMember({
+    id: 'host-member',
+    userId: HOST_USER_ID,
+    userName: 'host',
+  });
+}
 
 function makeGameSession(
   overrides: Partial<GameSessionDetail> = {},
@@ -36,7 +65,7 @@ function makeGameSession(
     createdBy: HOST_USER_ID,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
-    members: [],
+    members: [hostMember()],
     ...overrides,
   };
 }
@@ -317,5 +346,255 @@ describe('completeSession', () => {
 
     // Assert
     expect(mockToastError).toHaveBeenCalledWith('完了への変更に失敗しました');
+  });
+});
+
+describe('canDelete', () => {
+  // canDelete は「ステータス policy」「他メンバーの存在」「ロール/null チェック」という
+  // 3 つの独立した軸の AND で決まる。軸ごとに describe を分けることで、どの軸の境界が
+  // 壊れたかをテスト名から即座に特定できる。
+
+  // 軸1: ステータス policy
+  // 「ホスト × 自分以外メンバーなし」を満たした上で、status だけを振って許可境界を網羅する。
+  // 削除を許可するのは draft / open / scheduling、禁止するのは confirmed / today / completed。
+  // describe.each で表形式にすることで、policy の真理値表を一覧で読めるようにする。
+  // 将来ステータスや許可条件が増減した場合も、ここの配列に 1 行追加するだけで網羅できる。
+  describe.each([
+    { status: GameSessionStatus.draft, expected: true },
+    { status: GameSessionStatus.open, expected: true },
+    { status: GameSessionStatus.scheduling, expected: true },
+    { status: GameSessionStatus.confirmed, expected: false },
+    { status: GameSessionStatus.today, expected: false },
+    { status: GameSessionStatus.completed, expected: false },
+  ])('ステータス policy (status=$status)', ({ status, expected }) => {
+    it(`ホストかつ自分以外のメンバーがいないとき ${expected} を返す`, () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const gameSession = ref(
+        makeGameSession({
+          status,
+          members: [hostMember()],
+        }),
+      );
+
+      // Act
+      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+      // Assert
+      expect(canDelete.value).toBe(expected);
+    });
+  });
+
+  // 軸2: 他メンバーの存在
+  // ステータスが許可される open でも、自分以外のメンバーが 1 人でもいれば削除不可。
+  // 「他人」にはログイン済みユーザとゲスト（userId=null）の両方が含まれることを
+  // 別ケースとして担保しておく（ゲスト判定漏れの回帰防止）。
+  describe('他メンバーの存在 (status=open, ホスト)', () => {
+    it('自分以外のログインメンバーがいるとき false を返す', () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const gameSession = ref(
+        makeGameSession({
+          members: [
+            hostMember(),
+            makeMember({ id: 'm2', userId: 'other-user' }),
+          ],
+        }),
+      );
+
+      // Act
+      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+      // Assert
+      expect(canDelete.value).toBe(false);
+    });
+
+    it('ゲストメンバーがいるとき false を返す', () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const gameSession = ref(
+        makeGameSession({
+          members: [hostMember(), makeMember({ id: 'g1', userId: null })],
+        }),
+      );
+
+      // Act
+      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+      // Assert
+      expect(canDelete.value).toBe(false);
+    });
+  });
+
+  // 軸3: 前提条件（ロール / セッション存在）
+  // ステータスやメンバー条件を評価する以前のガード。
+  // ホストでない／セッション未取得（null）のときは無条件で false。
+  it('ホスト以外のとき false を返す', () => {
+    // Arrange
+    setupAuthAs(OTHER_USER_ID);
+    const gameSession = ref(makeGameSession());
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('gameSession が null のとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref<GameSessionDetail | null>(null);
+
+    // Act
+    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+});
+
+describe('deleteSession', () => {
+  it('deleteGameSession を gameSessionId で呼び出す', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(deleteGameSession).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it('成功時に一覧ページへ遷移する', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      name: 'game-sessions-list',
+    });
+  });
+
+  it('成功時に success トーストを表示する', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(mockToastSuccess).toHaveBeenCalledWith('卓を削除しました');
+  });
+
+  it('成功後に loadingDelete が false に戻る', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
+    const gameSession = ref(makeGameSession());
+    const { deleteSession, loadingDelete } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+    );
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(loadingDelete.value).toBe(false);
+  });
+
+  it('API エラー時に error トーストを表示する', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(deleteGameSession).mockRejectedValue(new Error('サーバーエラー'));
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalledWith('卓の削除に失敗しました');
+  });
+
+  it('API エラー時に遷移しない', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(deleteGameSession).mockRejectedValue(new Error('サーバーエラー'));
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('ホスト以外は API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(OTHER_USER_ID);
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(deleteGameSession).not.toHaveBeenCalled();
+  });
+
+  it('自分以外のメンバーがいるときは API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const gameSession = ref(
+      makeGameSession({
+        members: [hostMember(), makeMember({ id: 'm2', userId: 'other-user' })],
+      }),
+    );
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    await deleteSession();
+
+    // Assert
+    expect(deleteGameSession).not.toHaveBeenCalled();
+  });
+
+  it('loadingDelete 中の重複呼び出しは無視する', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    let resolve!: () => void;
+    vi.mocked(deleteGameSession).mockReturnValue(
+      new Promise<void>((r) => {
+        resolve = r;
+      }),
+    );
+    const gameSession = ref(makeGameSession());
+    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession);
+
+    // Act
+    const first = deleteSession();
+    await deleteSession();
+    resolve();
+    await first;
+
+    // Assert
+    expect(deleteGameSession).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
   });
 });

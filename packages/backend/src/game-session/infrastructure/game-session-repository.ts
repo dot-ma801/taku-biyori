@@ -297,6 +297,28 @@ export const createGameSessionRepository = (
     return result[0]?.cnt ?? 0;
   },
 
+  async executeWithLock(id, fn) {
+    // 削除フローの TOCTOU 対策:
+    // トランザクション開始直後に対象セッション行へ `SELECT ... FOR UPDATE` で
+    // 排他ロックを取得する。これにより同一セッションへの並行 publish/complete/join 等は
+    // このトランザクション終了までブロックされ、コールバック内の検証クエリと
+    // 最終 DELETE は同じスナップショットから決定できる。
+    return db.transaction(async (tx) => {
+      await tx
+        .select({ id: gameSessions.id })
+        .from(gameSessions)
+        .where(eq(gameSessions.id, id))
+        .for('update');
+
+      // Drizzle の tx は `PgTransaction`、Database は `PostgresJsDatabase` で兄弟型のため
+      // 直接代入できないが、本ファクトリで利用する select/insert/update/delete はどちらも
+      // `PgDatabase` から継承した同一インターフェースで、ランタイム挙動も同じ。
+      // 構造的にしか型が一致しないため unknown 経由でキャストする。
+      const txRepo = createGameSessionRepository(tx as unknown as Database);
+      return fn(txRepo);
+    });
+  },
+
   async findStatusFields(id: string) {
     const row = await db
       .select({

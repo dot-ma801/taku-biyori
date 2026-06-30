@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { username } from 'better-auth/plugins';
 import type { Database } from '@/system/infrastructure/database/client';
 import * as schema from '@/system/infrastructure/database/schema';
 
@@ -49,7 +50,14 @@ export const createAuth = (options: CreateAuthOptions) => {
     baseURL: options.baseURL,
     basePath: '/api/auth',
     trustedOrigins: [options.trustedOrigin],
-    plugins: [],
+    plugins: [
+      username({
+        minUsernameLength: 1,
+        maxUsernameLength: 50,
+        usernameValidator: () => true,
+        usernameNormalization: false,
+      }),
+    ],
     socialProviders,
   });
 };

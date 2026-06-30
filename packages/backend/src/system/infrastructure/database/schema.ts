@@ -19,6 +19,8 @@ export const user = authSchema.table('user', {
   email: text('email').unique(),
   emailVerified: boolean('email_verified').default(false),
   image: text('image'),
+  username: text('username').unique(),
+  displayUsername: text('display_username'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

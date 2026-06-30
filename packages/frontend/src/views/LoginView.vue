@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute, type LocationQueryValue } from 'vue-router';
+import { computed, onMounted } from 'vue';
+import { useRoute, useRouter, type LocationQueryValue } from 'vue-router';
 import BaseTabs, {
   type TabItem,
 } from '@/components/common/BaseTabs/BaseTabs.vue';
 import LoginCard from '@/features/user/LoginCard.vue';
 import SignupCard from '@/features/user/SignupCard.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const LOGIN_TABS = [
   { value: 'signin', label: 'ログイン' },
@@ -19,11 +20,22 @@ const parseLoginTab = (
 ): LoginTabValue => (raw === 'signin' || raw === 'signup' ? raw : 'signin');
 
 const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
 
 const activeTab = computed(() => parseLoginTab(route.query.tab));
 const nestPage = computed(() => {
   const p = route.query['nest-page'];
   return typeof p === 'string' ? p : null;
+});
+
+onMounted(async () => {
+  if (!authStore.isAuthenticated) {
+    await authStore.initSession();
+  }
+  if (authStore.isAuthenticated) {
+    await router.push({ name: nestPage.value ?? 'game-sessions-list' });
+  }
 });
 </script>
 

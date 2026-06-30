@@ -15,6 +15,14 @@ const userId = ref<string>('');
 const userName = ref<string>('');
 const password = ref<string>('');
 
+const userIdRules = [
+  (v: unknown) =>
+    (typeof v === 'string' && v.length > 0) || 'ユーザーIDを入力してください',
+  (v: unknown) =>
+    (typeof v === 'string' && /^[a-zA-Z0-9_.]+$/.test(v)) ||
+    '英数字・アンダースコア・ドットのみ使用できます',
+];
+
 const onClickSignup = () =>
   submit(() =>
     signUp.email({
@@ -50,6 +58,7 @@ const onClickSignup = () =>
         placeholder="taku_biyori"
         type="text"
         autocomplete="username"
+        :rules="userIdRules"
       ></BaseTextBox>
       <BaseTextBox
         v-model="userName"

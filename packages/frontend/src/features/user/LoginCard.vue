@@ -14,6 +14,12 @@ const { errorMessage, submit } = useAuthForm();
 const username = ref<string>('');
 const password = ref<string>('');
 
+const userIdRules = [
+  (v: unknown) =>
+    (typeof v === 'string' && /^[a-zA-Z0-9_.]+$/.test(v)) ||
+    '英数字・アンダースコア・ドットのみ使用できます',
+];
+
 const onClickLogin = () =>
   submit(() =>
     signIn.username({ username: username.value, password: password.value }),
@@ -41,6 +47,7 @@ const onClickLogin = () =>
         placeholder="taku_biyori"
         type="text"
         autocomplete="username"
+        :rules="userIdRules"
       ></BaseTextBox>
       <BaseTextBox
         v-model="password"

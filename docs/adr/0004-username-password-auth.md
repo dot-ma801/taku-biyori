@@ -92,12 +92,11 @@ displayUsername: text('display_username'),
 username({
   minUsernameLength: 1,
   maxUsernameLength: 50,
-  usernameValidator: () => true,  // 日本語・スペースを含む任意の文字列を許可
   usernameNormalization: false,   // 大文字小文字を区別する
 })
 ```
 
-デフォルトのバリデーター（英数字・アンダースコアのみ）は制限が強すぎるため、任意の文字列を許可する。
+バリデーターはデフォルト（`/^[a-zA-Z0-9_.]+$/`）を使用。英数字・アンダースコア・ドットのみ許可し、日本語・スペースは不可。
 
 ### 6. autocomplete 属性
 
@@ -130,8 +129,8 @@ username({
 
 - DB 漏洩時にプレースホルダーメールが露出した場合、理論上 `signIn.email()` 攻撃が可能になる
   - → パスワードは bcrypt でハッシュ化されており、メールが露出してもパスワードが不明なら悪用不可
-- `usernameValidator: () => true` により、空文字やスペースのみの userid が登録できてしまう
-  - → フロントエンドのバリデーションで制御する。必要に応じてサーバー側バリデーターを追加する
+- デフォルトバリデーター（`/^[a-zA-Z0-9_.]+$/`）により、日本語 userid は登録不可
+  - → userid は ASCII 限定の仕様であるため想定内。表示名（`name`）は任意の文字列を許容する
 
 ## 決めていないこと
 

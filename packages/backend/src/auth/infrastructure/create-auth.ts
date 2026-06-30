@@ -54,7 +54,6 @@ export const createAuth = (options: CreateAuthOptions) => {
       username({
         minUsernameLength: 1,
         maxUsernameLength: 50,
-        usernameValidator: () => true,
         usernameNormalization: false,
       }),
     ],

@@ -8,7 +8,10 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 const onClickCreate = () => {
-  router.push({ name: 'game-sessions-new' });
+  router.push({
+    name: 'login',
+    query: { tab: 'signup', 'next-page': 'game-sessions-new' },
+  });
 };
 
 const onClickToList = () => {

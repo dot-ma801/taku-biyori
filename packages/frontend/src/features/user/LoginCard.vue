@@ -11,11 +11,13 @@ import { useAuthForm } from '@/features/user/useAuthForm';
 
 const { errorMessage, submit } = useAuthForm();
 
-const email = ref<string>('');
+const username = ref<string>('');
 const password = ref<string>('');
 
 const onClickLogin = () =>
-  submit(() => signIn.email({ email: email.value, password: password.value }));
+  submit(() =>
+    signIn.username({ username: username.value, password: password.value }),
+  );
 </script>
 
 <template>
@@ -34,15 +36,17 @@ const onClickLogin = () =>
       <BaseDivider class="base-divider" label="または"></BaseDivider>
 
       <BaseTextBox
-        v-model="email"
-        label="メールアドレス"
-        placeholder="example@email.com"
-        type="email"
+        v-model="username"
+        label="ユーザーID"
+        placeholder="taku_biyori"
+        type="text"
+        autocomplete="username"
       ></BaseTextBox>
       <BaseTextBox
         v-model="password"
         label="パスワード"
         type="password"
+        autocomplete="current-password"
       ></BaseTextBox>
 
       <BaseButton class="login-button" @click="onClickLogin">

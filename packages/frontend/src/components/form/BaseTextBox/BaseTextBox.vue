@@ -9,6 +9,7 @@ withDefaults(
     placeholder?: string;
     hint?: string;
     type?: string;
+    autocomplete?: string;
     rules?: Rule[];
     disabled?: boolean;
     readonly?: boolean;
@@ -38,6 +39,7 @@ const model = defineModel<string>({ default: '' });
     <label v-if="label" class="textbox__label">{{ label }}</label>
     <Input.Control
       :placeholder="placeholder"
+      :autocomplete="autocomplete"
       :min="min"
       :max="max"
       :step="step"

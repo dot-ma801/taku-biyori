@@ -1,6 +1,6 @@
 # RollHub（たく日和）— 設計ドキュメント 最新版
 
-> **最終更新**: 2026-06-28  
+> **最終更新**: 2026-07-01  
 > マーダーミステリー・TRPG向けのセッション管理・卓建て補助 Web アプリ
 
 ---
@@ -27,7 +27,7 @@
 | フロントエンド | Vue 3 + TypeScript + Vite（`apps/frontend`） |
 | バックエンド | Hono（`packages/backend`） |
 | ORM / DB | Drizzle / Neon（PostgreSQL） |
-| 認証 | Better Auth（ソーシャルログインのみ） |
+| 認証 | Better Auth（userid + password / Google OAuth） |
 | 状態管理 | Pinia |
 | デプロイ | Vercel |
 | テスト | Vitest + Playwright |
@@ -73,19 +73,23 @@
 
 ### `auth.user` — ユーザー（Better Auth 管理）
 
-> Better Auth が自動生成するテーブル。RollHub 側から直接変更しない。
+> Better Auth が管理するテーブル。username プラグインにより `username`・`display_username` カラムが追加されている。
 
 | カラム | 型 | 説明 |
 |---|---|---|
 | `id` | `text` | PK |
-| `name` | `text?` | 表示名。`/profile/setting` で編集可 |
-| `email` | `text` | unique |
+| `name` | `text?` | 表示名（ユーザー登録時に入力）。`/profile/setting` で編集可 |
+| `email` | `text?` | unique。userid + password 登録時はフロントが生成したプレースホルダー値が入る（ユーザーには非公開） |
 | `emailVerified` | `boolean` | |
 | `image` | `text?` | OAuth プロバイダーの画像 URL。Ph1 は永続化なし |
+| `username` | `text?` | unique。ログイン識別子（userid）。userid + password 登録ユーザーのみ設定される |
+| `display_username` | `text?` | username プラグインが内部管理する表示用フィールド。RollHub では `name` を表示名として使うため参照しない |
 | `createdAt` | `timestamp` | |
 | `updatedAt` | `timestamp` | |
 
 > ⚠️ `userProfiles` テーブルは不要。Ph1 で管理するプロフィール情報は `name` のみで、`auth.user` で完結する。
+>
+> ⚠️ `email` カラムには userid + password 登録ユーザーのプレースホルダー値が入る。アプリ内でメールアドレスとして表示・利用しないこと（ADR 0004 参照）。
 
 ---
 

@@ -25,7 +25,7 @@ const authStore = useAuthStore();
 
 const activeTab = computed(() => parseLoginTab(route.query.tab));
 const nestPage = computed(() => {
-  const p = route.query['nest-page'];
+  const p = route.query['next-page'];
   return typeof p === 'string' ? p : null;
 });
 

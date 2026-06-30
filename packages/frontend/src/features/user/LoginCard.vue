@@ -9,7 +9,11 @@ import GoogleLoginButton from '@/features/user/GoogleLoginButton.vue';
 import { signIn } from '@/lib/auth';
 import { useAuthForm } from '@/features/user/useAuthForm';
 
-const { errorMessage, submit } = useAuthForm();
+const props = defineProps<{
+  nestPage?: string | null;
+}>();
+
+const { errorMessage, submit } = useAuthForm(() => props.nestPage);
 
 const username = ref<string>('');
 const password = ref<string>('');

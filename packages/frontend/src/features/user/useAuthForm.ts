@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, toValue, type MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -7,7 +7,9 @@ type AuthCall = () => Promise<{
   error: { message?: string } | null;
 }>;
 
-export function useAuthForm() {
+export function useAuthForm(
+  redirectTo?: MaybeRefOrGetter<string | null | undefined>,
+) {
   const router = useRouter();
   const authStore = useAuthStore();
 
@@ -25,8 +27,11 @@ export function useAuthForm() {
       }
       if (data) {
         await authStore.initSession();
-        // FIXME:
-        router.push({ name: 'auth-callback' });
+        const destination = toValue(redirectTo);
+        await router.push({
+          name: 'auth-callback',
+          query: destination ? { 'next-page': destination } : {},
+        });
       }
     } catch {
       errorMessage.value = 'エラーが発生しました';

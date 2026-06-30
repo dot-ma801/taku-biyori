@@ -5,6 +5,10 @@ import { useToast } from '@/composables/useToast';
 import { useRouter } from 'vue-router';
 import { onMounted } from 'vue';
 
+const props = defineProps<{
+  nextPage?: string | null;
+}>();
+
 const router = useRouter();
 const authStore = useAuthStore();
 const toast = useToast();
@@ -12,7 +16,7 @@ const toast = useToast();
 onMounted(async () => {
   await authStore.initSession();
   if (authStore.isAuthenticated) {
-    router.push({ name: 'game-sessions-list' });
+    router.push({ name: props.nextPage ?? 'game-sessions-list' });
   } else {
     toast.error('ログインに失敗しました。もう一度お試しください。');
     router.push({ name: 'login' });

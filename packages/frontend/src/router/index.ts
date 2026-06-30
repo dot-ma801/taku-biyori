@@ -19,6 +19,12 @@ const router = createRouter({
       path: '/auth/callback',
       name: 'auth-callback',
       component: AfterLogin,
+      props: (to) => ({
+        nextPage:
+          typeof to.query['next-page'] === 'string'
+            ? to.query['next-page']
+            : null,
+      }),
     },
     {
       path: '/game-sessions',

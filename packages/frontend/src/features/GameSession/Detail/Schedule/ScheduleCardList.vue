@@ -58,6 +58,16 @@ const isMyAnswerEditable = computed(() => {
   return isChipEditable(props.myMemberId);
 });
 
+// いずれかの編集モード中か（ヒント表示用）
+const isEditing = computed(() => props.editableMemberIds.length > 0);
+
+// 編集モードに応じたタップ操作のヒント文言
+const editHint = computed(() =>
+  isMyAnswerEditable.value
+    ? '「あなたの回答」をタップすると ◯ → △ → ✕ の順に切り替わります'
+    : 'ゲストのチップをタップすると ◯ → △ → ✕ の順に切り替わります',
+);
+
 // 編集可能なチップ・回答行に付与するアクセシビリティ属性
 function editableAttrs(editable: boolean) {
   return editable ? { role: 'button', tabindex: 0 } : {};
@@ -94,6 +104,7 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 
 <template>
   <div v-if="hasDates" class="card-list">
+    <p v-if="isEditing" class="edit-hint">{{ editHint }}</p>
     <div v-for="date in availabilityDates" :key="date.id" class="card">
       <div class="card-header">
         <input
@@ -158,6 +169,12 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.edit-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .card {

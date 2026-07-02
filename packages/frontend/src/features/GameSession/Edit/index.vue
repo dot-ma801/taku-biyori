@@ -41,7 +41,7 @@ const pendingDates = defineModel<string[]>('pendingDates', {
 
 <template>
   <div class="container">
-    <BaseSectionHeading level="h1" text-color="primary">
+    <BaseSectionHeading level="h1">
       {{ heading }}
     </BaseSectionHeading>
 

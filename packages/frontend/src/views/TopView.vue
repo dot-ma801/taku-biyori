@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
-router.replace({ name: 'game-sessions-list' });
+import LandingPage from '@/features/Landing/index.vue';
 </script>
 
 <template>
-  <div></div>
+  <LandingPage></LandingPage>
 </template>
 
 <style scoped></style>

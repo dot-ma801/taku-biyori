@@ -9,18 +9,31 @@ import GoogleLoginButton from '@/features/user/GoogleLoginButton.vue';
 import { signUp } from '@/lib/auth';
 import { useAuthForm } from '@/features/user/useAuthForm';
 
-const { errorMessage, submit } = useAuthForm();
+const props = defineProps<{
+  nestPage?: string | null;
+}>();
 
+const { errorMessage, submit } = useAuthForm(() => props.nestPage);
+
+const userId = ref<string>('');
 const userName = ref<string>('');
-const email = ref<string>('');
 const password = ref<string>('');
+
+const userIdRules = [
+  (v: unknown) =>
+    (typeof v === 'string' && v.length > 0) || 'ユーザーIDを入力してください',
+  (v: unknown) =>
+    (typeof v === 'string' && /^[a-zA-Z0-9_.]+$/.test(v)) ||
+    '英数字・アンダースコア・ドットのみ使用できます',
+];
 
 const onClickSignup = () =>
   submit(() =>
     signUp.email({
       name: userName.value,
-      email: email.value,
+      email: `${crypto.randomUUID()}@placeholder.local`,
       password: password.value,
+      username: userId.value,
     }),
   );
 </script>
@@ -44,21 +57,25 @@ const onClickSignup = () =>
       <BaseDivider class="base-divider" label="または"></BaseDivider>
 
       <BaseTextBox
+        v-model="userId"
+        label="ユーザーID"
+        placeholder="taku_biyori"
+        type="text"
+        autocomplete="username"
+        :rules="userIdRules"
+      ></BaseTextBox>
+      <BaseTextBox
         v-model="userName"
         label="ユーザー名"
         placeholder="卓 日和"
         type="text"
-      ></BaseTextBox>
-      <BaseTextBox
-        v-model="email"
-        label="メールアドレス"
-        placeholder="example@email.com"
-        type="email"
+        autocomplete="name"
       ></BaseTextBox>
       <BaseTextBox
         v-model="password"
         label="パスワード"
         type="password"
+        autocomplete="new-password"
       ></BaseTextBox>
 
       <BaseButton class="login-button" @click="onClickSignup">

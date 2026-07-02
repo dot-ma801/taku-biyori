@@ -33,7 +33,7 @@ const iconSize = computed(() => ICON_SIZE[props.level]);
 
 const iconColorStyle = computed(() => {
   if (props.iconColor === 'primary') {
-    return 'var(--color-primary)';
+    return 'var(--_icon-primary-color)';
   }
   if (props.iconColor === 'default') {
     return 'currentcolor';
@@ -72,6 +72,8 @@ const textColorStyle = computed(() => {
 
 <style scoped>
 .section-heading {
+  --_icon-primary-color: var(--color-primary);
+
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -79,6 +81,10 @@ const textColorStyle = computed(() => {
   line-height: 1;
   font-family: var(--font-family-base);
   color: var(--color-text);
+}
+
+:root[data-theme='dark'] .section-heading {
+  --_icon-primary-color: var(--color-primary-text);
 }
 
 .section-heading__icon {

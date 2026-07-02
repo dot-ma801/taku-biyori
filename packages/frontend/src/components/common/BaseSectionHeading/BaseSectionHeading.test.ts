@@ -102,7 +102,7 @@ describe('BaseSectionHeading', () => {
       // Assert
       expect(
         wrapper.find('.section-heading__icon').attributes('style'),
-      ).toContain('var(--color-primary)');
+      ).toContain('var(--_icon-primary-color)');
     });
 
     it('iconColor="default" のとき currentColor が適用される', () => {

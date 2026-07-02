@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import BaseProgress from '@/components/common/BaseProgress/BaseProgress.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useToast } from '@/composables/useToast';
+import { useRouter } from 'vue-router';
+import { onMounted } from 'vue';
 
+const props = defineProps<{
+  nextPage?: string | null;
+}>();
+
+const router = useRouter();
 const authStore = useAuthStore();
-authStore.initSession();
+const toast = useToast();
 
-// TODO: 実装する
-if (authStore.isAuthenticated) {
-  // ログイン成功
-  // router.push()
-} else {
-  // ログイン失敗
-  // router.push()
-}
+onMounted(async () => {
+  await authStore.initSession();
+  if (authStore.isAuthenticated) {
+    router.push({ name: props.nextPage ?? 'game-sessions-list' });
+  } else {
+    toast.error('ログインに失敗しました。もう一度お試しください。');
+    router.push({ name: 'login' });
+  }
+});
 </script>
 
 <template>

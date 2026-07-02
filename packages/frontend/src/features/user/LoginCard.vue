@@ -9,13 +9,25 @@ import GoogleLoginButton from '@/features/user/GoogleLoginButton.vue';
 import { signIn } from '@/lib/auth';
 import { useAuthForm } from '@/features/user/useAuthForm';
 
-const { errorMessage, submit } = useAuthForm();
+const props = defineProps<{
+  nestPage?: string | null;
+}>();
 
-const email = ref<string>('');
+const { errorMessage, submit } = useAuthForm(() => props.nestPage);
+
+const username = ref<string>('');
 const password = ref<string>('');
 
+const userIdRules = [
+  (v: unknown) =>
+    (typeof v === 'string' && /^[a-zA-Z0-9_.]+$/.test(v)) ||
+    '英数字・アンダースコア・ドットのみ使用できます',
+];
+
 const onClickLogin = () =>
-  submit(() => signIn.email({ email: email.value, password: password.value }));
+  submit(() =>
+    signIn.username({ username: username.value, password: password.value }),
+  );
 </script>
 
 <template>
@@ -34,15 +46,18 @@ const onClickLogin = () =>
       <BaseDivider class="base-divider" label="または"></BaseDivider>
 
       <BaseTextBox
-        v-model="email"
-        label="メールアドレス"
-        placeholder="example@email.com"
-        type="email"
+        v-model="username"
+        label="ユーザーID"
+        placeholder="taku_biyori"
+        type="text"
+        autocomplete="username"
+        :rules="userIdRules"
       ></BaseTextBox>
       <BaseTextBox
         v-model="password"
         label="パスワード"
         type="password"
+        autocomplete="current-password"
       ></BaseTextBox>
 
       <BaseButton class="login-button" @click="onClickLogin">

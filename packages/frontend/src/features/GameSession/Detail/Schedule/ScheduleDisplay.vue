@@ -3,6 +3,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/GameSession/Detail/Schedule/ScheduleTable.vue';
+import ScheduleCardList from '@/features/GameSession/Detail/Schedule/ScheduleCardList.vue';
 import { useSchedule } from '@/features/GameSession/Detail/Schedule/useSchedule';
 import type { GameSession, GameSessionDetail } from '@taku-biyori/shared';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
@@ -179,17 +180,32 @@ const canEditSchedule = computed(
       {{ errorMessage }}
     </div>
     <template v-else>
-      <ScheduleTable
-        :availability-dates="availabilityDates"
-        :members="props.gameSession.members"
-        :my-member-id="myMemberId"
-        :editable-member-ids="editableMemberIds"
-        :draft-answers="tableDraftAnswers"
-        :can-confirm="canConfirm"
-        :selected-date-id="selectedDateId"
-        @cell-click="onCellClick"
-        @date-select="(id) => (selectedDateId = id)"
-      />
+      <div class="schedule-table">
+        <ScheduleTable
+          :availability-dates="availabilityDates"
+          :members="props.gameSession.members"
+          :my-member-id="myMemberId"
+          :editable-member-ids="editableMemberIds"
+          :draft-answers="tableDraftAnswers"
+          :can-confirm="canConfirm"
+          :selected-date-id="selectedDateId"
+          @cell-click="onCellClick"
+          @date-select="(id) => (selectedDateId = id)"
+        />
+      </div>
+      <div class="schedule-cards">
+        <ScheduleCardList
+          :availability-dates="availabilityDates"
+          :members="props.gameSession.members"
+          :my-member-id="myMemberId"
+          :editable-member-ids="editableMemberIds"
+          :draft-answers="tableDraftAnswers"
+          :can-confirm="canConfirm"
+          :selected-date-id="selectedDateId"
+          @cell-click="onCellClick"
+          @date-select="(id) => (selectedDateId = id)"
+        />
+      </div>
       <div v-if="displayMemberId" class="actions">
         <template v-if="isScheduleEditing">
           <BaseButton
@@ -268,5 +284,20 @@ const canEditSchedule = computed(
 
 .reset-btn {
   margin-right: auto;
+}
+
+/* 768px 以下ではテーブルをカード表示にフォールバックする */
+.schedule-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .schedule-table {
+    display: none;
+  }
+
+  .schedule-cards {
+    display: block;
+  }
 }
 </style>

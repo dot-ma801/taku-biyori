@@ -6,6 +6,7 @@ import ScheduleTable from '@/features/GameSession/Detail/Schedule/ScheduleTable.
 import ScheduleCardList from '@/features/GameSession/Detail/Schedule/ScheduleCardList.vue';
 import { useSchedule } from '@/features/GameSession/Detail/Schedule/useSchedule';
 import type { GameSession, GameSessionDetail } from '@taku-biyori/shared';
+import { isGuestMember } from '@taku-biyori/shared';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 import { useSession } from '@/lib/auth';
 import { CalendarCheck, SquarePen, Check, RotateCcw } from '@lucide/vue';
@@ -108,7 +109,7 @@ const editableMemberIds = computed<string[]>(() => {
   if (isEditing.value && myMemberId.value) return [myMemberId.value];
   if (isEditingGuestSchedule.value) {
     return props.gameSession.members
-      .filter((m) => m.userId === null)
+      .filter((m) => isGuestMember(m))
       .map((m) => m.id);
   }
   return [];

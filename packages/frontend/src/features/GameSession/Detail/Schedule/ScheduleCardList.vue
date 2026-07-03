@@ -5,6 +5,7 @@ import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import { useScheduleView } from '@/features/GameSession/Detail/Schedule/useScheduleView';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
+import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed, toRef } from 'vue';
 
 const props = defineProps<{
@@ -30,10 +31,6 @@ const { getAnswer, answerCounts } = useScheduleView(
 );
 
 const hasDates = computed(() => props.availabilityDates.length > 0);
-
-function memberDisplayName(member: GameSessionMember): string {
-  return member.userName ?? member.guestName ?? '（未設定）';
-}
 
 // チップの見た目を回答状態で切り替えるためのクラス（未回答は 'none'）
 function chipAnswerClass(date: AvailabilityDate, memberId: string): string {
@@ -143,7 +140,7 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
           @click="onChipClick(member.id, date.id)"
           @keydown="onChipKeydown($event, member.id, date.id)"
         >
-          <UserAvatar :size="20" :name="memberDisplayName(member)" />
+          <UserAvatar :size="20" :name="memberBaseName(member)" />
           <span class="chip-name">{{ memberDisplayName(member) }}</span>
         </span>
       </div>

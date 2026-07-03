@@ -7,6 +7,7 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
 import { UsersRound, SquarePen, Check } from '@lucide/vue';
 import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
+import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -17,7 +18,9 @@ const displayMembers = computed(() =>
   props.gameSession.members.map((member) => ({
     id: member.id,
     characterName: member.characterName,
-    userName: member.userName ?? member.guestName ?? '（未設定）',
+    userName: memberDisplayName(member),
+    // アバターの色を変えないため、サフィックスなしの名前を渡す
+    baseName: memberBaseName(member),
   })),
 );
 
@@ -56,7 +59,7 @@ const {
       <UserAvatar
         class="avatar"
         :size="35"
-        :name="member.userName"
+        :name="member.baseName"
       ></UserAvatar>
 
       <p v-if="!isEditing">

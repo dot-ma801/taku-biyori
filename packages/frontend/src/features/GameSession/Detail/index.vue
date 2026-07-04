@@ -7,21 +7,10 @@ import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisp
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { computed, ref } from 'vue';
-import {
-  Album,
-  UsersRound,
-  UserRoundPlus,
-  UserRoundMinus,
-  CalendarDays,
-  SquarePen,
-  Globe,
-  Trophy,
-  Share2,
-  Trash,
-} from '@lucide/vue';
-import BaseButton from '@/components/button/BaseButton.vue';
+import { Album, UsersRound, CalendarDays } from '@lucide/vue';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
+import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue';
 import type { GameSessionMember } from '@taku-biyori/shared';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
@@ -144,68 +133,25 @@ const join = () => {
           <p>募集人数: {{ maxMembers }}</p>
         </div>
 
-        <!-- component を分割するか？ -->
-        <div class="button-area">
-          <BaseButton
-            v-if="canDelete"
-            :left-icon="Trash"
-            variant="danger"
-            @click="deleteDialogModel = true"
-          >
-            削除
-          </BaseButton>
-          <BaseButton
-            v-if="isHost"
-            :left-icon="SquarePen"
-            variant="secondary"
-            @click="onClickEdit"
-          >
-            セッション編集
-          </BaseButton>
-          <!-- secondary でいいか？ -->
-          <BaseButton
-            v-if="canIssueGuestLink"
-            :left-icon="Share2"
-            variant="secondary"
-            @click="copyGuestLink"
-            :loading="loadingGuestLink"
-          >
-            招待リンクを取得
-          </BaseButton>
-          <BaseButton
-            :left-icon="Globe"
-            v-if="canPublish"
-            @click="publishSession"
-            :loading="loadingStatus"
-          >
-            公開
-          </BaseButton>
-          <BaseButton
-            :left-icon="Trophy"
-            v-if="canComplete"
-            @click="completeSession"
-            :loading="loadingStatus"
-          >
-            セッション完了！
-          </BaseButton>
-          <BaseButton
-            v-if="canJoinAny"
-            :left-icon="UserRoundPlus"
-            @click="join"
-            :loading="loadingMember"
-          >
-            参加する
-          </BaseButton>
-          <BaseButton
-            v-if="canLeave"
-            :left-icon="UserRoundMinus"
-            @click="leave"
-            variant="secondary"
-            :loading="loadingMember"
-          >
-            退出する
-          </BaseButton>
-        </div>
+        <SessionActionBar
+          :can-delete="canDelete"
+          :is-host="isHost"
+          :can-issue-guest-link="canIssueGuestLink"
+          :loading-guest-link="loadingGuestLink"
+          :can-publish="canPublish"
+          :can-complete="canComplete"
+          :loading-status="loadingStatus"
+          :can-join-any="canJoinAny"
+          :can-leave="canLeave"
+          :loading-member="loadingMember"
+          @click-delete="deleteDialogModel = true"
+          @click-edit="onClickEdit"
+          @copy-guest-link="copyGuestLink"
+          @publish="publishSession"
+          @complete="completeSession"
+          @join="join"
+          @leave="leave"
+        />
       </div>
     </div>
 
@@ -255,10 +201,5 @@ const join = () => {
     padding-left: var(--space-3);
   }
 
-  .button-area {
-    > * {
-      margin: 0 var(--space-1);
-    }
-  }
 }
 </style>

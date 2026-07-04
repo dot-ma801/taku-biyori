@@ -3,8 +3,7 @@ import {
   date,
   index,
   integer,
-  pgEnum,
-  pgTable,
+  pgSchema,
   text,
   timestamp,
   unique,
@@ -14,7 +13,13 @@ import {
 import { relations, sql } from 'drizzle-orm';
 import { user } from '@/system/infrastructure/database/schema';
 
-export const gameSessions = pgTable('game_sessions', {
+/**
+ * 卓（ゲームセッション）機能用の PostgreSQL スキーマです。
+ * 機能ごとにスキーマを分離する方針（ADR 0005）に基づきます。
+ */
+export const gameSessionSchema = pgSchema('game_session');
+
+export const gameSessions = gameSessionSchema.table('game_sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
   hostUserId: text('host_user_id')
     .notNull()
@@ -36,7 +41,7 @@ export const gameSessions = pgTable('game_sessions', {
     .$onUpdate(() => new Date()),
 });
 
-export const gameSessionMembers = pgTable(
+export const gameSessionMembers = gameSessionSchema.table(
   'game_session_members',
   {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -62,7 +67,7 @@ export const gameSessionMembers = pgTable(
   }),
 );
 
-export const gameSessionCandidates = pgTable(
+export const gameSessionCandidates = gameSessionSchema.table(
   'game_session_candidates',
   {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -83,13 +88,12 @@ export const gameSessionCandidates = pgTable(
   }),
 );
 
-export const availabilityDateAnswerEnum = pgEnum('availability_date_answer', [
-  'ok',
-  'maybe',
-  'ng',
-]);
+export const availabilityDateAnswerEnum = gameSessionSchema.enum(
+  'availability_date_answer',
+  ['ok', 'maybe', 'ng'],
+);
 
-export const gameSessionAnswers = pgTable(
+export const gameSessionAnswers = gameSessionSchema.table(
   'game_session_answers',
   {
     id: uuid('id').primaryKey().defaultRandom(),

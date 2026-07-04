@@ -66,7 +66,7 @@
 ### 方針
 
 - ステータスは DB に持たず、ファクトデータから**計算して導出する**
-- Better Auth は `auth` スキーマで管理。RollHub 側のテーブルは `public` スキーマ
+- **機能ごとに PostgreSQL スキーマを分ける**（ADR 0005 参照）。Better Auth は `auth` スキーマ、卓関連テーブルは `game_session` スキーマで管理
 - `user.id` は Better Auth の仕様により `text` 型（uuid ではない）
 
 ---
@@ -93,7 +93,7 @@
 
 ---
 
-### `game_sessions` — セッション（卓）
+### `game_session.game_sessions` — セッション（卓）
 
 | カラム | 型 | 説明 |
 |---|---|---|
@@ -115,7 +115,7 @@
 
 ---
 
-### `game_session_members` — 参加登録
+### `game_session.game_session_members` — 参加登録
 
 | カラム | 型 | 説明 |
 |---|---|---|
@@ -131,7 +131,7 @@
 
 ---
 
-### `game_session_candidates` — 候補日
+### `game_session.game_session_candidates` — 候補日
 
 | カラム | 型 | 説明 |
 |---|---|---|
@@ -147,7 +147,7 @@
 
 ---
 
-### `game_session_answers` — 日程回答（◯△×）
+### `game_session.game_session_answers` — 日程回答（◯△×）
 
 | カラム | 型 | 説明 |
 |---|---|---|

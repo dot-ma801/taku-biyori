@@ -92,6 +92,10 @@ backend・frontend ともに同じ規則です。
 
 ## DB スキーマの変更手順
 
+**新しいテーブル・enum は機能ごとの PostgreSQL スキーマに置くこと**（`docs/adr/0005-postgresql-schema-per-feature.md` 参照）。
+`pgTable()` / `pgEnum()` は使わず、`pgSchema('{機能名}')` 経由で定義する
+（例: `gameSessionSchema.table(...)`。機能ディレクトリ名の kebab-case はスキーマ名では snake_case に読み替える）。
+
 スキーマを変更した場合は以下を実行します。
 
 ```bash

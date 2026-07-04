@@ -67,10 +67,7 @@ const gameSessionDateTime = computed(
       :game-session="gameSession"
       @session-updated="patchGameSession"
     />
-    <MemberDisplay
-      :game-session="gameSession"
-      @member-updated="updateMember"
-    />
+    <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
   </div>
 </template>
 
@@ -93,6 +90,15 @@ const gameSessionDateTime = computed(
 
     gap: 0 var(--space-1);
     padding-left: var(--space-3);
+  }
+
+  @media (max-width: 780px) {
+    flex-direction: column;
+    gap: var(--space-4) 0;
+
+    .description {
+      padding-left: 0;
+    }
   }
 }
 </style>

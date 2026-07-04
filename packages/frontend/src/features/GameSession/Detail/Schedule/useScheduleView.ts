@@ -25,5 +25,20 @@ export const useScheduleView = (
     return members.filter((m) => getAnswer(date, m.id) === 'ok').length;
   }
 
-  return { getAnswer, okCount };
+  // 回答種別ごとの件数（未回答はどのカウントにも含めない）。カード表示の集計に使う
+  function answerCounts(
+    date: AvailabilityDate,
+    members: GameSessionMember[],
+  ): Record<Answer, number> {
+    const counts: Record<Answer, number> = { ok: 0, maybe: 0, ng: 0 };
+    for (const member of members) {
+      const answer = getAnswer(date, member.id);
+      if (answer) {
+        counts[answer] += 1;
+      }
+    }
+    return counts;
+  }
+
+  return { getAnswer, okCount, answerCounts };
 };

@@ -24,10 +24,12 @@ const ALLOWED: Record<
     { role: 'member', status: GameSessionStatus.open },
     { role: 'member', status: GameSessionStatus.scheduling },
   ],
-  [GameSessionAction.addCandidates]: ALL_STATUSES.map((status) => ({
-    role: 'host' as const,
-    status,
-  })),
+  // 確定済み（scheduled_at 非 null = confirmed 以降）は候補日の変更不可（docs/design-v1.md）
+  [GameSessionAction.addCandidates]: [
+    { role: 'host', status: GameSessionStatus.draft },
+    { role: 'host', status: GameSessionStatus.open },
+    { role: 'host', status: GameSessionStatus.scheduling },
+  ],
   [GameSessionAction.confirmSchedule]: [
     { role: 'host', status: GameSessionStatus.scheduling },
   ],

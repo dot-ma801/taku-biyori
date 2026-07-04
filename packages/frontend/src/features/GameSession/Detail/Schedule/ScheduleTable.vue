@@ -4,6 +4,7 @@ import AnswerCell from '@/features/GameSession/Detail/Schedule/AnswerCell.vue';
 import { useScheduleView } from '@/features/GameSession/Detail/Schedule/useScheduleView';
 import type { Answer } from '@/features/GameSession/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
+import { memberDisplayName } from '@/utils/memberDisplayName';
 import { computed, toRef } from 'vue';
 
 const props = defineProps<{
@@ -32,10 +33,6 @@ const { getAnswer, okCount } = useScheduleView(
 const emptyRowColspan = computed(
   () => props.members.length + 2 + (props.canConfirm ? 1 : 0),
 );
-
-function memberDisplayName(member: GameSessionMember): string {
-  return member.userName ?? member.guestName ?? '（未設定）';
-}
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
 function isMe(member: GameSessionMember): boolean {

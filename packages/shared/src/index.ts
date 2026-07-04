@@ -52,6 +52,7 @@ export {
   ACTION_POLICIES,
   canPerform,
 } from './game-session/permissions.js';
+export { isGuestMember } from './game-session/member.js';
 export {
   ProfileResponseSchema,
   type ProfileResponse,

@@ -52,11 +52,13 @@ const gameSessionDateTime = computed(
           <p>募集人数: {{ maxMembers }}</p>
         </div>
 
-        <SessionActionBar
-          :game-session-id="props.gameSessionId"
-          :game-session="gameSession"
-          @session-changed="fetch"
-        />
+        <div class="action-bar-wrapper">
+          <SessionActionBar
+            :game-session-id="props.gameSessionId"
+            :game-session="gameSession"
+            @session-changed="fetch"
+          />
+        </div>
       </div>
     </div>
 
@@ -98,6 +100,10 @@ const gameSessionDateTime = computed(
 
     .description {
       padding-left: 0;
+    }
+
+    .action-bar-wrapper {
+      align-self: flex-end;
     }
   }
 }

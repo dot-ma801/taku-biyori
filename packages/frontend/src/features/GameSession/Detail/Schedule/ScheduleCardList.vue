@@ -141,7 +141,10 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
           @keydown="onChipKeydown($event, member.id, date.id)"
         >
           <UserAvatar :size="20" :name="memberBaseName(member)" />
-          <span class="chip-name">{{ memberDisplayName(member) }}</span>
+          <span class="chip-name" :title="memberDisplayName(member)">{{
+            memberDisplayName(member)
+          }}</span>
+          <AnswerCell :answer="getAnswer(date, member.id)" />
         </span>
       </div>
 

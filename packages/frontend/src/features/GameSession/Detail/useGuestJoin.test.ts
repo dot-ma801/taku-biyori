@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   joinAsGuest: vi.fn(),
@@ -18,20 +17,6 @@ import { joinAsGuest } from '@/api/game-session';
 
 const SESSION_ID = 'session-1';
 const TOKEN = 'guest-token-abc';
-
-function makeGuestMember(
-  overrides: Partial<GameSessionMember> = {},
-): GameSessionMember {
-  return {
-    id: 'member-guest-1',
-    userId: null,
-    userName: null,
-    guestName: 'ゲスト太郎',
-    characterName: null,
-    joinedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -133,7 +118,14 @@ describe('canSubmit', () => {
 describe('join', () => {
   it('joinAsGuest を token とトリムした入力値で呼び出す', async () => {
     // Arrange
-    vi.mocked(joinAsGuest).mockResolvedValue(makeGuestMember());
+    vi.mocked(joinAsGuest).mockResolvedValue({
+      id: 'member-guest-1',
+      userId: null,
+      userName: null,
+      guestName: 'ゲスト太郎',
+      characterName: null,
+      joinedAt: '2026-01-01T00:00:00Z',
+    });
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
@@ -151,10 +143,16 @@ describe('join', () => {
     });
   });
 
-  it('成功時に onJoined を新メンバーで呼び出し、入力をリセットする', async () => {
+  it('成功時に onJoined を呼び出し、入力をリセットする', async () => {
     // Arrange
-    const newMember = makeGuestMember();
-    vi.mocked(joinAsGuest).mockResolvedValue(newMember);
+    vi.mocked(joinAsGuest).mockResolvedValue({
+      id: 'member-guest-1',
+      userId: null,
+      userName: null,
+      guestName: 'ゲスト太郎',
+      characterName: null,
+      joinedAt: '2026-01-01T00:00:00Z',
+    });
     const onJoined = vi.fn();
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
@@ -168,7 +166,7 @@ describe('join', () => {
     await join();
 
     // Assert
-    expect(onJoined).toHaveBeenCalledWith(newMember);
+    expect(onJoined).toHaveBeenCalled();
     expect(guestName.value).toBe('');
   });
 
@@ -262,7 +260,7 @@ describe('join', () => {
 
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
-    let resolve!: (m: GameSessionMember) => void;
+    let resolve!: () => void;
     vi.mocked(joinAsGuest).mockReturnValue(
       new Promise((r) => {
         resolve = r;
@@ -279,7 +277,14 @@ describe('join', () => {
     // Act
     const first = join();
     await join();
-    resolve(makeGuestMember());
+    resolve({
+      id: 'member-guest-1',
+      userId: null,
+      userName: null,
+      guestName: 'ゲスト太郎',
+      characterName: null,
+      joinedAt: '2026-01-01T00:00:00Z',
+    });
     await first;
 
     // Assert

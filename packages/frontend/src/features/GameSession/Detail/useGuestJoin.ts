@@ -1,21 +1,20 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { GameSessionMember } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import { joinAsGuest } from '@/api/game-session';
 import { useToast } from '@/composables/useToast';
 
 /**
  * ゲスト（完全匿名）として卓に参加するための composable。
- * トークンは招待リンクのクエリ由来なので getter で受け取り、書き込みは onJoined で親に委譲する。
+ * トークンは招待リンクのクエリ由来なので getter で受け取り、変更後の再取得は onJoined で親に委譲する。
  */
 export const useGuestJoin = (
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。token は招待リンク（?token=）由来でクエリから渡る。
   token: MaybeRefOrGetter<string | null>,
   status: MaybeRefOrGetter<GameSessionStatus | undefined>,
-  // NOTE: 書き込みは callback で所有者（親）に委譲する。
-  onJoined: (member: GameSessionMember) => void,
+  // NOTE: 参加成功後の再取得を呼び出し元に委譲する。
+  onJoined: () => void,
 ) => {
   const toast = useToast();
   const loading = ref(false);
@@ -36,7 +35,7 @@ export const useGuestJoin = (
 
   /**
    * ゲストとして卓に参加する。
-   * 成功後に onJoined で新メンバーを親へ渡し、入力ドラフトをリセットする。
+   * 成功後に onJoined で再取得を依頼し、入力ドラフトをリセットする。
    * トークン未設定・ゲスト名未入力・loading 中の呼び出しは無視する。
    */
   async function join() {
@@ -52,10 +51,10 @@ export const useGuestJoin = (
     }
     loading.value = true;
     try {
-      const member = await joinAsGuest(gameSessionId, currentToken, {
+      await joinAsGuest(gameSessionId, currentToken, {
         guestName: guestName.value.trim(),
       });
-      onJoined(member);
+      onJoined();
       guestName.value = '';
       toast.success('参加しました');
     } catch {

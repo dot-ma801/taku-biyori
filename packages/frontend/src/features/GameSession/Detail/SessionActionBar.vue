@@ -9,30 +9,98 @@ import {
   Share2,
   Trash,
 } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import BaseButton from '@/components/button/BaseButton.vue';
+import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
+import DeleteDialog from '@/features/GameSession/Detail/Dialog/DeleteDialog.vue';
+import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
+import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
+import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
+import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
+import { useAuthStore } from '@/stores/auth';
+import type { GameSessionDetail } from '@taku-biyori/shared';
 
-defineProps<{
-  canDelete: boolean;
-  isHost: boolean;
-  canIssueGuestLink: boolean;
-  loadingGuestLink: boolean;
-  canPublish: boolean;
-  canComplete: boolean;
-  loadingStatus: boolean;
-  canJoinAny: boolean;
-  canLeave: boolean;
-  loadingMember: boolean;
+const props = defineProps<{
+  gameSessionId: string;
+  gameSession: GameSessionDetail | null;
 }>();
 
 const emit = defineEmits<{
-  clickDelete: [];
-  clickEdit: [];
-  copyGuestLink: [];
-  publish: [];
-  complete: [];
-  join: [];
-  leave: [];
+  sessionChanged: [];
 }>();
+
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+
+const deleteDialogModel = ref(false);
+const guestJoinDialogModel = ref(false);
+
+const onRefresh = () => emit('sessionChanged');
+
+const {
+  isHost,
+  canPublish,
+  canComplete,
+  canDelete,
+  loading: loadingStatus,
+  publishSession,
+  completeSession,
+  deleteSession,
+} = useGameSessionStatus(props.gameSessionId, () => props.gameSession, onRefresh);
+
+const {
+  canJoin,
+  canLeave,
+  join: joinUser,
+  leave,
+  loading: loadingMember,
+} = useGameSessionMembership(
+  props.gameSessionId,
+  () => props.gameSession,
+  onRefresh,
+);
+
+const {
+  loading: loadingGuestLink,
+  canIssueGuestLink,
+  copyGuestLink,
+} = useGuestLink(
+  props.gameSessionId,
+  () => props.gameSession?.createdBy ?? null,
+  () => props.gameSession?.status,
+);
+
+const { canGuestJoin } = useGuestJoin(
+  props.gameSessionId,
+  () => route.query.token?.toString() ?? null,
+  () => props.gameSession?.status,
+  // ダイアログ内でも join を持つため、ここでは canGuestJoin のみ使い onJoined は空実装
+  () => {},
+);
+
+const canJoinAny = computed(() => canJoin.value || canGuestJoin.value);
+
+function onClickEdit() {
+  router.push({
+    name: 'game-sessions-edit',
+    params: { gameSessionId: props.gameSessionId },
+  });
+}
+
+function onJoinClick() {
+  if (authStore.currentUser) {
+    joinUser();
+  } else {
+    guestJoinDialogModel.value = true;
+  }
+}
+
+function onGuestJoined() {
+  guestJoinDialogModel.value = false;
+  onRefresh();
+}
 </script>
 
 <template>
@@ -41,7 +109,7 @@ const emit = defineEmits<{
       v-if="canDelete"
       :left-icon="Trash"
       variant="danger"
-      @click="emit('clickDelete')"
+      @click="deleteDialogModel = true"
     >
       削除
     </BaseButton>
@@ -49,7 +117,7 @@ const emit = defineEmits<{
       v-if="isHost"
       :left-icon="SquarePen"
       variant="secondary"
-      @click="emit('clickEdit')"
+      @click="onClickEdit"
     >
       セッション編集
     </BaseButton>
@@ -58,7 +126,7 @@ const emit = defineEmits<{
       :left-icon="Share2"
       variant="secondary"
       :loading="loadingGuestLink"
-      @click="emit('copyGuestLink')"
+      @click="copyGuestLink"
     >
       招待リンクを取得
     </BaseButton>
@@ -66,7 +134,7 @@ const emit = defineEmits<{
       v-if="canPublish"
       :left-icon="Globe"
       :loading="loadingStatus"
-      @click="emit('publish')"
+      @click="publishSession"
     >
       公開
     </BaseButton>
@@ -74,7 +142,7 @@ const emit = defineEmits<{
       v-if="canComplete"
       :left-icon="Trophy"
       :loading="loadingStatus"
-      @click="emit('complete')"
+      @click="completeSession"
     >
       セッション完了！
     </BaseButton>
@@ -82,7 +150,7 @@ const emit = defineEmits<{
       v-if="canJoinAny"
       :left-icon="UserRoundPlus"
       :loading="loadingMember"
-      @click="emit('join')"
+      @click="onJoinClick"
     >
       参加する
     </BaseButton>
@@ -91,11 +159,23 @@ const emit = defineEmits<{
       :left-icon="UserRoundMinus"
       variant="secondary"
       :loading="loadingMember"
-      @click="emit('leave')"
+      @click="leave"
     >
       退出する
     </BaseButton>
   </div>
+
+  <GuestJoinDialog
+    v-if="gameSession"
+    v-model="guestJoinDialogModel"
+    :game-session-id="gameSession.id"
+    :game-session-status="gameSession.status"
+    @joined="onGuestJoined"
+  />
+  <DeleteDialog
+    v-model="deleteDialogModel"
+    @delete="deleteSession"
+  />
 </template>
 
 <style scoped>

@@ -3,7 +3,7 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseDialog from '@/components/dialog/BaseDialog.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
-import type { GameSessionMember, GameSessionStatus } from '@taku-biyori/shared';
+import type { GameSessionStatus } from '@taku-biyori/shared';
 import { useRoute } from 'vue-router';
 
 const model = defineModel();
@@ -16,7 +16,7 @@ const props = defineProps<{
 const route = useRoute();
 
 const emit = defineEmits<{
-  guestJoined: [member: GameSessionMember];
+  joined: [];
 }>();
 
 const {
@@ -28,8 +28,7 @@ const {
   // getter で渡すことで route.query の変化をリアクティブに追従する
   () => route.query.token?.toString() ?? null,
   () => props.gameSessionStatus,
-  // 参加成功後の新メンバーを親へ渡す（書き込みは親に委譲）
-  (member: GameSessionMember) => emit('guestJoined', member),
+  () => emit('joined'),
 );
 </script>
 

@@ -1,5 +1,5 @@
-import { computed, ref } from 'vue';
-import type { Ref } from 'vue';
+import { computed, ref, toValue } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 import {
@@ -13,7 +13,9 @@ import { useToast } from '@/composables/useToast';
 
 export const useGameSessionStatus = (
   gameSessionId: string,
-  gameSession: Ref<GameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<GameSessionDetail | null>,
+  // NOTE: 変更後の再取得を呼び出し元に委譲する。
+  onRefresh: () => void,
 ) => {
   const authStore = useAuthStore();
   const toast = useToast();
@@ -25,20 +27,21 @@ export const useGameSessionStatus = (
   const loadingDelete = ref(false);
 
   /** ログインユーザーがこのセッションのホストか */
-  const isHost = computed(
-    () =>
-      !!gameSession.value &&
-      gameSession.value.createdBy === authStore.currentUser?.id,
-  );
+  const isHost = computed(() => {
+    const session = toValue(gameSession);
+    return !!session && session.createdBy === authStore.currentUser?.id;
+  });
 
   /** 公開可能か。ホストかつ status が draft のときのみ true */
   const canPublish = computed(
-    () => isHost.value && gameSession.value?.status === GameSessionStatus.draft,
+    () =>
+      isHost.value && toValue(gameSession)?.status === GameSessionStatus.draft,
   );
 
   /** 完了可能か。ホストかつ status が today のときのみ true */
   const canComplete = computed(
-    () => isHost.value && gameSession.value?.status === GameSessionStatus.today,
+    () =>
+      isHost.value && toValue(gameSession)?.status === GameSessionStatus.today,
   );
 
   /**
@@ -49,7 +52,7 @@ export const useGameSessionStatus = (
    * - 自分以外のメンバーがいない（参加者がいる卓を勝手に消さない）
    */
   const canDelete = computed(() => {
-    const session = gameSession.value;
+    const session = toValue(gameSession);
     if (!session) {
       return false;
     }
@@ -66,7 +69,7 @@ export const useGameSessionStatus = (
 
   /**
    * 卓を公開する（draft → open）。
-   * 成功後に gameSession を更新する。
+   * 成功後に onRefresh で再取得を依頼する。
    * loading 中の重複呼び出しは無視する。
    */
   async function publishSession() {
@@ -75,12 +78,8 @@ export const useGameSessionStatus = (
     }
     loading.value = true;
     try {
-      const updated = await updateGameSessionStatus(gameSessionId, {
-        status: 'open',
-      });
-      if (gameSession.value) {
-        gameSession.value = { ...gameSession.value, ...updated };
-      }
+      await updateGameSessionStatus(gameSessionId, { status: 'open' });
+      onRefresh();
     } catch {
       toast.error('公開に失敗しました');
     } finally {
@@ -90,7 +89,7 @@ export const useGameSessionStatus = (
 
   /**
    * 卓を完了する（today → completed）。
-   * 成功後に gameSession を更新する。
+   * 成功後に onRefresh で再取得を依頼する。
    * loading 中の重複呼び出しは無視する。
    */
   async function completeSession() {
@@ -99,12 +98,8 @@ export const useGameSessionStatus = (
     }
     loading.value = true;
     try {
-      const updated = await updateGameSessionStatus(gameSessionId, {
-        status: 'completed',
-      });
-      if (gameSession.value) {
-        gameSession.value = { ...gameSession.value, ...updated };
-      }
+      await updateGameSessionStatus(gameSessionId, { status: 'completed' });
+      onRefresh();
     } catch {
       toast.error('完了への変更に失敗しました');
     } finally {

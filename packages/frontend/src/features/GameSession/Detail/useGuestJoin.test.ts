@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
 import { GameSessionStatus } from '@taku-biyori/shared';
+import type { GameSessionMember } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   joinAsGuest: vi.fn(),
@@ -260,7 +261,7 @@ describe('join', () => {
 
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
-    let resolve!: () => void;
+    let resolve!: (member: GameSessionMember) => void;
     vi.mocked(joinAsGuest).mockReturnValue(
       new Promise((r) => {
         resolve = r;

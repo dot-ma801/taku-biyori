@@ -53,6 +53,10 @@ if (availability) {
 // 複数日 picker 用の writable computed
 // get: API 管理 or ローカル管理の日付リストを返す
 // set: 更新フローは差分を API に送信、新規作成フローはローカルに保持
+//
+// 候補日への入力（ユーザー操作起点の set のみ）で開催日を破棄する。
+// マウント時の候補日非同期 fetch は get 側で反映されるだけで set を通らないため、
+// 確定済み scheduledAt を誤って消さない。
 const selectedDates = computed<string[]>({
   get() {
     if (availability) {
@@ -66,14 +70,10 @@ const selectedDates = computed<string[]>({
     } else {
       pendingDates.value = dates;
     }
+    if (dates.length > 0) {
+      scheduledAt.value = '';
+    }
   },
-});
-
-// 候補日に値が入ったら、開催日の入力状態を破棄する
-watch(selectedDates, (dates) => {
-  if (dates.length > 0) {
-    scheduledAt.value = '';
-  }
 });
 
 function removeDate(date: string) {

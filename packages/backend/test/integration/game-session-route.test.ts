@@ -223,6 +223,36 @@ describe('POST /api/game-sessions', () => {
     expect(response.status).toBe(400);
   });
 
+  it('openUntil が過去日なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '卓', openUntil: '2000-01-01' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('scheduledAt が過去日なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/game-sessions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '卓', scheduledAt: '2000-01-01' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
   it('ユースケースに userId と入力を渡す', async () => {
     // Arrange
     const createGameSession = vi.fn().mockResolvedValue(mockGameSession);
@@ -662,7 +692,7 @@ describe('POST /api/game-sessions/:id/availability-dates', () => {
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2025-09-01' }),
+        body: JSON.stringify({ date: '2099-09-01' }),
       },
     );
     const body = await response.json();
@@ -682,7 +712,7 @@ describe('POST /api/game-sessions/:id/availability-dates', () => {
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2025-09-01' }),
+        body: JSON.stringify({ date: '2099-09-01' }),
       },
     );
 
@@ -702,12 +732,30 @@ describe('POST /api/game-sessions/:id/availability-dates', () => {
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2025-09-01' }),
+        body: JSON.stringify({ date: '2099-09-01' }),
       },
     );
 
     // Assert
     expect(response.status).toBe(403);
+  });
+
+  it('過去日なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2000-01-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
   });
 });
 

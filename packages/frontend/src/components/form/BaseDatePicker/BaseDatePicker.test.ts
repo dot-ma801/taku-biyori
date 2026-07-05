@@ -1,9 +1,13 @@
 // このファイルを編集するときは README の「単体テスト項目」も更新が必要か確認してください。
 // → ./README.md
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('BaseDatePicker', () => {
   describe('レンダリング', () => {
@@ -95,6 +99,54 @@ describe('BaseDatePicker', () => {
       expect(wrapper.find('.datepicker__trigger-text').text()).toBe(
         '2025/6/10',
       );
+    });
+  });
+
+  describe('disablePast', () => {
+    it('today より前の日付セルが disabled になる', () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const wrapper = mount(BaseDatePicker, {
+        props: { disablePast: true },
+      });
+
+      // Act
+      const pastCell = wrapper
+        .findAll('.datepicker__cell')
+        .find((c) => c.attributes('aria-label') === '2025-06-10');
+
+      // Assert
+      expect(pastCell?.attributes('disabled')).toBeDefined();
+    });
+
+    it('today 以降の日付セルは disabled にならない', () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const wrapper = mount(BaseDatePicker, {
+        props: { disablePast: true },
+      });
+
+      // Act
+      const futureCell = wrapper
+        .findAll('.datepicker__cell')
+        .find((c) => c.attributes('aria-label') === '2025-06-20');
+
+      // Assert
+      expect(futureCell?.attributes('disabled')).toBeUndefined();
+    });
+
+    it('disablePast 未指定なら過去日でも disabled にならない', () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const wrapper = mount(BaseDatePicker);
+
+      // Act
+      const pastCell = wrapper
+        .findAll('.datepicker__cell')
+        .find((c) => c.attributes('aria-label') === '2025-06-10');
+
+      // Assert
+      expect(pastCell?.attributes('disabled')).toBeUndefined();
     });
   });
 

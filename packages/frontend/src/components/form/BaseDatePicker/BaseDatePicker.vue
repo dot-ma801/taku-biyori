@@ -4,6 +4,7 @@
 import { computed, ref } from 'vue';
 import { Popover } from '@vuetify/v0';
 import { ChevronLeft, ChevronRight, CalendarDays } from '@lucide/vue';
+import { todayDateString } from '@taku-biyori/shared';
 
 // multiple=false のとき string | undefined、multiple=true のとき string[] を想定
 type ModelValue = string | string[];
@@ -17,6 +18,8 @@ const props = withDefaults(
     max?: string;
     /** true のとき複数日選択モード。v-model は string[] で使う */
     multiple?: boolean;
+    /** true のとき今日より前の日付を選択不可にする */
+    disablePast?: boolean;
   }>(),
   {
     placeholder: '日付を選択',
@@ -80,12 +83,7 @@ const calendarCells = computed(() => {
   return cells;
 });
 
-const todayStr = computed(() => {
-  const y = today.getFullYear();
-  const m = String(today.getMonth() + 1).padStart(2, '0');
-  const d = String(today.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-});
+const todayStr = todayDateString();
 
 const displayLabel = computed<string | null>(() => {
   const dates = selectedDates.value;
@@ -128,6 +126,9 @@ function nextMonth() {
 }
 
 function isDisabled(dateStr: string): boolean {
+  if (props.disablePast && dateStr < todayStr) {
+    return true;
+  }
   if (props.min && dateStr < props.min) {
     return true;
   }

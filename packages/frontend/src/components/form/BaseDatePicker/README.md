@@ -11,6 +11,7 @@
 | `disabled`    | `boolean` | `false`        | 無効化                             |
 | `min`         | `string`  | —              | 選択可能な最小日付（`YYYY-MM-DD`） |
 | `max`         | `string`  | —              | 選択可能な最大日付（`YYYY-MM-DD`） |
+| `disablePast` | `boolean` | `false`        | 今日より前の日付を選択不可にする   |
 
 ## Model
 
@@ -52,6 +53,12 @@
 ### disabled
 
 - `disabled` のときトリガーボタンが無効化されること
+
+### disablePast
+
+- `disablePast` のとき今日より前の日付セルが選択不可になること
+- `disablePast` のとき今日以降の日付セルは選択可能なままであること
+- `disablePast` 未指定のとき過去日でも選択可能であること
 
 ### アクセシビリティ
 

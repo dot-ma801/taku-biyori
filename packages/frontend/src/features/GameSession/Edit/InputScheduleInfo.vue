@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseChip from '@/components/common/BaseChip/BaseChip.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
@@ -90,6 +89,7 @@ function removeDate(date: string) {
           <BaseDatePicker
             label="候補日"
             multiple
+            disable-past
             v-model="selectedDates"
           ></BaseDatePicker>
           <p v-if="availability?.errorMessage.value" class="error">
@@ -108,11 +108,13 @@ function removeDate(date: string) {
           v-else
           v-model="scheduledAt"
           label="開催日"
+          disable-past
         ></BaseDatePicker>
 
         <BaseDatePicker
           v-model="openUntil"
           label="募集締め切り日"
+          disable-past
         ></BaseDatePicker>
 
         <BaseTextBox

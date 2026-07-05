@@ -48,6 +48,27 @@ describe('BaseChip', () => {
     });
   });
 
+  describe('size', () => {
+    it.each(['sm', 'md', 'lg'] as const)(
+      'size="%s" のとき .chip--%s クラスが付与される',
+      (size) => {
+        // Arrange & Act
+        const wrapper = mount(BaseChip, { props: { size } });
+
+        // Assert
+        expect(wrapper.find('.chip').classes()).toContain(`chip--${size}`);
+      },
+    );
+
+    it('size を指定しないとき .chip--md クラスが付与される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseChip);
+
+      // Assert
+      expect(wrapper.find('.chip').classes()).toContain('chip--md');
+    });
+  });
+
   describe('removable', () => {
     it('removable=false のとき削除ボタンが表示されない', () => {
       // Arrange & Act

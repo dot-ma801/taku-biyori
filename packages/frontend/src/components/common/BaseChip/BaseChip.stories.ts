@@ -10,6 +10,13 @@ const meta: Meta<typeof BaseChip> = {
     selected: false,
     removable: false,
     disabled: false,
+    size: 'md',
+  },
+  argTypes: {
+    size: {
+      control: 'select',
+      options: ['sm', 'md', 'lg'],
+    },
   },
 };
 
@@ -48,6 +55,19 @@ export const Disabled: Story = {
     components: { BaseChip },
     setup: () => ({ args }),
     template: '<BaseChip v-bind="args">無効</BaseChip>',
+  }),
+};
+
+export const Sizes: Story = {
+  render: () => ({
+    components: { BaseChip },
+    template: `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <BaseChip size="sm">Small</BaseChip>
+        <BaseChip size="md">Medium</BaseChip>
+        <BaseChip size="lg">Large</BaseChip>
+      </div>
+    `,
   }),
 };
 

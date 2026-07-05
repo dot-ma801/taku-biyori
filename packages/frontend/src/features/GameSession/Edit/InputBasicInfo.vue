@@ -23,6 +23,7 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
           v-model="title"
           label="タイトル"
           placeholder="例：【5月】定期開催マダミス会"
+          required
         ></BaseTextBox>
         <BaseTextBox
           v-model="maxMembers"

@@ -41,6 +41,28 @@ describe('BaseTextBox', () => {
     });
   });
 
+  describe('required', () => {
+    it('required=true のときラベルに必須マークが表示される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTextBox, {
+        props: { label: 'タイトル', required: true },
+      });
+
+      // Assert
+      expect(wrapper.find('.textbox__required').exists()).toBe(true);
+    });
+
+    it('required 未指定のとき必須マークが表示されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTextBox, {
+        props: { label: 'タイトル' },
+      });
+
+      // Assert
+      expect(wrapper.find('.textbox__required').exists()).toBe(false);
+    });
+  });
+
   describe('placeholder', () => {
     it('placeholder prop を渡したとき input のプレースホルダーに反映される', () => {
       // Arrange & Act

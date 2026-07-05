@@ -79,6 +79,19 @@ export const Disabled: Story = {
   }),
 };
 
+export const Required: Story = {
+  args: { label: 'タイトル', required: true },
+  render: (args) => ({
+    components: { BaseTextBox },
+    setup() {
+      const value = ref('');
+      return { args, value };
+    },
+    template:
+      '<BaseTextBox v-bind="args" v-model="value" style="max-width: 320px;" />',
+  }),
+};
+
 export const Readonly: Story = {
   args: { label: '読み取り専用', readonly: true },
   render: (args) => ({

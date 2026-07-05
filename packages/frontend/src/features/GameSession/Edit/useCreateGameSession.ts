@@ -6,7 +6,10 @@ import {
   bulkUpdateAvailabilityDates,
 } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
-import { parseMaxMembers } from '@/features/GameSession/Edit/maxMembersValidation';
+import {
+  parseMaxMembers,
+  getMaxMembersError,
+} from '@/features/GameSession/Edit/maxMembersValidation';
 
 export const useCreateGameSession = () => {
   const router = useRouter();
@@ -24,8 +27,15 @@ export const useCreateGameSession = () => {
   const errorMessage = ref('');
 
   async function submit() {
-    loading.value = true;
     errorMessage.value = '';
+
+    const maxMembersError = getMaxMembersError(maxMembers.value);
+    if (maxMembersError) {
+      errorMessage.value = maxMembersError;
+      return;
+    }
+
+    loading.value = true;
 
     try {
       // `&&` の手前が falsy なら false が返り、そうでなければ 値を返す

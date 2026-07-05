@@ -2,11 +2,16 @@
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import { getMaxMembersError } from '@/features/GameSession/Edit/maxMembersValidation';
 import { NotebookPen, BookOpenText } from '@lucide/vue';
 
 const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
 const maxMembers = defineModel<string>('maxMembers', { default: '' });
+
+const maxMembersRules = [
+  (v: unknown) => getMaxMembersError(v as string) ?? true,
+];
 </script>
 
 <template>
@@ -23,12 +28,15 @@ const maxMembers = defineModel<string>('maxMembers', { default: '' });
           v-model="title"
           label="タイトル"
           placeholder="例：【5月】定期開催マダミス会"
+          required
         ></BaseTextBox>
         <BaseTextBox
           v-model="maxMembers"
           label="募集人数（自分を含めて）"
           :type="'number'"
           min="2"
+          max="20"
+          :rules="maxMembersRules"
         ></BaseTextBox>
 
         <div class="scenario-info">

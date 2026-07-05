@@ -211,6 +211,12 @@ game_session_members
 
 ### 導出ロジック
 
+> 最新の導出ロジックは [`docs/game-session-status.md`](./game-session-status.md) を参照。
+> 以下のスニペットは初期設計時のもので、`openUntil` が `null`（締め切りなし）のときに
+> `open` を飛ばして `scheduling` に落ちてしまう不具合があった。実装では
+> `!session.openUntil || now < session.openUntil` として修正済み（`open` を
+> `scheduledAt` より優先する）。
+
 ```ts
 // utils/gameSessionStatus.ts
 
@@ -228,7 +234,7 @@ export function getGameSessionStatus(
 ): GameSessionStatus {
   if (!session.isPublished) return 'draft'
 
-  if (session.openUntil && now < session.openUntil) return 'open'
+  if (!session.openUntil || now < session.openUntil) return 'open'
 
   if (!session.scheduledAt) return 'scheduling'
 
@@ -327,6 +333,21 @@ confirmed（実施前）
 - 「複数の候補日を選択する」スイッチは非表示（常に単一日モード）
 - 「開催日」フィールドは引き続き編集可能
 - 候補日の追加・更新・削除は API レベルでも禁止（`409 Conflict`）
+
+#### 候補日0件のまま `scheduling` になるケース
+
+候補日はステータスに関係なくいつでも登録できる設計（[8. 意思決定ログ](#8-意思決定ログ)参照）のため、
+募集締め切り日を過ぎても候補日を1件も登録していない卓は `scheduling`（日程調整中）のまま止まる。
+候補日はいつでも編集画面から追加できるため詰んでいるわけではないが、ホストが気づきにくいという
+発見性の課題があった。以下の対応で緩和している。
+
+- `openUntil`・`scheduledAt`・候補日の `date` に過去日を指定できないようにし（フロントの
+  `BaseDatePicker` の `disablePast`、バックエンドの新規作成・候補日単体追加時のバリデーション）、
+  誤って過去日の募集締め切りを設定してしまう事故を減らす
+- 候補日0件・`scheduling` の詳細画面で、ホストに候補日登録を促す案内文を表示する
+  （`ScheduleDisplay.vue`）
+- 候補日が既に登録されている卓を編集画面で開いたとき、「複数の候補日を選択する」トグルを
+  自動的にONにする（`InputScheduleInfo.vue`）
 
 ---
 

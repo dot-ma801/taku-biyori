@@ -1,6 +1,6 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import type { GameSessionDetail } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import { joinGameSession, leaveGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
@@ -11,10 +11,8 @@ export const useGameSessionMembership = (
   // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
   gameSession: MaybeRefOrGetter<GameSessionDetail | null>,
-  // NOTE: 書き込みは callback で所有者（親）に委譲する。composable は
-  //       自分が所有していない状態を直接書き換えない。
-  onJoined: (member: GameSessionMember) => void,
-  onLeft: (memberId: string) => void,
+  // NOTE: 変更後の再取得を呼び出し元に委譲する。
+  onRefresh: () => void,
 ) => {
   const authStore = useAuthStore();
   const toast = useToast();
@@ -49,8 +47,8 @@ export const useGameSessionMembership = (
     if (loading.value) return;
     loading.value = true;
     try {
-      const newMember = await joinGameSession(gameSessionId, {});
-      onJoined(newMember);
+      await joinGameSession(gameSessionId, {});
+      onRefresh();
     } catch {
       toast.error('参加に失敗しました');
     } finally {
@@ -64,7 +62,7 @@ export const useGameSessionMembership = (
     const memberId = myMember.value.id;
     try {
       await leaveGameSession(gameSessionId, memberId);
-      onLeft(memberId);
+      onRefresh();
     } catch {
       toast.error('退出に失敗しました');
     } finally {

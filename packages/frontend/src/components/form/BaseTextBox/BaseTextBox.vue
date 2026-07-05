@@ -13,6 +13,7 @@ withDefaults(
     rules?: Rule[];
     disabled?: boolean;
     readonly?: boolean;
+    required?: boolean;
     min?: string | number;
     max?: string | number;
     step?: string | number;
@@ -33,10 +34,13 @@ const model = defineModel<string>({ default: '' });
     :rules="rules"
     :disabled="disabled"
     :readonly="readonly"
+    :required="required"
     class="textbox"
     validate-on="blur"
   >
-    <label v-if="label" class="textbox__label">{{ label }}</label>
+    <label v-if="label" class="textbox__label">
+      {{ label }}<span v-if="required" class="textbox__required">*</span>
+    </label>
     <Input.Control
       :placeholder="placeholder"
       :autocomplete="autocomplete"
@@ -69,6 +73,11 @@ const model = defineModel<string>({ default: '' });
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
+}
+
+.textbox__required {
+  color: var(--color-error);
+  margin-left: 2px;
 }
 
 .textbox__control {

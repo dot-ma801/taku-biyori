@@ -8,6 +8,13 @@
         "postgresql://app:pass@localhost:5432/taku-biyori"
       ],
       "env": {}
+    },
+    "vuetify-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vuetify/mcp"
+      ]
     }
   }
 }

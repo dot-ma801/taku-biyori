@@ -3,6 +3,10 @@ import { useRouter } from 'vue-router';
 
 import { getGameSession, updateGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
+import {
+  parseMaxMembers,
+  getMaxMembersError,
+} from '@/features/GameSession/Edit/maxMembersValidation';
 
 export const useUpdateGameSession = (id: string) => {
   const router = useRouter();
@@ -48,23 +52,25 @@ export const useUpdateGameSession = (id: string) => {
   onMounted(fetchInitialValues);
 
   async function submit() {
-    loading.value = true;
     errorMessage.value = '';
 
+    const maxMembersError = getMaxMembersError(maxMembers.value);
+    if (maxMembersError) {
+      errorMessage.value = maxMembersError;
+      return;
+    }
+
+    loading.value = true;
+
     try {
-      const parsedMaxMembers = Number(maxMembers.value.trim());
-      const validMaxMembers =
-        maxMembers.value.trim() !== '' &&
-        Number.isInteger(parsedMaxMembers) &&
-        parsedMaxMembers >= 2 &&
-        parsedMaxMembers <= 20;
+      const parsedMaxMembers = parseMaxMembers(maxMembers.value);
 
       await updateGameSession(id, {
         ...(title.value?.trim() ? { title: title.value } : {}),
         ...(scenarioName.value
           ? { scenarioName: scenarioName.value }
           : { scenarioName: null }),
-        ...(validMaxMembers
+        ...(parsedMaxMembers !== null
           ? { maxMembers: parsedMaxMembers }
           : { maxMembers: null }),
         ...(description.value

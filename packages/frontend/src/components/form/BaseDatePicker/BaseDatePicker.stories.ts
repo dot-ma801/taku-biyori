@@ -47,6 +47,18 @@ export const WithMinMax: Story = {
   }),
 };
 
+export const DisablePast: Story = {
+  args: {
+    label: '開催日',
+    disablePast: true,
+  },
+  render: (args) => ({
+    components: { BaseDatePicker },
+    setup: () => ({ args }),
+    template: '<BaseDatePicker v-bind="args" />',
+  }),
+};
+
 export const Disabled: Story = {
   args: {
     label: '開催日',

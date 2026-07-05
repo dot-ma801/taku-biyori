@@ -1,13 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { X } from '@lucide/vue';
+
+type Size = 'sm' | 'md' | 'lg';
+
+const ICON_SIZE: Record<Size, number> = {
+  sm: 10,
+  md: 12,
+  lg: 14,
+};
 
 const props = withDefaults(
   defineProps<{
     selected?: boolean;
     removable?: boolean;
     disabled?: boolean;
+    size?: Size;
   }>(),
-  {},
+  {
+    size: 'md',
+  },
 );
 
 const emit = defineEmits<{
@@ -20,12 +32,15 @@ const toggle = () => {
     emit('update:selected', !props.selected);
   }
 };
+
+const removeIconSize = computed(() => ICON_SIZE[props.size]);
 </script>
 
 <template>
   <span
     :class="[
       'chip',
+      `chip--${size}`,
       selected ? 'chip--selected' : 'chip--unselected',
       { 'chip--disabled': disabled },
     ]"
@@ -43,7 +58,7 @@ const toggle = () => {
       @click.stop="emit('remove')"
       @keydown.enter.space.prevent.stop="emit('remove')"
     >
-      <X :size="12" />
+      <X :size="removeIconSize" />
     </button>
   </span>
 </template>
@@ -53,9 +68,7 @@ const toggle = () => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 5px 10px;
   font-family: var(--font-family-base);
-  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.2;
@@ -72,6 +85,20 @@ const toggle = () => {
 .chip:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* sizes */
+.chip--sm {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.chip--md {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+.chip--lg {
+  padding: 7px 14px;
+  font-size: 14px;
 }
 
 .chip--selected {

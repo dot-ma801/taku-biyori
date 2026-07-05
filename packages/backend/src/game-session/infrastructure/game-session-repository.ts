@@ -153,7 +153,7 @@ export const createGameSessionRepository = (
         ...getTableColumns(gameSessions),
         memberCount: count(gameSessionMembers.id),
         userMemberId: sql<string | null>`(
-          SELECT id FROM game_session_members
+          SELECT id FROM game_session.game_session_members
           WHERE game_session_id = ${gameSessions.id}
             AND user_id = ${userId}
           LIMIT 1

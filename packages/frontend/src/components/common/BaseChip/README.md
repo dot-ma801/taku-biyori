@@ -4,11 +4,12 @@
 
 ## Props
 
-| Prop        | Type      | Default | Description                     |
-| ----------- | --------- | ------- | ------------------------------- |
-| `selected`  | `boolean` | `false` | v-model:selected バインディング |
-| `removable` | `boolean` | `false` | 削除ボタン（X アイコン）を表示  |
-| `disabled`  | `boolean` | `false` | 操作を無効化                    |
+| Prop        | Type                   | Default | Description                     |
+| ----------- | ---------------------- | ------- | ------------------------------- |
+| `selected`  | `boolean`              | `false` | v-model:selected バインディング |
+| `removable` | `boolean`              | `false` | 削除ボタン（X アイコン）を表示  |
+| `disabled`  | `boolean`              | `false` | 操作を無効化                    |
+| `size`      | `'sm' \| 'md' \| 'lg'` | `'md'`  | チップのサイズ                  |
 
 ## Events
 
@@ -38,7 +39,13 @@
 - 選択時: `color-mix()` によるプライマリカラーのティント背景
 - 未選択時: `surface` 背景 + `border-strong` ボーダー
 - 角丸は `--radius-full`（完全な pill 形状）
-- 削除アイコンは Lucide `X`（12px）
+- `size` によって padding・font-size・削除アイコンサイズが変化する
+
+  | size | padding  | font-size | 削除アイコン |
+  | ---- | -------- | --------- | ------------ |
+  | sm   | 3px 8px  | 12px      | 10px         |
+  | md   | 5px 10px | 13px      | 12px         |
+  | lg   | 7px 14px | 14px      | 14px         |
 
 ## 単体テスト項目
 
@@ -52,6 +59,11 @@
 - `selected=false` のとき未選択スタイルのクラスが付与されること
 - `selected=true` のとき選択済みスタイルのクラスが付与されること
 - チップをクリックしたとき `update:selected` イベントが発火し、値が反転すること
+
+### size
+
+- `size` の各値（`sm` / `md` / `lg`）に対応するモディファイアクラスが付与されること
+- `size` を指定しないとき `chip--md` クラスが付与されること
 
 ### removable
 

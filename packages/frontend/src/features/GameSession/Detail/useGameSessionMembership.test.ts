@@ -55,14 +55,11 @@ function makeGameSession(
   };
 }
 
-// 書き込みは callback で親へ委譲する契約なので、テストでは spy を渡して検証する。
 function setup(gameSession: MaybeRefOrGetter<GameSessionDetail | null>) {
-  const onJoined = vi.fn();
-  const onLeft = vi.fn();
+  const onRefresh = vi.fn();
   return {
-    onJoined,
-    onLeft,
-    ...useGameSessionMembership(SESSION_ID, gameSession, onJoined, onLeft),
+    onRefresh,
+    ...useGameSessionMembership(SESSION_ID, gameSession, onRefresh),
   };
 }
 
@@ -129,26 +126,40 @@ describe('canJoin', () => {
 });
 
 describe('join', () => {
-  it('API を呼び出して onJoined に新メンバーを渡す', async () => {
-    const newMember = makeMember();
-    vi.mocked(joinGameSession).mockResolvedValue(newMember);
+  it('API を呼び出して onRefresh を実行する', async () => {
+    vi.mocked(joinGameSession).mockResolvedValue({
+      id: MEMBER_ID,
+      userId: USER_ID,
+      userName: 'テストユーザー',
+      guestName: null,
+      characterName: null,
+      joinedAt: '2024-01-01T00:00:00Z',
+    });
 
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { join, onJoined } = setup(gameSession);
+    const { join, onRefresh } = setup(gameSession);
     await join();
 
     // Assert
     expect(joinGameSession).toHaveBeenCalledWith(SESSION_ID, {});
-    expect(onJoined).toHaveBeenCalledWith(newMember);
+    expect(onRefresh).toHaveBeenCalled();
   });
 
   it('API 呼び出し中は loading が true になる', async () => {
     let resolveJoin!: () => void;
     vi.mocked(joinGameSession).mockReturnValue(
       new Promise((resolve) => {
-        resolveJoin = () => resolve(makeMember());
+        resolveJoin = () =>
+          resolve({
+            id: MEMBER_ID,
+            userId: USER_ID,
+            userName: 'テストユーザー',
+            guestName: null,
+            characterName: null,
+            joinedAt: '2024-01-01T00:00:00Z',
+          });
       }),
     );
 
@@ -176,19 +187,27 @@ describe('join', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { join, onJoined } = setup(gameSession);
+    const { join, onRefresh } = setup(gameSession);
     await join();
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('参加に失敗しました');
-    expect(onJoined).not.toHaveBeenCalled();
+    expect(onRefresh).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
     let resolveJoin!: () => void;
     vi.mocked(joinGameSession).mockReturnValue(
       new Promise((resolve) => {
-        resolveJoin = () => resolve(makeMember());
+        resolveJoin = () =>
+          resolve({
+            id: MEMBER_ID,
+            userId: USER_ID,
+            userName: 'テストユーザー',
+            guestName: null,
+            characterName: null,
+            joinedAt: '2024-01-01T00:00:00Z',
+          });
       }),
     );
 
@@ -260,17 +279,17 @@ describe('canLeave', () => {
 });
 
 describe('leave', () => {
-  it('API を memberId で呼び出して onLeft に memberId を渡す', async () => {
+  it('API を memberId で呼び出して onRefresh を実行する', async () => {
     vi.mocked(leaveGameSession).mockResolvedValue(undefined);
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { leave, onLeft } = setup(gameSession);
+    const { leave, onRefresh } = setup(gameSession);
     await leave();
 
     // Assert
     expect(leaveGameSession).toHaveBeenCalledWith(SESSION_ID, MEMBER_ID);
-    expect(onLeft).toHaveBeenCalledWith(MEMBER_ID);
+    expect(onRefresh).toHaveBeenCalled();
   });
 
   it('自分がメンバーでない場合は API を呼び出さない', async () => {
@@ -278,12 +297,12 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [] }));
 
     // Act
-    const { leave, onLeft } = setup(gameSession);
+    const { leave, onRefresh } = setup(gameSession);
     await leave();
 
     // Assert
     expect(leaveGameSession).not.toHaveBeenCalled();
-    expect(onLeft).not.toHaveBeenCalled();
+    expect(onRefresh).not.toHaveBeenCalled();
   });
 
   it('API が失敗した場合は toast.error を呼び出す', async () => {
@@ -295,12 +314,12 @@ describe('leave', () => {
     const gameSession = ref(makeGameSession({ members: [makeMember()] }));
 
     // Act
-    const { leave, onLeft } = setup(gameSession);
+    const { leave, onRefresh } = setup(gameSession);
     await leave();
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('退出に失敗しました');
-    expect(onLeft).not.toHaveBeenCalled();
+    expect(onRefresh).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {

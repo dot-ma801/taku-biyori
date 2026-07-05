@@ -7,6 +7,7 @@ export {
   type User,
 } from './auth.js';
 export { HealthResponseSchema, type HealthResponse } from './health.js';
+export { todayDateString } from './date.js';
 export {
   GameSessionStatusSchema,
   GameSessionStatus,

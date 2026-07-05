@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GameSessionStatus } from '@/game-session/status';
+import { todayDateString } from '@/date';
 
 export { GameSessionStatus };
 export const GameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
@@ -38,15 +39,33 @@ export const GameSessionSchema = z.object({
 });
 export type GameSession = z.infer<typeof GameSessionSchema>;
 
-export const CreateGameSessionInputSchema = z.object({
-  title: z.string().min(1).max(100),
-  description: z.string().max(1000).optional(),
-  scenarioName: z.string().max(200).optional(),
-  location: z.string().max(200).optional(),
-  maxMembers: z.number().int().min(2).max(20).optional(),
-  openUntil: z.iso.date().optional(),
-  scheduledAt: z.iso.date().optional(),
-});
+export const CreateGameSessionInputSchema = z
+  .object({
+    title: z.string().min(1).max(100),
+    description: z.string().max(1000).optional(),
+    scenarioName: z.string().max(200).optional(),
+    location: z.string().max(200).optional(),
+    maxMembers: z.number().int().min(2).max(20).optional(),
+    openUntil: z.iso.date().optional(),
+    scheduledAt: z.iso.date().optional(),
+  })
+  .superRefine((input, ctx) => {
+    const today = todayDateString();
+    if (input.openUntil && input.openUntil < today) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['openUntil'],
+        message: '募集締め切り日には今日以降の日付を指定してください',
+      });
+    }
+    if (input.scheduledAt && input.scheduledAt < today) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scheduledAt'],
+        message: '開催日には今日以降の日付を指定してください',
+      });
+    }
+  });
 export type CreateGameSessionInput = z.infer<
   typeof CreateGameSessionInputSchema
 >;
@@ -92,9 +111,14 @@ export const AvailabilityDateSchema = z.object({
 });
 export type AvailabilityDate = z.infer<typeof AvailabilityDateSchema>;
 
-export const CreateAvailabilityDateInputSchema = z.object({
-  date: z.iso.date(),
-});
+export const CreateAvailabilityDateInputSchema = z
+  .object({
+    date: z.iso.date(),
+  })
+  .refine((input) => input.date >= todayDateString(), {
+    message: '候補日には今日以降の日付を指定してください',
+    path: ['date'],
+  });
 export type CreateAvailabilityDateInput = z.infer<
   typeof CreateAvailabilityDateInputSchema
 >;

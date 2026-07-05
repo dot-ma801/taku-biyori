@@ -68,13 +68,38 @@ describe('InputScheduleInfo', () => {
       const wrapper = mount(InputScheduleInfo, {
         props: { scheduledAt: '2025-06-15', pendingDates: [] },
       });
+      // 複数候補日モードに切り替える（ユーザー操作を模す）
+      await wrapper.find('.switch__root').trigger('click');
 
-      // Act
-      await wrapper.setProps({ pendingDates: ['2025-06-10'] });
+      // Act: 候補日ピッカーでの選択（ユーザー操作）をシミュレートする
+      const cell = wrapper
+        .findAll('.datepicker__cell')
+        .find(
+          (c) =>
+            !c.classes('datepicker__cell--empty') &&
+            !c.classes('datepicker__cell--disabled'),
+        );
+      await cell?.trigger('click');
 
       // Assert
       const emitted = wrapper.emitted('update:scheduledAt');
       expect(emitted?.[emitted.length - 1]).toEqual(['']);
+    });
+
+    it('候補日の非同期取得（マウント時の初期反映）では開催日は破棄されない', async () => {
+      // Arrange
+      vi.mocked(listAvailabilityDates).mockResolvedValue([
+        { id: 'date-1', date: '2025-07-01', answers: [] },
+      ]);
+
+      // Act
+      const wrapper = mount(InputScheduleInfo, {
+        props: { gameSessionId: 'session-1', scheduledAt: '2025-06-15' },
+      });
+      await flushPromises();
+
+      // Assert
+      expect(wrapper.emitted('update:scheduledAt')).toBeFalsy();
     });
 
     it('スイッチを ON にしただけでは開催日は破棄されない', async () => {

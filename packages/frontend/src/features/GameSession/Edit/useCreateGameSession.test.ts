@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCreateGameSession } from '@/features/GameSession/Edit/useCreateGameSession';
 import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   createGameSession: vi.fn(),
@@ -20,7 +21,7 @@ const mockGameSession: GameSession = {
   description: null,
   location: null,
   maxMembers: null,
-  status: 'draft',
+  status: GameSessionStatus.draft,
   isPublished: false,
   openUntil: null,
   scheduledAt: null,
@@ -37,9 +38,10 @@ beforeEach(() => {
 
 describe('useCreateGameSession', () => {
   describe('募集人数のバリデーション', () => {
-    it('1（下限未満）を入力すると maxMembers を含めずに送信する', async () => {
+    it('1（下限未満）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, maxMembers, submit } = useCreateGameSession();
+      const { title, maxMembers, errorMessage, submit } =
+        useCreateGameSession();
       title.value = '卓';
       maxMembers.value = '1';
 
@@ -47,14 +49,16 @@ describe('useCreateGameSession', () => {
       await submit();
 
       // Assert
-      expect(createGameSession).toHaveBeenCalledWith(
-        expect.not.objectContaining({ maxMembers: expect.anything() }),
+      expect(createGameSession).not.toHaveBeenCalled();
+      expect(errorMessage.value).toBe(
+        '募集人数は2〜20人の範囲で入力してください',
       );
     });
 
-    it('21（上限超過）を入力すると maxMembers を含めずに送信する', async () => {
+    it('21（上限超過）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, maxMembers, submit } = useCreateGameSession();
+      const { title, maxMembers, errorMessage, submit } =
+        useCreateGameSession();
       title.value = '卓';
       maxMembers.value = '21';
 
@@ -62,8 +66,9 @@ describe('useCreateGameSession', () => {
       await submit();
 
       // Assert
-      expect(createGameSession).toHaveBeenCalledWith(
-        expect.not.objectContaining({ maxMembers: expect.anything() }),
+      expect(createGameSession).not.toHaveBeenCalled();
+      expect(errorMessage.value).toBe(
+        '募集人数は2〜20人の範囲で入力してください',
       );
     });
 

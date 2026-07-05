@@ -158,27 +158,25 @@ function selectDate(dateStr: string | null) {
   <div class="datepicker">
     <span v-if="label" class="datepicker__label">{{ label }}</span>
     <Popover.Root v-model="isOpen">
-      <Popover.Activator>
-        <button
-          type="button"
-          class="datepicker__trigger"
-          :disabled="disabled"
-          :aria-label="label ?? '日付を選択'"
+      <!-- Activator 自体が button を描画するため、内側に button を置くと枠線が二重になる -->
+      <Popover.Activator
+        class="datepicker__trigger"
+        :disabled="disabled"
+        :aria-label="label ?? '日付を選択'"
+      >
+        <span
+          :class="[
+            'datepicker__trigger-text',
+            !displayLabel && 'datepicker__trigger-text--placeholder',
+          ]"
         >
-          <span
-            :class="[
-              'datepicker__trigger-text',
-              !displayLabel && 'datepicker__trigger-text--placeholder',
-            ]"
-          >
-            {{ displayLabel ?? placeholder }}
-          </span>
-          <CalendarDays
-            :size="14"
-            class="datepicker__trigger-icon"
-            aria-hidden="true"
-          />
-        </button>
+          {{ displayLabel ?? placeholder }}
+        </span>
+        <CalendarDays
+          :size="14"
+          class="datepicker__trigger-icon"
+          aria-hidden="true"
+        />
       </Popover.Activator>
 
       <Popover.Content class="datepicker__popover">
@@ -401,7 +399,9 @@ function selectDate(dateStr: string | null) {
   cursor: default;
   pointer-events: none;
 }
-.datepicker__cell:hover:not(:disabled):not(.datepicker__cell--empty) {
+.datepicker__cell:hover:not(:disabled):not(.datepicker__cell--empty):not(
+    .datepicker__cell--selected
+  ) {
   background: var(--color-surface-raised);
 }
 .datepicker__cell:focus-visible {
@@ -409,16 +409,28 @@ function selectDate(dateStr: string | null) {
   box-shadow: 0 0 0 2px var(--color-primary-soft);
 }
 .datepicker__cell--today {
-  font-weight: 700;
-  color: var(--color-primary);
+  position: relative;
+}
+/* 当日は 1px 幅の丸枠で示す */
+.datepicker__cell--today::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid var(--color-primary-text);
+  border-radius: var(--radius-full);
+  pointer-events: none;
 }
 .datepicker__cell--selected {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
   font-weight: 600;
 }
 .datepicker__cell--selected:hover {
-  background: var(--color-primary-strong);
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft),
+    var(--color-primary) 15%
+  );
 }
 .datepicker__cell--disabled {
   opacity: 0.35;

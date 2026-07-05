@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
+import BaseChip from '@/components/common/BaseChip/BaseChip.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
@@ -54,6 +56,10 @@ const selectedDates = computed<string[]>({
     }
   },
 });
+
+function removeDate(date: string) {
+  selectedDates.value = selectedDates.value.filter((d) => d !== date);
+}
 </script>
 
 <template>
@@ -82,6 +88,13 @@ const selectedDates = computed<string[]>({
           <p v-if="availability?.errorMessage.value" class="error">
             {{ availability.errorMessage.value }}
           </p>
+          <ul class="dates">
+            <li v-for="item in selectedDates" :key="item">
+              <BaseChip selected removable size="lg" @remove="removeDate(item)">
+                {{ item }}
+              </BaseChip>
+            </li>
+          </ul>
         </template>
 
         <BaseDatePicker
@@ -128,5 +141,14 @@ const selectedDates = computed<string[]>({
   font-size: 13px;
   color: var(--color-error);
   margin-top: var(--space-2);
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 </style>

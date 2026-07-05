@@ -6,6 +6,7 @@ import {
   bulkUpdateAvailabilityDates,
 } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
+import { parseMaxMembers } from '@/features/GameSession/Edit/maxMembersValidation';
 
 export const useCreateGameSession = () => {
   const router = useRouter();
@@ -32,17 +33,12 @@ export const useCreateGameSession = () => {
       // 具体例:
       // ...false -> 何も展開されない
       // ...{ scenarioName: 'シナリオ名' } -> scenarioName: 'シナリオ名' が展開される
-      const parsedMaxMembers = Number(maxMembers.value.trim());
-      const validMaxMembers =
-        maxMembers.value.trim() !== '' &&
-        Number.isInteger(parsedMaxMembers) &&
-        parsedMaxMembers >= 2 &&
-        parsedMaxMembers <= 20;
+      const parsedMaxMembers = parseMaxMembers(maxMembers.value);
 
       const gameSession = await createGameSession({
         title: title.value,
         ...(scenarioName.value && { scenarioName: scenarioName.value }),
-        ...(validMaxMembers && { maxMembers: parsedMaxMembers }),
+        ...(parsedMaxMembers !== null && { maxMembers: parsedMaxMembers }),
         ...(description.value && { description: description.value }),
         ...(openUntil.value && { openUntil: openUntil.value }),
         ...(scheduledAt.value && { scheduledAt: scheduledAt.value }),

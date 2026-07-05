@@ -61,6 +61,44 @@ describe('BaseTextBox', () => {
       // Assert
       expect(wrapper.find('.textbox__required').exists()).toBe(false);
     });
+
+    it('required=true のとき input に required 属性が付与される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTextBox, {
+        props: { label: 'タイトル', required: true },
+      });
+
+      // Assert
+      expect(
+        (wrapper.find('.textbox__control').element as HTMLInputElement)
+          .required,
+      ).toBe(true);
+    });
+
+    it('required=true のとき input に aria-required="true" が付与される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTextBox, {
+        props: { label: 'タイトル', required: true },
+      });
+
+      // Assert
+      expect(
+        wrapper.find('.textbox__control').attributes('aria-required'),
+      ).toBe('true');
+    });
+
+    it('required 未指定のとき input に required 属性が付与されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseTextBox, {
+        props: { label: 'タイトル' },
+      });
+
+      // Assert
+      expect(
+        (wrapper.find('.textbox__control').element as HTMLInputElement)
+          .required,
+      ).toBe(false);
+    });
   });
 
   describe('placeholder', () => {

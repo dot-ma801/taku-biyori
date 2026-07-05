@@ -34,6 +34,7 @@ const model = defineModel<string>({ default: '' });
     :rules="rules"
     :disabled="disabled"
     :readonly="readonly"
+    :required="required"
     class="textbox"
     validate-on="blur"
   >

@@ -4,17 +4,17 @@
 
 ## Props
 
-| Prop          | Type                                | Default  | Description                     |
-| ------------- | ----------------------------------- | -------- | ------------------------------- |
-| `modelValue`  | `string`                            | `''`     | v-model バインディング          |
-| `label`       | `string`                            | —        | フィールドラベル                |
-| `placeholder` | `string`                            | —        | プレースホルダーテキスト        |
-| `hint`        | `string`                            | —        | フィールド下部のヒントテキスト  |
-| `type`        | `string`                            | `'text'` | input の type 属性              |
-| `rules`       | `((v: string) => true \| string)[]` | —        | バリデーションルール配列        |
-| `disabled`    | `boolean`                           | —        | 入力を無効化                    |
-| `readonly`    | `boolean`                           | —        | 読み取り専用                    |
-| `required`    | `boolean`                           | —        | ラベルに必須マーク（`*`）を表示 |
+| Prop          | Type                                | Default  | Description                                                                     |
+| ------------- | ----------------------------------- | -------- | ------------------------------------------------------------------------------- |
+| `modelValue`  | `string`                            | `''`     | v-model バインディング                                                          |
+| `label`       | `string`                            | —        | フィールドラベル                                                                |
+| `placeholder` | `string`                            | —        | プレースホルダーテキスト                                                        |
+| `hint`        | `string`                            | —        | フィールド下部のヒントテキスト                                                  |
+| `type`        | `string`                            | `'text'` | input の type 属性                                                              |
+| `rules`       | `((v: string) => true \| string)[]` | —        | バリデーションルール配列                                                        |
+| `disabled`    | `boolean`                           | —        | 入力を無効化                                                                    |
+| `readonly`    | `boolean`                           | —        | 読み取り専用                                                                    |
+| `required`    | `boolean`                           | —        | ラベルに必須マーク（`*`）を表示し、input に `required` / `aria-required` を付与 |
 
 ## Usage
 
@@ -74,6 +74,9 @@
 
 - `required=true` のときラベルに必須マークが表示されること
 - `required` 未指定のとき必須マークが表示されないこと
+- `required=true` のとき input に `required` 属性が付与されること
+- `required=true` のとき input に `aria-required="true"` が付与されること
+- `required` 未指定のとき input に `required` 属性が付与されないこと
 
 ### アクセシビリティ
 

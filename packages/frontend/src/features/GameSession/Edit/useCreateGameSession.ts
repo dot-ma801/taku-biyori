@@ -36,7 +36,8 @@ export const useCreateGameSession = () => {
       const validMaxMembers =
         maxMembers.value.trim() !== '' &&
         Number.isInteger(parsedMaxMembers) &&
-        parsedMaxMembers > 0;
+        parsedMaxMembers >= 2 &&
+        parsedMaxMembers <= 20;
 
       const gameSession = await createGameSession({
         title: title.value,

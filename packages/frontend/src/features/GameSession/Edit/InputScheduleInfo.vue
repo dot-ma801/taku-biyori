@@ -8,7 +8,7 @@ import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import { useAvailabilityDates } from '@/features/GameSession/Edit/useAvailabilityDates';
 import { CalendarDays } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
   /** 更新フローのときのみ渡す。未指定のとき候補日はローカル管理（pendingDates） */
@@ -55,6 +55,13 @@ const selectedDates = computed<string[]>({
       pendingDates.value = dates;
     }
   },
+});
+
+// 候補日に値が入ったら、開催日の入力状態を破棄する
+watch(selectedDates, (dates) => {
+  if (dates.length > 0) {
+    scheduledAt.value = '';
+  }
 });
 
 function removeDate(date: string) {

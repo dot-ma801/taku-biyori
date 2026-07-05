@@ -168,6 +168,12 @@ const displayMemberId = computed(
 const canEditSchedule = computed(
   () => canInputSchedule.value || canEditGuestSchedule.value,
 );
+
+// ホストが日程確定操作可能（=scheduling中のホスト）かつ候補日が1件もないとき、
+// 候補日の登録を促す案内を表示する
+const showAddDatesHint = computed(
+  () => canConfirm.value && availabilityDates.value.length === 0,
+);
 </script>
 
 <template>
@@ -181,6 +187,9 @@ const canEditSchedule = computed(
       {{ errorMessage }}
     </div>
     <template v-else>
+      <p v-if="showAddDatesHint" class="hint-add-dates">
+        候補日がまだ登録されていません。「セッション編集」から候補日を登録してください。
+      </p>
       <div class="schedule-table">
         <ScheduleTable
           :availability-dates="availabilityDates"
@@ -271,6 +280,15 @@ const canEditSchedule = computed(
 
 .state-message.error {
   color: var(--color-error);
+}
+
+.hint-add-dates {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  background: var(--color-warning-soft);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin: 0 0 var(--space-3);
 }
 
 .actions {

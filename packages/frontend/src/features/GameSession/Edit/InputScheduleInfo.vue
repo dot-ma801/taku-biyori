@@ -37,6 +37,19 @@ const availability = props.gameSessionId
   ? useAvailabilityDates(props.gameSessionId)
   : null;
 
+// 候補日は onMounted で非同期取得されるため、取得完了時に一度だけ
+// 「候補日が既にあるなら複数日選択モードを自動でONにする」を反映する。
+// 以降はホストが自由にトグルできるよう、この watch は初回のみ発火する。
+if (availability) {
+  watch(
+    () => availability.availabilityDates.value.length,
+    (length) => {
+      if (length > 0) selectMultiDays.value = true;
+    },
+    { once: true },
+  );
+}
+
 // 複数日 picker 用の writable computed
 // get: API 管理 or ローカル管理の日付リストを返す
 // set: 更新フローは差分を API に送信、新規作成フローはローカルに保持

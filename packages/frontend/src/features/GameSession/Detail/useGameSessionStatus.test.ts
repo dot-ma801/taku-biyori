@@ -128,7 +128,11 @@ describe('canPublish', () => {
     );
 
     // Act
-    const { canPublish } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canPublish } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canPublish.value).toBe(true);
@@ -142,7 +146,11 @@ describe('canPublish', () => {
     );
 
     // Act
-    const { canPublish } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canPublish } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canPublish.value).toBe(false);
@@ -156,7 +164,11 @@ describe('canPublish', () => {
     );
 
     // Act
-    const { canPublish } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canPublish } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canPublish.value).toBe(false);
@@ -172,7 +184,11 @@ describe('canComplete', () => {
     );
 
     // Act
-    const { canComplete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canComplete } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canComplete.value).toBe(true);
@@ -186,7 +202,11 @@ describe('canComplete', () => {
     );
 
     // Act
-    const { canComplete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canComplete } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canComplete.value).toBe(false);
@@ -200,7 +220,11 @@ describe('canComplete', () => {
     );
 
     // Act
-    const { canComplete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canComplete } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canComplete.value).toBe(false);
@@ -223,7 +247,11 @@ describe('publishSession', () => {
     const gameSession = ref(
       makeGameSession({ status: GameSessionStatus.draft }),
     );
-    const { publishSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { publishSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await publishSession();
@@ -248,7 +276,11 @@ describe('publishSession', () => {
     });
     const gameSession = ref(makeGameSession());
     const onRefresh = vi.fn();
-    const { publishSession } = useGameSessionStatus(SESSION_ID, gameSession, onRefresh);
+    const { publishSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      onRefresh,
+    );
 
     // Act
     await publishSession();
@@ -290,7 +322,11 @@ describe('publishSession', () => {
       new Error('サーバーエラー'),
     );
     const gameSession = ref(makeGameSession());
-    const { publishSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { publishSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await publishSession();
@@ -316,7 +352,11 @@ describe('completeSession', () => {
     const gameSession = ref(
       makeGameSession({ status: GameSessionStatus.today }),
     );
-    const { completeSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { completeSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await completeSession();
@@ -343,7 +383,11 @@ describe('completeSession', () => {
       makeGameSession({ status: GameSessionStatus.today }),
     );
     const onRefresh = vi.fn();
-    const { completeSession } = useGameSessionStatus(SESSION_ID, gameSession, onRefresh);
+    const { completeSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      onRefresh,
+    );
 
     // Act
     await completeSession();
@@ -389,7 +433,11 @@ describe('completeSession', () => {
     const gameSession = ref(
       makeGameSession({ status: GameSessionStatus.today }),
     );
-    const { completeSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { completeSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await completeSession();
@@ -419,7 +467,11 @@ describe('canDelete', () => {
       );
 
       // Act
-      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+      const { canDelete } = useGameSessionStatus(
+        SESSION_ID,
+        gameSession,
+        vi.fn(),
+      );
 
       // Assert
       expect(canDelete.value).toBe(expected);
@@ -440,7 +492,11 @@ describe('canDelete', () => {
       );
 
       // Act
-      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+      const { canDelete } = useGameSessionStatus(
+        SESSION_ID,
+        gameSession,
+        vi.fn(),
+      );
 
       // Assert
       expect(canDelete.value).toBe(false);
@@ -456,7 +512,11 @@ describe('canDelete', () => {
       );
 
       // Act
-      const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+      const { canDelete } = useGameSessionStatus(
+        SESSION_ID,
+        gameSession,
+        vi.fn(),
+      );
 
       // Assert
       expect(canDelete.value).toBe(false);
@@ -469,7 +529,11 @@ describe('canDelete', () => {
     const gameSession = ref(makeGameSession());
 
     // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canDelete } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canDelete.value).toBe(false);
@@ -481,7 +545,11 @@ describe('canDelete', () => {
     const gameSession = ref<GameSessionDetail | null>(null);
 
     // Act
-    const { canDelete } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canDelete } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canDelete.value).toBe(false);
@@ -494,7 +562,11 @@ describe('deleteSession', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(deleteGameSession).mockResolvedValue(undefined);
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -508,7 +580,11 @@ describe('deleteSession', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(deleteGameSession).mockResolvedValue(undefined);
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -524,7 +600,11 @@ describe('deleteSession', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(deleteGameSession).mockResolvedValue(undefined);
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -556,7 +636,11 @@ describe('deleteSession', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(deleteGameSession).mockRejectedValue(new Error('サーバーエラー'));
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -570,7 +654,11 @@ describe('deleteSession', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(deleteGameSession).mockRejectedValue(new Error('サーバーエラー'));
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -583,7 +671,11 @@ describe('deleteSession', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -600,7 +692,11 @@ describe('deleteSession', () => {
         members: [hostMember(), makeMember({ id: 'm2', userId: 'other-user' })],
       }),
     );
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await deleteSession();
@@ -619,7 +715,11 @@ describe('deleteSession', () => {
       }),
     );
     const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { deleteSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     const first = deleteSession();

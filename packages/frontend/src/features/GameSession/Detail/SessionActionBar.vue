@@ -48,7 +48,11 @@ const {
   publishSession,
   completeSession,
   deleteSession,
-} = useGameSessionStatus(props.gameSessionId, () => props.gameSession, onRefresh);
+} = useGameSessionStatus(
+  props.gameSessionId,
+  () => props.gameSession,
+  onRefresh,
+);
 
 const {
   canJoin,
@@ -172,10 +176,7 @@ function onGuestJoined() {
     :game-session-status="gameSession.status"
     @joined="onGuestJoined"
   />
-  <DeleteDialog
-    v-model="deleteDialogModel"
-    @delete="deleteSession"
-  />
+  <DeleteDialog v-model="deleteDialogModel" @delete="deleteSession" />
 </template>
 
 <style scoped>

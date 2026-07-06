@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && vite build",
+    "build:vercel": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && vite build --config vite.config.vercel.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "lint:eslint": "eslint . --fix --cache",
@@ -22,9 +23,10 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@taku-biyori/shared": "workspace:*",
     "@hono/node-server": "^1.19.11",
     "@hono/vite-build": "^1.11.1",
+    "@opentelemetry/api": "^1.9.1",
+    "@taku-biyori/shared": "workspace:*",
     "better-auth": "^1.6.11",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

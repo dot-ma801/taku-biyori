@@ -8,5 +8,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["vite.config.ts", "drizzle.config.ts"]
+  "include": ["vite.config.ts", "vite.config.vercel.ts", "drizzle.config.ts"]
 }

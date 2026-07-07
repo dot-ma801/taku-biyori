@@ -52,10 +52,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `POST /api/recruitments/:id/confirm`（選出バリデーション + トランザクションでの卓生成 + `confirmed_game_session_id` セット）、`GET /api/game-sessions/:id` への `recruitmentId` 追加、確定後の募集枠 API の read-only 化（`409`） |
-| 既存への影響 | `GET /api/game-sessions/:id` のレスポンス**フィールド追加のみ**（後方互換） |
-| 完了条件 | design-v1.1 §5 のバリデーション表を全ケーステストでカバー。トランザクション失敗時に卓もリンクも残らないことを確認 |
-| 検証 | 「定員以内 → memberIds 省略で全員選出」「定員超過 → 省略で `422`、指定で成功」「確定後の参加・回答が `409`」 |
+| スコープ | `POST /api/recruitments/:id/confirm`（選出バリデーション + トランザクションでの卓生成 + 条件付き UPDATE による二重確定排他 + `open_until = 確定実行日` セット + `recruitment_member_id` コピー）、`game_session_members.recruitment_member_id` カラム追加マイグレーション、`GET /api/game-sessions/:id` への `recruitmentId` 追加、確定卓の削除ガード（`DELETE /api/game-sessions/:id` が確定リンク参照時 `409`）、確定後の募集枠 API の read-only 化（`409`） |
+| 既存への影響 | `GET /api/game-sessions/:id` のレスポンスフィールド追加、`game_session_members` への nullable カラム追加、卓削除への確定卓ガード追加（いずれも後方互換） |
+| 完了条件 | design-v1.1 §5 のバリデーション表を全ケーステストでカバー。トランザクション失敗時に卓もリンクも残らないこと・並行確定が片方 `409` になることを確認 |
+| 検証 | 「定員以内 → memberIds 省略で全員選出」「定員超過 → 省略で `422`、指定で成功」「確定後の参加・回答が `409`」「確定卓のステータスが `confirmed`/`today` に導出される（`open` に落ちない）」 |
 
 ### 段階4: 募集枠のフロントエンド
 
@@ -87,6 +87,9 @@
 - [ ] ゲストリンク参加が募集枠に対して機能する（参加・回答・全ゲスト列編集）
 - [ ] 確定後の募集枠で参加・回答・編集がすべて拒否される（UI 非表示 + API `409`）
 - [ ] 非選出者向け表示に強い言葉（キック・削除・落選）が使われていない
+- [ ] 確定で生まれた卓のステータスが `confirmed`/`today`/`completed` に正しく導出され、完了操作ができる
+- [ ] 同一募集枠への二重確定が `409` になり、卓が2つ作られない
+- [ ] 確定卓の削除が `409` で拒否される
 
 1項目でも未達なら段階6には進まず、修正 PR を先に出す。
 
@@ -97,8 +100,8 @@
 | # | 内容 |
 |---|---|
 | 6a | **フロントの旧導線撤去**: `/game-sessions/new` を直接卓立て（日程必須）へ変更、卓詳細から日程調整 UI を撤去、卓の `draft/open/scheduling` バッジ撤去 |
-| 6b | **API の廃止**: 卓の availability-dates 系ルート・`PATCH /:id/status` の `open` 遷移を削除。`POST /api/game-sessions` の `scheduledAt` 必須化。卓参加条件を「未完了かつ実施日前」へ変更 |
-| 6c | **DB とステータスの整理**: `game_session_candidates` / `game_session_answers` テーブル drop、`game_sessions.is_published` / `open_until` カラム drop、`getGameSessionStatus` を `confirmed/today/completed` に簡素化 |
+| 6b | **API の廃止**: 卓の availability-dates 系ルート・`PATCH /:id/status` の `open` 遷移を削除。`POST /api/game-sessions` の `scheduledAt` 必須化・**`is_published = true` での作成に変更**（`open` 遷移の削除と同時に行わないと、この期間に作られた卓が公開手段を失い永遠に draft になる）。卓参加を design-v1.1 §8 の最終形認可モデルへ変更（ログイン参加もトークン必須・参加可能期間は「未完了かつ実施日当日まで」） |
+| 6c | **DB とステータスの整理**: `game_session_candidates` / `game_session_answers` テーブル drop、`game_sessions.is_published` / `open_until` カラム drop、**`scheduled_at` の NOT NULL 化**（null の卓＝旧経路の日程未確定な開発データは事前に削除）、`getGameSessionStatus` を `confirmed/today/completed` に簡素化 |
 
 - 6a と 6b の間はフロントが旧 API を呼ばなくなっているため、6b は安全に削除できる
 - 6c のマイグレーションは破壊的だが、本番データが無いためロールバックは「マイグレーションを戻す」のみで完結する
@@ -125,6 +128,8 @@
 | 移植時に既存ロジックへ手を入れて既存機能を壊す | 移植は**コピー**とし、既存 `game-session` 配下のファイルは段階1〜5では変更しない（段階3の `recruitmentId` 追加のみ例外）。共通化リファクタは段階6完了後に検討する（廃止で消えるコードとの共通化は無駄になるため） |
 | 新旧2系統の並走で UI 導線が混乱する | 段階5のダッシュボード再構成までは既存導線を優先表示のまま維持し、`/recruitments` はナビゲーションに追加するだけに留める |
 | 確定トランザクションの部分失敗 | 卓生成・メンバーコピー・確定リンクを単一 DB トランザクションで実施（design-v1.1 §5）。インテグレーションテストで失敗時のロールバックを検証 |
+| 同一募集枠への同時確定（二重確定） | unique 制約では防げないため、確定リンクのセットを条件付き UPDATE（`WHERE confirmed_game_session_id IS NULL`）で行い、更新0行なら全体ロールバック + `409`（design-v1.1 §5） |
+| 移行期間中に確定卓が既存導出で `open`（募集中）扱いになる | 確定処理で `open_until = 確定実行日` をセットし、既存の `getGameSessionStatus` でも `confirmed`/`today` に到達させる（design-v1.1 §5・意思決定ログ） |
 | 段階6の削除漏れ・参照残り | 6b で `typecheck` / `lint` / 全テストに加え、`availability` `isPublished` `openUntil` 等のシンボル横断検索で参照ゼロを確認してからマージ |
 | openapi.yml と実装の乖離 | 各段階の PR に `docs/openapi.yml` の更新を含める（段階1〜3で追加、6b で削除） |
 
@@ -133,5 +138,6 @@
 ## 5. 廃止後のフォローアップ（スコープ外だが忘れないこと）
 
 - `docs/design-v1.md` の卓ステータス・日程調整・API セクションに「v1.1 で廃止済み」の注記を入れる（または design-v2 として統合改訂する）
+- `docs/design-v1.md` の `game_sessions` テーブル定義に `location` カラムが欠けている既存 drift を修正する（実装・v1.1 には存在する）
 - 共通化リファクタの検討（募集枠と卓で重複した日程調整ロジックが残る場合。ただし卓側は 6c で消えるため、原則発生しない想定）
 - 非選出者への通知機能（要求 §6 スコープ外。リマインド通知機能と合わせて別途要求定義）

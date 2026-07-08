@@ -25,7 +25,7 @@
 
 「卓（game_session）」が担っていた**募集・日程調整**の責務を、新概念**「募集枠（recruitment）」**に分離する。
 
-```
+```text
 【募集枠 recruitment】                    【卓 game_session】
   作成 → 公開 → 参加募集 → 日程調整 ──確定──▶ 実施前 → 当日 → 完了
   （人を多めに集めて日程を調整する）        （日程とメンバーが確定した状態でのみ存在）
@@ -134,7 +134,7 @@
 
 ### リレーション概要
 
-```
+```text
 auth.user
   └─< recruitments (host_user_id)
   └─< recruitment_members (user_id) ※ゲストはnull
@@ -200,7 +200,7 @@ export function getRecruitmentStatus(
 | 日程回答（◯△×） | ❌ 422 | ✅ | ✅ | ❌ 409 |
 | 卓確定 | ❌ 422 | ✅ | ✅ | ❌ 409 |
 
-> \* メンバーが1人でもいる場合は `409`（既存卓の削除と同方針）。確定済みの削除を禁止するのは、卓の出自リンク（`confirmed_game_session_id` の逆引き）を保持するため。
+> \* **ホスト以外の**メンバーが1人でもいる場合は `409`（既存卓の削除と同方針。ホスト自身しか参加していない募集枠は削除できる）。確定済みの削除を禁止するのは、卓の出自リンク（`confirmed_game_session_id` の逆引き）を保持するため。
 > 日程回答が draft で不可なのは、draft では参加できずメンバーが存在し得ないため（既存の `inputScheduleResponse` が `open`/`scheduling` のみ許可であることとも一致）。
 > 参加可否を `open` のみに限定するのは design-v1 の既存方針と同じ。
 > 操作可否は既存の shared `ACTION_POLICIES` / `canPerform` パターンを踏襲し、`RecruitmentAction` として shared に定義する。
@@ -226,7 +226,10 @@ export function getRecruitmentStatus(
 
 `POST /api/recruitments/:id/confirm` — body: `{ candidateId, memberIds?: string[] }`
 
-```
+```text
+0. 募集枠・確定候補日・選出対象メンバーをトランザクション内で SELECT ... FOR UPDATE により
+   再読込し、バリデーション（候補日の所属・◯△回答・定員）を再実行する
+   （候補日の削除・メンバー退出・回答変更が並行しても、古い選出結果のまま確定しない）
 1. 卓 game_sessions を INSERT
    - title / scenario_name / description / location / max_players を募集枠からコピー
    - host_user_id = 募集枠のホスト
@@ -281,7 +284,7 @@ export function getRecruitmentStatus(
 
 | 型 | フィールド |
 |---|---|
-| `CreateRecruitmentInput` | `title`, `scenarioName?`, `description?`, `location?`, `maxPlayers?`, `openUntil?`, `candidateDates?: string[]`（作成時の候補日登録は任意。ADR 0006 の方針を踏襲） |
+| `CreateRecruitmentInput` | `title`, `scenarioName?`, `description?`, `location?`, `maxPlayers?`, `openUntil?`, `candidateDates: string[]`（**1件以上必須**。日程調整が募集枠の存在意義であるため。卓側の「作成時スケジュール任意」= ADR 0006 とは意図的に方針を分ける） |
 | `UpdateRecruitmentInput` | 上記のうち候補日を除く各フィールドの partial（候補日は availability-dates API で操作） |
 | `ConfirmRecruitmentInput` | `candidateId`, `memberIds?: string[]` |
 | `Recruitment` / `RecruitmentListItem` | 既存 `GameSession` / `GameSessionListItem` に準じる。詳細は `confirmedGameSessionId?` を含む |

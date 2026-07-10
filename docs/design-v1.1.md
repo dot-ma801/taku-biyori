@@ -216,29 +216,45 @@ export function getRecruitmentStatus(
 
 ### ステータス遷移図
 
+遷移のラベルは「操作（変更されるファクト）」。`draft`/`open`/`scheduling` 等は DB に保存されず、ファクトから導出される（[導出ロジック](#4-ステータス設計)参照）。時間経過による遷移は操作なしで導出結果が変わるもの。
+
 募集枠:
 
-```text
-draft ──公開──▶ open ──open_until 経過──▶ scheduling
-                 │                          │
-                 └────────── 卓確定（closed_at セット）──────────▶ confirmed（クローズ）
-                                             ▲                        │
-                                             └─── 中止【提案・未確定】──┘
-                                          （卓を削除し closed_at を null に戻す
-                                           → scheduling に復帰して再調整できる）
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> draft : 作成（is_published = false）
+    draft --> open : 公開する（is_published = true）
+    open --> scheduling : open_until を経過（時間経過による導出。open_until = null なら open のまま）
+    open --> confirmed : 卓確定（closed_at セット + 卓生成）
+    scheduling --> confirmed : 卓確定（closed_at セット + 卓生成）
+    confirmed --> scheduling : 中止【提案・未確定】（卓を削除 + closed_at を null に戻す）
+    note right of confirmed
+        終端状態。
+        参加・回答・候補日変更・編集を
+        409 / 422 で拒否する
+    end note
 ```
 
 卓（最終形）:
 
-```text
-直接卓立て ──▶ draft ──公開──▶ confirmed（実施前）──実施日当日──▶ today ──完了アクション──▶ completed
-募集経由 ─────────────────────▶（公開状態で生成）
-
-confirmed / today ─── 中止【提案・未確定】= 卓の削除
-                      （募集経由の卓なら、あわせて募集枠を scheduling に復帰させる）
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> draft : 直接卓立て（is_published = false・scheduled_at 必須）
+    [*] --> confirmed : 募集経由の確定（is_published = true・scheduled_at セット済みで生成）
+    draft --> confirmed : 公開する（is_published = true）
+    confirmed --> today : 実施日当日になる（時間経過による導出）
+    today --> completed : ホストが完了を記録（completed_at セット）
+    confirmed --> [*] : 中止【提案・未確定】＝卓の削除（募集経由なら募集枠の closed_at をクリアし scheduling に復帰）
+    today --> [*] : 中止【提案・未確定】（同上）
+    note right of completed
+        終端状態。自動完了はしない
+        （キャンセル・延期を表現できるようにするため）
+    end note
 ```
 
-> 中止の扱い（点線部分）は未確定の提案。確定するまで、募集由来の卓の削除は暫定的に `409` でガードする（[6章](#6-api設計)）。
+> 中止の扱いは未確定の提案。確定するまで、募集由来の卓の削除は暫定的に `409` でガードする（[6章](#6-api設計)）。
 > 中止を採用する場合は「開催を中止して再調整する」というワンアクションとして提供し、卓の削除と募集枠の `closed_at` クリアを1トランザクションで行う。
 
 ---
@@ -511,6 +527,18 @@ design-v1 で「日程確定は `PATCH /status` に統合せず独立エンド�
 
 回答が早く揃った場合に締め切りを待たせる理由がない。`open` / `scheduling` の両方から確定可能とする。
 確定がすべての受付を閉じる終端状態であることは、ステータス導出の優先順位（`confirmed` 最優先）で保証する。
+
+### ホスト（`host_user_id`）は「管理者ロール」であり、参加メンバーとは独立
+
+「ホスト」は管理権限（編集・公開・確定・完了・削除）を持つ1人を指す**ロール**であり、
+プレイヤーとして参加している（= members にいる）ことを要求しない。既存実装もこの構造
+（`host_user_id` と `game_session_members` は独立）である。
+
+- 募集経由の卓は募集枠の `host_user_id` を**自動で引き継ぐ**。「選出」はプレイヤーとしての
+  参加メンバーを選ぶ操作であり、管理権限の付与とは無関係。募集枠を立てた人が自分を選出
+  しなくても（自分は遊ばない回でも）、その人が卓の管理者であり続けるため、管理者不在は発生しない
+- UI では「ホスト」を「主催者（管理者）」の意味で一貫して使い、プレイヤー参加とは区別して表示する
+- ホストの譲渡・複数管理者・GM 指定は Ph2（design-v1 の GM 指定の検討と同枠）
 
 ### 二重確定は条件付き UPDATE で排他する
 

@@ -54,7 +54,8 @@ const onClickToList = () => {
       </div>
 
       <p class="hero__note">
-        ＊ 卓の作成にはアカウント登録が必要です。参加だけならアカウントなしで大丈夫。
+        ＊
+        卓の作成にはアカウント登録が必要です。参加だけならアカウントなしで大丈夫。
       </p>
     </div>
   </section>
@@ -65,12 +66,11 @@ const onClickToList = () => {
   position: relative;
   margin: calc(var(--space-6) * -1) calc(var(--space-4) * -1) var(--space-6);
   padding: var(--space-10) var(--space-4) var(--space-12);
-  background:
-    radial-gradient(
-      120% 100% at 50% 0%,
-      var(--sun-50) 0%,
-      var(--surface-app) 65%
-    );
+  background: radial-gradient(
+    120% 100% at 50% 0%,
+    var(--sun-50) 0%,
+    var(--surface-app) 65%
+  );
   border-bottom: 1px solid var(--border-subtle);
   overflow: hidden;
 }
@@ -83,8 +83,7 @@ const onClickToList = () => {
 
 .hero__title {
   margin: var(--space-4) 0 var(--space-5);
-  font:
-    var(--weight-bold) var(--text-4xl) / var(--leading-tight)
+  font: var(--weight-bold) var(--text-4xl) / var(--leading-tight)
     var(--font-display);
   color: var(--text-primary);
   letter-spacing: var(--tracking-tight);

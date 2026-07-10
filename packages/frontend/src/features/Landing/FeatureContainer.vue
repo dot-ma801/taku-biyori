@@ -52,7 +52,7 @@ import { Megaphone, UserRound, CalendarCheck } from '@lucide/vue';
 }
 
 .section__eyebrow {
-  font: var(--font-label);
+  font: var(--type-label);
   color: var(--brand-primary);
   letter-spacing: var(--tracking-wide);
   margin: 0 0 var(--space-1);
@@ -60,8 +60,7 @@ import { Megaphone, UserRound, CalendarCheck } from '@lucide/vue';
 
 .section__title {
   margin: 0;
-  font:
-    var(--weight-bold) var(--text-2xl) / var(--leading-tight)
+  font: var(--weight-bold) var(--text-2xl) / var(--leading-tight)
     var(--font-display);
   color: var(--text-primary);
 }
@@ -100,8 +99,7 @@ import { Megaphone, UserRound, CalendarCheck } from '@lucide/vue';
 
 .feature-card__title {
   margin: 0;
-  font:
-    var(--weight-medium) var(--text-lg) / var(--leading-snug)
+  font: var(--weight-medium) var(--text-lg) / var(--leading-snug)
     var(--font-display);
   color: var(--text-primary);
 }

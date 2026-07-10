@@ -17,7 +17,8 @@ import { Lightbulb, BookMarked, Drama } from '@lucide/vue';
         </div>
         <h3 class="feature-card__title">シナリオ管理</h3>
         <p class="feature-card__body">
-          マダミスや TRPG のシナリオを登録して、卓に紐づけて管理できるようにします。
+          マダミスや TRPG
+          のシナリオを登録して、卓に紐づけて管理できるようにします。
         </p>
       </BaseCard>
 
@@ -51,7 +52,7 @@ import { Lightbulb, BookMarked, Drama } from '@lucide/vue';
 }
 
 .section__eyebrow {
-  font: var(--font-label);
+  font: var(--type-label);
   color: var(--brand-secondary);
   letter-spacing: var(--tracking-wide);
   margin: 0 0 var(--space-1);
@@ -59,8 +60,7 @@ import { Lightbulb, BookMarked, Drama } from '@lucide/vue';
 
 .section__title {
   margin: 0;
-  font:
-    var(--weight-bold) var(--text-2xl) / var(--leading-tight)
+  font: var(--weight-bold) var(--text-2xl) / var(--leading-tight)
     var(--font-display);
   color: var(--text-primary);
 }
@@ -90,8 +90,7 @@ import { Lightbulb, BookMarked, Drama } from '@lucide/vue';
 
 .feature-card__title {
   margin: 0;
-  font:
-    var(--weight-medium) var(--text-lg) / var(--leading-snug)
+  font: var(--weight-medium) var(--text-lg) / var(--leading-snug)
     var(--font-display);
   color: var(--text-primary);
 }

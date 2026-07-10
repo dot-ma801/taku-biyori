@@ -1,122 +1,366 @@
+/* ==========================================================================
+   たく日和(RollHub) — Design tokens
+   ベースは「日和」＝ 晴れた気持ちの良い日。
+   コーラルオレンジの sun / 空色の sora / 和紙色の washi をベースにした
+   温かい配色で、事務的な管理画面ではなく「卓を囲む前のワクワク」を出す。
+   ========================================================================== */
+
 :root {
-  --font-family-base:
-    'Fira Code', 'Fira Mono', source-code-pro, 'Menlo', 'Monaco', 'Consolas',
-    'Courier New', monospace;
-  --font-size-base: 16px;
-  --font-size-sm: 0.875rem; /* 14px = body-sm */
-  --font-size-lg: 1.5rem; /* 24px */
+  /* ==========================================================================
+     Base palette
+     ========================================================================== */
 
-  --color-primary: #005f6b;
-  --color-primary-strong: #004a53;
-  --color-primary-soft: #d7ecee;
-  --color-on-primary: #ffffff;
-  --color-primary-text: #005f6b;
+  /* Sun (primary — warm coral-orange, sunset tone) */
+  --sun-50: #fff5ef;
+  --sun-100: #ffe6d7;
+  --sun-200: #ffcbaf;
+  --sun-300: #ffa87c;
+  --sun-400: #fb8a5a;
+  --sun-500: #ef7b4d; /* primary */
+  --sun-600: #dd5f34;
+  --sun-700: #b84a27;
+  --sun-800: #933a21;
+  --sun-900: #6f2d1c;
 
-  --color-secondary: #596774;
+  /* Sora (secondary — calm sky blue, used for schedule/◯△× chrome) */
+  --sora-50: #f0f8fb;
+  --sora-100: #dcedf3;
+  --sora-200: #b7dae8;
+  --sora-300: #8ac1d6;
+  --sora-400: #5fa3bf;
+  --sora-500: #4488a6; /* secondary */
+  --sora-600: #366d87;
+  --sora-700: #2c576d;
+  --sora-800: #254757;
+  --sora-900: #1f3b48;
 
-  --color-background: #f4f5f1;
-  --color-background-alt: #eef0eb;
-  --color-surface: #fafaf8;
-  --color-surface-raised: #f1f2ec;
-  --color-surface-muted: #e9ebe4;
+  /* Washi (neutrals — warm paper, never cool gray) */
+  --washi-0: #fffdf9;
+  --washi-25: #fdfaf4;
+  --washi-50: #fbf6ee; /* app background */
+  --washi-100: #f5ecdd;
+  --washi-150: #ede0c9;
+  --washi-200: #e3d2b4;
+  --washi-300: #cbb693;
+  --washi-400: #a9926e;
+  --washi-500: #8a7657;
+  --washi-600: #6d5d46;
+  --washi-700: #55483a;
+  --washi-800: #3e332a;
+  --washi-900: #2a221c;
 
-  --color-border: #d4d7cf;
-  --color-border-strong: #b5bbb1;
+  /* Semantic accents */
+  --moss-50: #f1f8ee;
+  --moss-400: #7fb069;
+  --moss-500: #5c9448; /* success / ○ */
+  --moss-600: #477736;
 
-  --color-text: #1f2328;
-  --color-text-secondary: #4e5661;
-  --color-text-muted: #5c6978;
+  --amber-50: #fff8e8;
+  --amber-400: #f0b642;
+  --amber-500: #dd9d24; /* warning / △ */
+  --amber-600: #b47f18;
 
-  --color-success: #1f7348;
-  --color-success-soft: #d3ede1;
-  --color-warning: #8c5e00;
-  --color-warning-soft: #faecd0;
-  --color-error: #b84040;
-  --color-error-soft: #f5dada;
-  --color-info: #005f6b;
+  --coral-50: #fdeeee;
+  --coral-400: #e56a63;
+  --coral-500: #d34a43; /* danger / × */
+  --coral-600: #ac3a34;
 
-  --color-dark-background: #1c2026;
-  --color-dark-background-alt: #21262d;
-  --color-dark-surface: #25292f;
-  --color-dark-surface-raised: #2c3138;
-  --color-dark-surface-muted: #343941;
-  --color-dark-border: #434a54;
-  --color-dark-border-strong: #59616c;
-  --color-dark-text: #f2f4f7;
-  --color-dark-text-secondary: #cdd3da;
-  --color-dark-text-muted: #929aa5;
+  /* ==========================================================================
+     Semantic aliases (コンポーネントはこちらを参照する)
+     ========================================================================== */
 
-  --color-dark-success-soft: #1a3028;
-  --color-dark-warning-soft: #3d3018;
-  --color-dark-error-soft: #3a1f1f;
+  /* Surfaces */
+  --surface-app: var(--washi-50);
+  --surface-card: var(--washi-0);
+  --surface-card-sunk: var(--washi-25);
+  --surface-raised: #ffffff;
+  --surface-overlay: rgba(42, 34, 28, 0.48);
+  --surface-inverse: var(--washi-800);
 
-  --shadow-sm: 0 2px 6px rgba(31, 35, 40, 0.04);
-  --shadow-md: 0 8px 24px rgba(31, 35, 40, 0.06);
-  --shadow-lg: 0 10px 28px rgba(31, 35, 40, 0.08);
+  /* Borders */
+  --border-subtle: var(--washi-150);
+  --border-default: var(--washi-200);
+  --border-strong: var(--washi-300);
+  --border-focus: var(--sun-500);
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-full: 9999px;
+  /* Text */
+  --text-primary: var(--washi-900);
+  --text-secondary: var(--washi-600);
+  --text-tertiary: var(--washi-500);
+  --text-disabled: var(--washi-300);
+  --text-inverse: var(--washi-0);
+  --text-link: var(--sora-600);
+  --text-link-hover: var(--sora-700);
 
+  /* Brand */
+  --brand-primary: var(--sun-500);
+  --brand-primary-hover: var(--sun-600);
+  --brand-primary-press: var(--sun-700);
+  --brand-primary-soft: var(--sun-50);
+  --brand-primary-border: var(--sun-200);
+
+  --brand-secondary: var(--sora-500);
+  --brand-secondary-hover: var(--sora-600);
+  --brand-secondary-press: var(--sora-700);
+  --brand-secondary-soft: var(--sora-50);
+  --brand-secondary-border: var(--sora-200);
+
+  /* Semantic states */
+  --state-success: var(--moss-500);
+  --state-success-soft: var(--moss-50);
+  --state-warning: var(--amber-500);
+  --state-warning-soft: var(--amber-50);
+  --state-danger: var(--coral-500);
+  --state-danger-soft: var(--coral-50);
+  --state-info: var(--sora-500);
+  --state-info-soft: var(--sora-50);
+
+  /* ○△× — 日程回答（この製品固有のセマンティクス） */
+  --resp-maru: var(--moss-500);
+  --resp-maru-soft: var(--moss-50);
+  --resp-sankaku: var(--amber-500);
+  --resp-sankaku-soft: var(--amber-50);
+  --resp-batsu: var(--coral-500);
+  --resp-batsu-soft: var(--coral-50);
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px rgba(239, 123, 77, 0.28);
+
+  /* ==========================================================================
+     Typography
+     ========================================================================== */
+
+  --font-display:
+    'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Rounded Mplus 1c',
+    sans-serif;
+  --font-body:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+  /* Base font-family alias (旧: --font-family-base) */
+  --font-family-base: var(--font-body);
+
+  /* Type scale */
+  --text-3xs: 11px;
+  --text-2xs: 12px;
+  --text-xs: 13px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-md: 17px;
+  --text-lg: 19px;
+  --text-xl: 22px;
+  --text-2xl: 26px;
+  --text-3xl: 32px;
+  --text-4xl: 40px;
+  --text-5xl: 52px;
+
+  --font-size-base: var(--text-base);
+  --font-size-sm: var(--text-sm);
+  --font-size-lg: var(--text-xl);
+
+  /* Line-height */
+  --leading-tight: 1.35;
+  --leading-snug: 1.55;
+  --leading-normal: 1.75;
+  --leading-loose: 2;
+
+  --line-height-tight: var(--leading-tight);
+  --line-height-standard: var(--leading-snug);
+  --line-height-relaxed: var(--leading-normal);
+
+  /* Letter-spacing (JP は 0 か僅かに正、負にしない) */
+  --tracking-tight: 0;
+  --tracking-normal: 0.01em;
+  --tracking-wide: 0.04em;
+  --tracking-widest: 0.08em;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+
+  /* Semantic text bundles */
+  --font-h1: var(--weight-bold) var(--text-4xl) / var(--leading-tight)
+    var(--font-display);
+  --font-h2: var(--weight-bold) var(--text-3xl) / var(--leading-tight)
+    var(--font-display);
+  --font-h3: var(--weight-medium) var(--text-2xl) / var(--leading-snug)
+    var(--font-display);
+  --font-h4: var(--weight-medium) var(--text-xl) / var(--leading-snug)
+    var(--font-display);
+  --font-title-card: var(--weight-medium) var(--text-lg) / var(--leading-snug)
+    var(--font-display);
+  --font-body-lg: var(--weight-regular) var(--text-md) / var(--leading-normal)
+    var(--font-body);
+  --font-body: var(--weight-regular) var(--text-base) / var(--leading-normal)
+    var(--font-body);
+  --font-body-sm: var(--weight-regular) var(--text-sm) / var(--leading-normal)
+    var(--font-body);
+  --font-caption: var(--weight-regular) var(--text-xs) / var(--leading-snug)
+    var(--font-body);
+  --font-label: var(--weight-medium) var(--text-sm) / var(--leading-snug)
+    var(--font-body);
+  --font-mono-sm: var(--weight-regular) var(--text-sm) / var(--leading-snug)
+    var(--font-mono);
+
+  /* ==========================================================================
+     Spacing / Radius / Shadow / Motion / Layout
+     ========================================================================== */
+
+  /* Spacing (4px base) */
+  --space-0: 0;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px; /* 互換維持: 旧設定では 48px だったが、DS の 4px スケールに合わせて 32px 系へ寄せる */
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
 
-  --line-height-tight: 1.25;
-  --line-height-standard: 1.5;
-  --line-height-relaxed: 1.65;
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 20px;
+  --radius-full: 999px;
+
+  /* Shadow (warm-tinted, kept light) */
+  --shadow-xs: 0 1px 2px rgba(90, 66, 40, 0.04);
+  --shadow-sm:
+    0 1px 3px rgba(90, 66, 40, 0.05), 0 1px 2px rgba(90, 66, 40, 0.04);
+  --shadow-md:
+    0 3px 10px rgba(90, 66, 40, 0.06), 0 1px 3px rgba(90, 66, 40, 0.04);
+  --shadow-lg:
+    0 8px 20px rgba(90, 66, 40, 0.08), 0 2px 6px rgba(90, 66, 40, 0.04);
+  --shadow-xl:
+    0 14px 32px rgba(90, 66, 40, 0.1), 0 4px 10px rgba(90, 66, 40, 0.05);
+  --shadow-focus: var(--focus-ring);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.32, 0.72, 0.35, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.6, 0, 0.8, 0.2);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+
+  /* Layout */
+  --container-max: 1080px;
+  --sidebar-width: 264px;
+  --header-height: 64px;
+  --bottom-nav-height: 64px;
+
+  /* ==========================================================================
+     Backward-compat aliases (既存コード用 — DS の値へマッピング)
+     ========================================================================== */
+
+  --color-primary: var(--brand-primary);
+  --color-primary-strong: var(--brand-primary-press);
+  --color-primary-soft: var(--brand-primary-soft);
+  --color-on-primary: var(--text-inverse);
+  --color-primary-text: var(--brand-primary);
+
+  --color-secondary: var(--brand-secondary);
+
+  --color-background: var(--surface-app);
+  --color-background-alt: var(--washi-100);
+  --color-surface: var(--surface-card);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-card-sunk);
+
+  --color-border: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-text: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-tertiary);
+
+  --color-success: var(--state-success);
+  --color-success-soft: var(--state-success-soft);
+  --color-warning: var(--state-warning);
+  --color-warning-soft: var(--state-warning-soft);
+  --color-error: var(--state-danger);
+  --color-error-soft: var(--state-danger-soft);
+  --color-info: var(--state-info);
 
   color-scheme: light;
 }
 
+/* ==========================================================================
+   Dark theme (暖色ベースの控えめなダーク)
+   ========================================================================== */
+
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-background: var(--color-dark-background);
-  --color-background-alt: var(--color-dark-background-alt);
-  --color-surface: var(--color-dark-surface);
-  --color-surface-raised: var(--color-dark-surface-raised);
-  --color-surface-muted: var(--color-dark-surface-muted);
-  --color-border: var(--color-dark-border);
-  --color-border-strong: var(--color-dark-border-strong);
-  --color-text: var(--color-dark-text);
-  --color-text-secondary: var(--color-dark-text-secondary);
-  --color-text-muted: var(--color-dark-text-muted);
+  --surface-app: #1f1a15;
+  --surface-card: #2a231d;
+  --surface-card-sunk: #241d18;
+  --surface-raised: #322a22;
+  --surface-overlay: rgba(0, 0, 0, 0.56);
+  --surface-inverse: var(--washi-50);
 
-  /* ダーク背景でのコントラスト確保 (各色 4.5:1 以上) */
-  /* --color-primary はボタン/ヘッダー背景にも使用するため変更不可。
-     テキスト用途には --color-primary-text を使う。 */
-  --color-primary-text: #3db5c5;
-  --color-info: #3db5c5;
-  --color-success: #54c48c; /* 4.5:1+ on badge bg (color-mix 15% surface) */
-  --color-success-soft: var(--color-dark-success-soft);
-  --color-warning: #e8a030; /* 5.01:1 */
-  --color-warning-soft: var(--color-dark-warning-soft);
-  --color-error: #f88080; /* 4.55:1 */
-  --color-error-soft: var(--color-dark-error-soft);
+  --border-subtle: #3b3128;
+  --border-default: #4a3d31;
+  --border-strong: #5d4c3d;
+
+  --text-primary: #f6efe3;
+  --text-secondary: #c9beac;
+  --text-tertiary: #a89b87;
+  --text-disabled: #6d5f4c;
+  --text-inverse: #2a221c;
+
+  --brand-primary-soft: #3a2418;
+  --brand-secondary-soft: #163040;
+  --state-success-soft: #1a3028;
+  --state-warning-soft: #3d3018;
+  --state-danger-soft: #3a1f1f;
+  --state-info-soft: #163040;
+  --resp-maru-soft: #1a3028;
+  --resp-sankaku-soft: #3d3018;
+  --resp-batsu-soft: #3a1f1f;
+
+  /* 旧エイリアスもダーク値に追従させる */
+  --color-background: var(--surface-app);
+  --color-background-alt: #2a231d;
+  --color-surface: var(--surface-card);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-card-sunk);
+  --color-border: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-tertiary);
+  --color-primary-text: var(--sun-300);
+  --color-success: #7ec483;
+  --color-warning: #e8a030;
+  --color-error: #f0857f;
+  --color-info: var(--sora-300);
 }
 
 body {
   margin: 0;
-  font-family: var(--font-family-base);
-  background: var(--color-background);
-  color: var(--color-text);
+  font-family: var(--font-body);
+  background: var(--surface-app);
+  color: var(--text-primary);
 }
 
 a {
-  color: var(--color-primary-text);
+  color: var(--text-link);
 }
 
 a:hover {
-  color: var(--color-primary-strong);
+  color: var(--text-link-hover);
 }
 
 ::selection {
-  background: var(--color-primary-soft);
-  color: var(--color-text);
+  background: var(--brand-primary-soft);
+  color: var(--text-primary);
 }

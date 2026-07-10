@@ -6,47 +6,36 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
 
 <template>
   <div class="app-container">
-    <AppHeader class="header" />
-    <div class="content">
+    <AppHeader class="app-container__header" />
+    <div class="app-container__content">
       <router-view />
     </div>
-    <AppFooter class="footer" />
+    <AppFooter class="app-container__footer" />
     <BaseToastContainer />
   </div>
 </template>
 
 <style scoped>
 .app-container {
-  height: 100vh;
-  background-color: var(--color-background);
-  color: var(--color-text);
+  min-height: 100vh;
+  background-color: var(--surface-app);
+  color: var(--text-primary);
   display: grid;
   grid-template-rows: auto 1fr auto;
 }
 
-.header {
+.app-container__header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
-  padding: var(--space-4);
 }
 
-.content {
+.app-container__content {
   min-height: 0;
-  padding: var(--space-4);
-  overflow-y: auto;
 }
 
-.footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 100;
-  width: 100%;
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
-  text-align: center;
-  padding: var(--space-2);
+.app-container__footer {
+  position: relative;
+  z-index: 1;
 }
 </style>

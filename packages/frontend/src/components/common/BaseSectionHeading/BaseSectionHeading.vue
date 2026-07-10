@@ -72,19 +72,22 @@ const textColorStyle = computed(() => {
 
 <style scoped>
 .section-heading {
-  --_icon-primary-color: var(--color-primary);
+  --_icon-primary-color: var(--brand-primary);
 
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  line-height: 1;
-  font-family: var(--font-family-base);
-  color: var(--color-text);
+  line-height: var(--leading-tight);
+  font-family:
+    'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Rounded Mplus 1c',
+    sans-serif;
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .section-heading {
-  --_icon-primary-color: var(--color-primary-text);
+  --_icon-primary-color: var(--sun-300);
 }
 
 .section-heading__icon {

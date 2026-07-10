@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import type { LucideIcon } from '@lucide/vue';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'text';
 type Size = 'sm' | 'md' | 'lg';
 
 const ICON_SIZE: Record<Size, number> = {
@@ -69,97 +69,125 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  font-family: var(--font-family-base);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-family:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
   line-height: 1.2;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
   transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s,
-    opacity 0.15s;
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
   white-space: nowrap;
   user-select: none;
 }
 .btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 /* sizes */
 .btn--sm {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 8px 14px;
+  font-size: var(--text-xs);
 }
 .btn--md {
-  padding: 10px 16px;
+  padding: 11px 20px;
+  font-size: var(--text-sm);
 }
 .btn--lg {
-  padding: 14px 20px;
-  font-size: 15px;
+  padding: 14px 26px;
+  font-size: var(--text-base);
 }
 
 /* primary */
 .btn--primary {
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: var(--color-primary);
+  background-color: var(--brand-primary);
+  color: var(--text-inverse);
+  border-color: var(--brand-primary);
 }
 .btn--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-strong);
-  border-color: var(--color-primary-strong);
+  background-color: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+}
+.btn--primary:active:not(:disabled) {
+  background-color: var(--brand-primary-press);
+  border-color: var(--brand-primary-press);
+  transform: scale(0.98);
 }
 
-/* secondary */
+/* secondary — sora blue soft */
 .btn--secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+  background-color: var(--brand-secondary-soft);
+  color: var(--brand-secondary-press);
+  border-color: var(--brand-secondary-border);
 }
 .btn--secondary:hover:not(:disabled) {
-  background-color: var(--color-surface-raised);
+  background-color: var(--brand-secondary);
+  color: var(--text-inverse);
+  border-color: var(--brand-secondary);
+}
+.btn--secondary:active:not(:disabled) {
+  background-color: var(--brand-secondary-press);
+  border-color: var(--brand-secondary-press);
+  color: var(--text-inverse);
+  transform: scale(0.98);
 }
 
-/* ghost */
+/* ghost — transparent + border-default */
 .btn--ghost {
   background-color: transparent;
-  color: var(--color-text-secondary);
-  border-color: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-default);
 }
 .btn--ghost:hover:not(:disabled) {
-  background-color: var(--color-surface-raised);
-  color: var(--color-text);
+  background-color: var(--surface-card-sunk);
+  border-color: var(--border-strong);
+}
+.btn--ghost:active:not(:disabled) {
+  background-color: var(--washi-100);
+  transform: scale(0.98);
+}
+
+/* text — no chrome, brand-primary color */
+.btn--text {
+  background-color: transparent;
+  color: var(--brand-primary);
+  border-color: transparent;
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+.btn--text:hover:not(:disabled) {
+  color: var(--brand-primary-hover);
+  background-color: var(--brand-primary-soft);
+}
+.btn--text:active:not(:disabled) {
+  color: var(--brand-primary-press);
+  transform: scale(0.98);
 }
 
 /* danger */
 .btn--danger {
-  background-color: var(--color-error);
-  color: #ffffff;
-  border-color: var(--color-error);
+  background-color: var(--state-danger);
+  color: var(--text-inverse);
+  border-color: var(--state-danger);
 }
 .btn--danger:hover:not(:disabled) {
-  filter: brightness(0.88);
-}
-
-/* active (push) */
-.btn--primary:active:not(:disabled) {
-  background-color: var(--color-primary-strong);
-  border-color: var(--color-primary-strong);
-  opacity: 0.8;
-}
-.btn--secondary:active:not(:disabled) {
-  background-color: var(--color-surface-muted);
-}
-.btn--ghost:active:not(:disabled) {
-  background-color: var(--color-surface-muted);
-  color: var(--color-text);
+  background-color: var(--coral-600);
+  border-color: var(--coral-600);
 }
 .btn--danger:active:not(:disabled) {
-  filter: brightness(0.8);
+  background-color: var(--coral-600);
+  border-color: var(--coral-600);
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 /* disabled / loading */

@@ -51,12 +51,13 @@ const model = defineModel<string>();
 
 <style scoped>
 .tabs {
-  font-family: var(--font-family-base);
+  font-family:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
 }
 
 .tabs__list {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border-subtle);
   gap: 0;
   padding: 0;
   margin: 0;
@@ -70,36 +71,38 @@ const model = defineModel<string>();
 
 .tabs__item {
   padding: 10px var(--space-4);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
+  color: var(--text-secondary);
   border: none;
   background: none;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition:
-    color 0.15s,
-    border-color 0.15s;
+    color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
   white-space: nowrap;
-  font-family: var(--font-family-base);
+  font-family:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
 }
 .tabs__item:hover:not(:disabled) {
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 .tabs__item[aria-selected='true'],
 .tabs__item[data-state='active'] {
-  color: var(--color-primary-text);
-  border-bottom-color: var(--color-primary-text);
+  color: var(--brand-primary);
+  border-bottom-color: var(--brand-primary);
 }
 .tabs__item:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 .tabs__item:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
 
 .tabs__panels {
@@ -121,8 +124,8 @@ const model = defineModel<string>();
 }
 
 .tabs__panel {
-  font-size: 14px;
-  color: var(--color-text);
-  line-height: 1.65;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-normal);
 }
 </style>

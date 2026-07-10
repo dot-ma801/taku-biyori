@@ -45,17 +45,19 @@ defineProps<{
   width: min(480px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-5);
-  font-family: var(--font-family-base);
-  color: var(--color-text);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-6);
+  font-family:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  color: var(--text-primary);
 }
 
 .dialog::backdrop {
-  background: rgba(31, 35, 40, 0.4);
+  background: var(--surface-overlay);
+  backdrop-filter: blur(4px);
 }
 
 .dialog__header {
@@ -67,46 +69,50 @@ defineProps<{
 }
 
 .dialog__title {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-family:
+    'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Rounded Mplus 1c',
+    sans-serif;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
   margin: 0;
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .dialog__close {
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm);
   line-height: 1;
-  font-size: 14px;
+  font-size: var(--text-sm);
   transition:
-    color 0.15s,
-    background-color 0.15s;
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
 }
 .dialog__close:hover {
-  color: var(--color-text);
-  background-color: var(--color-surface-raised);
+  color: var(--text-primary);
+  background-color: var(--surface-card-sunk);
 }
 .dialog__close:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .dialog__description {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  line-height: 1.55;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-snug);
   margin: 0 0 var(--space-4);
 }
 
 .dialog__body {
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
 }
 
 .dialog__actions {

@@ -46,11 +46,12 @@ withDefaults(
 <style scoped>
 .card {
   position: relative;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  font-family: var(--font-family-base);
+  box-shadow: var(--shadow-xs);
+  font-family:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
   overflow: hidden;
 }
 
@@ -70,31 +71,36 @@ withDefaults(
 }
 .card--hoverable {
   transition:
-    box-shadow 0.15s,
-    border-color 0.15s;
+    box-shadow var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
   cursor: pointer;
 }
 .card--hoverable:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-default);
+  transform: translateY(-1px);
 }
 
 .card__header {
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .card__title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text);
+  font-family:
+    'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Rounded Mplus 1c',
+    sans-serif;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
   margin: 0;
-  line-height: 1.3;
+  line-height: var(--leading-snug);
 }
 .card__subtitle {
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   margin: 4px 0 0;
-  line-height: 1.4;
+  line-height: var(--leading-snug);
 }
 
 .card__body {
@@ -107,10 +113,10 @@ withDefaults(
 .card__actions {
   position: relative;
   padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  background: var(--color-surface-raised);
+  background: var(--surface-card-sunk);
 }
 </style>

@@ -68,61 +68,55 @@ const removeIconSize = computed(() => ICON_SIZE[props.size]);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-family: var(--font-family-base);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-family:
+    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
   line-height: 1.2;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
   transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
   user-select: none;
   white-space: nowrap;
 }
 .chip:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
-/* sizes */
+/* sizes — chips are slightly larger than badges */
 .chip--sm {
-  padding: 3px 8px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: var(--text-2xs);
 }
 .chip--md {
-  padding: 5px 10px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: var(--text-xs);
 }
 .chip--lg {
-  padding: 7px 14px;
-  font-size: 14px;
+  padding: 8px 16px;
+  font-size: var(--text-sm);
 }
 
 .chip--selected {
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-text);
-  border-color: color-mix(
-    in srgb,
-    var(--color-primary) 40%,
-    var(--color-border)
-  );
+  background-color: var(--brand-primary-soft);
+  color: var(--brand-primary-press);
+  border-color: var(--brand-primary-border);
 }
 
 .chip--unselected {
-  background-color: var(--color-surface);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border-strong);
+  background-color: var(--surface-card);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
 }
 .chip--unselected:hover:not(.chip--disabled) {
-  background-color: var(--color-surface-raised);
-  color: var(--color-text);
+  background-color: var(--surface-card-sunk);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
 }
 
 .chip--disabled {
@@ -139,7 +133,7 @@ const removeIconSize = computed(() => ICON_SIZE[props.size]);
   cursor: pointer;
   color: inherit;
   opacity: 0.7;
-  transition: opacity 0.15s;
+  transition: opacity var(--duration-fast) var(--ease-standard);
 }
 .chip__remove:hover {
   opacity: 1;

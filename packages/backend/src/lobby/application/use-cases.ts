@@ -8,6 +8,8 @@ import type {
   JoinLobbyAsGuestInput,
   CreateLobbyAvailabilityDateInput,
   BulkUpdateLobbyAvailabilityDatesInput,
+  UpdateLobbyAvailabilityDateResponseInput,
+  GuestUpdateLobbyAvailabilityDateResponseInput,
 } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyResult } from '@/lobby/application/update-lobby';
@@ -37,6 +39,10 @@ import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk
 import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
 import type { DeleteAvailabilityDateResult } from '@/lobby/application/delete-availability-date';
 import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delete-availability-date';
+import type { UpdateAvailabilityDateResponseResult } from '@/lobby/application/update-availability-date-response';
+import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseResult } from '@/lobby/application/update-guest-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
 import { listLobbies } from '@/lobby/application/list-lobbies';
 import { createLobby } from '@/lobby/application/create-lobby';
 import { getLobby } from '@/lobby/application/get-lobby';
@@ -52,6 +58,8 @@ import { listAvailabilityDates } from '@/lobby/application/list-availability-dat
 import { addAvailabilityDate } from '@/lobby/application/add-availability-date';
 import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
 import { deleteAvailabilityDate } from '@/lobby/application/delete-availability-date';
+import { updateAvailabilityDateResponse } from '@/lobby/application/update-availability-date-response';
+import { updateGuestAvailabilityDateResponse } from '@/lobby/application/update-guest-availability-date-response';
 
 type LobbyRepo = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -67,7 +75,9 @@ type LobbyRepo = ListLobbiesRepository &
   ListAvailabilityDatesRepository &
   AddAvailabilityDateRepository &
   BulkUpdateAvailabilityDatesRepository &
-  DeleteAvailabilityDateRepository;
+  DeleteAvailabilityDateRepository &
+  UpdateAvailabilityDateResponseRepository &
+  UpdateGuestAvailabilityDateResponseRepository;
 
 export interface LobbyUseCases {
   listLobbies(userId: string): Promise<LobbyListItem[]>;
@@ -123,6 +133,19 @@ export interface LobbyUseCases {
     dateId: string,
     userId: string,
   ): Promise<DeleteAvailabilityDateResult>;
+  updateAvailabilityDateResponse(
+    lobbyId: string,
+    dateId: string,
+    userId: string,
+    input: UpdateLobbyAvailabilityDateResponseInput,
+  ): Promise<UpdateAvailabilityDateResponseResult>;
+  updateGuestAvailabilityDateResponse(
+    lobbyId: string,
+    dateId: string,
+    token: string,
+    memberId: string,
+    input: UpdateLobbyAvailabilityDateResponseInput,
+  ): Promise<UpdateGuestAvailabilityDateResponseResult>;
 }
 
 export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
@@ -189,4 +212,26 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
     userId: string,
   ): Promise<DeleteAvailabilityDateResult> =>
     deleteAvailabilityDate(repo, lobbyId, dateId, userId),
+  updateAvailabilityDateResponse: (
+    lobbyId: string,
+    dateId: string,
+    userId: string,
+    input: UpdateLobbyAvailabilityDateResponseInput,
+  ): Promise<UpdateAvailabilityDateResponseResult> =>
+    updateAvailabilityDateResponse(repo, lobbyId, dateId, userId, input),
+  updateGuestAvailabilityDateResponse: (
+    lobbyId: string,
+    dateId: string,
+    token: string,
+    memberId: string,
+    input: UpdateLobbyAvailabilityDateResponseInput,
+  ): Promise<UpdateGuestAvailabilityDateResponseResult> =>
+    updateGuestAvailabilityDateResponse(
+      repo,
+      lobbyId,
+      dateId,
+      token,
+      memberId,
+      input,
+    ),
 });

@@ -288,10 +288,20 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
   },
 
   async cancel(id: string): Promise<Lobby | null> {
+    // 確定（closed_at）と中止（cancelled_at）は排他ガードにより共存しない
+    // （design-v1.1 意思決定ログ）。application 層のステータスチェックだけでは
+    // confirm との並行実行で confirmed + cancelled が共存し得るため、
+    // 条件付き UPDATE で DB レベルでも排他を担保する。
     const result = await db
       .update(lobbies)
       .set({ cancelledAt: new Date() })
-      .where(and(eq(lobbies.id, id), isNull(lobbies.cancelledAt)))
+      .where(
+        and(
+          eq(lobbies.id, id),
+          isNull(lobbies.cancelledAt),
+          isNull(lobbies.closedAt),
+        ),
+      )
       .returning();
 
     const row = result[0];

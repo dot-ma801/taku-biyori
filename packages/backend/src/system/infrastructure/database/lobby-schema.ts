@@ -80,6 +80,11 @@ export const lobbyCandidates = lobbySchema.table(
   },
   (table) => ({
     lobbyIdIdx: index('lobby_candidates_lobby_id_idx').on(table.lobbyId),
+    // 同一募集枠に同じ候補日を重複登録できないようにする
+    lobbyDateUnique: unique('lobby_candidates_lobby_id_date_unique').on(
+      table.lobbyId,
+      table.date,
+    ),
   }),
 );
 

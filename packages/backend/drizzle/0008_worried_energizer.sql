@@ -1,0 +1,1 @@
+ALTER TABLE "lobby"."lobby_candidates" ADD CONSTRAINT "lobby_candidates_lobby_id_date_unique" UNIQUE("lobby_id","date");

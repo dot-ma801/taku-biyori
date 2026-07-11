@@ -73,7 +73,7 @@ export type GameSessionRepository = ListGameSessionsRepository &
   GetGuestLinkRepository &
   GetGuestLinkPreviewRepository;
 
-type GameSessionRow = {
+export type GameSessionRow = {
   id: string;
   hostUserId: string;
   title: string;
@@ -85,6 +85,8 @@ type GameSessionRow = {
   openUntil: string | null;
   scheduledAt: string | null;
   completedAt: Date | null;
+  cancelledAt: Date | null;
+  lobbyId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -97,7 +99,7 @@ type ListRow = GameSessionRow & {
 const toDateOrNull = (s: string | null): Date | null =>
   s ? new Date(s) : null;
 
-const toGameSession = (row: GameSessionRow): GameSession => ({
+export const toGameSession = (row: GameSessionRow): GameSession => ({
   id: row.id,
   title: row.title,
   description: row.description,
@@ -108,11 +110,14 @@ const toGameSession = (row: GameSessionRow): GameSession => ({
     openUntil: toDateOrNull(row.openUntil),
     scheduledAt: toDateOrNull(row.scheduledAt),
     completedAt: row.completedAt,
+    cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
   openUntil: row.openUntil,
   scheduledAt: row.scheduledAt,
   completedAt: row.completedAt?.toISOString() ?? null,
+  cancelledAt: row.cancelledAt?.toISOString() ?? null,
+  lobbyId: row.lobbyId,
   maxMembers: row.maxPlayers,
   createdBy: row.hostUserId,
   createdAt: row.createdAt.toISOString(),
@@ -128,6 +133,7 @@ const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
     openUntil: toDateOrNull(row.openUntil),
     scheduledAt: toDateOrNull(row.scheduledAt),
     completedAt: row.completedAt,
+    cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
   openUntil: row.openUntil,
@@ -219,6 +225,7 @@ export const createGameSessionRepository = (
         memberUserName: user.name,
         memberGuestName: gameSessionMembers.guestName,
         memberCharacterName: gameSessionMembers.characterName,
+        memberLobbyMemberId: gameSessionMembers.lobbyMemberId,
         memberCreatedAt: gameSessionMembers.createdAt,
       })
       .from(gameSessions)
@@ -242,6 +249,7 @@ export const createGameSessionRepository = (
         userName: r.memberUserName ?? null,
         guestName: r.memberGuestName,
         characterName: r.memberCharacterName,
+        lobbyMemberId: r.memberLobbyMemberId,
         joinedAt: r.memberCreatedAt!.toISOString(),
       }));
 
@@ -326,6 +334,7 @@ export const createGameSessionRepository = (
         openUntil: gameSessions.openUntil,
         scheduledAt: gameSessions.scheduledAt,
         completedAt: gameSessions.completedAt,
+        cancelledAt: gameSessions.cancelledAt,
       })
       .from(gameSessions)
       .where(eq(gameSessions.id, id))
@@ -338,6 +347,7 @@ export const createGameSessionRepository = (
       openUntil: toDateOrNull(r.openUntil),
       scheduledAt: toDateOrNull(r.scheduledAt),
       completedAt: r.completedAt,
+      cancelledAt: r.cancelledAt,
     };
   },
 
@@ -364,6 +374,19 @@ export const createGameSessionRepository = (
           isNull(gameSessions.completedAt),
         ),
       )
+      .returning();
+
+    const session = result[0];
+    if (!session) return null;
+    return toGameSession(session);
+  },
+
+  async cancel(id: string, cancelledAt: Date): Promise<GameSession | null> {
+    // cancelled_at が NULL の行だけを更新する（二重中止・並行中止の排他）
+    const result = await db
+      .update(gameSessions)
+      .set({ cancelledAt })
+      .where(and(eq(gameSessions.id, id), isNull(gameSessions.cancelledAt)))
       .returning();
 
     const session = result[0];
@@ -554,6 +577,7 @@ export const createGameSessionRepository = (
         userName: user.name,
         guestName: gameSessionMembers.guestName,
         characterName: gameSessionMembers.characterName,
+        lobbyMemberId: gameSessionMembers.lobbyMemberId,
         createdAt: gameSessionMembers.createdAt,
       })
       .from(gameSessionMembers)
@@ -567,6 +591,7 @@ export const createGameSessionRepository = (
       userName: r.userName ?? null,
       guestName: r.guestName,
       characterName: r.characterName,
+      lobbyMemberId: r.lobbyMemberId,
       joinedAt: r.createdAt.toISOString(),
     }));
   },
@@ -602,6 +627,7 @@ export const createGameSessionRepository = (
       userName: userRow[0]?.name ?? null,
       guestName: row.guestName,
       characterName: row.characterName,
+      lobbyMemberId: row.lobbyMemberId,
       joinedAt: row.createdAt.toISOString(),
     };
   },
@@ -629,6 +655,7 @@ export const createGameSessionRepository = (
       userName: null,
       guestName: row.guestName,
       characterName: row.characterName,
+      lobbyMemberId: row.lobbyMemberId,
       joinedAt: row.createdAt.toISOString(),
     };
   },
@@ -678,6 +705,7 @@ export const createGameSessionRepository = (
       userName: userRow[0]?.name ?? null,
       guestName: row.guestName,
       characterName: row.characterName,
+      lobbyMemberId: row.lobbyMemberId,
       joinedAt: row.createdAt.toISOString(),
     };
   },

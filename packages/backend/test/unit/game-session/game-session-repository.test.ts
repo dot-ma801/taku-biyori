@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
 import type { Database } from '@/system/infrastructure/database/client';
 
@@ -16,6 +18,8 @@ const mockSessionRow = {
   openUntil: null,
   scheduledAt: null,
   completedAt: null,
+  cancelledAt: null,
+  lobbyId: null,
   createdAt: now,
   updatedAt: now,
 };
@@ -26,10 +30,35 @@ const makeSelectDb = (rows: unknown[]) => {
     leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockResolvedValue(rows),
+    orderBy: vi.fn().mockResolvedValue(rows),
   };
   return {
     select: vi.fn().mockReturnValue(chain),
   } as unknown as Database;
+};
+
+// update(...).set(...).where(...).returning() のチェーンをモックし、
+// where に渡された条件式をキャプチャして SQL 文字列に変換して検証する。
+const makeUpdateDb = (rows: unknown[]) => {
+  let capturedWhere: SQL | undefined;
+  const chain = {
+    set: vi.fn().mockReturnThis(),
+    where: vi.fn().mockImplementation((condition: SQL) => {
+      capturedWhere = condition;
+      return chain;
+    }),
+    returning: vi.fn().mockResolvedValue(rows),
+  };
+  const db = {
+    update: vi.fn().mockReturnValue(chain),
+  } as unknown as Database;
+  return {
+    db,
+    whereSql: () => {
+      if (!capturedWhere) throw new Error('where が呼ばれていません');
+      return new PgDialect().sqlToQuery(capturedWhere).sql;
+    },
+  };
 };
 
 const makeTransactionDb = (sessionRow: unknown) => {
@@ -266,5 +295,153 @@ describe('createWithHost', () => {
 
     // Assert
     expect(transactionSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ----------------------------------------------------------------
+
+describe('cancel', () => {
+  it('cancelled_at が NULL の行だけを更新する（二重中止の排他）', async () => {
+    // Arrange
+    const cancelledAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db, whereSql } = makeUpdateDb([
+      { ...mockSessionRow, cancelledAt },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.cancel(mockSessionRow.id, cancelledAt);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"cancelled_at" is null');
+  });
+
+  it('更新行が 0 件なら null を返す', async () => {
+    // Arrange
+    const { db } = makeUpdateDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.cancel(
+      mockSessionRow.id,
+      new Date('2025-06-01T00:00:00.000Z'),
+    );
+
+    // Assert
+    expect(result).toBeNull();
+  });
+
+  it('更新に成功したら cancelled ステータスの GameSession を返す', async () => {
+    // Arrange
+    const cancelledAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db } = makeUpdateDb([
+      {
+        ...mockSessionRow,
+        isPublished: true,
+        scheduledAt: '2025-05-01',
+        cancelledAt,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.cancel(mockSessionRow.id, cancelledAt);
+
+    // Assert
+    expect(result).toMatchObject({
+      id: mockSessionRow.id,
+      status: 'cancelled',
+      cancelledAt: cancelledAt.toISOString(),
+    });
+  });
+});
+
+// ----------------------------------------------------------------
+
+describe('findDetailById', () => {
+  const makeDetailSelectDb = (rows: unknown[]) => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(rows),
+    };
+    return { select: vi.fn().mockReturnValue(chain) } as unknown as Database;
+  };
+
+  it('lobbyId を GameSession に含める', async () => {
+    // Arrange
+    const db = makeDetailSelectDb([
+      {
+        ...mockSessionRow,
+        lobbyId: 'lobby-1',
+        memberId: null,
+        memberUserId: null,
+        memberUserName: null,
+        memberGuestName: null,
+        memberCharacterName: null,
+        memberLobbyMemberId: null,
+        memberCreatedAt: null,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockSessionRow.id);
+
+    // Assert
+    expect(result).toMatchObject({ lobbyId: 'lobby-1' });
+  });
+
+  it('メンバーの lobbyMemberId を含める', async () => {
+    // Arrange
+    const db = makeDetailSelectDb([
+      {
+        ...mockSessionRow,
+        memberId: 'member-1',
+        memberUserId: 'user-2',
+        memberUserName: 'テストユーザー',
+        memberGuestName: null,
+        memberCharacterName: null,
+        memberLobbyMemberId: 'lobby-member-1',
+        memberCreatedAt: now,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockSessionRow.id);
+
+    // Assert
+    expect(result?.members[0]).toMatchObject({
+      id: 'member-1',
+      lobbyMemberId: 'lobby-member-1',
+    });
+  });
+
+  it('lobby 経由でないメンバーの lobbyMemberId は null になる', async () => {
+    // Arrange
+    const db = makeDetailSelectDb([
+      {
+        ...mockSessionRow,
+        memberId: 'member-1',
+        memberUserId: 'user-2',
+        memberUserName: 'テストユーザー',
+        memberGuestName: null,
+        memberCharacterName: null,
+        memberLobbyMemberId: null,
+        memberCreatedAt: now,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockSessionRow.id);
+
+    // Assert
+    expect(result?.members[0]).toMatchObject({
+      id: 'member-1',
+      lobbyMemberId: null,
+    });
   });
 });

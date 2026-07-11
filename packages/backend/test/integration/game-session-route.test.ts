@@ -290,6 +290,41 @@ describe('GET /api/game-sessions/:id', () => {
     expect(body).toEqual(mockGameSessionDetail);
   });
 
+  it('lobbyId とメンバーの lobbyMemberId を含めて返す（募集枠経由の卓）', async () => {
+    // Arrange
+    const detailWithLobby = {
+      ...mockGameSessionDetail,
+      lobbyId: 'lobby-1',
+      members: [
+        {
+          id: 'member-1',
+          userId: 'user-2',
+          userName: 'テストユーザー',
+          guestName: null,
+          characterName: null,
+          lobbyMemberId: 'lobby-member-1',
+          joinedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    const app = makeApp({
+      getGameSession: vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', gameSession: detailWithLobby }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1');
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      lobbyId: 'lobby-1',
+      members: [expect.objectContaining({ lobbyMemberId: 'lobby-member-1' })],
+    });
+  });
+
   it('公開済みセッションは未認証でも 200 を返す', async () => {
     // Arrange
     const app = makeApp({
@@ -544,6 +579,47 @@ describe('PATCH /api/game-sessions/:id/status', () => {
 
     // Assert
     expect(response.status).toBe(200);
+  });
+
+  it('ホストが confirmed/today → cancelled に遷移すると 200 とセッションを返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGameSessionStatus: vi.fn().mockResolvedValue({
+        type: 'ok',
+        gameSession: { ...mockGameSession, status: 'cancelled' },
+      }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1/status', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ status: 'cancelled' });
+  });
+
+  it('cancelled への不正な遷移（draft/open/scheduling/completed から）は 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGameSessionStatus: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidTransition' }),
+    });
+
+    // Act
+    const response = await app.request('/api/game-sessions/session-1/status', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(409);
   });
 
   it('未認証なら 401 を返す', async () => {

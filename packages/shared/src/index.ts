@@ -83,4 +83,12 @@ export {
   type JoinLobbyAsGuestInput,
   LobbyGuestLinkResponseSchema,
   type LobbyGuestLinkResponse,
+  LobbyAvailabilityDateAnswerSchema,
+  type LobbyAvailabilityDateAnswer,
+  LobbyAvailabilityDateSchema,
+  type LobbyAvailabilityDate,
+  CreateLobbyAvailabilityDateInputSchema,
+  type CreateLobbyAvailabilityDateInput,
+  BulkUpdateLobbyAvailabilityDatesInputSchema,
+  type BulkUpdateLobbyAvailabilityDatesInput,
 } from './lobby.js';

@@ -128,3 +128,42 @@ export const LobbyGuestLinkResponseSchema = z.object({
 export type LobbyGuestLinkResponse = z.infer<
   typeof LobbyGuestLinkResponseSchema
 >;
+
+// 日程調整（候補日・回答）。game-session の availability-dates 系と同一インターフェースだが、
+// shared のエクスポート名衝突を避けるため Lobby プレフィックスを付ける（design-v1.1 §Lobby Schedules）。
+export const LobbyAvailabilityDateAnswerSchema = z.object({
+  id: z.string().uuid(),
+  memberId: z.string().uuid(),
+  answer: z.enum(['ok', 'maybe', 'ng']),
+  comment: z.string().nullable().optional(),
+});
+export type LobbyAvailabilityDateAnswer = z.infer<
+  typeof LobbyAvailabilityDateAnswerSchema
+>;
+
+export const LobbyAvailabilityDateSchema = z.object({
+  id: z.string().uuid(),
+  date: z.iso.date(),
+  answers: z.array(LobbyAvailabilityDateAnswerSchema),
+});
+export type LobbyAvailabilityDate = z.infer<typeof LobbyAvailabilityDateSchema>;
+
+export const CreateLobbyAvailabilityDateInputSchema = z
+  .object({
+    date: z.iso.date(),
+  })
+  .refine((input) => input.date >= todayDateString(), {
+    message: '候補日には今日以降の日付を指定してください',
+    path: ['date'],
+  });
+export type CreateLobbyAvailabilityDateInput = z.infer<
+  typeof CreateLobbyAvailabilityDateInputSchema
+>;
+
+// game-session と異なり、置き換え後の候補日が 0 件になる更新は許可しない（design-v1.1 §Lobby Schedules）。
+export const BulkUpdateLobbyAvailabilityDatesInputSchema = z.object({
+  dates: z.array(z.iso.date()).min(1),
+});
+export type BulkUpdateLobbyAvailabilityDatesInput = z.infer<
+  typeof BulkUpdateLobbyAvailabilityDatesInputSchema
+>;

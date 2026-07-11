@@ -111,3 +111,86 @@ export const LobbyDetailSchema = LobbySchema.extend({
   members: z.array(LobbyMemberSchema),
 });
 export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
+
+// 募集枠メンバーは character_name を持たない（design-v1.1 §6）ため、
+// 参加入力は空オブジェクト。将来的にフィールドが増える可能性に備えてスキーマ自体は残す。
+export const JoinLobbyInputSchema = z.object({});
+export type JoinLobbyInput = z.infer<typeof JoinLobbyInputSchema>;
+
+export const JoinLobbyAsGuestInputSchema = z.object({
+  guestName: z.string().min(1).max(100),
+});
+export type JoinLobbyAsGuestInput = z.infer<typeof JoinLobbyAsGuestInputSchema>;
+
+export const LobbyGuestLinkResponseSchema = z.object({
+  token: z.string(),
+});
+export type LobbyGuestLinkResponse = z.infer<
+  typeof LobbyGuestLinkResponseSchema
+>;
+
+// 日程調整（候補日・回答）。game-session の availability-dates 系と同一インターフェースだが、
+// shared のエクスポート名衝突を避けるため Lobby プレフィックスを付ける（design-v1.1 §Lobby Schedules）。
+export const LobbyAvailabilityDateAnswerSchema = z.object({
+  id: z.string().uuid(),
+  memberId: z.string().uuid(),
+  answer: z.enum(['ok', 'maybe', 'ng']),
+  comment: z.string().nullable().optional(),
+});
+export type LobbyAvailabilityDateAnswer = z.infer<
+  typeof LobbyAvailabilityDateAnswerSchema
+>;
+
+export const LobbyAvailabilityDateSchema = z.object({
+  id: z.string().uuid(),
+  date: z.iso.date(),
+  answers: z.array(LobbyAvailabilityDateAnswerSchema),
+});
+export type LobbyAvailabilityDate = z.infer<typeof LobbyAvailabilityDateSchema>;
+
+export const CreateLobbyAvailabilityDateInputSchema = z
+  .object({
+    date: z.iso.date(),
+  })
+  .refine((input) => input.date >= todayDateString(), {
+    message: '候補日には今日以降の日付を指定してください',
+    path: ['date'],
+  });
+export type CreateLobbyAvailabilityDateInput = z.infer<
+  typeof CreateLobbyAvailabilityDateInputSchema
+>;
+
+// game-session と異なり、置き換え後の候補日が 0 件になる更新は許可しない（design-v1.1 §Lobby Schedules）。
+export const BulkUpdateLobbyAvailabilityDatesInputSchema = z
+  .object({
+    dates: z.array(z.iso.date()).min(1),
+  })
+  .superRefine((input, ctx) => {
+    if (new Set(input.dates).size !== input.dates.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dates'],
+        message: '候補日に重複する日付を含めることはできません',
+      });
+    }
+  });
+export type BulkUpdateLobbyAvailabilityDatesInput = z.infer<
+  typeof BulkUpdateLobbyAvailabilityDatesInputSchema
+>;
+
+export const UpdateLobbyAvailabilityDateResponseInputSchema = z.object({
+  answer: LobbyAvailabilityDateAnswerSchema.shape.answer,
+  comment: z.string().max(500).optional(),
+});
+export type UpdateLobbyAvailabilityDateResponseInput = z.infer<
+  typeof UpdateLobbyAvailabilityDateResponseInputSchema
+>;
+
+// ゲストの日程回答。本人確認手段がないため、どのゲスト列を更新するかを memberId で明示する。
+export const GuestUpdateLobbyAvailabilityDateResponseInputSchema =
+  UpdateLobbyAvailabilityDateResponseInputSchema.extend({
+    memberId: z.string().uuid(),
+  });
+export type GuestUpdateLobbyAvailabilityDateResponseInput = z.infer<
+  typeof GuestUpdateLobbyAvailabilityDateResponseInputSchema
+>;

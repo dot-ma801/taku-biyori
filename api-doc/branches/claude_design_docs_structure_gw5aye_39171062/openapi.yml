@@ -1944,23 +1944,12 @@ components:
         joinedAt:
           type: string
           format: date-time
-      oneOf:
-        - title: ログインユーザーメンバー
-          required: [userId]
-          properties:
-            userId:
-              type: string
-              description: Better Auth の userId
-            guestName:
-              type: 'null'
-        - title: ゲストメンバー
-          required: [guestName]
-          properties:
-            userId:
-              type: 'null'
-            guestName:
-              type: string
-              description: ゲストの表示名（game_session_members.guest_name）
+        userId:
+          type: [string, 'null']
+          description: Better Auth の userId。ゲストメンバーは null
+        guestName:
+          type: [string, 'null']
+          description: ゲストの表示名（game_session_members.guest_name）。ログインユーザーは null
 
     JoinSessionInput:
       type: object
@@ -2208,23 +2197,12 @@ components:
         joinedAt:
           type: string
           format: date-time
-      oneOf:
-        - title: ログインユーザーメンバー
-          required: [userId]
-          properties:
-            userId:
-              type: string
-              description: Better Auth の userId
-            guestName:
-              type: 'null'
-        - title: ゲストメンバー
-          required: [guestName]
-          properties:
-            userId:
-              type: 'null'
-            guestName:
-              type: string
-              description: ゲストの表示名（lobby_members.guest_name）
+        userId:
+          type: [string, 'null']
+          description: Better Auth の userId。ゲストメンバーは null
+        guestName:
+          type: [string, 'null']
+          description: ゲストの表示名（lobby_members.guest_name）。ログインユーザーは null
 
     CreateLobbyInput:
       type: object

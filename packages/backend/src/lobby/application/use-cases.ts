@@ -6,6 +6,8 @@ import type {
   UpdateLobbyStatusInput,
   JoinLobbyInput,
   JoinLobbyAsGuestInput,
+  CreateLobbyAvailabilityDateInput,
+  BulkUpdateLobbyAvailabilityDatesInput,
 } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyResult } from '@/lobby/application/update-lobby';
@@ -27,6 +29,14 @@ import type { JoinLobbyRepository } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkRepository } from '@/lobby/application/get-guest-link';
+import type { ListAvailabilityDatesResult } from '@/lobby/application/list-availability-dates';
+import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-availability-dates';
+import type { AddAvailabilityDateResult } from '@/lobby/application/add-availability-date';
+import type { AddAvailabilityDateRepository } from '@/lobby/application/add-availability-date';
+import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk-update-availability-dates';
+import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
+import type { DeleteAvailabilityDateResult } from '@/lobby/application/delete-availability-date';
+import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delete-availability-date';
 import { listLobbies } from '@/lobby/application/list-lobbies';
 import { createLobby } from '@/lobby/application/create-lobby';
 import { getLobby } from '@/lobby/application/get-lobby';
@@ -38,6 +48,10 @@ import { joinLobby } from '@/lobby/application/join-lobby';
 import { joinAsGuest } from '@/lobby/application/join-as-guest';
 import { leaveLobby } from '@/lobby/application/leave-lobby';
 import { getGuestLink } from '@/lobby/application/get-guest-link';
+import { listAvailabilityDates } from '@/lobby/application/list-availability-dates';
+import { addAvailabilityDate } from '@/lobby/application/add-availability-date';
+import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
+import { deleteAvailabilityDate } from '@/lobby/application/delete-availability-date';
 
 type LobbyRepo = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -49,7 +63,11 @@ type LobbyRepo = ListLobbiesRepository &
   JoinLobbyRepository &
   JoinAsGuestRepository &
   LeaveLobbyRepository &
-  GetGuestLinkRepository;
+  GetGuestLinkRepository &
+  ListAvailabilityDatesRepository &
+  AddAvailabilityDateRepository &
+  BulkUpdateAvailabilityDatesRepository &
+  DeleteAvailabilityDateRepository;
 
 export interface LobbyUseCases {
   listLobbies(userId: string): Promise<LobbyListItem[]>;
@@ -86,6 +104,25 @@ export interface LobbyUseCases {
     userId: string,
   ): Promise<LeaveLobbyResult>;
   getGuestLink(id: string, userId: string): Promise<GetGuestLinkResult>;
+  listAvailabilityDates(
+    lobbyId: string,
+    userId: string | null,
+  ): Promise<ListAvailabilityDatesResult>;
+  addAvailabilityDate(
+    lobbyId: string,
+    userId: string,
+    input: CreateLobbyAvailabilityDateInput,
+  ): Promise<AddAvailabilityDateResult>;
+  bulkUpdateAvailabilityDates(
+    lobbyId: string,
+    userId: string,
+    input: BulkUpdateLobbyAvailabilityDatesInput,
+  ): Promise<BulkUpdateAvailabilityDatesResult>;
+  deleteAvailabilityDate(
+    lobbyId: string,
+    dateId: string,
+    userId: string,
+  ): Promise<DeleteAvailabilityDateResult>;
 }
 
 export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
@@ -129,4 +166,27 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
   ): Promise<LeaveLobbyResult> => leaveLobby(repo, lobbyId, memberId, userId),
   getGuestLink: (id: string, userId: string): Promise<GetGuestLinkResult> =>
     getGuestLink(repo, id, userId),
+  listAvailabilityDates: (
+    lobbyId: string,
+    userId: string | null,
+  ): Promise<ListAvailabilityDatesResult> =>
+    listAvailabilityDates(repo, lobbyId, userId),
+  addAvailabilityDate: (
+    lobbyId: string,
+    userId: string,
+    input: CreateLobbyAvailabilityDateInput,
+  ): Promise<AddAvailabilityDateResult> =>
+    addAvailabilityDate(repo, lobbyId, userId, input),
+  bulkUpdateAvailabilityDates: (
+    lobbyId: string,
+    userId: string,
+    input: BulkUpdateLobbyAvailabilityDatesInput,
+  ): Promise<BulkUpdateAvailabilityDatesResult> =>
+    bulkUpdateAvailabilityDates(repo, lobbyId, userId, input),
+  deleteAvailabilityDate: (
+    lobbyId: string,
+    dateId: string,
+    userId: string,
+  ): Promise<DeleteAvailabilityDateResult> =>
+    deleteAvailabilityDate(repo, lobbyId, dateId, userId),
 });

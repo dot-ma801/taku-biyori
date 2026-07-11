@@ -247,13 +247,66 @@ describe('updateLobbyStatus', () => {
       expect(result).toEqual({ type: 'forbidden' });
     });
 
-    it('publish が null を返す場合は notFound を返す', async () => {
+    // 条件付き UPDATE が 0 行（null）のとき、行が存在するなら並行する遷移に
+    // 先を越されたケースなので invalidTransition（409）、行が消えているなら notFound。
+    it('publish が null を返し行が存在する場合は invalidTransition を返す', async () => {
       // Arrange
       const repo = makeRepo({ publish: vi.fn().mockResolvedValue(null) });
 
       // Act
       const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
         status: 'open',
+      });
+
+      // Assert
+      expect(result).toEqual({ type: 'invalidTransition' });
+    });
+
+    it('publish が null を返し行が消えている場合は notFound を返す', async () => {
+      // Arrange
+      const repo = makeRepo({
+        findHostUserId: vi
+          .fn()
+          .mockResolvedValueOnce('user-1') // 権限チェック時は存在
+          .mockResolvedValueOnce(null), // 再確認時には削除済み
+        publish: vi.fn().mockResolvedValue(null),
+      });
+
+      // Act
+      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
+        status: 'open',
+      });
+
+      // Assert
+      expect(result).toEqual({ type: 'notFound' });
+    });
+
+    it('cancel が null を返し行が存在する場合（並行確定に敗北）は invalidTransition を返す', async () => {
+      // Arrange
+      const repo = makeRepo({ cancel: vi.fn().mockResolvedValue(null) });
+
+      // Act
+      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
+        status: 'cancelled',
+      });
+
+      // Assert
+      expect(result).toEqual({ type: 'invalidTransition' });
+    });
+
+    it('cancel が null を返し行が消えている場合は notFound を返す', async () => {
+      // Arrange
+      const repo = makeRepo({
+        findHostUserId: vi
+          .fn()
+          .mockResolvedValueOnce('user-1')
+          .mockResolvedValueOnce(null),
+        cancel: vi.fn().mockResolvedValue(null),
+      });
+
+      // Act
+      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
+        status: 'cancelled',
       });
 
       // Assert

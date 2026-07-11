@@ -35,12 +35,20 @@ export const updateLobbyStatus = async (
 
   const currentStatus = getLobbyStatus(fields, now);
 
+  // 条件付き UPDATE が 0 行（null）だったとき、行が残っているなら
+  // 並行する遷移（公開・確定・中止）に先を越されたケースなので invalidTransition、
+  // 行ごと消えているなら notFound を返す。
+  const resolveZeroRowUpdate = async (): Promise<UpdateLobbyStatusResult> => {
+    const stillExists = (await repo.findHostUserId(id)) !== null;
+    return stillExists ? { type: 'invalidTransition' } : { type: 'notFound' };
+  };
+
   if (input.status === LobbyStatus.open) {
     if (currentStatus !== LobbyStatus.draft) {
       return { type: 'invalidTransition' };
     }
     const lobby = await repo.publish(id);
-    if (!lobby) return { type: 'notFound' };
+    if (!lobby) return resolveZeroRowUpdate();
     return { type: 'ok', lobby };
   }
 
@@ -53,7 +61,7 @@ export const updateLobbyStatus = async (
       return { type: 'invalidTransition' };
     }
     const lobby = await repo.cancel(id);
-    if (!lobby) return { type: 'notFound' };
+    if (!lobby) return resolveZeroRowUpdate();
     return { type: 'ok', lobby };
   }
 

@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
+import type { LobbyUseCases } from '@/lobby/application/use-cases';
 
 const stubGameSession = {} as unknown as GameSessionUseCases;
 const stubProfile = {} as unknown as ProfileUseCases;
+const stubLobby = {} as unknown as LobbyUseCases;
 
 describe('createApp', () => {
   it('GET / で疎通確認を返す', async () => {
@@ -15,6 +17,7 @@ describe('createApp', () => {
       getSession: vi.fn().mockResolvedValue(null),
       gameSession: stubGameSession,
       profile: stubProfile,
+      lobby: stubLobby,
     });
 
     // Act
@@ -52,6 +55,7 @@ describe('createApp', () => {
       getSession: vi.fn().mockResolvedValue(null),
       gameSession: stubGameSession,
       profile: stubProfile,
+      lobby: stubLobby,
     });
 
     // Act

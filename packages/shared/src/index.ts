@@ -60,3 +60,21 @@ export {
   UpdateProfileInputSchema,
   type UpdateProfileInput,
 } from './profile.js';
+export {
+  LobbyStatusSchema,
+  LobbyStatus,
+  LobbyListItemSchema,
+  type LobbyListItem,
+  LobbySchema,
+  type Lobby,
+  CreateLobbyInputSchema,
+  type CreateLobbyInput,
+  UpdateLobbyInputSchema,
+  type UpdateLobbyInput,
+  UpdateLobbyStatusInputSchema,
+  type UpdateLobbyStatusInput,
+  LobbyMemberSchema,
+  type LobbyMember,
+  LobbyDetailSchema,
+  type LobbyDetail,
+} from './lobby.js';

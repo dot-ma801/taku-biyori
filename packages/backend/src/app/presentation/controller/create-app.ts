@@ -13,6 +13,8 @@ import { registerMemberRoute } from '@/game-session/presentation/controller/rout
 import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
+import { registerMemberRoute as registerLobbyMemberRoute } from '@/lobby/presentation/controller/routes/member-route';
+import { registerGuestLinkRoute as registerLobbyGuestLinkRoute } from '@/lobby/presentation/controller/routes/guest-link-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -81,6 +83,17 @@ export const createApp = (options: CreateAppOptions) => {
     updateLobby: options.lobby.updateLobby,
     deleteLobby: options.lobby.deleteLobby,
     updateLobbyStatus: options.lobby.updateLobbyStatus,
+  });
+  registerLobbyMemberRoute(app, {
+    getSession: options.getSession,
+    listMembers: options.lobby.listMembers,
+    joinLobby: options.lobby.joinLobby,
+    joinAsGuest: options.lobby.joinAsGuest,
+    leaveLobby: options.lobby.leaveLobby,
+  });
+  registerLobbyGuestLinkRoute(app, {
+    getSession: options.getSession,
+    getGuestLink: options.lobby.getGuestLink,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,

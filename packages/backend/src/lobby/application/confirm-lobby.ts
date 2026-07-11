@@ -26,6 +26,13 @@ export interface ConfirmLobbyRepository extends LobbyHostRepository {
   findCandidateOwner(
     dateId: string,
   ): Promise<{ lobbyId: string; date: string } | null>;
+  /**
+   * 指定 ID のメンバーを取得すると同時に `FOR KEY SHARE` で行をロックする。
+   * これにより、この呼び出しからトランザクションのコミット（卓生成・
+   * `game_session_members` への INSERT）までの間、対象メンバー行の DELETE
+   * （退出など）はコミット待ちでブロックされ、選出メンバーが確定処理の途中で
+   * 消えて FK 違反になることを防ぐ。
+   */
   findMemberCoresByIds(
     lobbyId: string,
     memberIds: string[],
@@ -70,15 +77,13 @@ export type ConfirmLobbyResult =
 class ConfirmLobbyConflictError extends Error {}
 
 /**
- * 日付を実行環境のローカルタイムゾーンで `YYYY-MM-DD` に整形する。
+ * 日付を UTC 基準で `YYYY-MM-DD` に整形する。
+ * `getGameSessionStatus` 側は `openUntil` を `new Date('YYYY-MM-DD')`（UTC 深夜0時）で
+ * パースするため、整形側もローカル TZ ではなく UTC 基準で揃える必要がある
+ * （ローカル TZ で整形すると UTC より進んだ TZ で確定直後の卓が open と誤判定される）。
  * `now` を引数に取れる必要があるため shared の todayDateString とは別に持つ。
  */
-const toDateString = (date: Date): string => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
+const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
 
 export const confirmLobby = async (
   repo: ConfirmLobbyRepository,

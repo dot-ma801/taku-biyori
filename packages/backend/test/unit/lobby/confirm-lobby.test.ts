@@ -342,6 +342,37 @@ describe('confirmLobby', () => {
     expect(call.guestLinkToken.length).toBeGreaterThan(0);
   });
 
+  it('openUntil は実行環境のローカル TZ に関わらず UTC 基準の日付になる（TZ 依存バグの回帰）', async () => {
+    // Arrange
+    // UTC より進んだ TZ（JST, UTC+9）ではローカル日付が UTC より1日進む時間帯。
+    // 2026-07-10T20:00:00Z は JST では 2026-07-11 05:00 になる。
+    vi.stubEnv('TZ', 'Asia/Tokyo');
+    const nowNearMidnightUtc = new Date('2026-07-10T20:00:00.000Z');
+    const createGameSessionFromLobby = vi
+      .fn()
+      .mockResolvedValue(mockGameSession);
+    const repo = makeRepo({ createGameSessionFromLobby });
+
+    // Act
+    await confirmLobby(
+      repo,
+      'lobby-1',
+      'host-1',
+      { candidateId: 'date-1', memberIds: ['member-1'] },
+      nowNearMidnightUtc,
+    );
+
+    // Assert
+    // getGameSessionStatus は openUntil を new Date('YYYY-MM-DD')（UTC 深夜0時）で
+    // パースするため、ここも UTC 基準の '2026-07-10' である必要がある
+    // （ローカル TZ 基準だと '2026-07-11' になってしまい、確定直後の卓が
+    // open と誤判定されるバグが再現する）。
+    const call = createGameSessionFromLobby.mock.calls[0]![0];
+    expect(call.openUntil).toBe('2026-07-10');
+
+    vi.unstubAllEnvs();
+  });
+
   it('ロック（executeWithLock）内でバリデーション・作成・クローズを行う', async () => {
     // Arrange
     const repo = makeRepo();

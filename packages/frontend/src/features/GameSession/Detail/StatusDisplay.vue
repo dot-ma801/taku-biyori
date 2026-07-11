@@ -10,6 +10,7 @@ import {
   CalendarCheck,
   CircleDot,
   Flag,
+  Ban,
 } from '@lucide/vue';
 import { GameSessionStatus } from '@taku-biyori/shared';
 
@@ -58,6 +59,12 @@ const STATUS_APPEARANCE: Record<GameSessionStatus, StatusAppearance> = {
     text: '開催を終えた卓です。',
     variant: 'success',
     icon: Flag,
+  },
+  [GameSessionStatus.cancelled]: {
+    label: '中止',
+    text: 'この卓は中止になりました。',
+    variant: 'error',
+    icon: Ban,
   },
 };
 

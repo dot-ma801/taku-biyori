@@ -28,6 +28,7 @@ const STATUS_ORDER: Record<GameSessionStatus, number> = {
   [GameSessionStatus.open]: 3,
   [GameSessionStatus.draft]: 4,
   [GameSessionStatus.completed]: 5,
+  [GameSessionStatus.cancelled]: 6,
 };
 
 const INITIAL_VISIBLE_COUNT = 3;

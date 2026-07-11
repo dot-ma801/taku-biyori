@@ -52,9 +52,8 @@ export const updateGuestAvailabilityDateResponse = async (
     repo.findStatusFields(lobbyId),
   ]);
 
-  if (storedToken === null) return { type: 'notFound' };
-  if (storedToken !== token) return { type: 'invalidToken' };
   if (!fields) return { type: 'notFound' };
+  if (storedToken !== token) return { type: 'invalidToken' };
 
   const status = getLobbyStatus(fields);
   if (status !== LobbyStatus.open && status !== LobbyStatus.scheduling) {

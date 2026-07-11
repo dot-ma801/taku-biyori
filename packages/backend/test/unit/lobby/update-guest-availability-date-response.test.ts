@@ -60,7 +60,21 @@ describe('updateGuestAvailabilityDateResponse', () => {
     expect(result).toEqual({ type: 'ok', answer: mockAnswer });
   });
 
-  it('募集枠が存在しない（トークンnull）場合は notFound を返す', async () => {
+  it('募集枠が存在しない場合は notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGuestLinkToken: vi.fn().mockResolvedValue(null),
+      findStatusFields: vi.fn().mockResolvedValue(null),
+    });
+
+    // Act
+    const result = await act(repo);
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('募集枠は存在するがゲストリンクトークンが未設定の場合は invalidToken を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findGuestLinkToken: vi.fn().mockResolvedValue(null),
@@ -70,7 +84,7 @@ describe('updateGuestAvailabilityDateResponse', () => {
     const result = await act(repo);
 
     // Assert
-    expect(result).toEqual({ type: 'notFound' });
+    expect(result).toEqual({ type: 'invalidToken' });
   });
 
   it('トークンが一致しない場合は invalidToken を返す', async () => {

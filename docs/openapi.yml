@@ -2356,7 +2356,7 @@ components:
       properties:
         guestName:
           type: string
-          maxLength: 50
+          maxLength: 100
           description: ゲストの表示名（lobby_members.guest_name に保存）
 
     ReplaceAvailabilityDatesInput:

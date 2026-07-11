@@ -1,13 +1,9 @@
-import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
 import type { LobbyStatusInput } from '@/lobby/domain/lobby-status';
-import { getLobbyStatus } from '@/lobby/domain/lobby-status';
-
-const ALLOWED_STATUSES = new Set<LobbyStatus>([
-  LobbyStatus.draft,
-  LobbyStatus.open,
-  LobbyStatus.scheduling,
-]);
+import {
+  EDITABLE_CANDIDATE_STATUSES,
+  getLobbyStatus,
+} from '@/lobby/domain/lobby-status';
 
 export interface DeleteAvailabilityDateRepository extends LobbyHostRepository {
   findStatusFields(id: string): Promise<LobbyStatusInput | null>;
@@ -37,7 +33,7 @@ export const deleteAvailabilityDate = async (
 
   const fields = await repo.findStatusFields(candidate.lobbyId);
   if (!fields) return { type: 'notFound' };
-  if (!ALLOWED_STATUSES.has(getLobbyStatus(fields)))
+  if (!EDITABLE_CANDIDATE_STATUSES.has(getLobbyStatus(fields)))
     return { type: 'invalidStatus' };
 
   await repo.deleteDateById(dateId);

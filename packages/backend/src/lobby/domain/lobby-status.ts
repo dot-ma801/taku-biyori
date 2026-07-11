@@ -7,6 +7,13 @@ export type LobbyStatusInput = {
   cancelledAt: Date | null;
 };
 
+// 日程候補の追加・削除・一括更新を許可するステータス（draft は非公開段階として許容する）
+export const EDITABLE_CANDIDATE_STATUSES = new Set<LobbyStatus>([
+  LobbyStatus.draft,
+  LobbyStatus.open,
+  LobbyStatus.scheduling,
+]);
+
 export const getLobbyStatus = (
   lobby: LobbyStatusInput,
   now: Date = new Date(),

@@ -1,6 +1,6 @@
 # RollHub（たく日和）— 設計ドキュメント v1.1: 募集と卓の分離
 
-> **最終更新**: 2026-07-07
+> **最終更新**: 2026-07-11
 > **元要求**: [docs/requirements/recruitment-separation.md](./requirements/recruitment-separation.md)
 > **位置づけ**: [design-v1.md](./design-v1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針など）は design-v1 を踏襲する。
 
@@ -79,7 +79,7 @@ flowchart LR
 | `scenario_name` | `text?` | シナリオ名 |
 | `description` | `text?` | 備考・説明文 |
 | `location` | `text?` | 開催場所（オンライン等の自由入力） |
-| `max_players` | `integer?` | 定員。`null` なら定員なし（選出は常に全員） |
+| `max_players` | `integer?` | 定員。`null` なら定員の目安なし（選出画面で定員不一致の確認ダイアログを出さない） |
 | `guest_link_token` | `text` | ゲストリンク用トークン（design-v1 と同じ仕組み） |
 | `is_published` | `boolean` | 公開フラグ |
 | `open_until` | `date?` | 募集締め切り日 |
@@ -104,6 +104,7 @@ flowchart LR
 | `updated_at` | `timestamp` | |
 
 > partial unique index: `(lobby_id, user_id) WHERE user_id IS NOT NULL`（ログインユーザーの重複参加防止。既存と同じ）。
+> 募集枠の作成時に**ホストのメンバーレコードを自動追加**する（既存卓と同じ）。ホストも参加者として日程回答に加わる（要求 §3-2）。
 > **`character_name` は持たない**。キャラクター名は「卓に着席してから」の関心事とし、卓側（`game_session_members.character_name`）でのみ管理する（[意思決定ログ](#10-意思決定ログ)参照）。
 
 ### `lobby.lobby_candidates` — 候補日
@@ -204,7 +205,7 @@ export function getLobbyStatus(
 }
 ```
 
-> `confirmed` を最優先にする理由: 確定は終端状態であり、公開フラグや締め切りに関係なく以降の参加・回答を締め切るため。
+> `confirmed` を公開フラグ・締め切りより優先する理由: 確定は終端状態であり、公開フラグや締め切りに関係なく以降の参加・回答を締め切るため（最優先は `cancelled`。確定と中止は排他ガードにより共存しない）。
 > `open` / `scheduling` の判定は既存 `getGameSessionStatus` の修正済みロジック（`docs/game-session-status.md`）と同一。
 > **卓確定は `open` / `scheduling` のどちらからでも可能**（締め切り前でも回答が揃えばホストは確定できる）。
 
@@ -225,7 +226,7 @@ export function getLobbyStatus(
 > \* **ホスト以外の**メンバーが1人でもいる場合は `409`（既存卓の削除と同方針。ホスト自身しか参加していない募集枠は削除できる）。確定済みの削除を禁止するのは、卓の出自リンク（卓側 `lobby_id`）を保持するため。
 > \*\* 確定後の中止は募集枠側ではなく**卓側の中止**（`game_sessions.cancelled_at`）で行う（[意思決定ログ](#10-意思決定ログ)参照）。
 > 退出はログインユーザー本人またはホストが行える。ゲストメンバーの取り消しはホストのみ（ゲストは本人確認手段がないため）。退出時、そのメンバーの日程回答は cascade delete で消える（日程調整中の退出も許容。確定処理はトランザクション内で再検証するため不整合は起きない）。
-> 日程回答が draft で不可なのは、draft では参加できずメンバーが存在し得ないため（既存の `inputScheduleResponse` が `open`/`scheduling` のみ許可であることとも一致）。
+> 日程回答が draft で不可なのは、既存の `inputScheduleResponse` と同じく公開後（`open`/`scheduling`）に限るため（ホストは自動参加済みだが、回答は公開後に行う）。
 > 参加可否を `open` のみに限定するのは design-v1 の既存方針と同じ。
 > 操作可否は既存の shared `ACTION_POLICIES` / `canPerform` パターンを踏襲し、`LobbyAction` として shared に定義する。
 
@@ -284,6 +285,7 @@ stateDiagram-v2
     end note
 ```
 
+> 確定候補日が当日の場合、導出は直ちに `today` になる。
 > 中止は**卓のステータス**として表現する（`cancelled_at` ファクトから導出。`completed_at` と対称）。
 > 中止しても募集枠は `confirmed`（クローズ）のまま戻らない（**単一方向**）。募集枠の再開
 > （`closed_at` クリアによる `scheduling` への復帰・再調整）は Ph1 では提供しない
@@ -314,6 +316,7 @@ stateDiagram-v2
    ◯△回答内容・定員によるサーバ側ブロックはしない）
 1. 卓 game_sessions を INSERT
    - title / scenario_name / description / location / max_players を募集枠からコピー
+     （`max_players` は卓側 API では `maxMembers` として現れる。DB カラム名は両方 `max_players`）
    - host_user_id = 募集枠のホスト
    - lobby_id = 募集枠の ID
    - scheduled_at = 確定候補日の date
@@ -361,6 +364,7 @@ stateDiagram-v2
 
 - 既存の game-sessions 系 API と同じ構造・権限モデル・ゲストトークン方式（`Guest-Token` ヘッダー）をミラーする
 - 一覧は全件返却・絞り込みはフロント（design-v1 と同じ）
+- API 表の「公開済みは不要」の「公開済み」は `is_published = true` を指す（ステータスでは判定しない。draft のまま中止した募集枠は `cancelled` でも非公開）
 - shared パッケージに契約型を先に定義する。主な型:
 
 | 型 | フィールド |
@@ -401,7 +405,7 @@ stateDiagram-v2
 |---|---|---|---|
 | `GET` | `/api/lobbies/:id/availability-dates` | 公開済みは不要 | 候補日一覧（回答含む） |
 | `POST` | `/api/lobbies/:id/availability-dates` | ホスト | 候補日追加（確定済みは `409`） |
-| `PUT` | `/api/lobbies/:id/availability-dates` | ホスト | 候補日一括更新（確定済みは `409`） |
+| `PUT` | `/api/lobbies/:id/availability-dates` | ホスト | 候補日一括更新（1件以上。候補日0件にはできない。確定済みは `409`） |
 | `DELETE` | `/api/lobbies/:id/availability-dates/:dateId` | ホスト | 候補日削除（確定済みは `409`） |
 | `PUT` | `/api/lobbies/:id/availability-dates/:dateId/responses` | 必要 | 自分の回答登録・更新（確定済みは `409`） |
 | `PUT` | `/api/lobbies/:id/availability-dates/:dateId/guest-responses` | 不要・`Guest-Token` 必須 | ゲスト回答（全ゲスト分編集可。確定済みは `409`） |
@@ -519,12 +523,12 @@ export type GameSessionStatus =
 
 | # | 内容 | 主な成果物 |
 |---|---|---|
-| 1 | **募集枠の基盤**: DB スキーマ（`lobby` スキーマ4テーブル）+ shared 型 + 募集枠 CRUD API（一覧/作成/詳細/更新/削除/公開） | backend `src/lobby/`、マイグレーション |
+| 1 | **募集枠の基盤**: DB スキーマ（`lobby` スキーマ4テーブル）+ shared 型 + 募集枠 CRUD API（一覧/作成/詳細/更新/削除/公開・募集中止） | backend `src/lobby/`、マイグレーション |
 | 2 | **募集枠への参加と日程調整 API**: members / guest-members / guest-link / availability-dates / responses / guest-responses（既存ロジック移植） | backend |
 | 3 | **卓確定 API**: `POST /:id/confirm`（選出バリデーション + トランザクション卓生成 + 二重確定排他）+ `game_session_members.lobby_member_id` 追加 + `GET /game-sessions/:id` への `lobbyId` 追加 + 卓の中止（`cancelled_at` カラム + `PATCH /:id/status` の `cancelled` 遷移） | backend |
 | 4 | **募集枠のフロントエンド**: 一覧・作成・詳細（参加・日程調整）・編集画面（既存 GameSession 実装の移植） | frontend `features/Lobby/` |
 | 5 | **卓確定フローのフロントエンド**: 確定ダイアログ（候補日選択 → 条件付き選出 → 確認）、確定後表示（非選出者文言含む）、ダッシュボード再構成 | frontend |
-| 6 | **旧経路の廃止**: 卓の候補日・回答・募集ステータスの削除（API・UI・テーブル）、`POST /api/game-sessions` の `scheduledAt` 必須化、卓ステータス簡素化 | backend + frontend + マイグレーション |
+| 6 | **旧経路の廃止**: 卓の候補日・回答・募集ステータスの削除（API・UI・テーブル）、`POST /api/game-sessions` の `scheduledAt` 必須化、卓ステータス簡素化（6a フロント導線撤去 → 6b API 廃止 → 6c DB 整理 の分割・詳細は[移行計画](./migration-plan-recruitment-separation.md)参照） | backend + frontend + マイグレーション |
 
 > 段階 1〜5 の間、既存機能は無変更で動き続ける（要求 §5「既存実装を壊さず段階的に」）。
 > 段階 6 は新経路の動作確認（受け入れ基準の一連フロー）完了後に着手する。
@@ -568,7 +572,15 @@ design-v1 で「日程確定は `PATCH /status` に統合せず独立エンド�
 ### 締め切り前（open）でも卓確定できる
 
 回答が早く揃った場合に締め切りを待たせる理由がない。`open` / `scheduling` の両方から確定可能とする。
-確定がすべての受付を閉じる終端状態であることは、ステータス導出の優先順位（`confirmed` 最優先）で保証する。
+確定がすべての受付を閉じる終端状態であることは、ステータス導出の優先順位（`cancelled` に次いで `confirmed` を優先）で保証する。
+
+### ホストは作成時にメンバーへ自動追加する
+
+既存卓の挙動を踏襲。要求 §3-2「ホスト自身も参加者として日程回答に加われる」を自然に満たし、ホストの回答し忘れ導線を減らす。
+
+### 確定後ロックのエラーコードは 409 に統一（既存卓の 423 から変更）
+
+既存卓側は確定後の変更拒否に `423 Locked` を使っていたが、WebDAV 由来でクライアント・フレームワークの扱いが安定しないため、lobby 系では慣用的な `409 Conflict` に統一する。既存実装から移植する際に 423 を持ち込まないこと。
 
 ### ホスト（`host_user_id`）は「管理者ロール」であり、参加メンバーとは独立
 

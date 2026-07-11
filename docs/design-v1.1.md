@@ -25,12 +25,18 @@
 
 「卓（game_session）」が担っていた**募集・日程調整**の責務を、新概念**「募集枠（recruitment）」**に分離する。
 
-```text
-【募集枠 recruitment】                    【卓 game_session】
-  作成 → 公開 → 参加募集 → 日程調整 ──確定──▶ 実施前 → 当日 → 完了
-  （人を多めに集めて日程を調整する）        （日程とメンバーが確定した状態でのみ存在）
-                                              ▲
-  直接卓立て（日程・メンバー決め打ち）────────┘
+```mermaid
+flowchart LR
+    subgraph R["募集枠 recruitment（人を多めに集めて日程を調整する）"]
+        direction LR
+        a[作成] --> b[公開] --> c[参加募集] --> d[日程調整]
+    end
+    subgraph G["卓 game_session（日程とメンバーが確定した状態でのみ存在）"]
+        direction LR
+        e[実施前] --> f[当日] --> g[完了]
+    end
+    d -- "確定（メンバー選出）" --> e
+    direct["直接卓立て（日程・メンバー決め打ち）"] --> e
 ```
 
 - 募集枠では定員を超えて人を集めてよい。**卓確定時に「その日に来られる人」を選ぶ**ことで、「キック」操作を不要にする
@@ -77,6 +83,7 @@
 | `is_published` | `boolean` | 公開フラグ |
 | `open_until` | `date?` | 募集締め切り日 |
 | `closed_at` | `timestamp?` | クローズ（卓確定）日時。`null` なら受付中。卓確定時にセットする |
+| `cancelled_at` | `timestamp?` | 募集中止日時。ホストの「募集を中止する」アクションで記録。`null` なら中止されていない |
 | `created_at` | `timestamp` | |
 | `updated_at` | `timestamp` | |
 
@@ -140,20 +147,19 @@
 
 ### リレーション概要
 
-```text
-auth.user
-  └─< recruitments (host_user_id)
-  └─< recruitment_members (user_id) ※ゲストはnull
-
-recruitments
-  └─< recruitment_members
-  └─< recruitment_candidates
-  └─< game_session.game_sessions (recruitment_id, nullable)  ← 出自リンク
-
-recruitment_candidates ─< recruitment_answers >─ recruitment_members
-                                                        │
-game_session.game_session_members >──────────────────１ (recruitment_member_id, nullable)
+```mermaid
+erDiagram
+    user ||--o{ recruitments : "host_user_id"
+    user ||--o{ recruitment_members : "user_id（ゲストは null）"
+    recruitments ||--o{ recruitment_members : ""
+    recruitments ||--o{ recruitment_candidates : ""
+    recruitment_candidates ||--o{ recruitment_answers : ""
+    recruitment_members ||--o{ recruitment_answers : ""
+    recruitments ||--o{ game_sessions : "recruitment_id（nullable・出自リンク）"
+    recruitment_members ||--o{ game_session_members : "recruitment_member_id（nullable・選出突合）"
 ```
+
+> `game_sessions` / `game_session_members` は `game_session` スキーマ、`user` は `auth` スキーマ。それ以外は `recruitment` スキーマ。
 
 ---
 
@@ -161,11 +167,12 @@ game_session.game_session_members >───────────────
 
 ### 募集枠のステータス
 
-ファクトカラム: `is_published` / `open_until` / `closed_at`
+ファクトカラム: `is_published` / `open_until` / `closed_at` / `cancelled_at`
 
 | ステータス | 表示名 | 条件 |
 |---|---|---|
-| `confirmed` | 卓確定済み | `closed_at != null`（最優先） |
+| `cancelled` | 中止 | `cancelled_at != null`（最優先） |
+| `confirmed` | 卓確定済み | `closed_at != null` |
 | `draft` | 非公開 | `is_published = false` |
 | `open` | 募集中 | 公開済み・`open_until` が `null` または未来 |
 | `scheduling` | 日程調整中 | 公開済み・`open_until` 経過 |
@@ -174,15 +181,21 @@ game_session.game_session_members >───────────────
 // src/recruitment/domain/recruitment-status.ts
 // （既存 getGameSessionStatus = src/game-session/domain/game-session-status.ts と同パターン）
 
-export type RecruitmentStatus = 'draft' | 'open' | 'scheduling' | 'confirmed';
+export type RecruitmentStatus =
+  | 'draft'
+  | 'open'
+  | 'scheduling'
+  | 'confirmed'
+  | 'cancelled';
 
 export function getRecruitmentStatus(
   recruitment: Pick<
     Recruitment,
-    'isPublished' | 'openUntil' | 'closedAt'
+    'isPublished' | 'openUntil' | 'closedAt' | 'cancelledAt'
   >,
   now: Date = new Date(),
 ): RecruitmentStatus {
+  if (recruitment.cancelledAt) return 'cancelled';
   if (recruitment.closedAt) return 'confirmed';
   if (!recruitment.isPublished) return 'draft';
   if (!recruitment.openUntil || now < recruitment.openUntil) return 'open';
@@ -196,17 +209,21 @@ export function getRecruitmentStatus(
 
 ### ステータスごとの操作可否
 
-| 操作 | draft | open | scheduling | confirmed |
-|---|---|---|---|---|
-| 募集枠の編集（PATCH） | ✅ | ✅ | ✅ | ❌ 409 |
-| 募集枠の削除（DELETE） | ✅* | ✅* | ✅* | ❌ 409 |
-| 公開（PATCH `/status`） | ✅ | — | — | ❌ 409 |
-| 参加（ログイン / ゲスト） | ❌ 422 | ✅ | ❌ 422 | ❌ 422 |
-| 候補日の追加・削除 | ✅ | ✅ | ✅ | ❌ 409 |
-| 日程回答（◯△×） | ❌ 422 | ✅ | ✅ | ❌ 409 |
-| 卓確定 | ❌ 422 | ✅ | ✅ | ❌ 409 |
+| 操作 | draft | open | scheduling | confirmed | cancelled |
+|---|---|---|---|---|---|
+| 募集枠の編集（PATCH） | ✅ | ✅ | ✅ | ❌ 409 | ❌ 409 |
+| 募集枠の削除（DELETE） | ✅* | ✅* | ✅* | ❌ 409 | ✅* |
+| 公開（PATCH `/status`） | ✅ | — | — | ❌ 409 | ❌ 409 |
+| 募集中止（PATCH `/status`） | ✅ | ✅ | ✅ | ❌ 409** | ❌ 409 |
+| 参加（ログイン / ゲスト） | ❌ 422 | ✅ | ❌ 422 | ❌ 422 | ❌ 422 |
+| 退出（本人 / ホスト） | — | ✅ | ✅ | ❌ 409 | ❌ 409 |
+| 候補日の追加・削除 | ✅ | ✅ | ✅ | ❌ 409 | ❌ 409 |
+| 日程回答（◯△×） | ❌ 422 | ✅ | ✅ | ❌ 409 | ❌ 409 |
+| 卓確定 | ❌ 422 | ✅ | ✅ | ❌ 409 | ❌ 422 |
 
 > \* **ホスト以外の**メンバーが1人でもいる場合は `409`（既存卓の削除と同方針。ホスト自身しか参加していない募集枠は削除できる）。確定済みの削除を禁止するのは、卓の出自リンク（卓側 `recruitment_id`）を保持するため。
+> \*\* 確定後の中止は募集枠側ではなく**卓側の中止**（`game_sessions.cancelled_at`）で行う（[意思決定ログ](#10-意思決定ログ)参照）。
+> 退出はログインユーザー本人またはホストが行える。ゲストメンバーの取り消しはホストのみ（ゲストは本人確認手段がないため）。退出時、そのメンバーの日程回答は cascade delete で消える（日程調整中の退出も許容。確定処理はトランザクション内で再検証するため不整合は起きない）。
 > 日程回答が draft で不可なのは、draft では参加できずメンバーが存在し得ないため（既存の `inputScheduleResponse` が `open`/`scheduling` のみ許可であることとも一致）。
 > 参加可否を `open` のみに限定するのは design-v1 の既存方針と同じ。
 > 操作可否は既存の shared `ACTION_POLICIES` / `canPerform` パターンを踏襲し、`RecruitmentAction` として shared に定義する。
@@ -229,11 +246,19 @@ stateDiagram-v2
     open --> scheduling : open_until を経過（時間経過による導出。open_until = null なら open のまま）
     open --> confirmed : 卓確定（closed_at セット + 卓生成）
     scheduling --> confirmed : 卓確定（closed_at セット + 卓生成）
+    draft --> cancelled : 募集を中止（cancelled_at セット）
+    open --> cancelled : 募集を中止（cancelled_at セット）
+    scheduling --> cancelled : 募集を中止（cancelled_at セット）
     note right of confirmed
         完全な終端状態（単一方向）。
         参加・回答・候補日変更・編集を
         409 / 422 で拒否する。
-        卓が中止になっても募集枠は再開しない
+        卓が中止になっても募集枠は再開しない。
+        確定後の中止は卓側の cancelled で行う
+    end note
+    note right of cancelled
+        終端状態。募集枠は削除せず
+        「中止」として残し、参加者に柔らかく伝える
     end note
 ```
 
@@ -300,8 +325,8 @@ stateDiagram-v2
    - character_name は null（卓側で後から設定）
 3. UPDATE recruitments
      SET closed_at = now()
-     WHERE id = :id AND closed_at IS NULL
-   - 更新行数が 0（並行する確定に先を越された）なら全体をロールバックして 409
+     WHERE id = :id AND closed_at IS NULL AND cancelled_at IS NULL
+   - 更新行数が 0（並行する確定に先を越された・並行して中止された）なら全体をロールバックして 409
 ```
 
 > 手順3の条件付き UPDATE が二重確定の排他を担う。`WHERE closed_at IS NULL` により、
@@ -313,7 +338,7 @@ stateDiagram-v2
 |---|---|
 | ホスト以外の実行 | `403` |
 | 確定済み（`closed_at != null`）・並行確定に敗北 | `409` |
-| ステータスが `draft` | `422` |
+| ステータスが `draft` または `cancelled` | `422` |
 | `candidateId` がこの募集枠の候補日でない | `404` |
 | `memberIds` 未指定・空配列（選出は必須） | `422` |
 | `memberIds` にこの募集枠のメンバーでない ID を含む | `422` |
@@ -353,7 +378,7 @@ stateDiagram-v2
 | `GET` | `/api/recruitments/:id` | 公開済みは不要 | 募集枠詳細（メンバー含む）。確定済みなら `closedAt` を含む |
 | `PATCH` | `/api/recruitments/:id` | ホスト | 募集枠更新（確定済みは `409`） |
 | `DELETE` | `/api/recruitments/:id` | ホスト | 募集枠削除（メンバーあり・確定済みは `409`。[4章の操作可否表](#4-ステータス設計)参照） |
-| `PATCH` | `/api/recruitments/:id/status` | ホスト | `{ status: "open" }` — `draft → open`（公開） |
+| `PATCH` | `/api/recruitments/:id/status` | ホスト | `{ status: "open" }` — `draft → open`（公開）／`{ status: "cancelled" }` — `draft`/`open`/`scheduling` → `cancelled`（募集中止。`cancelled_at` セット。確定済みは `409`） |
 | `POST` | `/api/recruitments/:id/confirm` | ホスト | **卓確定（選出）**。[5章](#5-卓確定選出の設計)参照 |
 
 ### Recruitment Members
@@ -363,7 +388,7 @@ stateDiagram-v2
 | `GET` | `/api/recruitments/:id/members` | 公開済みは不要 | 参加者一覧 |
 | `POST` | `/api/recruitments/:id/members` | 必要 | 参加（`open` のみ。それ以外 `422`） |
 | `POST` | `/api/recruitments/:id/guest-members` | 不要・`Guest-Token` 必須 | ゲスト参加（`open` のみ） |
-| `DELETE` | `/api/recruitments/:id/members/:memberId` | ホスト | 参加取り消し（確定済みは `409`） |
+| `DELETE` | `/api/recruitments/:id/members/:memberId` | **本人またはホスト** | 退出・参加取り消し（確定済み・中止済みは `409`）。ログインユーザーは自分の参加を取り消せる。ゲストメンバーの取り消しはホストのみ |
 
 > `PATCH .../members/:memberId` は提供しない（募集枠メンバーは `character_name` を持たず、編集対象がないため）。
 
@@ -476,6 +501,8 @@ export type GameSessionStatus =
 | メンバー編集・退出・完了・削除 | 現行どおり（ホスト権限） |
 
 > 満員（`maxPlayers`）チェックは既存方針どおり入れない（入れる場合はログイン・ゲスト両方に。Ph2）。
+> **直接卓立てのメンバー集めもこの参加モデルで行う**: ホストが卓を作成・公開し、URL（ログインユーザー向け）またはゲストリンク（ゲスト向け）を共有して、**相手に参加ボタンを押してもらう**。フレンド機能・ホストによる代理登録は持たない（ゲスト分はゲストリンクから本人が名前を入力する）。
+> なお「参加を受け付けている」ことは卓のステータスとしては表現しない（`confirmed` と重なる二重状態になるため）。参加可否は上表の条件から導出する `canJoin` として扱い、UI では「参加できます」の表示で伝える。人を集める行為そのものは募集枠の責務。
 
 ### 移行期間中（旧経路廃止まで）
 
@@ -579,6 +606,30 @@ design-v1 で「日程確定は `PATCH /status` に統合せず独立エンド�
 
 なお、募集由来の卓の削除を暫定的に `409` でガードする案は不要になった。既存の削除ポリシーが
 もともと確定（`confirmed`）以降の卓の削除を許しておらず、「確定後にやめたい」の受け皿は中止が担う。
+
+### 募集枠にも `cancelled`（募集中止）を持つ — 確定前と確定後で中止の主体を分ける
+
+「中止」は確定の前後で意味が異なるため、主体を分けて表現する。
+
+- **確定前の中止（募集自体の取りやめ）**: 募集枠の `cancelled_at`。メンバーが付いた募集枠は削除できない
+  （ホスト以外のメンバーがいると `409`）ため、削除以外に募集をやめる手段が必要。参加者には
+  「この募集は中止されました」を柔らかく表示する
+- **確定後の中止（開催の取りやめ）**: 卓側の `cancelled_at`。募集枠は `confirmed` のまま動かない（単一方向）
+
+確定済み募集枠への中止は `409`（確定後の中止は卓側で行う）。逆に中止済み募集枠の確定も `422`。
+排他は確定処理の条件付き UPDATE に `AND cancelled_at IS NULL` を加えて担保する。
+
+### ログインユーザー本人の退出を許可する
+
+募集枠のメンバー取り消しは「本人またはホスト」が行える（ゲストメンバーはホストのみ。本人確認手段がないため）。
+日程調整中の退出も許容する — 退出時に回答は cascade delete で消え、確定処理はトランザクション内で
+メンバーを再検証するため、退出と確定が並行しても不整合は起きない。確定後・中止後は `409`。
+
+### 「参加を受け付けている」を卓のステータスにしない
+
+卓への参加可否（公開済み・未完了・実施日当日まで）は `confirmed` 期間と重なるため、独立したステータスに
+すると排他的なステータスモデルが崩れる（「実施前かつ募集中」の二重状態）。参加可否は `canJoin` として
+導出し、UI 表示で伝える。「人を集める」行為はあくまで募集枠の責務であり、卓に `open`（募集中）は復活させない。
 
 ### 選出の突合は `recruitment_member_id` FK で行う
 

@@ -33,10 +33,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `recruitment` PostgreSQL スキーマ（4テーブル + enum）の Drizzle 定義・マイグレーション生成、shared に `Recruitment` 系契約型、募集枠 CRUD API（一覧/作成/詳細/更新/削除/`PATCH /:id/status` 公開） |
+| スコープ | `recruitment` PostgreSQL スキーマ（4テーブル + enum）の Drizzle 定義・マイグレーション生成、shared に `Recruitment` 系契約型、募集枠 CRUD API（一覧/作成/詳細/更新/削除/`PATCH /:id/status` の公開・募集中止） |
 | 既存への影響 | なし（新規スキーマ・新規ルートの追加のみ） |
 | 完了条件 | ユニット・インテグレーションテスト green。`db:generate` / `db:migrate` が通る |
-| 検証 | `POST → PATCH(公開) → GET` の一連をインテグレーションテストで確認。ステータス導出（`draft/open/scheduling`）のユニットテスト |
+| 検証 | `POST → PATCH(公開) → GET` の一連をインテグレーションテストで確認。ステータス導出（`draft/open/scheduling/cancelled`）のユニットテスト |
 
 ### 段階2: 募集枠への参加と日程調整 API（backend）
 
@@ -61,7 +61,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `features/Recruitment/`（List / New / Detail / Edit）、ルート追加（`/recruitments` 系）、ゲストの `?token=` 動線 |
+| スコープ | `features/Recruitment/`（List / New / Detail / Edit）、ルート追加（`/recruitments` 系）、ゲストの `?token=` 動線、募集中止ボタン（確認ダイアログ付き・中止表示）、本人退出ボタン |
 | 移植元 | `features/GameSession/` の各画面・`Schedule/` サブディレクトリ・composables |
 | 既存への影響 | ルート追加のみ。既存画面は無変更（ダッシュボード再構成は段階5） |
 | 完了条件 | 募集枠の作成 → 公開 → 参加 → 日程回答が UI から一通り行える |

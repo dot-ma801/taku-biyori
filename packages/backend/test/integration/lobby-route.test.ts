@@ -9,6 +9,7 @@ import type {
   LobbyListItem,
   LobbyMember,
   LobbyAvailabilityDate,
+  LobbyAvailabilityDateAnswer,
   CreateLobbyInput,
   UpdateLobbyStatusInput,
 } from '@taku-biyori/shared';
@@ -23,6 +24,8 @@ import type { ListAvailabilityDatesResult } from '@/lobby/application/list-avail
 import type { AddAvailabilityDateResult } from '@/lobby/application/add-availability-date';
 import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk-update-availability-dates';
 import type { DeleteAvailabilityDateResult } from '@/lobby/application/delete-availability-date';
+import type { UpdateAvailabilityDateResponseResult } from '@/lobby/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseResult } from '@/lobby/application/update-guest-availability-date-response';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -79,6 +82,13 @@ const mockAvailabilityDate: LobbyAvailabilityDate = {
   answers: [],
 };
 
+const mockAnswer: LobbyAvailabilityDateAnswer = {
+  id: 'answer-1',
+  memberId: 'member-1',
+  answer: 'ok',
+  comment: null,
+};
+
 const stubProfile = {} as unknown as ProfileUseCases;
 const stubGameSession = {} as unknown as GameSessionUseCases;
 
@@ -126,6 +136,12 @@ const makeApp = (
     deleteAvailabilityDate:
       overrides.deleteAvailabilityDate ??
       vi.fn().mockResolvedValue({ type: 'ok' }),
+    updateAvailabilityDateResponse:
+      overrides.updateAvailabilityDateResponse ??
+      vi.fn().mockResolvedValue({ type: 'ok', answer: mockAnswer }),
+    updateGuestAvailabilityDateResponse:
+      overrides.updateGuestAvailabilityDateResponse ??
+      vi.fn().mockResolvedValue({ type: 'ok', answer: mockAnswer }),
   };
 
   return createApp({
@@ -1759,6 +1775,506 @@ describe('DELETE /api/lobbies/:id/availability-dates/:dateId', () => {
       'date-1',
       'user-1',
     );
+  });
+});
+
+describe('PUT /api/lobbies/:id/availability-dates/:dateId/responses', () => {
+  it('メンバーが自分の回答を登録すると 200 と回答を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'ok' }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockAnswer);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'ok' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('募集枠のメンバーでない場合は 403 を返す（本人以外は回答できない）', async () => {
+    // Arrange
+    const app = makeApp({
+      updateAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'ok' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない募集枠・候補日なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/nonexistent/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'ok' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('募集枠が draft（公開前）の場合は 422 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'notPublished' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'ok' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('募集枠が確定済み・中止済みの場合は 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidStatus' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'ok' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('answer が不正な値なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'invalid' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('ユースケースに lobbyId・dateId・userId・input を渡す（memberId は本文で受け取らない）', async () => {
+    // Arrange
+    const updateAvailabilityDateResponse: (
+      lobbyId: string,
+      dateId: string,
+      userId: string,
+      input: unknown,
+    ) => Promise<UpdateAvailabilityDateResponseResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', answer: mockAnswer });
+    const app = makeApp({ updateAvailabilityDateResponse });
+
+    // Act
+    await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: 'maybe', comment: 'たぶん行ける' }),
+      },
+    );
+
+    // Assert
+    expect(updateAvailabilityDateResponse).toHaveBeenCalledWith(
+      'lobby-1',
+      'date-1',
+      'user-1',
+      { answer: 'maybe', comment: 'たぶん行ける' },
+    );
+  });
+});
+
+describe('PUT /api/lobbies/:id/availability-dates/:dateId/guest-responses', () => {
+  it('有効な Guest-Token とゲストの memberId で回答すると 200 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockAnswer);
+  });
+
+  it('認証（セッション）は不要', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(200);
+  });
+
+  it('Guest-Token がない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGuestAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidToken' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('Guest-Token が一致しない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGuestAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidToken' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'wrong-token',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('トークンは正しいが memberId がゲストメンバーでない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGuestAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000099',
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない募集枠・候補日なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGuestAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/nonexistent/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('draft を含め open/scheduling 以外の募集枠は 409 を返す（game-session と異なり 423 は使わない）', async () => {
+    // Arrange
+    const app = makeApp({
+      updateGuestAvailabilityDateResponse: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidStatus' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('memberId が UUID でない場合は 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({ answer: 'ok', memberId: 'not-a-uuid' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('ユースケースに lobbyId・dateId・token・memberId・input を渡す', async () => {
+    // Arrange
+    const updateGuestAvailabilityDateResponse: (
+      lobbyId: string,
+      dateId: string,
+      token: string,
+      memberId: string,
+      input: unknown,
+    ) => Promise<UpdateGuestAvailabilityDateResponseResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', answer: mockAnswer });
+    const app = makeApp({ updateGuestAvailabilityDateResponse });
+
+    // Act
+    await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'maybe',
+          comment: 'たぶん行ける',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+
+    // Assert
+    expect(updateGuestAvailabilityDateResponse).toHaveBeenCalledWith(
+      'lobby-1',
+      'date-1',
+      'guest-token-abc',
+      'aaaaaaaa-0000-4000-8000-000000000001',
+      { answer: 'maybe', comment: 'たぶん行ける' },
+    );
+  });
+
+  it('1つのゲストトークンで複数の異なるゲストメンバーの回答を編集できる（調整さん方式）', async () => {
+    // Arrange
+    // トークンとゲストメンバーの状態を持つ簡易 in-memory 実装で検証する
+    const validGuestMemberIds = new Set([
+      'aaaaaaaa-0000-4000-8000-000000000001',
+      'aaaaaaaa-0000-4000-8000-000000000002',
+    ]);
+    const answers = new Map<string, LobbyAvailabilityDateAnswer>();
+    const updateGuestAvailabilityDateResponse = vi.fn(
+      async (
+        _lobbyId: string,
+        _dateId: string,
+        token: string,
+        memberId: string,
+        input: { answer: 'ok' | 'maybe' | 'ng'; comment?: string },
+      ): Promise<UpdateGuestAvailabilityDateResponseResult> => {
+        if (token !== 'guest-token-abc') return { type: 'invalidToken' };
+        if (!validGuestMemberIds.has(memberId)) return { type: 'forbidden' };
+        const answer: LobbyAvailabilityDateAnswer = {
+          id: `answer-${memberId}`,
+          memberId,
+          answer: input.answer,
+          comment: input.comment ?? null,
+        };
+        answers.set(memberId, answer);
+        return { type: 'ok', answer };
+      },
+    );
+    const app = makeApp({ updateGuestAvailabilityDateResponse });
+
+    // Act: 同じトークンで2人分のゲスト回答を更新する
+    const first = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+        }),
+      },
+    );
+    const second = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          answer: 'ng',
+          memberId: 'aaaaaaaa-0000-4000-8000-000000000002',
+        }),
+      },
+    );
+
+    // Assert
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(answers.get('aaaaaaaa-0000-4000-8000-000000000001')).toMatchObject({
+      memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+      answer: 'ok',
+    });
+    expect(answers.get('aaaaaaaa-0000-4000-8000-000000000002')).toMatchObject({
+      memberId: 'aaaaaaaa-0000-4000-8000-000000000002',
+      answer: 'ng',
+    });
   });
 });
 

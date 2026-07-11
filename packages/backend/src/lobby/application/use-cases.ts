@@ -9,7 +9,6 @@ import type {
   CreateLobbyAvailabilityDateInput,
   BulkUpdateLobbyAvailabilityDatesInput,
   UpdateLobbyAvailabilityDateResponseInput,
-  GuestUpdateLobbyAvailabilityDateResponseInput,
 } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyResult } from '@/lobby/application/update-lobby';

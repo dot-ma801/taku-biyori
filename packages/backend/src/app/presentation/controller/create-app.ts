@@ -102,6 +102,10 @@ export const createApp = (options: CreateAppOptions) => {
     addAvailabilityDate: options.lobby.addAvailabilityDate,
     bulkUpdateAvailabilityDates: options.lobby.bulkUpdateAvailabilityDates,
     deleteAvailabilityDate: options.lobby.deleteAvailabilityDate,
+    updateAvailabilityDateResponse:
+      options.lobby.updateAvailabilityDateResponse,
+    updateGuestAvailabilityDateResponse:
+      options.lobby.updateGuestAvailabilityDateResponse,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,

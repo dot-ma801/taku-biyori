@@ -389,12 +389,15 @@ export const createGameSessionRepository = (
     // cancelled_at が NULL の行だけを更新する（二重中止・並行中止の排他）。
     // completed_at も NULL であることを要求し、complete() との並行実行で
     // 両方の終端カラムが同時にセットされる二重終端状態を防ぐ。
+    // isPublished も complete() と同様に要求し、draft 卓がリポジトリ単体呼び出しで
+    // 中止されてしまわないようにする（application 層のステータスチェックと対称に保つ）。
     const result = await db
       .update(gameSessions)
       .set({ cancelledAt })
       .where(
         and(
           eq(gameSessions.id, id),
+          eq(gameSessions.isPublished, true),
           isNull(gameSessions.cancelledAt),
           isNull(gameSessions.completedAt),
         ),

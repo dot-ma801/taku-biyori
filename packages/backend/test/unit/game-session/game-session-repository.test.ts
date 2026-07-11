@@ -329,6 +329,20 @@ describe('cancel', () => {
     expect(sql).toContain('"completed_at" is null');
   });
 
+  it('is_published が true の行だけを更新する（complete() と対称・draft 卓の中止を防ぐ）', async () => {
+    // Arrange
+    const cancelledAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db, whereSql } = makeUpdateDb([{ ...mockSessionRow, cancelledAt }]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.cancel(mockSessionRow.id, cancelledAt);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"is_published" = ');
+  });
+
   it('更新行が 0 件なら null を返す', async () => {
     // Arrange
     const { db } = makeUpdateDb([]);

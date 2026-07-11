@@ -13,6 +13,7 @@ export default defineConfig({
   schema: [
     './src/system/infrastructure/database/schema.ts',
     './src/system/infrastructure/database/game-session-schema.ts',
+    './src/system/infrastructure/database/lobby-schema.ts',
   ],
   out: './drizzle',
   dbCredentials: {

@@ -50,6 +50,13 @@
       "when": 1783068779266,
       "tag": "0006_daffy_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783748280398,
+      "tag": "0007_dapper_rattler",
+      "breakpoints": true
     }
   ]
 }

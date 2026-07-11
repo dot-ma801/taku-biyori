@@ -57,6 +57,13 @@ export const CreateLobbyInputSchema = z
         message: '募集締め切り日には今日以降の日付を指定してください',
       });
     }
+    if (new Set(input.candidateDates).size !== input.candidateDates.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['candidateDates'],
+        message: '候補日に重複する日付を含めることはできません',
+      });
+    }
   });
 export type CreateLobbyInput = z.infer<typeof CreateLobbyInputSchema>;
 

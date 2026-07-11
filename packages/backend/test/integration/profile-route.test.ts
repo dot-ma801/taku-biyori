@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
+import type { LobbyUseCases } from '@/lobby/application/use-cases';
 import type { ProfileResponse } from '@taku-biyori/shared';
 import type { GetProfileResult } from '@/profile/application/get-profile';
 import type { UpdateProfileResult } from '@/profile/application/update-profile';
@@ -16,6 +17,7 @@ const mockProfile: ProfileResponse = {
 };
 
 const stubGameSession = {} as unknown as GameSessionUseCases;
+const stubLobby = {} as unknown as LobbyUseCases;
 
 const makeApp = (
   overrides: Partial<ProfileUseCases> & {
@@ -35,6 +37,7 @@ const makeApp = (
         overrides.updateProfile ??
         vi.fn().mockResolvedValue({ type: 'ok', profile: mockProfile }),
     },
+    lobby: stubLobby,
   });
 
 describe('GET /api/profile', () => {

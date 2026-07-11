@@ -9,6 +9,8 @@ import { createGameSessionRepository } from '@/game-session/infrastructure/game-
 import { createGameSessionUseCases } from '@/game-session/application/use-cases';
 import { createProfileRepository } from '@/profile/infrastructure/profile-repository';
 import { createProfileUseCases } from '@/profile/application/use-cases';
+import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
+import { createLobbyUseCases } from '@/lobby/application/use-cases';
 
 const config = loadBackendConfig(process.env);
 const db = createDatabase(config.databaseUrl);
@@ -23,6 +25,7 @@ const auth = createAuth({
 
 const gameSessionRepo = createGameSessionRepository(db);
 const profileRepo = createProfileRepository(db);
+const lobbyRepo = createLobbyRepository(db);
 
 const app = createApp({
   frontendOrigin: config.frontendOrigin,
@@ -30,6 +33,7 @@ const app = createApp({
   getSession: (headers) => auth.api.getSession({ headers }),
   gameSession: createGameSessionUseCases(gameSessionRepo),
   profile: createProfileUseCases(profileRepo),
+  lobby: createLobbyUseCases(lobbyRepo),
 });
 
 export default app;

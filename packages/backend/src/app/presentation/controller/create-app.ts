@@ -1,5 +1,6 @@
 import type { HealthResponse } from '@taku-biyori/shared';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
+import type { LobbyUseCases } from '@/lobby/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -11,6 +12,7 @@ import { registerAvailabilityDateRoute } from '@/game-session/presentation/contr
 import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
+import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -19,6 +21,7 @@ export interface CreateAppOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
   gameSession: GameSessionUseCases;
   profile: ProfileUseCases;
+  lobby: LobbyUseCases;
 }
 
 export const createApp = (options: CreateAppOptions) => {
@@ -69,6 +72,15 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     getGuestLink: options.gameSession.getGuestLink,
     getGuestLinkPreview: options.gameSession.getGuestLinkPreview,
+  });
+  registerLobbyRoute(app, {
+    getSession: options.getSession,
+    listLobbies: options.lobby.listLobbies,
+    createLobby: options.lobby.createLobby,
+    getLobby: options.lobby.getLobby,
+    updateLobby: options.lobby.updateLobby,
+    deleteLobby: options.lobby.deleteLobby,
+    updateLobbyStatus: options.lobby.updateLobbyStatus,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
+import type { LobbyUseCases } from '@/lobby/application/use-cases';
 import type {
   GameSessionListItem,
   GameSession,
@@ -48,6 +49,7 @@ const mockAvailabilityDate: AvailabilityDate = {
 };
 
 const stubProfile = {} as unknown as ProfileUseCases;
+const stubLobby = {} as unknown as LobbyUseCases;
 
 const makeApp = (
   overrides: Partial<GameSessionUseCases> & {
@@ -115,6 +117,7 @@ const makeApp = (
     getSession: overrides.getSession ?? vi.fn().mockResolvedValue(mockSession),
     gameSession,
     profile: stubProfile,
+    lobby: stubLobby,
   });
 };
 

@@ -52,7 +52,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `POST /api/recruitments/:id/confirm`（選出バリデーション + トランザクションでの卓生成 + `closed_at` の条件付き UPDATE による二重確定排他 + `open_until = 確定実行日` セット + `recruitment_member_id` コピー）、`game_sessions.recruitment_id`・`game_session_members.recruitment_member_id` カラム追加マイグレーション、`recruitments.closed_at` カラム追加、`GET /api/game-sessions/:id` への `recruitmentId` 追加、募集由来卓の削除ガード（`DELETE /api/game-sessions/:id` が `recruitment_id != null` の卓で `409`。中止設計確定までの暫定）、確定後の募集枠 API の read-only 化（`409`） |
+| スコープ | `POST /api/recruitments/:id/confirm`（選出バリデーション + トランザクションでの卓生成 + `closed_at` の条件付き UPDATE による二重確定排他 + `open_until = 確定実行日` セット + `recruitment_member_id` コピー）、`game_sessions.recruitment_id`・`game_session_members.recruitment_member_id` カラム追加マイグレーション、`recruitments.closed_at` カラム追加、`GET /api/game-sessions/:id` への `recruitmentId` 追加、卓の中止（`game_sessions.cancelled_at` カラム追加 + `PATCH /:id/status` に `cancelled` 遷移を追加。`confirmed`/`today` から可）、確定後の募集枠 API の read-only 化（`409`） |
 | 既存への影響 | `GET /api/game-sessions/:id` のレスポンスフィールド追加、`game_session_members` への nullable カラム追加、卓削除への確定卓ガード追加（いずれも後方互換） |
 | 完了条件 | design-v1.1 §5 のバリデーション表を全ケーステストでカバー。トランザクション失敗時に卓もリンクも残らないこと・並行確定が片方 `409` になることを確認 |
 | 検証 | 「`memberIds` 必須（未指定・空配列で `422`）」「この募集枠のメンバーでない ID を含むと `422`」「◯△×・未回答いずれのメンバーも指定できる（サーバは回答内容・定員でブロックしない）」「確定後の参加・回答が `409`」「確定卓のステータスが `confirmed`/`today` に導出される（`open` に落ちない）」 |
@@ -71,7 +71,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | 確定ダイアログ（候補日選択 → メンバー選出〔常に表示・◯△デフォルト選択済み・×/未回答は注意表示付きで選択可・定員不一致で確認ダイアログ〕 → 確認）、確定後表示（選出者に卓リンク・非選出者に柔らかい文言）、ダッシュボード再構成（「募集・調整中」「開催予定の卓」） |
+| スコープ | 確定ダイアログ（候補日選択 → メンバー選出〔常に表示・◯△デフォルト選択済み・×/未回答は注意表示付きで選択可・定員不一致で確認ダイアログ〕 → 確認）、確定後表示（選出者に卓リンク・非選出者に柔らかい文言）、卓詳細への「開催を中止する」アクション（確認ダイアログ付き・`cancelled` バッジ表示）、ダッシュボード再構成（「募集・調整中」「開催予定の卓」） |
 | 既存への影響 | ダッシュボード（`/`）の表示構成のみ |
 | 完了条件 | 受け入れ基準の UI 系項目（下記 Go/No-Go チェックリスト）を満たす |
 | 検証 | 5人参加・定員3の募集枠で確定フローを通し、◯△回答者がデフォルト選択済みであること・×/未回答も注意表示付きで選択できること・定員不一致で確認ダイアログが出ることを確認 |
@@ -89,7 +89,7 @@
 - [ ] 非選出者向け表示に強い言葉（キック・削除・落選）が使われていない
 - [ ] 確定で生まれた卓のステータスが `confirmed`/`today`/`completed` に正しく導出され、完了操作ができる
 - [ ] 同一募集枠への二重確定が `409` になり、卓が2つ作られない
-- [ ] 確定卓の削除が `409` で拒否される（中止設計確定までの暫定ガード）
+- [ ] 確定後の卓を中止でき、`cancelled` ステータスが導出される（募集枠は `confirmed` のまま戻らない）
 
 1項目でも未達なら段階6には進まず、修正 PR を先に出す。
 
@@ -101,7 +101,7 @@
 |---|---|
 | 6a | **フロントの旧導線撤去**: `/game-sessions/new` を直接卓立て（日程必須）へ変更、卓詳細から日程調整 UI を撤去、卓の `open/scheduling` バッジ撤去（`draft` は残る） |
 | 6b | **API の廃止**: 卓の availability-dates 系ルートを削除（公開遷移 `PATCH /:id/status` の `draft → open` は残す）。`POST /api/game-sessions` の `scheduledAt` 必須化。卓参加条件を「公開済み・未完了・実施日当日まで」へ変更（トークン仕様は現行のまま） |
-| 6c | **DB とステータスの整理**: `game_session_candidates` / `game_session_answers` テーブル drop、`game_sessions.open_until` カラム drop（`is_published` は維持）、**`scheduled_at` の NOT NULL 化**（null の卓＝旧経路の日程未確定な開発データは事前に削除）、`getGameSessionStatus` を `draft/confirmed/today/completed` に簡素化 |
+| 6c | **DB とステータスの整理**: `game_session_candidates` / `game_session_answers` テーブル drop、`game_sessions.open_until` カラム drop（`is_published` は維持）、**`scheduled_at` の NOT NULL 化**（null の卓＝旧経路の日程未確定な開発データは事前に削除）、`getGameSessionStatus` を `draft/confirmed/today/completed/cancelled` に簡素化 |
 
 - 6a と 6b の間はフロントが旧 API を呼ばなくなっているため、6b は安全に削除できる
 - 6c のマイグレーションは破壊的だが、本番データが無いためロールバックは「マイグレーションを戻す」のみで完結する

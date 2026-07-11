@@ -134,6 +134,7 @@
 | カラム | 型 | 説明 |
 |---|---|---|
 | `recruitment_id` | `uuid?` | FK → `recruitment.recruitments.id`（`onDelete: set null`）。出自の募集枠。直接卓立ては `null` |
+| `cancelled_at` | `timestamp?` | 中止日時。ホストの「開催を中止する」アクションで記録。`null` なら中止されていない |
 
 > 選出/非選出の突合のために持つ。ログインユーザーは `user_id` で突合できるが、ゲストは `user_id = null` かつ同名重複参加を許容するため、`guest_name` では突合が曖昧になる。募集枠詳細画面の「選出者に卓リンク・非選出者に柔らかい文言」の描画にこの FK を使う。
 
@@ -212,7 +213,7 @@ export function getRecruitmentStatus(
 
 ### 卓のステータス（最終形）
 
-卓は「下書き → 実施前 → 当日 → 完了」を持つ（詳細は [8. 既存（卓）側の変更](#8-既存卓側の変更)）。
+卓は「下書き → 実施前 → 当日 → 完了」に加え、終端状態として「中止」（`cancelled_at` から導出）を持つ（詳細は [8. 既存（卓）側の変更](#8-既存卓側の変更)）。
 
 ### ステータス遷移図
 
@@ -228,11 +229,11 @@ stateDiagram-v2
     open --> scheduling : open_until を経過（時間経過による導出。open_until = null なら open のまま）
     open --> confirmed : 卓確定（closed_at セット + 卓生成）
     scheduling --> confirmed : 卓確定（closed_at セット + 卓生成）
-    confirmed --> scheduling : 中止【提案・未確定】（卓を削除 + closed_at を null に戻す）
     note right of confirmed
-        終端状態。
+        完全な終端状態（単一方向）。
         参加・回答・候補日変更・編集を
-        409 / 422 で拒否する
+        409 / 422 で拒否する。
+        卓が中止になっても募集枠は再開しない
     end note
 ```
 
@@ -246,16 +247,21 @@ stateDiagram-v2
     draft --> confirmed : 公開する（is_published = true）
     confirmed --> today : 実施日当日になる（時間経過による導出）
     today --> completed : ホストが完了を記録（completed_at セット）
-    confirmed --> [*] : 中止【提案・未確定】＝卓の削除（募集経由なら募集枠の closed_at をクリアし scheduling に復帰）
-    today --> [*] : 中止【提案・未確定】（同上）
+    confirmed --> cancelled : ホストが開催中止を記録（cancelled_at セット）
+    today --> cancelled : ホストが開催中止を記録（cancelled_at セット）
     note right of completed
         終端状態。自動完了はしない
         （キャンセル・延期を表現できるようにするため）
     end note
+    note right of cancelled
+        終端状態。卓は削除せず「中止」として残す
+    end note
 ```
 
-> 中止の扱いは未確定の提案。確定するまで、募集由来の卓の削除は暫定的に `409` でガードする（[6章](#6-api設計)）。
-> 中止を採用する場合は「開催を中止して再調整する」というワンアクションとして提供し、卓の削除と募集枠の `closed_at` クリアを1トランザクションで行う。
+> 中止は**卓のステータス**として表現する（`cancelled_at` ファクトから導出。`completed_at` と対称）。
+> 中止しても募集枠は `confirmed`（クローズ）のまま戻らない（**単一方向**）。募集枠の再開
+> （`closed_at` クリアによる `scheduling` への復帰・再調整）は Ph1 では提供しない
+> （[意思決定ログ](#10-意思決定ログ)参照）。再調整したい場合は新しい募集枠を立てる。
 
 ---
 
@@ -389,7 +395,8 @@ stateDiagram-v2
 |---|---|
 | `GET /api/game-sessions/:id` | レスポンスに `recruitmentId?`（`recruitment_id` カラムをそのまま返す）を追加 |
 | `GET .../members`（卓詳細のメンバー） | レスポンスの各メンバーに `recruitmentMemberId?` を追加（選出突合用） |
-| `DELETE /api/game-sessions/:id` | **暫定**: 中止の設計（§4 の遷移図の提案）が確定するまで、募集由来（`recruitment_id != null`）の卓は削除不可 `409`（段階3で追加） |
+| `PATCH /api/game-sessions/:id/status` | `{ status: "cancelled" }` を追加（`confirmed`/`today` → `cancelled`。`cancelled_at` セット。段階3で追加） |
+| `DELETE /api/game-sessions/:id` | 変更なし（既存ポリシーどおり確定以降の卓は削除不可。「確定後にやめたい」の受け皿は中止が担う） |
 | `POST /api/game-sessions` | 【最終形】`scheduledAt` 必須化（直接卓立て = 日程決め打ち）。移行期間中は現状のまま |
 | 卓の availability-dates 系 | 【段階6で廃止】[9章](#9-実装ステップ)参照（公開遷移 `PATCH /:id/status` の `draft → open` は残す） |
 | 卓への参加系 | 【最終形】参加条件を「公開済み・未完了・実施日当日まで」に変更（トークン仕様は現行のまま。[8章](#8-既存卓側の変更)参照） |
@@ -409,7 +416,7 @@ stateDiagram-v2
 | `/recruitments/edit/:recruitmentId` | 募集枠編集（既存 `/game-sessions/edit/:id` と同パターン） | **新規** |
 | `/game-sessions` | 卓一覧（確定済みの卓のみが並ぶ世界になる） | 位置づけ変更 |
 | `/game-sessions/new` | **直接卓立て**（日程決め打ち。募集系フィールドは最終的に撤去） | 位置づけ変更 |
-| `/game-sessions/:gameSessionId` | 卓詳細（実施前→当日→完了の管理、メンバー表示、キャラ名編集） | 位置づけ変更 |
+| `/game-sessions/:gameSessionId` | 卓詳細（実施前→当日→完了・中止の管理、メンバー表示、キャラ名編集） | 位置づけ変更 |
 | `/game-sessions/edit/:gameSessionId` | 卓編集 | 位置づけ変更 |
 
 ### 募集枠詳細画面（`/recruitments/:recruitmentId`）の構成
@@ -441,12 +448,18 @@ stateDiagram-v2
 - ステータス導出は簡素化する:
 
 ```ts
-export type GameSessionStatus = 'draft' | 'confirmed' | 'today' | 'completed';
-// is_published が false なら draft / completed_at があれば completed /
-// scheduled_at が今日なら today / それ以外 confirmed
+export type GameSessionStatus =
+  | 'draft'
+  | 'confirmed'
+  | 'today'
+  | 'completed'
+  | 'cancelled';
+// cancelled_at があれば cancelled（最優先）/ is_published が false なら draft /
+// completed_at があれば completed / scheduled_at が今日なら today / それ以外 confirmed
 ```
 
 - 完了は引き続きホストの明示アクション（`PATCH /:id/status` で `completed_at` セット）。自動完了しない
+- **中止**もホストの明示アクション（`PATCH /:id/status` で `cancelled_at` セット）。卓は削除せず「中止」として残し、参加者に柔らかく伝わる表示にする
 - `game_sessions` から `open_until` を、テーブルごと `game_session_candidates` / `game_session_answers` を削除（`is_published` は残す）
 - `game_sessions.scheduled_at` は NOT NULL 化する（「卓は日程確定状態でのみ存在」を DB レベルで保証）
 - `POST /api/game-sessions` は `scheduledAt` 必須
@@ -479,7 +492,7 @@ export type GameSessionStatus = 'draft' | 'confirmed' | 'today' | 'completed';
 |---|---|---|
 | 1 | **募集枠の基盤**: DB スキーマ（`recruitment` スキーマ4テーブル）+ shared 型 + 募集枠 CRUD API（一覧/作成/詳細/更新/削除/公開） | backend `src/recruitment/`、マイグレーション |
 | 2 | **募集枠への参加と日程調整 API**: members / guest-members / guest-link / availability-dates / responses / guest-responses（既存ロジック移植） | backend |
-| 3 | **卓確定 API**: `POST /:id/confirm`（選出バリデーション + トランザクション卓生成 + 二重確定排他）+ `game_session_members.recruitment_member_id` 追加 + `GET /game-sessions/:id` への `recruitmentId` 追加 + 確定卓の削除ガード | backend |
+| 3 | **卓確定 API**: `POST /:id/confirm`（選出バリデーション + トランザクション卓生成 + 二重確定排他）+ `game_session_members.recruitment_member_id` 追加 + `GET /game-sessions/:id` への `recruitmentId` 追加 + 卓の中止（`cancelled_at` カラム + `PATCH /:id/status` の `cancelled` 遷移） | backend |
 | 4 | **募集枠のフロントエンド**: 一覧・作成・詳細（参加・日程調整）・編集画面（既存 GameSession 実装の移植） | frontend `features/Recruitment/` |
 | 5 | **卓確定フローのフロントエンド**: 確定ダイアログ（候補日選択 → 条件付き選出 → 確認）、確定後表示（非選出者文言含む）、ダッシュボード再構成 | frontend |
 | 6 | **旧経路の廃止**: 卓の候補日・回答・募集ステータスの削除（API・UI・テーブル）、`POST /api/game-sessions` の `scheduledAt` 必須化、卓ステータス簡素化 | backend + frontend + マイグレーション |
@@ -547,14 +560,25 @@ design-v1 で「日程確定は `PATCH /status` に統合せず独立エンド�
 更新行数 0 ならトランザクション全体をロールバックして `409` を返す。
 片方の確定だけが `closed_at` をセットでき、敗者は必ず 0 行更新になる。
 
-### 募集由来の卓の削除は暫定的に禁止する（中止の設計が確定するまで）
+### 中止は卓のステータス（`cancelled_at`）で表現し、募集枠の再開は Ph1 では提供しない
 
-中止（開催を取りやめて再調整する）の設計は §4 の遷移図で**提案・未確定**として示している。
-これが確定するまでの**暫定措置**として、募集由来（`recruitment_id != null`）の卓の削除を
-卓削除 API 側で `409` によりガードする。安易に削除を許すと、募集枠の `closed_at` が残ったまま
-出自リンクだけが失われ、状態の整合が崩れるため。
-中止を採用する場合は「開催を中止して再調整する」というワンアクションとして提供し、
-卓の削除と募集枠の `closed_at` クリアを1トランザクションで行う設計を別途確定させる。
+「やっぱり中止」を表現する方式として、当初は操作方式（卓を削除し募集枠の `closed_at` をクリアして
+`scheduling` に復帰させる）を提案したが、**ステータス方式**に確定した。理由:
+
+- 要求 §3-6 の「完了を明示アクションにするのはキャンセル・延期を表現できるようにするため」と整合する
+  （中止はもともと要求レベルで「表現したい状態」だった）
+- 卓を削除すると参加者視点で「何が起きたか」が分からない。`cancelled` 表示なら柔らかく伝えられる
+- `cancelled_at` は `completed_at` と対称なファクトで、導出方針とも整合する
+- FK を卓側 `recruitment_id`（unique なし）に反転済みのため、中止卓を残したまま将来の再確定
+  （1募集枠に cancelled + confirmed の複数卓）にも DB はそのまま耐える
+
+**募集枠の再開（`closed_at` クリア → `scheduling` 復帰）は Ph1 では提供しない（単一方向）。**
+募集枠の `confirmed` は完全な終端であり、卓が中止になっても戻らない。再調整したい場合は
+新しい募集枠を立てる。再開導線が必要になったら、`closed_at` クリアの1操作を追加するだけで
+実現できる（DB 変更不要の additive な拡張）ため、必要性が実証されてから議論する。
+
+なお、募集由来の卓の削除を暫定的に `409` でガードする案は不要になった。既存の削除ポリシーが
+もともと確定（`confirmed`）以降の卓の削除を許しておらず、「確定後にやめたい」の受け皿は中止が担う。
 
 ### 選出の突合は `recruitment_member_id` FK で行う
 

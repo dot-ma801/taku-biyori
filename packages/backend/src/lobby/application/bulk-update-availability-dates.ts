@@ -13,8 +13,7 @@ const ALLOWED_STATUSES = new Set<LobbyStatus>([
   LobbyStatus.scheduling,
 ]);
 
-export interface BulkUpdateAvailabilityDatesRepository
-  extends LobbyHostRepository {
+export interface BulkUpdateAvailabilityDatesRepository extends LobbyHostRepository {
   findStatusFields(id: string): Promise<LobbyStatusInput | null>;
   replaceAllDates(
     lobbyId: string,

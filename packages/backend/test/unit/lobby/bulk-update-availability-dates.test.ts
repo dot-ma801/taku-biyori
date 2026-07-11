@@ -28,9 +28,14 @@ describe('bulkUpdateAvailabilityDates', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2025-10-01', '2025-10-02'],
-    });
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'lobby-1',
+      'user-1',
+      {
+        dates: ['2025-10-01', '2025-10-02'],
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', dates: mockDates });
@@ -59,9 +64,14 @@ describe('bulkUpdateAvailabilityDates', () => {
     });
 
     // Act
-    const result = await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2025-10-01'],
-    });
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'lobby-1',
+      'user-1',
+      {
+        dates: ['2025-10-01'],
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -79,9 +89,14 @@ describe('bulkUpdateAvailabilityDates', () => {
     });
 
     // Act
-    const result = await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2026-07-01'],
-    });
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'lobby-1',
+      'user-1',
+      {
+        dates: ['2026-07-01'],
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });
@@ -99,9 +114,14 @@ describe('bulkUpdateAvailabilityDates', () => {
     });
 
     // Act
-    const result = await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2026-07-01'],
-    });
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'lobby-1',
+      'user-1',
+      {
+        dates: ['2026-07-01'],
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });

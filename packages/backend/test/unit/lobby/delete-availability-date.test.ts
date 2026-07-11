@@ -55,9 +55,7 @@ describe('deleteAvailabilityDate', () => {
   it('候補日が別募集枠に属する場合は notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findCandidateOwner: vi
-        .fn()
-        .mockResolvedValue({ lobbyId: 'other-lobby' }),
+      findCandidateOwner: vi.fn().mockResolvedValue({ lobbyId: 'other-lobby' }),
     });
 
     // Act

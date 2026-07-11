@@ -537,10 +537,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return [...map.values()];
   },
 
-  async addDate(
-    lobbyId: string,
-    date: string,
-  ): Promise<LobbyAvailabilityDate> {
+  async addDate(lobbyId: string, date: string): Promise<LobbyAvailabilityDate> {
     const result = await db
       .insert(lobbyCandidates)
       .values({ lobbyId, date })

@@ -4,6 +4,8 @@ import {
   UpdateLobbyInputSchema,
   JoinLobbyInputSchema,
   JoinLobbyAsGuestInputSchema,
+  CreateLobbyAvailabilityDateInputSchema,
+  BulkUpdateLobbyAvailabilityDatesInputSchema,
 } from '@/lobby';
 
 afterEach(() => {
@@ -236,6 +238,67 @@ describe('JoinLobbyAsGuestInputSchema', () => {
 
     // Act
     const result = JoinLobbyAsGuestInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('CreateLobbyAvailabilityDateInputSchema', () => {
+  it('今日以降の日付なら成功する', () => {
+    // Arrange
+    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+    const input = { date: '2025-06-15' };
+
+    // Act
+    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('過去日なら失敗する', () => {
+    // Arrange
+    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+    const input = { date: '2025-06-14' };
+
+    // Act
+    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
+  it('1 件以上の日付があれば成功する', () => {
+    // Arrange
+    const input = { dates: ['2099-09-01', '2099-09-02'] };
+
+    // Act
+    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('dates が空配列なら失敗する（game-session と異なり 1 件以上が必須）', () => {
+    // Arrange
+    const input = { dates: [] };
+
+    // Act
+    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  it('dates が未指定なら失敗する', () => {
+    // Arrange
+    const input = {};
+
+    // Act
+    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
 
     // Assert
     expect(result.success).toBe(false);

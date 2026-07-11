@@ -1,4 +1,8 @@
-import { LobbyStatus, type Lobby, type UpdateLobbyInput } from '@taku-biyori/shared';
+import {
+  LobbyStatus,
+  type Lobby,
+  type UpdateLobbyInput,
+} from '@taku-biyori/shared';
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
 
 export interface UpdateLobbyRepository extends LobbyHostRepository {

@@ -1,4 +1,13 @@
-import { and, count, eq, exists, isNull, or, sql, getTableColumns } from 'drizzle-orm';
+import {
+  and,
+  count,
+  eq,
+  exists,
+  isNull,
+  or,
+  sql,
+  getTableColumns,
+} from 'drizzle-orm';
 import type {
   Lobby,
   LobbyDetail,
@@ -50,7 +59,8 @@ type ListRow = LobbyRow & {
   userMemberId: string | null;
 };
 
-const toDateOrNull = (s: string | null): Date | null => (s ? new Date(s) : null);
+const toDateOrNull = (s: string | null): Date | null =>
+  s ? new Date(s) : null;
 
 const toLobby = (row: LobbyRow): Lobby => ({
   id: row.id,

@@ -45,9 +45,7 @@ describe('createLobby', () => {
 
   it('createWithHostAndCandidates に hostUserId・title・candidateDates を渡す', async () => {
     // Arrange
-    const createWithHostAndCandidates = vi
-      .fn()
-      .mockResolvedValue(mockLobby);
+    const createWithHostAndCandidates = vi.fn().mockResolvedValue(mockLobby);
     const repo: CreateLobbyRepository = { createWithHostAndCandidates };
 
     // Act
@@ -68,9 +66,7 @@ describe('createLobby', () => {
 
   it('guestLinkToken が 16 バイト base64url 形式で渡される', async () => {
     // Arrange
-    const createWithHostAndCandidates = vi
-      .fn()
-      .mockResolvedValue(mockLobby);
+    const createWithHostAndCandidates = vi.fn().mockResolvedValue(mockLobby);
     const repo: CreateLobbyRepository = { createWithHostAndCandidates };
 
     // Act
@@ -80,17 +76,14 @@ describe('createLobby', () => {
     });
 
     // Assert
-    const { guestLinkToken } =
-      createWithHostAndCandidates.mock.calls[0]![0];
+    const { guestLinkToken } = createWithHostAndCandidates.mock.calls[0]![0];
     expect(guestLinkToken).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(guestLinkToken.length).toBeGreaterThan(10);
   });
 
   it('オプションフィールドを createWithHostAndCandidates に渡す', async () => {
     // Arrange
-    const createWithHostAndCandidates = vi
-      .fn()
-      .mockResolvedValue(mockLobby);
+    const createWithHostAndCandidates = vi.fn().mockResolvedValue(mockLobby);
     const repo: CreateLobbyRepository = { createWithHostAndCandidates };
 
     // Act

@@ -7,12 +7,35 @@ import type {
   Lobby,
   LobbyDetail,
   LobbyListItem,
+  LobbyMember,
   CreateLobbyInput,
   UpdateLobbyStatusInput,
 } from '@taku-biyori/shared';
+import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
+import type { ListMembersResult } from '@/lobby/application/list-members';
+import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
+import type { JoinAsGuestResult } from '@/lobby/application/join-as-guest';
+import type { LeaveLobbyResult } from '@/lobby/application/leave-lobby';
+import type { GetGuestLinkResult } from '@/lobby/application/get-guest-link';
 
 const mockSession = { user: { id: 'user-1' } };
+
+const mockMember: LobbyMember = {
+  id: 'member-1',
+  userId: 'user-2',
+  userName: 'テストユーザー',
+  guestName: null,
+  joinedAt: '2025-01-01T00:00:00.000Z',
+};
+
+const mockGuestMember: LobbyMember = {
+  id: 'member-2',
+  userId: null,
+  userName: null,
+  guestName: 'ゲスト太郎',
+  joinedAt: '2025-01-01T00:00:00.000Z',
+};
 
 const mockListItem: LobbyListItem = {
   id: 'f2b4dbb8-0000-4000-8000-000000000001',
@@ -66,6 +89,20 @@ const makeApp = (
     updateLobbyStatus:
       overrides.updateLobbyStatus ??
       vi.fn().mockResolvedValue({ type: 'ok', lobby: mockLobby }),
+    listMembers:
+      overrides.listMembers ??
+      vi.fn().mockResolvedValue({ type: 'ok', members: [mockMember] }),
+    joinLobby:
+      overrides.joinLobby ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: mockMember }),
+    joinAsGuest:
+      overrides.joinAsGuest ??
+      vi.fn().mockResolvedValue({ type: 'ok', member: mockGuestMember }),
+    leaveLobby:
+      overrides.leaveLobby ?? vi.fn().mockResolvedValue({ type: 'ok' }),
+    getGuestLink:
+      overrides.getGuestLink ??
+      vi.fn().mockResolvedValue({ type: 'ok', token: 'guest-token-abc' }),
   };
 
   return createApp({
@@ -650,6 +687,561 @@ describe('PATCH /api/lobbies/:id/status', () => {
     expect(updateLobbyStatus).toHaveBeenCalledWith('lobby-1', 'user-1', {
       status: 'open',
     });
+  });
+});
+
+describe('GET /api/lobbies/:id/members', () => {
+  it('公開済み募集枠は未認証でも 200 でメンバー一覧を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members');
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockMember]);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listMembers: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/nonexistent/members');
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('非公開募集枠にホスト以外がアクセスすると 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listMembers: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members');
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('非公開募集枠に未認証でアクセスすると 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getSession: vi.fn().mockResolvedValue(null),
+      listMembers: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members');
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('lobbyId と userId を listMembers に渡す', async () => {
+    // Arrange
+    const listMembers: (
+      lobbyId: string,
+      userId: string | null,
+    ) => Promise<ListMembersResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', members: [] });
+    const app = makeApp({ listMembers });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/members');
+
+    // Assert
+    expect(listMembers).toHaveBeenCalledWith('lobby-1', 'user-1');
+  });
+});
+
+describe('POST /api/lobbies/:id/members', () => {
+  it('認証済みユーザーが参加すると 201 とメンバーを返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(201);
+    expect(body).toEqual(mockMember);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/nonexistent/members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('open 以外の募集枠は 422 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinLobby: vi.fn().mockResolvedValue({ type: 'lobbyNotOpen' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('すでに参加済みなら 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinLobby: vi.fn().mockResolvedValue({ type: 'alreadyJoined' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('ユースケースに lobbyId・userId・input を渡す', async () => {
+    // Arrange
+    const joinLobby: (
+      lobbyId: string,
+      userId: string,
+      input: unknown,
+    ) => Promise<JoinLobbyResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', member: mockMember });
+    const app = makeApp({ joinLobby });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Assert
+    expect(joinLobby).toHaveBeenCalledWith('lobby-1', 'user-1', {});
+  });
+});
+
+describe('POST /api/lobbies/:id/guest-members', () => {
+  it('有効な Guest-Token で 201 とゲストメンバーを返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+      },
+      body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+    });
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(201);
+    expect(body).toEqual(mockGuestMember);
+  });
+
+  it('認証（セッション）は不要', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+      },
+      body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(201);
+  });
+
+  it('Guest-Token が一致しない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinAsGuest: vi.fn().mockResolvedValue({ type: 'invalidToken' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: 'wrong-token',
+      },
+      body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('Guest-Token ヘッダーがない場合も 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinAsGuest: vi.fn().mockResolvedValue({ type: 'invalidToken' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinAsGuest: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/nonexistent/guest-members',
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('open 以外の募集枠は 422 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      joinAsGuest: vi.fn().mockResolvedValue({ type: 'lobbyNotOpen' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+      },
+      body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('guestName が空なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+      },
+      body: JSON.stringify({ guestName: '' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('重複するゲスト参加も 201 を返す（dedup しない）', async () => {
+    // Arrange
+    const joinAsGuest: (
+      lobbyId: string,
+      token: string,
+      input: unknown,
+    ) => Promise<JoinAsGuestResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', member: mockGuestMember });
+    const app = makeApp({ joinAsGuest });
+    const request = () =>
+      app.request('/api/lobbies/lobby-1/guest-members', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+      });
+
+    // Act
+    const first = await request();
+    const second = await request();
+
+    // Assert
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(joinAsGuest).toHaveBeenCalledTimes(2);
+  });
+
+  it('ユースケースに lobbyId・token・input を渡す', async () => {
+    // Arrange
+    const joinAsGuest: (
+      lobbyId: string,
+      token: string,
+      input: unknown,
+    ) => Promise<JoinAsGuestResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', member: mockGuestMember });
+    const app = makeApp({ joinAsGuest });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+      },
+      body: JSON.stringify({ guestName: 'ゲスト太郎' }),
+    });
+
+    // Assert
+    expect(joinAsGuest).toHaveBeenCalledWith('lobby-1', 'guest-token-abc', {
+      guestName: 'ゲスト太郎',
+    });
+  });
+});
+
+describe('DELETE /api/lobbies/:id/members/:memberId', () => {
+  it('本人が退出すると 204 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/members/member-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(204);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/members/member-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('本人でもホストでもない場合は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      leaveLobby: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/members/member-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しないメンバーなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      leaveLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/members/nonexistent',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('ホスト自身の退出は 422 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      leaveLobby: vi.fn().mockResolvedValue({ type: 'hostCannotLeave' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/members/member-host',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      leaveLobby: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/members/member-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('ユースケースに lobbyId・memberId・userId を渡す', async () => {
+    // Arrange
+    const leaveLobby: (
+      lobbyId: string,
+      memberId: string,
+      userId: string,
+    ) => Promise<LeaveLobbyResult> = vi.fn().mockResolvedValue({ type: 'ok' });
+    const app = makeApp({ leaveLobby });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/members/member-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(leaveLobby).toHaveBeenCalledWith('lobby-1', 'member-1', 'user-1');
+  });
+});
+
+describe('GET /api/lobbies/:id/guest-link', () => {
+  it('ホストがリクエストすると 200 とトークンを返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-link');
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ token: 'guest-token-abc' });
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-link');
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホスト以外がリクエストすると 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLink: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/guest-link');
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getGuestLink: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/nonexistent/guest-link');
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('ユースケースに id と userId を渡す', async () => {
+    // Arrange
+    const getGuestLink: (
+      id: string,
+      userId: string,
+    ) => Promise<GetGuestLinkResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', token: 'guest-token-abc' });
+    const app = makeApp({ getGuestLink });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/guest-link');
+
+    // Assert
+    expect(getGuestLink).toHaveBeenCalledWith('lobby-1', 'user-1');
   });
 });
 

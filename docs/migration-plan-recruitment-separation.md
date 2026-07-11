@@ -33,7 +33,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `recruitment` PostgreSQL スキーマ（4テーブル + enum）の Drizzle 定義・マイグレーション生成、shared に `Recruitment` 系契約型、募集枠 CRUD API（一覧/作成/詳細/更新/削除/`PATCH /:id/status` の公開・募集中止） |
+| スコープ | `lobby` PostgreSQL スキーマ（4テーブル + enum）の Drizzle 定義・マイグレーション生成、shared に `Lobby` 系契約型、募集枠 CRUD API（一覧/作成/詳細/更新/削除/`PATCH /:id/status` の公開・募集中止） |
 | 既存への影響 | なし（新規スキーマ・新規ルートの追加のみ） |
 | 完了条件 | ユニット・インテグレーションテスト green。`db:generate` / `db:migrate` が通る |
 | 検証 | `POST → PATCH(公開) → GET` の一連をインテグレーションテストで確認。ステータス導出（`draft/open/scheduling/cancelled`）のユニットテスト |
@@ -43,16 +43,16 @@
 | 項目 | 内容 |
 |---|---|
 | スコープ | members / guest-members / guest-link / availability-dates（CRUD・一括更新）/ responses / guest-responses |
-| 移植元 | 既存 `game-session` の application / infrastructure 層ロジック。**コピーして recruitment 配下に移植**する（共通化はしない。理由は §4 参照） |
+| 移植元 | 既存 `game-session` の application / infrastructure 層ロジック。**コピーして lobby 配下に移植**する（共通化はしない。理由は §4 参照） |
 | 既存への影響 | なし |
-| 完了条件 | 既存卓側の同等機能と同じテスト観点（権限・`Guest-Token` 検証・`open` のみ参加可・ゲスト全列編集）を recruitment 側でカバー |
+| 完了条件 | 既存卓側の同等機能と同じテスト観点（権限・`Guest-Token` 検証・`open` のみ参加可・ゲスト全列編集）を lobby 側でカバー |
 | 検証 | ゲストリンク発行 → ゲスト参加 → ゲスト回答の一連をインテグレーションテストで確認 |
 
 ### 段階3: 卓確定 API（backend）
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `POST /api/recruitments/:id/confirm`（選出バリデーション + トランザクションでの卓生成 + `closed_at` の条件付き UPDATE による二重確定排他 + `open_until = 確定実行日` セット + `recruitment_member_id` コピー）、`game_sessions.recruitment_id`・`game_session_members.recruitment_member_id` カラム追加マイグレーション、`recruitments.closed_at` カラム追加、`GET /api/game-sessions/:id` への `recruitmentId` 追加、卓の中止（`game_sessions.cancelled_at` カラム追加 + `PATCH /:id/status` に `cancelled` 遷移を追加。`confirmed`/`today` から可）、確定後の募集枠 API の read-only 化（`409`） |
+| スコープ | `POST /api/lobbies/:id/confirm`（選出バリデーション + トランザクションでの卓生成 + `closed_at` の条件付き UPDATE による二重確定排他 + `open_until = 確定実行日` セット + `lobby_member_id` コピー）、`game_sessions.lobby_id`・`game_session_members.lobby_member_id` カラム追加マイグレーション、`lobbies.closed_at` カラム追加、`GET /api/game-sessions/:id` への `lobbyId` 追加、卓の中止（`game_sessions.cancelled_at` カラム追加 + `PATCH /:id/status` に `cancelled` 遷移を追加。`confirmed`/`today` から可）、確定後の募集枠 API の read-only 化（`409`） |
 | 既存への影響 | `GET /api/game-sessions/:id` のレスポンスフィールド追加、`game_session_members` への nullable カラム追加、卓削除への確定卓ガード追加（いずれも後方互換） |
 | 完了条件 | design-v1.1 §5 のバリデーション表を全ケーステストでカバー。トランザクション失敗時に卓もリンクも残らないこと・並行確定が片方 `409` になることを確認 |
 | 検証 | 「`memberIds` 必須（未指定・空配列で `422`）」「この募集枠のメンバーでない ID を含むと `422`」「◯△×・未回答いずれのメンバーも指定できる（サーバは回答内容・定員でブロックしない）」「確定後の参加・回答が `409`」「確定卓のステータスが `confirmed`/`today` に導出される（`open` に落ちない）」 |
@@ -61,7 +61,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `features/Recruitment/`（List / New / Detail / Edit）、ルート追加（`/recruitments` 系）、ゲストの `?token=` 動線、募集中止ボタン（確認ダイアログ付き・中止表示）、本人退出ボタン |
+| スコープ | `features/Lobby/`（List / New / Detail / Edit）、ルート追加（`/lobbies` 系）、ゲストの `?token=` 動線、募集中止ボタン（確認ダイアログ付き・中止表示）、本人退出ボタン |
 | 移植元 | `features/GameSession/` の各画面・`Schedule/` サブディレクトリ・composables |
 | 既存への影響 | ルート追加のみ。既存画面は無変更（ダッシュボード再構成は段階5） |
 | 完了条件 | 募集枠の作成 → 公開 → 参加 → 日程回答が UI から一通り行える |
@@ -125,10 +125,10 @@
 
 | リスク | 対応 |
 |---|---|
-| 移植時に既存ロジックへ手を入れて既存機能を壊す | 移植は**コピー**とし、既存 `game-session` 配下の変更は段階1〜5では段階3の後方互換な追加（`GET /:id` の `recruitmentId`・メンバーレスポンスの `recruitmentMemberId`・`DELETE /:id` の確定卓ガード・`recruitment_member_id` カラム）に限定する。共通化リファクタは段階6完了後に検討する（廃止で消えるコードとの共通化は無駄になるため） |
-| 新旧2系統の並走で UI 導線が混乱する | 段階5のダッシュボード再構成までは既存導線を優先表示のまま維持し、`/recruitments` はナビゲーションに追加するだけに留める |
+| 移植時に既存ロジックへ手を入れて既存機能を壊す | 移植は**コピー**とし、既存 `game-session` 配下の変更は段階1〜5では段階3の後方互換な追加（`GET /:id` の `lobbyId`・メンバーレスポンスの `lobbyMemberId`・`DELETE /:id` の確定卓ガード・`lobby_member_id` カラム）に限定する。共通化リファクタは段階6完了後に検討する（廃止で消えるコードとの共通化は無駄になるため） |
+| 新旧2系統の並走で UI 導線が混乱する | 段階5のダッシュボード再構成までは既存導線を優先表示のまま維持し、`/lobbies` はナビゲーションに追加するだけに留める |
 | 確定トランザクションの部分失敗 | 卓生成・メンバーコピー・確定リンクを単一 DB トランザクションで実施（design-v1.1 §5）。インテグレーションテストで失敗時のロールバックを検証 |
-| 同一募集枠への同時確定（二重確定） | 確定ファクトのセットを条件付き UPDATE（`SET closed_at = now() WHERE closed_at IS NULL`）で行い、更新0行なら全体ロールバック + `409`（design-v1.1 §5）。卓との紐付けは卓側 `game_sessions.recruitment_id` で持つ |
+| 同一募集枠への同時確定（二重確定） | 確定ファクトのセットを条件付き UPDATE（`SET closed_at = now() WHERE closed_at IS NULL`）で行い、更新0行なら全体ロールバック + `409`（design-v1.1 §5）。卓との紐付けは卓側 `game_sessions.lobby_id` で持つ |
 | 移行期間中に確定卓が既存導出で `open`（募集中）扱いになる | 確定処理で `open_until = 確定実行日` をセットし、既存の `getGameSessionStatus` でも `confirmed`/`today` に到達させる（design-v1.1 §5・意思決定ログ） |
 | 段階6の削除漏れ・参照残り | 6b で `typecheck` / `lint` / 全テストに加え、`availability` `openUntil` 等の廃止シンボル（`isPublished` は維持するため対象外）の横断検索で参照ゼロを確認してからマージ |
 | openapi.yml と実装の乖離 | 各段階の PR に `docs/openapi.yml` の更新を含める（段階1〜3で追加、6b で削除） |

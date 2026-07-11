@@ -516,7 +516,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .from(lobbyCandidates)
       .leftJoin(lobbyAnswers, eq(lobbyAnswers.candidateId, lobbyCandidates.id))
       .where(eq(lobbyCandidates.lobbyId, lobbyId))
-      .orderBy(lobbyCandidates.date);
+      .orderBy(lobbyCandidates.date, lobbyAnswers.createdAt);
 
     const map = new Map<string, LobbyAvailabilityDate>();
     for (const row of rows) {

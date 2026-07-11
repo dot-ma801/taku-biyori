@@ -111,3 +111,20 @@ export const LobbyDetailSchema = LobbySchema.extend({
   members: z.array(LobbyMemberSchema),
 });
 export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
+
+// 募集枠メンバーは character_name を持たない（design-v1.1 §6）ため、
+// 参加入力は空オブジェクト。将来的にフィールドが増える可能性に備えてスキーマ自体は残す。
+export const JoinLobbyInputSchema = z.object({});
+export type JoinLobbyInput = z.infer<typeof JoinLobbyInputSchema>;
+
+export const JoinLobbyAsGuestInputSchema = z.object({
+  guestName: z.string().min(1).max(100),
+});
+export type JoinLobbyAsGuestInput = z.infer<typeof JoinLobbyAsGuestInputSchema>;
+
+export const LobbyGuestLinkResponseSchema = z.object({
+  token: z.string(),
+});
+export type LobbyGuestLinkResponse = z.infer<
+  typeof LobbyGuestLinkResponseSchema
+>;

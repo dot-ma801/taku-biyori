@@ -77,4 +77,10 @@ export {
   type LobbyMember,
   LobbyDetailSchema,
   type LobbyDetail,
+  JoinLobbyInputSchema,
+  type JoinLobbyInput,
+  JoinLobbyAsGuestInputSchema,
+  type JoinLobbyAsGuestInput,
+  LobbyGuestLinkResponseSchema,
+  type LobbyGuestLinkResponse,
 } from './lobby.js';

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { CreateLobbyInputSchema, UpdateLobbyInputSchema } from '@/lobby';
+import {
+  CreateLobbyInputSchema,
+  UpdateLobbyInputSchema,
+  JoinLobbyInputSchema,
+  JoinLobbyAsGuestInputSchema,
+} from '@/lobby';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -164,5 +169,75 @@ describe('UpdateLobbyInputSchema', () => {
       // Assert
       expect(result.success).toBe(true);
     });
+  });
+});
+
+describe('JoinLobbyInputSchema', () => {
+  it('空オブジェクトで成功する（募集枠メンバーは character_name を持たない）', () => {
+    // Arrange
+    const input = {};
+
+    // Act
+    const result = JoinLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('JoinLobbyAsGuestInputSchema', () => {
+  it('guestName があれば成功する', () => {
+    // Arrange
+    const input = { guestName: 'ゲスト太郎' };
+
+    // Act
+    const result = JoinLobbyAsGuestInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('guestName が空文字なら失敗する', () => {
+    // Arrange
+    const input = { guestName: '' };
+
+    // Act
+    const result = JoinLobbyAsGuestInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  it('guestName が未指定なら失敗する', () => {
+    // Arrange
+    const input = {};
+
+    // Act
+    const result = JoinLobbyAsGuestInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  it('guestName が 100 文字なら成功する', () => {
+    // Arrange
+    const input = { guestName: 'あ'.repeat(100) };
+
+    // Act
+    const result = JoinLobbyAsGuestInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('guestName が 101 文字なら失敗する（openapi.yml の 50 文字ではなく実装の 100 文字が正）', () => {
+    // Arrange
+    const input = { guestName: 'あ'.repeat(101) };
+
+    // Act
+    const result = JoinLobbyAsGuestInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
   });
 });

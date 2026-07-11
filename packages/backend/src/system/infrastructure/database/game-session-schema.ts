@@ -12,6 +12,10 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { user } from '@/system/infrastructure/database/schema';
+import {
+  lobbies,
+  lobbyMembers,
+} from '@/system/infrastructure/database/lobby-schema';
 
 /**
  * 卓（ゲームセッション）機能用の PostgreSQL スキーマです。
@@ -34,6 +38,11 @@ export const gameSessions = gameSessionSchema.table('game_sessions', {
   openUntil: date('open_until'),
   scheduledAt: date('scheduled_at'),
   completedAt: timestamp('completed_at'),
+  cancelledAt: timestamp('cancelled_at'),
+  // 出自の募集枠。直接卓立ては null（design-v1.1 §3）
+  lobbyId: uuid('lobby_id').references(() => lobbies.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at')
     .notNull()
@@ -51,6 +60,10 @@ export const gameSessionMembers = gameSessionSchema.table(
     userId: text('user_id').references(() => user.id),
     guestName: text('guest_name'),
     characterName: text('character_name'),
+    // 卓確定でコピーされたメンバーの出自（募集枠メンバーID）。直接参加は null（design-v1.1 §3）
+    lobbyMemberId: uuid('lobby_member_id').references(() => lobbyMembers.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()
@@ -129,6 +142,10 @@ export const gameSessionsRelations = relations(
       fields: [gameSessions.hostUserId],
       references: [user.id],
     }),
+    lobby: one(lobbies, {
+      fields: [gameSessions.lobbyId],
+      references: [lobbies.id],
+    }),
     members: many(gameSessionMembers),
     candidates: many(gameSessionCandidates),
   }),
@@ -144,6 +161,10 @@ export const gameSessionMembersRelations = relations(
     user: one(user, {
       fields: [gameSessionMembers.userId],
       references: [user.id],
+    }),
+    lobbyMember: one(lobbyMembers, {
+      fields: [gameSessionMembers.lobbyMemberId],
+      references: [lobbyMembers.id],
     }),
     answers: many(gameSessionAnswers),
   }),

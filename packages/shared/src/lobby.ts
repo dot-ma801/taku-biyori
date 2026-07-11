@@ -71,6 +71,16 @@ export const UpdateLobbyInputSchema = z
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: '少なくとも1つのフィールドが必要です',
+  })
+  .superRefine((input, ctx) => {
+    // null（締め切りのクリア）・未指定は検証しない
+    if (input.openUntil && input.openUntil < todayDateString()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['openUntil'],
+        message: '募集締め切り日には今日以降の日付を指定してください',
+      });
+    }
   });
 export type UpdateLobbyInput = z.infer<typeof UpdateLobbyInputSchema>;
 

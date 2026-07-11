@@ -11,4 +11,6 @@ export enum GameSessionStatus {
   today = 'today',
   /** 通過済み */
   completed = 'completed',
+  /** 中止 */
+  cancelled = 'cancelled',
 }

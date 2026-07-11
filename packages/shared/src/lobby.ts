@@ -98,6 +98,14 @@ export type UpdateLobbyStatusInput = z.infer<
   typeof UpdateLobbyStatusInputSchema
 >;
 
+// 卓確定（選出）。candidateId・memberIds は必須（design-v1.1 §5）。
+// memberIds は 1 件以上必須（選出対象0人での確定は許可しない）。
+export const ConfirmLobbyInputSchema = z.object({
+  candidateId: z.string().uuid(),
+  memberIds: z.array(z.string().uuid()).min(1),
+});
+export type ConfirmLobbyInput = z.infer<typeof ConfirmLobbyInputSchema>;
+
 export const LobbyMemberSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().nullable(),

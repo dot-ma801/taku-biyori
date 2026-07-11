@@ -18,6 +18,7 @@ import type {
   JoinLobbyInput,
   JoinLobbyAsGuestInput,
   UpdateLobbyInput,
+  UpdateLobbyAvailabilityDateResponseInput,
 } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
 import type { Database } from '@/system/infrastructure/database/client';
@@ -44,6 +45,8 @@ import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-a
 import type { AddAvailabilityDateRepository } from '@/lobby/application/add-availability-date';
 import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
 import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delete-availability-date';
+import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
+import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -59,7 +62,9 @@ export type LobbyRepository = ListLobbiesRepository &
   ListAvailabilityDatesRepository &
   AddAvailabilityDateRepository &
   BulkUpdateAvailabilityDatesRepository &
-  DeleteAvailabilityDateRepository;
+  DeleteAvailabilityDateRepository &
+  UpdateAvailabilityDateResponseRepository &
+  UpdateGuestAvailabilityDateResponseRepository;
 
 type LobbyRow = {
   id: string;
@@ -612,5 +617,54 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .where(eq(lobbies.id, id))
       .limit(1);
     return row[0]?.guestLinkToken ?? null;
+  },
+
+  async isGuestMember(lobbyId: string, memberId: string): Promise<boolean> {
+    const row = await db
+      .select({ userId: lobbyMembers.userId })
+      .from(lobbyMembers)
+      .where(
+        and(
+          eq(lobbyMembers.id, memberId),
+          eq(lobbyMembers.lobbyId, lobbyId),
+          isNull(lobbyMembers.userId),
+        ),
+      )
+      .limit(1);
+    return row[0] !== undefined;
+  },
+
+  async upsertAnswer(
+    candidateId: string,
+    memberId: string,
+    input: UpdateLobbyAvailabilityDateResponseInput,
+  ): Promise<LobbyAvailabilityDateAnswer> {
+    const result = await db
+      .insert(lobbyAnswers)
+      .values({
+        candidateId,
+        memberId,
+        answer: input.answer,
+        comment: input.comment ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [lobbyAnswers.candidateId, lobbyAnswers.memberId],
+        set: {
+          answer: input.answer,
+          comment: input.comment ?? null,
+        },
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('回答の登録に失敗しました');
+
+    const answerValue = row.answer as LobbyAvailabilityDateAnswer['answer'];
+    return {
+      id: row.id,
+      memberId: row.memberId,
+      answer: answerValue,
+      comment: row.comment,
+    };
   },
 });

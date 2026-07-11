@@ -658,3 +658,109 @@ describe('replaceAllDates', () => {
     expect(result).toEqual([]);
   });
 });
+
+describe('isGuestMember', () => {
+  it('user_id が null のメンバーなら true を返す', async () => {
+    // Arrange
+    const { db } = makeSelectLimitDb([{ userId: null }]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.isGuestMember(mockLobbyRow.id, 'member-2');
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  it('該当行がなければ false を返す（ログインメンバー・存在しないメンバーを含む）', async () => {
+    // Arrange
+    const { db } = makeSelectLimitDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.isGuestMember(mockLobbyRow.id, 'member-1');
+
+    // Assert
+    expect(result).toBe(false);
+  });
+});
+
+describe('upsertAnswer', () => {
+  const makeUpsertDb = (rows: unknown[]) => {
+    const insertChain = {
+      values: vi.fn().mockReturnThis(),
+      onConflictDoUpdate: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(rows),
+    };
+    const db = {
+      insert: vi.fn().mockReturnValue(insertChain),
+    } as unknown as Database;
+    return { db, insertChain };
+  };
+
+  it('回答を登録して LobbyAvailabilityDateAnswer を返す', async () => {
+    // Arrange
+    const { db } = makeUpsertDb([
+      {
+        id: 'answer-1',
+        memberId: 'member-1',
+        answer: 'ok',
+        comment: null,
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.upsertAnswer('date-1', 'member-1', {
+      answer: 'ok',
+    });
+
+    // Assert
+    expect(result).toEqual({
+      id: 'answer-1',
+      memberId: 'member-1',
+      answer: 'ok',
+      comment: null,
+    });
+  });
+
+  it('candidateId・memberId の組で競合したら更新する', async () => {
+    // Arrange
+    const { db, insertChain } = makeUpsertDb([
+      {
+        id: 'answer-1',
+        memberId: 'member-1',
+        answer: 'maybe',
+        comment: 'たぶん行ける',
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.upsertAnswer('date-1', 'member-1', {
+      answer: 'maybe',
+      comment: 'たぶん行ける',
+    });
+
+    // Assert
+    expect(insertChain.onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        set: expect.objectContaining({
+          answer: 'maybe',
+          comment: 'たぶん行ける',
+        }),
+      }),
+    );
+  });
+
+  it('挿入に失敗したらエラーを投げる', async () => {
+    // Arrange
+    const { db } = makeUpsertDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act & Assert
+    await expect(
+      repo.upsertAnswer('date-1', 'member-1', { answer: 'ok' }),
+    ).rejects.toThrow();
+  });
+});

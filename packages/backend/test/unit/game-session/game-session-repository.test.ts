@@ -304,9 +304,7 @@ describe('cancel', () => {
   it('cancelled_at が NULL の行だけを更新する（二重中止の排他）', async () => {
     // Arrange
     const cancelledAt = new Date('2025-06-01T00:00:00.000Z');
-    const { db, whereSql } = makeUpdateDb([
-      { ...mockSessionRow, cancelledAt },
-    ]);
+    const { db, whereSql } = makeUpdateDb([{ ...mockSessionRow, cancelledAt }]);
     const repo = createGameSessionRepository(db);
 
     // Act

@@ -859,9 +859,7 @@ describe('closeLobby', () => {
   it('closed_at・cancelled_at の両方が NULL の行だけを更新する（二重確定の排他）', async () => {
     // Arrange
     const closedAt = new Date('2026-07-11T10:00:00.000Z');
-    const { db, whereSql } = makeUpdateDb([
-      { ...mockLobbyRow, closedAt },
-    ]);
+    const { db, whereSql } = makeUpdateDb([{ ...mockLobbyRow, closedAt }]);
     const repo = createLobbyRepository(db);
 
     // Act

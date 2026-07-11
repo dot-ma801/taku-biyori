@@ -116,7 +116,12 @@ describe('confirmLobby', () => {
       // Arrange
       const fields =
         status === 'draft'
-          ? { isPublished: false, openUntil: null, closedAt: null, cancelledAt: null }
+          ? {
+              isPublished: false,
+              openUntil: null,
+              closedAt: null,
+              cancelledAt: null,
+            }
           : {
               isPublished: true,
               openUntil: null,
@@ -236,7 +241,9 @@ describe('confirmLobby', () => {
     const repo = makeRepo({
       findMemberCoresByIds: vi
         .fn()
-        .mockResolvedValue([{ id: 'member-1', userId: 'user-2', guestName: null }]),
+        .mockResolvedValue([
+          { id: 'member-1', userId: 'user-2', guestName: null },
+        ]),
     });
 
     // Act

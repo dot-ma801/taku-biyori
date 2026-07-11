@@ -815,12 +815,13 @@ describe('findMemberCoresByIds', () => {
   const makeSelectWhereDb = (rows: unknown[]) => {
     const chain = {
       from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue(rows),
+      where: vi.fn().mockReturnThis(),
+      for: vi.fn().mockResolvedValue(rows),
     };
     const db = {
       select: vi.fn().mockReturnValue(chain),
     } as unknown as Database;
-    return { db };
+    return { db, chain };
   };
 
   it('この募集枠に属する指定 ID のメンバーのみ返す', async () => {
@@ -839,6 +840,20 @@ describe('findMemberCoresByIds', () => {
     expect(result).toEqual([
       { id: 'member-1', userId: 'user-2', guestName: null },
     ]);
+  });
+
+  it('FOR KEY SHARE でメンバー行をロックする（並行退出との競合防止）', async () => {
+    // Arrange
+    const { db, chain } = makeSelectWhereDb([
+      { id: 'member-1', userId: 'user-2', guestName: null },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.findMemberCoresByIds(mockLobbyRow.id, ['member-1']);
+
+    // Assert
+    expect(chain.for).toHaveBeenCalledWith('key share');
   });
 
   it('memberIds が空配列ならクエリを発行せず空配列を返す', async () => {

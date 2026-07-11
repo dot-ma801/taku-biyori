@@ -695,6 +695,13 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
   async findMemberCoresByIds(lobbyId: string, memberIds: string[]) {
     if (memberIds.length === 0) return [];
 
+    // FOR KEY SHARE で選出メンバー行をロックする。
+    // executeWithLock のロビー行ロックだけでは lobby_members はロックされず、
+    // このメソッドの読み取り〜卓確定（game_session_members INSERT）の間に
+    // leave-lobby 等による選出メンバーの DELETE がコミットされると
+    // FK 違反（23503）で確定処理が失敗しうる。
+    // FOR KEY SHARE を取ることで、同じ行を消そうとする DELETE をこのトランザクションの
+    // コミットまでブロックし、確定処理と退出の競合を防ぐ。
     const rows = await db
       .select({
         id: lobbyMembers.id,
@@ -707,7 +714,8 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
           eq(lobbyMembers.lobbyId, lobbyId),
           inArray(lobbyMembers.id, memberIds),
         ),
-      );
+      )
+      .for('key share');
 
     return rows;
   },

@@ -449,3 +449,212 @@ describe('deleteMemberById', () => {
     expect(deleteChain.where).toHaveBeenCalledTimes(1);
   });
 });
+
+// ----------------------------------------------------------------
+// 日程調整（候補日・回答）
+
+describe('findByLobbyId', () => {
+  it('候補日ごとに回答をまとめた LobbyAvailabilityDate の配列を返す', async () => {
+    // Arrange
+    const { db } = makeSelectJoinOrderDb([
+      {
+        candidateId: 'date-1',
+        date: '2025-09-01',
+        answerId: 'answer-1',
+        memberId: 'member-1',
+        answer: 'ok',
+        comment: null,
+      },
+      {
+        candidateId: 'date-1',
+        date: '2025-09-01',
+        answerId: 'answer-2',
+        memberId: 'member-2',
+        answer: 'ng',
+        comment: '用事があります',
+      },
+      {
+        candidateId: 'date-2',
+        date: '2025-09-08',
+        answerId: null,
+        memberId: null,
+        answer: null,
+        comment: null,
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findByLobbyId(mockLobbyRow.id);
+
+    // Assert
+    expect(result).toEqual([
+      {
+        id: 'date-1',
+        date: '2025-09-01',
+        answers: [
+          { id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null },
+          {
+            id: 'answer-2',
+            memberId: 'member-2',
+            answer: 'ng',
+            comment: '用事があります',
+          },
+        ],
+      },
+      { id: 'date-2', date: '2025-09-08', answers: [] },
+    ]);
+  });
+
+  it('候補日がなければ空配列を返す', async () => {
+    // Arrange
+    const { db } = makeSelectJoinOrderDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findByLobbyId(mockLobbyRow.id);
+
+    // Assert
+    expect(result).toEqual([]);
+  });
+});
+
+describe('addDate', () => {
+  const makeInsertReturningDb = (rows: unknown[]) => {
+    const insertChain = {
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(rows),
+    };
+    const db = {
+      insert: vi.fn().mockReturnValue(insertChain),
+    } as unknown as Database;
+    return { db, insertChain };
+  };
+
+  it('回答なしの LobbyAvailabilityDate を返す', async () => {
+    // Arrange
+    const { db } = makeInsertReturningDb([
+      { id: 'date-1', date: '2025-09-01' },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.addDate(mockLobbyRow.id, '2025-09-01');
+
+    // Assert
+    expect(result).toEqual({ id: 'date-1', date: '2025-09-01', answers: [] });
+  });
+
+  it('挿入に失敗したらエラーを投げる', async () => {
+    // Arrange
+    const { db } = makeInsertReturningDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act & Assert
+    await expect(repo.addDate(mockLobbyRow.id, '2025-09-01')).rejects.toThrow();
+  });
+});
+
+describe('findCandidateOwner', () => {
+  it('lobbyId と date を返す', async () => {
+    // Arrange
+    const { db } = makeSelectLimitDb([
+      { lobbyId: mockLobbyRow.id, date: '2025-09-01' },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findCandidateOwner('date-1');
+
+    // Assert
+    expect(result).toEqual({ lobbyId: mockLobbyRow.id, date: '2025-09-01' });
+  });
+
+  it('存在しない候補日IDは null を返す', async () => {
+    // Arrange
+    const { db } = makeSelectLimitDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findCandidateOwner('nonexistent');
+
+    // Assert
+    expect(result).toBeNull();
+  });
+});
+
+describe('deleteDateById', () => {
+  it('delete().where() を呼び出す', async () => {
+    // Arrange
+    const deleteChain = { where: vi.fn().mockResolvedValue(undefined) };
+    const db = {
+      delete: vi.fn().mockReturnValue(deleteChain),
+    } as unknown as Database;
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.deleteDateById('date-1');
+
+    // Assert
+    expect(db.delete).toHaveBeenCalledTimes(1);
+    expect(deleteChain.where).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('replaceAllDates', () => {
+  // トランザクション内で delete().where() → insert().values().returning() の順に呼ばれることをモックする
+  const makeReplaceTransactionDb = (insertedRows: unknown[]) => {
+    const deleteChain = { where: vi.fn().mockResolvedValue(undefined) };
+    const insertChain = {
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(insertedRows),
+    };
+    const tx = {
+      delete: vi.fn().mockReturnValue(deleteChain),
+      insert: vi.fn().mockReturnValue(insertChain),
+    };
+    const db = {
+      transaction: vi
+        .fn()
+        .mockImplementation((fn: (tx: typeof tx) => unknown) => fn(tx)),
+    } as unknown as Database;
+    return { db, tx, deleteChain, insertChain };
+  };
+
+  it('全候補日を削除してから新しい候補日を挿入する', async () => {
+    // Arrange
+    const { db, tx } = makeReplaceTransactionDb([
+      { id: 'date-1', date: '2025-10-01' },
+      { id: 'date-2', date: '2025-10-02' },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.replaceAllDates(mockLobbyRow.id, [
+      '2025-10-01',
+      '2025-10-02',
+    ]);
+
+    // Assert
+    expect(tx.delete).toHaveBeenCalledTimes(1);
+    expect(tx.insert).toHaveBeenCalledTimes(1);
+    expect(result).toEqual([
+      { id: 'date-1', date: '2025-10-01', answers: [] },
+      { id: 'date-2', date: '2025-10-02', answers: [] },
+    ]);
+  });
+
+  it('dates が空配列なら insert を呼ばず空配列を返す', async () => {
+    // Arrange
+    const { db, tx } = makeReplaceTransactionDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.replaceAllDates(mockLobbyRow.id, []);
+
+    // Assert
+    expect(tx.delete).toHaveBeenCalledTimes(1);
+    expect(tx.insert).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+});

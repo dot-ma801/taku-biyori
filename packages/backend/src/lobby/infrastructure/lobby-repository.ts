@@ -13,6 +13,8 @@ import type {
   LobbyDetail,
   LobbyListItem,
   LobbyMember,
+  LobbyAvailabilityDate,
+  LobbyAvailabilityDateAnswer,
   JoinLobbyInput,
   JoinLobbyAsGuestInput,
   UpdateLobbyInput,
@@ -23,6 +25,7 @@ import {
   lobbies,
   lobbyMembers,
   lobbyCandidates,
+  lobbyAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getLobbyStatus } from '@/lobby/domain/lobby-status';
@@ -37,6 +40,10 @@ import type { JoinLobbyRepository } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkRepository } from '@/lobby/application/get-guest-link';
+import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-availability-dates';
+import type { AddAvailabilityDateRepository } from '@/lobby/application/add-availability-date';
+import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
+import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delete-availability-date';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -48,7 +55,11 @@ export type LobbyRepository = ListLobbiesRepository &
   JoinLobbyRepository &
   JoinAsGuestRepository &
   LeaveLobbyRepository &
-  GetGuestLinkRepository;
+  GetGuestLinkRepository &
+  ListAvailabilityDatesRepository &
+  AddAvailabilityDateRepository &
+  BulkUpdateAvailabilityDatesRepository &
+  DeleteAvailabilityDateRepository;
 
 type LobbyRow = {
   id: string;
@@ -485,6 +496,101 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
 
   async deleteMemberById(memberId: string): Promise<void> {
     await db.delete(lobbyMembers).where(eq(lobbyMembers.id, memberId));
+  },
+
+  async findByLobbyId(lobbyId: string): Promise<LobbyAvailabilityDate[]> {
+    const rows = await db
+      .select({
+        candidateId: lobbyCandidates.id,
+        date: lobbyCandidates.date,
+        answerId: lobbyAnswers.id,
+        memberId: lobbyAnswers.memberId,
+        answer: lobbyAnswers.answer,
+        comment: lobbyAnswers.comment,
+      })
+      .from(lobbyCandidates)
+      .leftJoin(lobbyAnswers, eq(lobbyAnswers.candidateId, lobbyCandidates.id))
+      .where(eq(lobbyCandidates.lobbyId, lobbyId))
+      .orderBy(lobbyCandidates.date);
+
+    const map = new Map<string, LobbyAvailabilityDate>();
+    for (const row of rows) {
+      if (!map.has(row.candidateId)) {
+        map.set(row.candidateId, {
+          id: row.candidateId,
+          date: row.date,
+          answers: [],
+        });
+      }
+      if (row.answerId !== null && row.memberId !== null) {
+        const entry = map.get(row.candidateId)!;
+        const answerValue = row.answer as LobbyAvailabilityDateAnswer['answer'];
+        entry.answers.push({
+          id: row.answerId,
+          memberId: row.memberId,
+          answer: answerValue,
+          comment: row.comment,
+        });
+      }
+    }
+
+    return [...map.values()];
+  },
+
+  async addDate(
+    lobbyId: string,
+    date: string,
+  ): Promise<LobbyAvailabilityDate> {
+    const result = await db
+      .insert(lobbyCandidates)
+      .values({ lobbyId, date })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('候補日の追加に失敗しました');
+    return { id: row.id, date: row.date, answers: [] };
+  },
+
+  async findCandidateOwner(
+    dateId: string,
+  ): Promise<{ lobbyId: string; date: string } | null> {
+    const row = await db
+      .select({
+        lobbyId: lobbyCandidates.lobbyId,
+        date: lobbyCandidates.date,
+      })
+      .from(lobbyCandidates)
+      .where(eq(lobbyCandidates.id, dateId))
+      .limit(1);
+    return row[0] ?? null;
+  },
+
+  async deleteDateById(dateId: string): Promise<void> {
+    await db.delete(lobbyCandidates).where(eq(lobbyCandidates.id, dateId));
+  },
+
+  async replaceAllDates(
+    lobbyId: string,
+    dates: string[],
+  ): Promise<LobbyAvailabilityDate[]> {
+    return db.transaction(async (tx) => {
+      await tx
+        .delete(lobbyCandidates)
+        .where(eq(lobbyCandidates.lobbyId, lobbyId));
+
+      if (dates.length === 0) return [];
+
+      const inserted = await tx
+        .insert(lobbyCandidates)
+        .values(dates.map((date) => ({ lobbyId, date })))
+        .returning();
+
+      return inserted.map((row) => ({
+        id: row.id,
+        date: row.date,
+        answers: [],
+      }));
+    });
   },
 
   async findGuestLinkInfo(

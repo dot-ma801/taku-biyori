@@ -84,6 +84,7 @@ export const createApp = (options: CreateAppOptions) => {
     updateLobby: options.lobby.updateLobby,
     deleteLobby: options.lobby.deleteLobby,
     updateLobbyStatus: options.lobby.updateLobbyStatus,
+    confirmLobby: options.lobby.confirmLobby,
   });
   registerLobbyMemberRoute(app, {
     getSession: options.getSession,

@@ -15,6 +15,7 @@ import { registerProfileRoute } from '@/profile/presentation/controller/routes/p
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
 import { registerMemberRoute as registerLobbyMemberRoute } from '@/lobby/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute as registerLobbyGuestLinkRoute } from '@/lobby/presentation/controller/routes/guest-link-route';
+import { registerAvailabilityDateRoute as registerLobbyAvailabilityDateRoute } from '@/lobby/presentation/controller/routes/availability-date-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -94,6 +95,13 @@ export const createApp = (options: CreateAppOptions) => {
   registerLobbyGuestLinkRoute(app, {
     getSession: options.getSession,
     getGuestLink: options.lobby.getGuestLink,
+  });
+  registerLobbyAvailabilityDateRoute(app, {
+    getSession: options.getSession,
+    listAvailabilityDates: options.lobby.listAvailabilityDates,
+    addAvailabilityDate: options.lobby.addAvailabilityDate,
+    bulkUpdateAvailabilityDates: options.lobby.bulkUpdateAvailabilityDates,
+    deleteAvailabilityDate: options.lobby.deleteAvailabilityDate,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,

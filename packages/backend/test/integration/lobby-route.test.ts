@@ -8,6 +8,7 @@ import type {
   LobbyDetail,
   LobbyListItem,
   LobbyMember,
+  LobbyAvailabilityDate,
   CreateLobbyInput,
   UpdateLobbyStatusInput,
 } from '@taku-biyori/shared';
@@ -18,6 +19,10 @@ import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestResult } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyResult } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkResult } from '@/lobby/application/get-guest-link';
+import type { ListAvailabilityDatesResult } from '@/lobby/application/list-availability-dates';
+import type { AddAvailabilityDateResult } from '@/lobby/application/add-availability-date';
+import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk-update-availability-dates';
+import type { DeleteAvailabilityDateResult } from '@/lobby/application/delete-availability-date';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -68,6 +73,12 @@ const mockGetOk: GetLobbyResult = {
   lobby: mockLobbyDetail,
 };
 
+const mockAvailabilityDate: LobbyAvailabilityDate = {
+  id: 'date-1',
+  date: '2025-09-01',
+  answers: [],
+};
+
 const stubProfile = {} as unknown as ProfileUseCases;
 const stubGameSession = {} as unknown as GameSessionUseCases;
 
@@ -103,6 +114,18 @@ const makeApp = (
     getGuestLink:
       overrides.getGuestLink ??
       vi.fn().mockResolvedValue({ type: 'ok', token: 'guest-token-abc' }),
+    listAvailabilityDates:
+      overrides.listAvailabilityDates ??
+      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
+    addAvailabilityDate:
+      overrides.addAvailabilityDate ??
+      vi.fn().mockResolvedValue({ type: 'ok', date: mockAvailabilityDate }),
+    bulkUpdateAvailabilityDates:
+      overrides.bulkUpdateAvailabilityDates ??
+      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
+    deleteAvailabilityDate:
+      overrides.deleteAvailabilityDate ??
+      vi.fn().mockResolvedValue({ type: 'ok' }),
   };
 
   return createApp({
@@ -1242,6 +1265,500 @@ describe('GET /api/lobbies/:id/guest-link', () => {
 
     // Assert
     expect(getGuestLink).toHaveBeenCalledWith('lobby-1', 'user-1');
+  });
+});
+
+describe('GET /api/lobbies/:id/availability-dates', () => {
+  it('公開済み募集枠は未認証でも 200 で候補日一覧を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockAvailabilityDate]);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/nonexistent/availability-dates',
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('非公開募集枠にホスト以外がアクセスすると 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('非公開募集枠に未認証でアクセスすると 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      getSession: vi.fn().mockResolvedValue(null),
+      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('lobbyId と userId を listAvailabilityDates に渡す', async () => {
+    // Arrange
+    const listAvailabilityDates: (
+      lobbyId: string,
+      userId: string | null,
+    ) => Promise<ListAvailabilityDatesResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', dates: [] });
+    const app = makeApp({ listAvailabilityDates });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/availability-dates');
+
+    // Assert
+    expect(listAvailabilityDates).toHaveBeenCalledWith('lobby-1', 'user-1');
+  });
+});
+
+describe('POST /api/lobbies/:id/availability-dates', () => {
+  it('ホストが有効なボディで追加すると 201 と候補日を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2099-09-01' }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(201);
+    expect(body).toEqual(mockAvailabilityDate);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2099-09-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホスト以外は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2099-09-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/nonexistent/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2099-09-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2099-09-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('過去日なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: '2000-01-01' }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('ユースケースに lobbyId・userId・input を渡す', async () => {
+    // Arrange
+    const addAvailabilityDate: (
+      lobbyId: string,
+      userId: string,
+      input: unknown,
+    ) => Promise<AddAvailabilityDateResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', date: mockAvailabilityDate });
+    const app = makeApp({ addAvailabilityDate });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/availability-dates', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ date: '2099-09-01' }),
+    });
+
+    // Assert
+    expect(addAvailabilityDate).toHaveBeenCalledWith('lobby-1', 'user-1', {
+      date: '2099-09-01',
+    });
+  });
+});
+
+describe('PUT /api/lobbies/:id/availability-dates', () => {
+  it('ホストが有効なボディで一括更新すると 200 と候補日一覧を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dates: ['2099-09-01', '2099-09-02'] }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockAvailabilityDate]);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dates: ['2099-09-01'] }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホスト以外は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      bulkUpdateAvailabilityDates: vi
+        .fn()
+        .mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dates: ['2099-09-01'] }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      bulkUpdateAvailabilityDates: vi
+        .fn()
+        .mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/nonexistent/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dates: ['2099-09-01'] }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      bulkUpdateAvailabilityDates: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidStatus' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dates: ['2099-09-01'] }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('dates が空配列なら 400 を返す（game-session と異なり 1 件以上が必須）', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dates: [] }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('dates 未指定なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('ユースケースに lobbyId・userId・input を渡す', async () => {
+    // Arrange
+    const bulkUpdateAvailabilityDates: (
+      lobbyId: string,
+      userId: string,
+      input: unknown,
+    ) => Promise<BulkUpdateAvailabilityDatesResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] });
+    const app = makeApp({ bulkUpdateAvailabilityDates });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/availability-dates', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ dates: ['2099-09-01', '2099-09-02'] }),
+    });
+
+    // Assert
+    expect(bulkUpdateAvailabilityDates).toHaveBeenCalledWith(
+      'lobby-1',
+      'user-1',
+      { dates: ['2099-09-01', '2099-09-02'] },
+    );
+  });
+});
+
+describe('DELETE /api/lobbies/:id/availability-dates/:dateId', () => {
+  it('ホストが削除すると 204 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(204);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('ホスト以外は 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('存在しない候補日なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/nonexistent',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      deleteAvailabilityDate: vi
+        .fn()
+        .mockResolvedValue({ type: 'invalidStatus' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1',
+      { method: 'DELETE' },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('ユースケースに lobbyId・dateId・userId を渡す', async () => {
+    // Arrange
+    const deleteAvailabilityDate: (
+      lobbyId: string,
+      dateId: string,
+      userId: string,
+    ) => Promise<DeleteAvailabilityDateResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok' });
+    const app = makeApp({ deleteAvailabilityDate });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/availability-dates/date-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(deleteAvailabilityDate).toHaveBeenCalledWith(
+      'lobby-1',
+      'date-1',
+      'user-1',
+    );
   });
 });
 

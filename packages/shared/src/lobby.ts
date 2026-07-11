@@ -161,9 +161,19 @@ export type CreateLobbyAvailabilityDateInput = z.infer<
 >;
 
 // game-session と異なり、置き換え後の候補日が 0 件になる更新は許可しない（design-v1.1 §Lobby Schedules）。
-export const BulkUpdateLobbyAvailabilityDatesInputSchema = z.object({
-  dates: z.array(z.iso.date()).min(1),
-});
+export const BulkUpdateLobbyAvailabilityDatesInputSchema = z
+  .object({
+    dates: z.array(z.iso.date()).min(1),
+  })
+  .superRefine((input, ctx) => {
+    if (new Set(input.dates).size !== input.dates.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dates'],
+        message: '候補日に重複する日付を含めることはできません',
+      });
+    }
+  });
 export type BulkUpdateLobbyAvailabilityDatesInput = z.infer<
   typeof BulkUpdateLobbyAvailabilityDatesInputSchema
 >;

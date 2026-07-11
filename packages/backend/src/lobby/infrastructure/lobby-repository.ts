@@ -13,6 +13,8 @@ import type {
   LobbyDetail,
   LobbyListItem,
   LobbyMember,
+  JoinLobbyInput,
+  JoinLobbyAsGuestInput,
   UpdateLobbyInput,
 } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
@@ -30,13 +32,23 @@ import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyRepository } from '@/lobby/application/update-lobby';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
 import type { UpdateLobbyStatusRepository } from '@/lobby/application/update-lobby-status';
+import type { ListMembersRepository } from '@/lobby/application/list-members';
+import type { JoinLobbyRepository } from '@/lobby/application/join-lobby';
+import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
+import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
+import type { GetGuestLinkRepository } from '@/lobby/application/get-guest-link';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
   GetLobbyRepository &
   UpdateLobbyRepository &
   DeleteLobbyRepository &
-  UpdateLobbyStatusRepository;
+  UpdateLobbyStatusRepository &
+  ListMembersRepository &
+  JoinLobbyRepository &
+  JoinAsGuestRepository &
+  LeaveLobbyRepository &
+  GetGuestLinkRepository;
 
 type LobbyRow = {
   id: string;
@@ -345,5 +357,157 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
 
       return toLobby(row);
     });
+  },
+
+  async findLobbyVisibility(
+    id: string,
+  ): Promise<{ isPublished: boolean; hostUserId: string } | null> {
+    const row = await db
+      .select({
+        isPublished: lobbies.isPublished,
+        hostUserId: lobbies.hostUserId,
+      })
+      .from(lobbies)
+      .where(eq(lobbies.id, id))
+      .limit(1);
+    if (!row[0]) return null;
+    return { isPublished: row[0].isPublished, hostUserId: row[0].hostUserId };
+  },
+
+  async findMembersByLobbyId(lobbyId: string): Promise<LobbyMember[]> {
+    const rows = await db
+      .select({
+        id: lobbyMembers.id,
+        userId: lobbyMembers.userId,
+        userName: user.name,
+        guestName: lobbyMembers.guestName,
+        createdAt: lobbyMembers.createdAt,
+      })
+      .from(lobbyMembers)
+      .leftJoin(user, eq(user.id, lobbyMembers.userId))
+      .where(eq(lobbyMembers.lobbyId, lobbyId))
+      .orderBy(lobbyMembers.createdAt);
+
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      userName: r.userName ?? null,
+      guestName: r.guestName,
+      joinedAt: r.createdAt.toISOString(),
+    }));
+  },
+
+  async findMemberByUserId(
+    lobbyId: string,
+    userId: string,
+  ): Promise<string | null> {
+    const row = await db
+      .select({ id: lobbyMembers.id })
+      .from(lobbyMembers)
+      .where(
+        and(eq(lobbyMembers.lobbyId, lobbyId), eq(lobbyMembers.userId, userId)),
+      )
+      .limit(1);
+    return row[0]?.id ?? null;
+  },
+
+  async addMember(
+    lobbyId: string,
+    userId: string,
+    _input: JoinLobbyInput,
+  ): Promise<LobbyMember | null> {
+    const result = await db
+      .insert(lobbyMembers)
+      .values({
+        lobbyId,
+        userId,
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    // onConflictDoNothing で競合した場合は空配列が返る
+    const row = result[0];
+    if (!row) return null;
+
+    const userRow = await db
+      .select({ name: user.name })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      userName: userRow[0]?.name ?? null,
+      guestName: row.guestName,
+      joinedAt: row.createdAt.toISOString(),
+    };
+  },
+
+  async addGuestMember(
+    lobbyId: string,
+    input: JoinLobbyAsGuestInput,
+  ): Promise<LobbyMember> {
+    const result = await db
+      .insert(lobbyMembers)
+      .values({
+        lobbyId,
+        userId: null,
+        guestName: input.guestName,
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('ゲストメンバーの追加に失敗しました');
+
+    return {
+      id: row.id,
+      userId: null,
+      userName: null,
+      guestName: row.guestName,
+      joinedAt: row.createdAt.toISOString(),
+    };
+  },
+
+  async findMemberOwner(
+    memberId: string,
+  ): Promise<{ lobbyId: string; userId: string | null } | null> {
+    const row = await db
+      .select({
+        lobbyId: lobbyMembers.lobbyId,
+        userId: lobbyMembers.userId,
+      })
+      .from(lobbyMembers)
+      .where(eq(lobbyMembers.id, memberId))
+      .limit(1);
+    return row[0] ?? null;
+  },
+
+  async deleteMemberById(memberId: string): Promise<void> {
+    await db.delete(lobbyMembers).where(eq(lobbyMembers.id, memberId));
+  },
+
+  async findGuestLinkInfo(
+    id: string,
+  ): Promise<{ hostUserId: string; token: string } | null> {
+    const row = await db
+      .select({
+        hostUserId: lobbies.hostUserId,
+        guestLinkToken: lobbies.guestLinkToken,
+      })
+      .from(lobbies)
+      .where(eq(lobbies.id, id))
+      .limit(1);
+    if (!row[0]) return null;
+    return { hostUserId: row[0].hostUserId, token: row[0].guestLinkToken };
+  },
+
+  async findGuestLinkToken(id: string): Promise<string | null> {
+    const row = await db
+      .select({ guestLinkToken: lobbies.guestLinkToken })
+      .from(lobbies)
+      .where(eq(lobbies.id, id))
+      .limit(1);
+    return row[0]?.guestLinkToken ?? null;
   },
 });

@@ -91,4 +91,8 @@ export {
   type CreateLobbyAvailabilityDateInput,
   BulkUpdateLobbyAvailabilityDatesInputSchema,
   type BulkUpdateLobbyAvailabilityDatesInput,
+  UpdateLobbyAvailabilityDateResponseInputSchema,
+  type UpdateLobbyAvailabilityDateResponseInput,
+  GuestUpdateLobbyAvailabilityDateResponseInputSchema,
+  type GuestUpdateLobbyAvailabilityDateResponseInput,
 } from './lobby.js';

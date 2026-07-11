@@ -167,3 +167,20 @@ export const BulkUpdateLobbyAvailabilityDatesInputSchema = z.object({
 export type BulkUpdateLobbyAvailabilityDatesInput = z.infer<
   typeof BulkUpdateLobbyAvailabilityDatesInputSchema
 >;
+
+export const UpdateLobbyAvailabilityDateResponseInputSchema = z.object({
+  answer: LobbyAvailabilityDateAnswerSchema.shape.answer,
+  comment: z.string().max(500).optional(),
+});
+export type UpdateLobbyAvailabilityDateResponseInput = z.infer<
+  typeof UpdateLobbyAvailabilityDateResponseInputSchema
+>;
+
+// ゲストの日程回答。本人確認手段がないため、どのゲスト列を更新するかを memberId で明示する。
+export const GuestUpdateLobbyAvailabilityDateResponseInputSchema =
+  UpdateLobbyAvailabilityDateResponseInputSchema.extend({
+    memberId: z.string().uuid(),
+  });
+export type GuestUpdateLobbyAvailabilityDateResponseInput = z.infer<
+  typeof GuestUpdateLobbyAvailabilityDateResponseInputSchema
+>;

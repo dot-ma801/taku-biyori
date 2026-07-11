@@ -14,15 +14,20 @@ const mockLobby: Lobby = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
+// makeRepo:
+// `executeWithLock` のモックは「コールバックを同期的にそのまま実行する」スタブを既定とする
+// （既存 deleteLobby / deleteGameSession のテストと同方針）。
 function makeRepo(
   overrides: Partial<UpdateLobbyRepository> = {},
 ): UpdateLobbyRepository {
-  return {
+  const repo: UpdateLobbyRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
     findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.draft),
     updateById: vi.fn().mockResolvedValue(mockLobby),
+    executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
     ...overrides,
   };
+  return repo;
 }
 
 describe('updateLobby', () => {
@@ -127,5 +132,42 @@ describe('updateLobby', () => {
 
     // Assert
     expect(result).toEqual({ type: 'ok', lobby: mockLobby });
+  });
+
+  describe('TOCTOU 対策（トランザクション + 行ロック）', () => {
+    it('検証と更新を `executeWithLock` の中で 1 回のスコープにまとめる', async () => {
+      // Arrange
+      const repo = makeRepo();
+
+      // Act
+      await updateLobby(repo, 'lobby-1', 'user-1', { title: 'x' });
+
+      // Assert: ステータスチェックと updateById が同一トランザクション内で走る
+      expect(repo.executeWithLock).toHaveBeenCalledTimes(1);
+      expect(repo.executeWithLock).toHaveBeenCalledWith(
+        'lobby-1',
+        expect.any(Function),
+      );
+    });
+
+    it('`executeWithLock` が結果を返したらその値をそのまま返す', async () => {
+      // Arrange
+      const repo = makeRepo({
+        executeWithLock: vi
+          .fn()
+          .mockResolvedValue({ type: 'notFound' } as const),
+      });
+
+      // Act
+      const result = await updateLobby(repo, 'lobby-1', 'user-1', {
+        title: 'x',
+      });
+
+      // Assert: コールバックが評価されなければ内部の検証もすべてスキップされる
+      expect(result).toEqual({ type: 'notFound' });
+      expect(repo.findHostUserId).not.toHaveBeenCalled();
+      expect(repo.findLobbyStatus).not.toHaveBeenCalled();
+      expect(repo.updateById).not.toHaveBeenCalled();
+    });
   });
 });

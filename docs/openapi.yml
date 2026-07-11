@@ -1194,7 +1194,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AvailabilityDate'
+                  $ref: '#/components/schemas/LobbyAvailabilityDate'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1221,7 +1221,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AvailabilityDate'
+                $ref: '#/components/schemas/LobbyAvailabilityDate'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1254,7 +1254,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AvailabilityDate'
+                  $ref: '#/components/schemas/LobbyAvailabilityDate'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1319,7 +1319,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AvailabilityResponse'
+                $ref: '#/components/schemas/LobbyAvailabilityDateAnswer'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1355,7 +1355,9 @@ paths:
           `user_id != null`（ログイン参加者）のメンバーを指定した場合は `403`。
         - 本人確認はしないため、トークンさえ持っていれば**どのゲストでも全ゲスト列を編集可**
           （調整さん方式）。
-        - ステータスが `confirmed`/`cancelled` の場合は `409`。
+        - ステータスが `draft`（非公開）を含め `open`/`scheduling` 以外の場合は `409`。
+          ログインユーザー用エンドポイントと異なり、非公開時も `422` ではなく `409` に統一する
+          （design-v1.1 の意思決定ログ）。game-session の同等ケースにある `423 Locked` は使わない。
       operationId: upsertLobbyGuestAvailabilityResponse
       security: []
       requestBody:
@@ -1370,22 +1372,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [id, memberId, answer]
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    description: lobby_answers.id（回答レコード自体のID）
-                  memberId:
-                    type: string
-                    format: uuid
-                    description: lobby_members.id（ゲストメンバーID）
-                  answer:
-                    $ref: '#/components/schemas/ScheduleAnswer'
-                  comment:
-                    type: string
-                    nullable: true
+                $ref: '#/components/schemas/LobbyAvailabilityDateAnswer'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -1397,9 +1384,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          description: 募集枠が非公開（draft）のときは回答できない
+          description: 募集枠が draft/confirmed/cancelled のいずれか（open/scheduling 以外）
           content:
             application/json:
               schema:
@@ -2234,6 +2219,48 @@ components:
         guestName:
           type: [string, 'null']
           description: ゲストの表示名（lobby_members.guest_name）。ログインユーザーは null
+
+    LobbyAvailabilityDateAnswer:
+      type: object
+      description: |
+        募集枠の候補日に対する◯△×回答。game-session の `AvailabilityResponse` と異なり、
+        `dateId`（親候補日への逆参照）と `createdAt` は持たない（候補日配下に入れ子で返すため不要）。
+      required: [id, memberId, answer]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: lobby_answers.id（回答レコード自体のID）
+        memberId:
+          type: string
+          format: uuid
+          description: lobby_members.id。ログインユーザー・ゲスト共通のメンバーID
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
+        comment:
+          type: [string, 'null']
+
+    LobbyAvailabilityDate:
+      type: object
+      description: |
+        募集枠の候補日。game-session の `AvailabilityDate` と異なり、回答一覧は
+        `answers`（`responses` ではない）に入り、`createdAt` は持たない。
+      required: [id, date, answers]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: lobby_candidates.id
+        date:
+          type: string
+          format: date
+          example: '2025-08-10'
+          description: 候補日。時刻は持たない。確定日程ではなく調整中の選択肢。
+        answers:
+          type: array
+          description: この候補日に対する各メンバーの◯△×回答一覧
+          items:
+            $ref: '#/components/schemas/LobbyAvailabilityDateAnswer'
 
     CreateLobbyInput:
       type: object

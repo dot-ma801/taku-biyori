@@ -303,4 +303,30 @@ describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
     // Assert
     expect(result.success).toBe(false);
   });
+
+  describe('dates の重複禁止', () => {
+    it('重複する日付を含むと失敗する', () => {
+      // Arrange
+      const input = { dates: ['2099-09-01', '2099-09-02', '2099-09-01'] };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+
+    it('すべて異なる日付なら成功する', () => {
+      // Arrange
+      const input = { dates: ['2099-09-01', '2099-09-02', '2099-09-03'] };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+  });
 });

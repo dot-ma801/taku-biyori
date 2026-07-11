@@ -11,6 +11,7 @@ export interface UpdateGameSessionStatusRepository extends GameSessionHostReposi
   findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
   publish(id: string): Promise<GameSession | null>;
   complete(id: string, completedAt: Date): Promise<GameSession | null>;
+  cancel(id: string, cancelledAt: Date): Promise<GameSession | null>;
 }
 
 export type UpdateGameSessionStatusResult =
@@ -47,6 +48,18 @@ export const updateGameSessionStatus = async (
     if (currentStatus !== GameSessionStatus.today)
       return { type: 'invalidTransition' };
     const gameSession = await repo.complete(id, now);
+    if (!gameSession) return { type: 'notFound' };
+    return { type: 'ok', gameSession };
+  }
+
+  if (input.status === GameSessionStatus.cancelled) {
+    if (
+      currentStatus !== GameSessionStatus.confirmed &&
+      currentStatus !== GameSessionStatus.today
+    ) {
+      return { type: 'invalidTransition' };
+    }
+    const gameSession = await repo.cancel(id, now);
     if (!gameSession) return { type: 'notFound' };
     return { type: 'ok', gameSession };
   }

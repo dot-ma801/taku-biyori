@@ -13,6 +13,8 @@ const baseSession: GameSession = {
   openUntil: null,
   scheduledAt: null,
   completedAt: null,
+  cancelledAt: null,
+  lobbyId: null,
   maxMembers: null,
   createdBy: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
@@ -28,6 +30,7 @@ const makeRepo = (
     openUntil: null,
     scheduledAt: null,
     completedAt: null,
+    cancelledAt: null,
   }),
   publish: vi
     .fn()
@@ -36,6 +39,11 @@ const makeRepo = (
     ...baseSession,
     status: 'completed',
     completedAt: '2025-01-01T00:00:00.000Z',
+  }),
+  cancel: vi.fn().mockResolvedValue({
+    ...baseSession,
+    status: 'cancelled',
+    cancelledAt: '2025-01-01T00:00:00.000Z',
   }),
   ...overrides,
 });
@@ -177,6 +185,186 @@ describe('updateGameSessionStatus', () => {
       // Assert
       expect(result).toEqual({ type: 'invalidTransition' });
       expect(repo.complete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('confirmed/today → cancelled（中止）', () => {
+    it.each(['confirmed', 'today'] as const)(
+      'ホストが %s → cancelled に遷移できる',
+      async (currentStatus) => {
+        // Arrange
+        const now = new Date('2025-06-01T10:00:00.000Z');
+        const fields =
+          currentStatus === 'today'
+            ? {
+                isPublished: true,
+                openUntil: new Date('2025-05-25'),
+                scheduledAt: new Date('2025-06-01'),
+                completedAt: null,
+                cancelledAt: null,
+              }
+            : {
+                isPublished: true,
+                openUntil: new Date('2025-05-25'),
+                scheduledAt: new Date('2025-06-10'),
+                completedAt: null,
+                cancelledAt: null,
+              };
+        const repo = makeRepo({
+          findStatusFields: vi.fn().mockResolvedValue(fields),
+        });
+
+        // Act
+        const result = await updateGameSessionStatus(
+          repo,
+          'session-1',
+          'user-1',
+          { status: 'cancelled' },
+          now,
+        );
+
+        // Assert
+        expect(result).toEqual({
+          type: 'ok',
+          gameSession: expect.objectContaining({ status: 'cancelled' }),
+        });
+      },
+    );
+
+    it('cancel を now で呼び出す', async () => {
+      // Arrange
+      const now = new Date('2025-06-01T10:00:00.000Z');
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue({
+          isPublished: true,
+          openUntil: new Date('2025-05-25'),
+          scheduledAt: new Date('2025-06-01'),
+          completedAt: null,
+          cancelledAt: null,
+        }),
+      });
+
+      // Act
+      await updateGameSessionStatus(
+        repo,
+        'session-1',
+        'user-1',
+        { status: 'cancelled' },
+        now,
+      );
+
+      // Assert
+      expect(repo.cancel).toHaveBeenCalledWith('session-1', now);
+    });
+
+    it.each(['draft', 'open', 'scheduling', 'completed'] as const)(
+      '%s から cancelled に遷移しようとすると invalidTransition を返す',
+      async (currentStatus) => {
+        // Arrange
+        const now = new Date('2025-06-01T10:00:00.000Z');
+        const fieldsByStatus = {
+          draft: {
+            isPublished: false,
+            openUntil: null,
+            scheduledAt: null,
+            completedAt: null,
+            cancelledAt: null,
+          },
+          open: {
+            isPublished: true,
+            openUntil: new Date('2025-06-10'),
+            scheduledAt: null,
+            completedAt: null,
+            cancelledAt: null,
+          },
+          scheduling: {
+            isPublished: true,
+            openUntil: new Date('2025-05-25'),
+            scheduledAt: null,
+            completedAt: null,
+            cancelledAt: null,
+          },
+          completed: {
+            isPublished: true,
+            openUntil: new Date('2025-05-25'),
+            scheduledAt: new Date('2025-05-30'),
+            completedAt: new Date('2025-05-31'),
+            cancelledAt: null,
+          },
+        } as const;
+        const repo = makeRepo({
+          findStatusFields: vi
+            .fn()
+            .mockResolvedValue(fieldsByStatus[currentStatus]),
+        });
+
+        // Act
+        const result = await updateGameSessionStatus(
+          repo,
+          'session-1',
+          'user-1',
+          { status: 'cancelled' },
+          now,
+        );
+
+        // Assert
+        expect(result).toEqual({ type: 'invalidTransition' });
+        expect(repo.cancel).not.toHaveBeenCalled();
+      },
+    );
+
+    it('既に cancelled の場合（二重中止）は invalidTransition を返す', async () => {
+      // Arrange
+      const now = new Date('2025-06-01T10:00:00.000Z');
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue({
+          isPublished: true,
+          openUntil: new Date('2025-05-25'),
+          scheduledAt: new Date('2025-06-01'),
+          completedAt: null,
+          cancelledAt: new Date('2025-05-20'),
+        }),
+      });
+
+      // Act
+      const result = await updateGameSessionStatus(
+        repo,
+        'session-1',
+        'user-1',
+        { status: 'cancelled' },
+        now,
+      );
+
+      // Assert
+      expect(result).toEqual({ type: 'invalidTransition' });
+      expect(repo.cancel).not.toHaveBeenCalled();
+    });
+
+    it('cancel が null を返す場合は notFound を返す', async () => {
+      // Arrange
+      const now = new Date('2025-06-01T10:00:00.000Z');
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue({
+          isPublished: true,
+          openUntil: new Date('2025-05-25'),
+          scheduledAt: new Date('2025-06-01'),
+          completedAt: null,
+          cancelledAt: null,
+        }),
+        cancel: vi.fn().mockResolvedValue(null),
+      });
+
+      // Act
+      const result = await updateGameSessionStatus(
+        repo,
+        'session-1',
+        'user-1',
+        { status: 'cancelled' },
+        now,
+      );
+
+      // Assert
+      expect(result).toEqual({ type: 'notFound' });
     });
   });
 

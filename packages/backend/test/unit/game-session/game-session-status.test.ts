@@ -6,6 +6,7 @@ const base = {
   openUntil: null,
   scheduledAt: null,
   completedAt: null,
+  cancelledAt: null,
 };
 
 const daysFromNow = (n: number): Date => {
@@ -107,5 +108,46 @@ describe('getGameSessionStatus', () => {
 
     // Act / Assert
     expect(getGameSessionStatus(input, fixedNow)).toBe('open');
+  });
+
+  it('cancelled_at がセットされていれば cancelled（最優先・非公開でも）', () => {
+    // Arrange
+    const input = {
+      ...base,
+      isPublished: false,
+      cancelledAt: new Date('2025-01-01'),
+    };
+
+    // Act / Assert
+    expect(getGameSessionStatus(input)).toBe('cancelled');
+  });
+
+  it('cancelled_at がセットされていれば confirmed 相当の状態でも cancelled が優先される', () => {
+    // Arrange
+    const input = {
+      ...base,
+      isPublished: true,
+      openUntil: daysFromNow(-7),
+      scheduledAt: daysFromNow(7),
+      cancelledAt: new Date('2025-01-01'),
+    };
+
+    // Act / Assert
+    expect(getGameSessionStatus(input)).toBe('cancelled');
+  });
+
+  it('cancelled_at がセットされていれば completed 相当の状態でも cancelled が優先される', () => {
+    // Arrange
+    const input = {
+      ...base,
+      isPublished: true,
+      openUntil: daysFromNow(-7),
+      scheduledAt: daysFromNow(-1),
+      completedAt: new Date(),
+      cancelledAt: new Date('2025-01-01'),
+    };
+
+    // Act / Assert
+    expect(getGameSessionStatus(input)).toBe('cancelled');
   });
 });

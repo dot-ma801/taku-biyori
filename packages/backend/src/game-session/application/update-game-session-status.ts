@@ -48,7 +48,12 @@ export const updateGameSessionStatus = async (
     if (currentStatus !== GameSessionStatus.today)
       return { type: 'invalidTransition' };
     const gameSession = await repo.complete(id, now);
-    if (!gameSession) return { type: 'notFound' };
+    // この時点で findHostUserId / findStatusFields により存在は確認済みのため、
+    // ここで null が返るのは基本的に cancel() との並行実行に負けたケース
+    // （cancelledAt が先にセットされた）を意味する。すでに終端状態が
+    // 確定しているという点で「無効な遷移」であり、404 ではなく 409 として
+    // 扱う方が実態に合う。
+    if (!gameSession) return { type: 'invalidTransition' };
     return { type: 'ok', gameSession };
   }
 
@@ -60,7 +65,10 @@ export const updateGameSessionStatus = async (
       return { type: 'invalidTransition' };
     }
     const gameSession = await repo.cancel(id, now);
-    if (!gameSession) return { type: 'notFound' };
+    // complete() 側と同様、この null は complete() との並行実行に負けた
+    // ケース（completedAt が先にセットされた）を意味するため invalidTransition
+    // を返す。
+    if (!gameSession) return { type: 'invalidTransition' };
     return { type: 'ok', gameSession };
   }
 

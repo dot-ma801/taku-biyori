@@ -161,6 +161,33 @@ describe('updateGameSessionStatus', () => {
       expect(repo.complete).toHaveBeenCalledWith('session-1', now);
     });
 
+    it('complete が null を返す場合（cancel との並行実行に負けた場合）は invalidTransition を返す', async () => {
+      // Arrange
+      const now = new Date('2025-06-01T10:00:00.000Z');
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue({
+          isPublished: true,
+          openUntil: new Date('2025-05-25'),
+          scheduledAt: new Date('2025-06-01'),
+          completedAt: null,
+          cancelledAt: null,
+        }),
+        complete: vi.fn().mockResolvedValue(null),
+      });
+
+      // Act
+      const result = await updateGameSessionStatus(
+        repo,
+        'session-1',
+        'user-1',
+        { status: 'completed' },
+        now,
+      );
+
+      // Assert
+      expect(result).toEqual({ type: 'invalidTransition' });
+    });
+
     it('today 以外から completed に遷移しようとすると invalidTransition を返す', async () => {
       // Arrange
       const now = new Date('2025-06-01T10:00:00.000Z');
@@ -340,7 +367,7 @@ describe('updateGameSessionStatus', () => {
       expect(repo.cancel).not.toHaveBeenCalled();
     });
 
-    it('cancel が null を返す場合は notFound を返す', async () => {
+    it('cancel が null を返す場合（complete との並行実行に負けた場合）は invalidTransition を返す', async () => {
       // Arrange
       const now = new Date('2025-06-01T10:00:00.000Z');
       const repo = makeRepo({
@@ -364,7 +391,7 @@ describe('updateGameSessionStatus', () => {
       );
 
       // Assert
-      expect(result).toEqual({ type: 'notFound' });
+      expect(result).toEqual({ type: 'invalidTransition' });
     });
   });
 

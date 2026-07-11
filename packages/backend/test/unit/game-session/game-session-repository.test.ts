@@ -315,8 +315,39 @@ describe('cancel', () => {
     expect(sql).toContain('"cancelled_at" is null');
   });
 
+  it('completed_at が NULL の行だけを更新する（完了との並行実行の排他）', async () => {
+    // Arrange
+    const cancelledAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db, whereSql } = makeUpdateDb([{ ...mockSessionRow, cancelledAt }]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.cancel(mockSessionRow.id, cancelledAt);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"completed_at" is null');
+  });
+
   it('更新行が 0 件なら null を返す', async () => {
     // Arrange
+    const { db } = makeUpdateDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.cancel(
+      mockSessionRow.id,
+      new Date('2025-06-01T00:00:00.000Z'),
+    );
+
+    // Assert
+    expect(result).toBeNull();
+  });
+
+  it('既に completedAt が設定されている（完了と競合した）場合は null を返す', async () => {
+    // Arrange
+    // WHERE 句に completed_at IS NULL が含まれるため、
+    // 完了済みの行は更新対象にならず 0 件（= null）が返る想定
     const { db } = makeUpdateDb([]);
     const repo = createGameSessionRepository(db);
 
@@ -351,6 +382,95 @@ describe('cancel', () => {
       id: mockSessionRow.id,
       status: 'cancelled',
       cancelledAt: cancelledAt.toISOString(),
+    });
+  });
+});
+
+// ----------------------------------------------------------------
+
+describe('complete', () => {
+  it('completed_at が NULL の行だけを更新する（二重完了の排他）', async () => {
+    // Arrange
+    const completedAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db, whereSql } = makeUpdateDb([{ ...mockSessionRow, completedAt }]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.complete(mockSessionRow.id, completedAt);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"completed_at" is null');
+  });
+
+  it('cancelled_at が NULL の行だけを更新する（中止との並行実行の排他）', async () => {
+    // Arrange
+    const completedAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db, whereSql } = makeUpdateDb([{ ...mockSessionRow, completedAt }]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.complete(mockSessionRow.id, completedAt);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"cancelled_at" is null');
+  });
+
+  it('更新行が 0 件なら null を返す', async () => {
+    // Arrange
+    const { db } = makeUpdateDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.complete(
+      mockSessionRow.id,
+      new Date('2025-06-01T00:00:00.000Z'),
+    );
+
+    // Assert
+    expect(result).toBeNull();
+  });
+
+  it('既に cancelledAt が設定されている（中止と競合した）場合は null を返す', async () => {
+    // Arrange
+    // WHERE 句に cancelled_at IS NULL が含まれるため、
+    // 中止済みの行は更新対象にならず 0 件（= null）が返る想定
+    const { db } = makeUpdateDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.complete(
+      mockSessionRow.id,
+      new Date('2025-06-01T00:00:00.000Z'),
+    );
+
+    // Assert
+    expect(result).toBeNull();
+  });
+
+  it('更新に成功したら completed ステータスの GameSession を返す', async () => {
+    // Arrange
+    const completedAt = new Date('2025-06-01T00:00:00.000Z');
+    const { db } = makeUpdateDb([
+      {
+        ...mockSessionRow,
+        isPublished: true,
+        openUntil: '2025-04-01',
+        scheduledAt: '2025-05-01',
+        completedAt,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.complete(mockSessionRow.id, completedAt);
+
+    // Assert
+    expect(result).toMatchObject({
+      id: mockSessionRow.id,
+      status: 'completed',
+      completedAt: completedAt.toISOString(),
     });
   });
 });

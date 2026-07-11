@@ -364,6 +364,9 @@ export const createGameSessionRepository = (
   },
 
   async complete(id: string, completedAt: Date): Promise<GameSession | null> {
+    // completed_at が NULL の行だけを更新する（二重完了の排他）。
+    // cancelled_at も NULL であることを要求し、cancel() との並行実行で
+    // 両方の終端カラムが同時にセットされる二重終端状態を防ぐ。
     const result = await db
       .update(gameSessions)
       .set({ completedAt })
@@ -372,6 +375,7 @@ export const createGameSessionRepository = (
           eq(gameSessions.id, id),
           eq(gameSessions.isPublished, true),
           isNull(gameSessions.completedAt),
+          isNull(gameSessions.cancelledAt),
         ),
       )
       .returning();
@@ -382,11 +386,19 @@ export const createGameSessionRepository = (
   },
 
   async cancel(id: string, cancelledAt: Date): Promise<GameSession | null> {
-    // cancelled_at が NULL の行だけを更新する（二重中止・並行中止の排他）
+    // cancelled_at が NULL の行だけを更新する（二重中止・並行中止の排他）。
+    // completed_at も NULL であることを要求し、complete() との並行実行で
+    // 両方の終端カラムが同時にセットされる二重終端状態を防ぐ。
     const result = await db
       .update(gameSessions)
       .set({ cancelledAt })
-      .where(and(eq(gameSessions.id, id), isNull(gameSessions.cancelledAt)))
+      .where(
+        and(
+          eq(gameSessions.id, id),
+          isNull(gameSessions.cancelledAt),
+          isNull(gameSessions.completedAt),
+        ),
+      )
       .returning();
 
     const session = result[0];

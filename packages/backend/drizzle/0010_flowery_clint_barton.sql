@@ -1,0 +1,2 @@
+CREATE INDEX "game_session_members_lobby_member_id_idx" ON "game_session"."game_session_members" USING btree ("lobby_member_id");--> statement-breakpoint
+CREATE INDEX "game_sessions_lobby_id_idx" ON "game_session"."game_sessions" USING btree ("lobby_id");

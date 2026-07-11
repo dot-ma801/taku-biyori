@@ -71,6 +71,13 @@
       "when": 1783797379500,
       "tag": "0009_aromatic_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783810841781,
+      "tag": "0010_flowery_clint_barton",
+      "breakpoints": true
     }
   ]
 }

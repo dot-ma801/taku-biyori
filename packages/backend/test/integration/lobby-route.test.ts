@@ -2344,3 +2344,116 @@ describe('POST → PATCH(公開) → GET の一連フロー', () => {
     expect(detail.title).toBe('フロー確認');
   });
 });
+
+describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一連フロー', () => {
+  it('ホストが発行したゲストリンクでゲストが参加し、そのゲストとして日程回答できる', async () => {
+    // Arrange
+    // ステートフルな in-memory 実装で、募集枠・トークン・ゲストメンバー・回答を一貫して検証する
+    const guestLinkToken = 'flow-guest-token-xyz';
+    const guestMembers = new Map<string, LobbyMember>();
+    let nextMemberId = 1;
+    const answers = new Map<string, LobbyAvailabilityDateAnswer>();
+
+    const getGuestLink = vi.fn(
+      async (): Promise<GetGuestLinkResult> => ({
+        type: 'ok',
+        token: guestLinkToken,
+      }),
+    );
+
+    const joinAsGuest = vi.fn(
+      async (
+        _lobbyId: string,
+        token: string,
+        input: { guestName: string },
+      ): Promise<JoinAsGuestResult> => {
+        if (token !== guestLinkToken) return { type: 'invalidToken' };
+        const member: LobbyMember = {
+          id: `aaaaaaaa-0000-4000-8000-00000000000${nextMemberId++}`,
+          userId: null,
+          userName: null,
+          guestName: input.guestName,
+          joinedAt: '2025-01-01T00:00:00.000Z',
+        };
+        guestMembers.set(member.id, member);
+        return { type: 'ok', member };
+      },
+    );
+
+    const updateGuestAvailabilityDateResponse = vi.fn(
+      async (
+        _lobbyId: string,
+        _dateId: string,
+        token: string,
+        memberId: string,
+        input: { answer: 'ok' | 'maybe' | 'ng'; comment?: string },
+      ): Promise<UpdateGuestAvailabilityDateResponseResult> => {
+        if (token !== guestLinkToken) return { type: 'invalidToken' };
+        if (!guestMembers.has(memberId)) return { type: 'forbidden' };
+        const answer: LobbyAvailabilityDateAnswer = {
+          id: `answer-${memberId}`,
+          memberId,
+          answer: input.answer,
+          comment: input.comment ?? null,
+        };
+        answers.set(memberId, answer);
+        return { type: 'ok', answer };
+      },
+    );
+
+    const app = makeApp({
+      getSession: vi.fn().mockResolvedValue(mockSession),
+      getGuestLink,
+      joinAsGuest,
+      updateGuestAvailabilityDateResponse,
+    });
+
+    // Act 1: ホストがゲストリンクを発行する
+    const guestLinkRes = await app.request('/api/lobbies/lobby-1/guest-link');
+    const { token } = (await guestLinkRes.json()) as { token: string };
+
+    // Act 2: 発行されたトークンでゲストが参加する
+    const joinRes = await app.request('/api/lobbies/lobby-1/guest-members', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [GUEST_TOKEN_HEADER]: token,
+      },
+      body: JSON.stringify({ guestName: 'ゲスト花子' }),
+    });
+    const joinedMember = (await joinRes.json()) as LobbyMember;
+
+    // Act 3: 参加したゲストとして日程回答する
+    const responseRes = await app.request(
+      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: token,
+        },
+        body: JSON.stringify({
+          answer: 'ok',
+          comment: '参加します',
+          memberId: joinedMember.id,
+        }),
+      },
+    );
+    const answer = (await responseRes.json()) as LobbyAvailabilityDateAnswer;
+
+    // Assert
+    expect(guestLinkRes.status).toBe(200);
+    expect(token).toBe(guestLinkToken);
+    expect(joinRes.status).toBe(201);
+    expect(joinedMember.guestName).toBe('ゲスト花子');
+    expect(joinedMember.userId).toBeNull();
+    expect(responseRes.status).toBe(200);
+    expect(answer.memberId).toBe(joinedMember.id);
+    expect(answer.answer).toBe('ok');
+    expect(answers.get(joinedMember.id)).toMatchObject({
+      memberId: joinedMember.id,
+      answer: 'ok',
+      comment: '参加します',
+    });
+  });
+});

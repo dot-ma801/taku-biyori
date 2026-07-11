@@ -16,7 +16,7 @@ info:
     未認証の場合は `401 Unauthorized` を返す。
 
     ## 命名規則
-    - URLは `/sessions` を使用
+    - URL は `/game-sessions`・`/lobbies` を使用
     - コード内の変数・型名は `gameSession` / `GameSession` プレフィックスを使用（Better Auth の `session` と衝突回避のため）
 
 servers:
@@ -815,6 +815,7 @@ paths:
       summary: 募集枠新規作成
       description: |
         新しい募集枠を作成する。ホスト（`hostUserId`）は Cookie のセッションから自動セットされる。
+        作成時にホストのメンバーレコードが自動追加される（既存卓と同じ）。
         候補日（`candidateDates`）は1件以上必須（日程調整が募集枠の存在意義であるため）。
         作成直後は非公開（`draft`）で、`PATCH /:id/status` の `open` で公開する。
       operationId: createLobby
@@ -845,8 +846,9 @@ paths:
       summary: 募集枠詳細取得
       description: |
         指定した募集枠の詳細情報（メンバー含む）を返す。
-        公開済み（`open`/`scheduling`/`confirmed`/`cancelled`）なら未認証でも閲覧可。
-        非公開（`draft`）はホストのみ。確定済みなら `closedAt` を含む。
+        `is_published = true` なら未認証でも閲覧可。閲覧可否はステータスではなく `is_published`
+        ファクトで判定する（`draft` のまま中止した募集枠はステータスが `cancelled` でも非公開のまま）。
+        非公開はホストのみ。確定済みなら `closedAt` を含む。
       operationId: getLobby
       security: []
       responses:
@@ -930,6 +932,7 @@ paths:
 
         `confirmed` への直接遷移は本エンドポイントでは扱わない（卓確定は `POST /:id/confirm` が担う）。
         確定済みへの中止は `409`（確定後の中止は卓側の `cancelled` で行う）。確定済みへの公開も `409`。
+        中止済み（`cancelled`）への公開も `409`。
       operationId: updateLobbyStatus
       requestBody:
         required: true
@@ -1031,7 +1034,10 @@ paths:
     get:
       tags: [LobbyMembers]
       summary: 募集枠メンバー一覧取得
-      description: 参加者一覧を返す。公開済みなら未認証でも取得可。定員を超えた人数も含めて返す。
+      description: |
+        参加者一覧を返す。`is_published = true` なら未認証でも取得可（閲覧可否はステータスではなく
+        `is_published` ファクトで判定する。draft のまま中止した募集枠は `cancelled` でも非公開）。
+        定員を超えた人数も含めて返す。
       operationId: listLobbyMembers
       security: []
       responses:
@@ -1174,7 +1180,10 @@ paths:
     get:
       tags: [LobbySchedules]
       summary: 候補日一覧取得
-      description: 候補日と各メンバーの◯△×回答をまとめて返す。公開済みなら未認証でも取得可。
+      description: |
+        候補日と各メンバーの◯△×回答をまとめて返す。`is_published = true` なら未認証でも取得可
+        （閲覧可否はステータスではなく `is_published` ファクトで判定する。draft のまま中止した募集枠は
+        `cancelled` でも非公開）。
       operationId: listLobbyAvailabilityDates
       security: []
       responses:
@@ -1321,6 +1330,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '422':
+          description: 募集枠が非公開（draft）のときは回答できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/lobbies/{id}/availability-dates/{dateId}/guest-responses:
     parameters:
@@ -1383,6 +1398,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '422':
+          description: 募集枠が非公開（draft）のときは回答できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ========== Lobby Guest Links ==========
 
@@ -1525,7 +1546,7 @@ components:
       in: header
       required: true
       description: |
-        ゲスト招待リンクのトークン（game_sessions.guest_link_token）。
+        ゲスト招待リンクのトークン（game_sessions.guest_link_token または lobbies.guest_link_token）。
         ゲストの参加・回答を認可する capability として扱う。
         サーバーは対象の卓の guest_link_token と一致するか検証し、不一致なら 403 を返す。
       schema:
@@ -1830,6 +1851,9 @@ components:
         scenarioName:
           type: [string, 'null']
           description: nullの場合はシナリオなし扱い
+        location:
+          type: [string, 'null']
+          description: 開催場所（オンライン等の自由入力）
         status:
           $ref: '#/components/schemas/GameSessionStatus'
         isPublished:
@@ -1892,6 +1916,10 @@ components:
         scenarioName:
           type: string
           maxLength: 200
+        location:
+          type: string
+          maxLength: 200
+          description: 開催場所（オンライン等の自由入力）
         maxMembers:
           type: integer
           minimum: 2
@@ -1911,6 +1939,9 @@ components:
           type: string
         scenarioName:
           type: string
+        location:
+          type: [string, 'null']
+          description: 開催場所（オンライン等の自由入力）
         maxMembers:
           type: integer
         openUntil:
@@ -2151,7 +2182,7 @@ components:
           description: 募集締め切り日。null なら締め切りなし
         maxPlayers:
           type: [integer, 'null']
-          description: 定員。null なら定員なし（選出は常に全員）
+          description: 定員。null なら定員の目安なし（選出画面で定員不一致の確認ダイアログを出さない）
         closedAt:
           type: [string, 'null']
           format: date-time
@@ -2308,7 +2339,8 @@ components:
       properties:
         dates:
           type: array
-          description: 更新後の候補日の配列
+          minItems: 1
+          description: 更新後の候補日の配列（1件以上。候補日0件にはできない）
           items:
             type: string
             format: date

@@ -131,7 +131,7 @@
 | 同一募集枠への同時確定（二重確定） | 確定ファクトのセットを条件付き UPDATE（`SET closed_at = now() WHERE closed_at IS NULL`）で行い、更新0行なら全体ロールバック + `409`（design-v1.1 §5）。卓との紐付けは卓側 `game_sessions.lobby_id` で持つ |
 | 移行期間中に確定卓が既存導出で `open`（募集中）扱いになる | 確定処理で `open_until = 確定実行日` をセットし、既存の `getGameSessionStatus` でも `confirmed`/`today` に到達させる（design-v1.1 §5・意思決定ログ） |
 | 段階6の削除漏れ・参照残り | 6b で `typecheck` / `lint` / 全テストに加え、`availability` `openUntil` 等の廃止シンボル（`isPublished` は維持するため対象外）の横断検索で参照ゼロを確認してからマージ |
-| openapi.yml と実装の乖離 | 各段階の PR に `docs/openapi.yml` の更新を含める（段階1〜3で追加、6b で削除） |
+| openapi.yml と実装の乖離 | lobby 系は設計時（PR #57）に全量を先行定義済み。各段階の PR では実装との乖離チェック・修正のみ行う（6b で卓側の廃止分を削除） |
 
 ---
 

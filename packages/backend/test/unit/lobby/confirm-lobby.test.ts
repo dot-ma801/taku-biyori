@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GameSession } from '@taku-biyori/shared';
 import {
   confirmLobby,
@@ -58,6 +58,10 @@ const makeRepo = (
 };
 
 describe('confirmLobby', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('ホストが確定できる（ok・作成された卓を返す）', async () => {
     // Arrange
     const repo = makeRepo();
@@ -369,8 +373,6 @@ describe('confirmLobby', () => {
     // open と誤判定されるバグが再現する）。
     const call = createGameSessionFromLobby.mock.calls[0]![0];
     expect(call.openUntil).toBe('2026-07-10');
-
-    vi.unstubAllEnvs();
   });
 
   it('ロック（executeWithLock）内でバリデーション・作成・クローズを行う', async () => {

@@ -95,6 +95,7 @@ function removeDate(date: string) {
           label="候補日"
           multiple
           disable-past
+          required
           v-model="selectedDates"
         ></BaseDatePicker>
       </div>

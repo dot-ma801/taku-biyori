@@ -44,6 +44,8 @@ pnpm install
 
 ### 2. 環境変数の設定
 
+#### .env
+
 各パッケージの `.env.example` をコピーして `.env` を作成し、必要な値を設定してください。
 
 **Backend** (`packages/backend/.env`):
@@ -61,6 +63,10 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 ```
 VITE_API_URL=http://localhost:3000
 ```
+
+#### その他
+
+プロジェクトルート直下の、`.mcp.json.example` をコピーし、`.mcp.json` を作成し`packages/backend/.env` にて設定した DB の情報に揃える。
 
 ### 3. データベースマイグレーション
 

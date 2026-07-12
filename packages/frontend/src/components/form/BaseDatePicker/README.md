@@ -6,6 +6,7 @@
 
 | Prop          | Type      | Default        | Description                        |
 | ------------- | --------- | -------------- | ---------------------------------- |
+| `required`    | `boolean` | `false`        | ラベルに必須マーク（`*`）を表示    |
 | `label`       | `string`  | —              | ラベル文字列                       |
 | `placeholder` | `string`  | `'日付を選択'` | 未選択時のプレースホルダー         |
 | `disabled`    | `boolean` | `false`        | 無効化                             |
@@ -49,6 +50,11 @@
 
 - 値未選択のときプレースホルダーが表示されること
 - 値が選択済みのとき日付ラベルが表示されること
+
+### required
+
+- `required=true` のときラベルに必須マークが表示されること
+- `required` 未指定のとき必須マークが表示されないこと
 
 ### disabled
 

@@ -71,6 +71,18 @@ export const Disabled: Story = {
   }),
 };
 
+export const Required: Story = {
+  args: {
+    label: '開始日',
+    required: true,
+  },
+  render: (args) => ({
+    components: { BaseDatePicker },
+    setup: () => ({ args }),
+    template: '<BaseDatePicker v-bind="args" />',
+  }),
+};
+
 export const AllVariants: Story = {
   render: () => ({
     components: { BaseDatePicker },

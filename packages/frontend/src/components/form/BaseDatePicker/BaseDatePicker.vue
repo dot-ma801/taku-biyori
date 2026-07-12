@@ -14,6 +14,7 @@ const props = withDefaults(
     label?: string;
     placeholder?: string;
     disabled?: boolean;
+    required?: boolean;
     min?: string;
     max?: string;
     /** true のとき複数日選択モード。v-model は string[] で使う */
@@ -157,7 +158,9 @@ function selectDate(dateStr: string | null) {
 
 <template>
   <div class="datepicker">
-    <span v-if="label" class="datepicker__label">{{ label }}</span>
+    <span v-if="label" class="datepicker__label">
+      {{ label }}<span v-if="required" class="datepicker__required">*</span>
+    </span>
     <Popover.Root v-model="isOpen">
       <!-- Activator 自体が button を描画するため、内側に button を置くと枠線が二重になる -->
       <Popover.Activator
@@ -265,6 +268,11 @@ function selectDate(dateStr: string | null) {
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
+}
+
+.datepicker__required {
+  color: var(--color-error);
+  margin-left: 2px;
 }
 
 .datepicker__trigger {

@@ -27,7 +27,15 @@ export const useCreateLobby = () => {
   // 入力の変更を修正の開始とみなしてエラーをクリアし、再送信できるようにする。
   // flush: 'sync' で変更の瞬間にクリアし、submit が直後に設定するエラーを消さない
   watch(
-    [title, scenarioName, maxMembers, description, openUntil, location, pendingDates],
+    [
+      title,
+      scenarioName,
+      maxMembers,
+      description,
+      openUntil,
+      location,
+      pendingDates,
+    ],
     () => {
       errorMessages.value = [];
     },
@@ -82,7 +90,7 @@ export const useCreateLobby = () => {
       if (err instanceof ApiError) {
         errorMessages.value = [err.message];
       } else {
-        console.error(err)
+        console.error(err);
         errorMessages.value = ['エラーが発生しました'];
       }
     } finally {

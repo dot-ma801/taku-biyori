@@ -23,12 +23,15 @@ export const useUpdateLobby = (id: string) => {
   const location = ref('');
   const pendingDates = ref<string[]>([]);
   const loading = ref(false);
-  const errorMessage = ref('');
+  /** submit（更新）失敗時のエラーメッセージ一覧。1件ずつアラート表示する */
+  const errorMessages = ref<string[]>([]);
+  /** 初期取得失敗時のエラー。フォーム自体を表示できない状態を表す */
+  const fetchError = ref('');
 
   /** Loads the lobby values to initialize the edit form. */
   async function fetchInitialValues() {
     loading.value = true;
-    errorMessage.value = '';
+    fetchError.value = '';
 
     try {
       const [lobby, availabilityDates] = await Promise.all([
@@ -46,7 +49,7 @@ export const useUpdateLobby = (id: string) => {
       location.value = lobby.location ?? '';
       pendingDates.value = availabilityDates.map((date) => date.date);
     } catch (err) {
-      errorMessage.value =
+      fetchError.value =
         err instanceof ApiError ? err.message : 'エラーが発生しました';
     } finally {
       loading.value = false;
@@ -55,13 +58,22 @@ export const useUpdateLobby = (id: string) => {
 
   onMounted(fetchInitialValues);
 
-  /** Validates and saves the lobby, then navigates to its detail page. */
-  async function submit() {
-    errorMessage.value = '';
+  /** フォーム全体を検証し、エラーメッセージを全件返す（早期 return せず収集する） */
+  function validate(): string[] {
+    const errors: string[] = [];
 
     const maxMembersError = getMaxMembersError(maxMembers.value);
     if (maxMembersError) {
-      errorMessage.value = maxMembersError;
+      errors.push(maxMembersError);
+    }
+
+    return errors;
+  }
+
+  /** Validates and saves the lobby, then navigates to its detail page. */
+  async function submit() {
+    errorMessages.value = validate();
+    if (errorMessages.value.length > 0) {
       return;
     }
 
@@ -78,13 +90,12 @@ export const useUpdateLobby = (id: string) => {
       });
       await bulkUpdateLobbyAvailabilityDates(id, { dates: pendingDates.value });
 
-      await router.push({
-        name: 'lobbies-detail',
-        params: { lobbyId: id },
-      });
+      // 詳細画面が未実装のため、当面は一覧へ遷移する
+      await router.push({ name: 'lobbies-list' });
     } catch (err) {
-      errorMessage.value =
-        err instanceof ApiError ? err.message : 'エラーが発生しました';
+      errorMessages.value = [
+        err instanceof ApiError ? err.message : 'エラーが発生しました',
+      ];
     } finally {
       loading.value = false;
     }
@@ -103,7 +114,8 @@ export const useUpdateLobby = (id: string) => {
     location,
     pendingDates,
     loading,
-    errorMessage,
+    errorMessages,
+    fetchError,
     fetchInitialValues,
     submit,
     cancel,

@@ -41,7 +41,7 @@ describe('useCreateLobby', () => {
   describe('候補日のバリデーション', () => {
     it('候補日が0件だと送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, pendingDates, errorMessage, submit } = useCreateLobby();
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '募集枠';
       pendingDates.value = [];
 
@@ -50,7 +50,7 @@ describe('useCreateLobby', () => {
 
       // Assert
       expect(createLobby).not.toHaveBeenCalled();
-      expect(errorMessage.value).toBe('候補日を1件以上指定してください');
+      expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
     });
 
     it('候補日が1件以上あれば candidateDates として送信する', async () => {
@@ -71,10 +71,45 @@ describe('useCreateLobby', () => {
     });
   });
 
+  describe('タイトルのバリデーション', () => {
+    it('タイトルが未入力だと送信をブロックしエラーメッセージを表示する', async () => {
+      // Arrange
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      title.value = '';
+      pendingDates.value = ['2025-05-01'];
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(createLobby).not.toHaveBeenCalled();
+      expect(errorMessages.value).toEqual(['タイトルを入力してください']);
+    });
+  });
+
+  describe('複数のバリデーションエラー', () => {
+    it('タイトル未入力かつ候補日0件のとき、両方のエラーメッセージを表示する', async () => {
+      // Arrange
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      title.value = '';
+      pendingDates.value = [];
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(createLobby).not.toHaveBeenCalled();
+      expect(errorMessages.value).toEqual([
+        'タイトルを入力してください',
+        '候補日を1件以上指定してください',
+      ]);
+    });
+  });
+
   describe('募集人数のバリデーション', () => {
     it('1（下限未満）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, maxMembers, pendingDates, errorMessage, submit } =
+      const { title, maxMembers, pendingDates, errorMessages, submit } =
         useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '1';
@@ -85,14 +120,14 @@ describe('useCreateLobby', () => {
 
       // Assert
       expect(createLobby).not.toHaveBeenCalled();
-      expect(errorMessage.value).toBe(
+      expect(errorMessages.value).toEqual([
         '募集人数は2〜20人の範囲で入力してください',
-      );
+      ]);
     });
 
     it('21（上限超過）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, maxMembers, pendingDates, errorMessage, submit } =
+      const { title, maxMembers, pendingDates, errorMessages, submit } =
         useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '21';
@@ -103,9 +138,9 @@ describe('useCreateLobby', () => {
 
       // Assert
       expect(createLobby).not.toHaveBeenCalled();
-      expect(errorMessage.value).toBe(
+      expect(errorMessages.value).toEqual([
         '募集人数は2〜20人の範囲で入力してください',
-      );
+      ]);
     });
 
     it('2（下限）を入力すると maxPlayers: 2 で送信する', async () => {
@@ -191,8 +226,24 @@ describe('useCreateLobby', () => {
     });
   });
 
+  describe('送信失敗時', () => {
+    it('API エラーになるとエラーメッセージを表示する', async () => {
+      // Arrange
+      vi.mocked(createLobby).mockRejectedValue(new Error('network error'));
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      title.value = '募集枠';
+      pendingDates.value = ['2025-05-01'];
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(errorMessages.value).toEqual(['エラーが発生しました']);
+    });
+  });
+
   describe('送信成功時の遷移', () => {
-    it('作成した募集枠の詳細画面へ遷移する', async () => {
+    it('ロビー一覧画面へ遷移する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
@@ -202,10 +253,7 @@ describe('useCreateLobby', () => {
       await submit();
 
       // Assert
-      expect(pushMock).toHaveBeenCalledWith({
-        name: 'lobbies-detail',
-        params: { lobbyId: 'lobby-1' },
-      });
+      expect(pushMock).toHaveBeenCalledWith({ name: 'lobbies-list' });
     });
   });
 

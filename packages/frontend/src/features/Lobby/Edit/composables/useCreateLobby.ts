@@ -20,20 +20,33 @@ export const useCreateLobby = () => {
   const pendingDates = ref<string[]>([]);
 
   const loading = ref(false);
-  const errorMessage = ref('');
+  /** バリデーション・API エラーのメッセージ一覧。1件ずつアラート表示する */
+  const errorMessages = ref<string[]>([]);
 
-  async function submit() {
-    errorMessage.value = '';
+  /** フォーム全体を検証し、エラーメッセージを全件返す（早期 return せず収集する） */
+  function validate(): string[] {
+    const errors: string[] = [];
+
+    if (title.value.trim() === '') {
+      errors.push('タイトルを入力してください');
+    }
 
     const maxMembersError = getMaxMembersError(maxMembers.value);
     if (maxMembersError) {
-      errorMessage.value = maxMembersError;
-      return;
+      errors.push(maxMembersError);
     }
 
     // 候補日は募集枠の存在意義であるため、作成時点で1件以上必須（design-v1.1 §6）
     if (pendingDates.value.length === 0) {
-      errorMessage.value = '候補日を1件以上指定してください';
+      errors.push('候補日を1件以上指定してください');
+    }
+
+    return errors;
+  }
+
+  async function submit() {
+    errorMessages.value = validate();
+    if (errorMessages.value.length > 0) {
       return;
     }
 
@@ -42,7 +55,7 @@ export const useCreateLobby = () => {
     try {
       const parsedMaxMembers = parseMaxMembers(maxMembers.value);
 
-      const lobby = await createLobby({
+      await createLobby({
         title: title.value,
         ...(scenarioName.value && { scenarioName: scenarioName.value }),
         ...(parsedMaxMembers !== null && { maxPlayers: parsedMaxMembers }),
@@ -52,15 +65,14 @@ export const useCreateLobby = () => {
         candidateDates: pendingDates.value,
       });
 
-      router.push({
-        name: 'lobbies-detail',
-        params: { lobbyId: lobby.id },
-      });
+      // 詳細画面が未実装のため、当面は一覧へ遷移する
+      router.push({ name: 'lobbies-list' });
     } catch (err) {
       if (err instanceof ApiError) {
-        errorMessage.value = err.message;
+        errorMessages.value = [err.message];
       } else {
-        errorMessage.value = 'エラーが発生しました';
+        console.error(err)
+        errorMessages.value = ['エラーが発生しました'];
       }
     } finally {
       loading.value = false;
@@ -80,7 +92,7 @@ export const useCreateLobby = () => {
     location,
     pendingDates,
     loading,
-    errorMessage,
+    errorMessages,
     submit,
     cancel,
   };

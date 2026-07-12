@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { useUpdateLobby } from '@/features/Lobby/Edit/composables/useUpdateLobby';
+import { ApiError } from '@/lib/api-client';
 
 vi.mock('@/api/lobby', () => ({
   bulkUpdateLobbyAvailabilityDates: vi.fn(),
@@ -69,13 +70,15 @@ describe('useUpdateLobby', () => {
   });
 
   it('does not update when max members is outside the allowed range', async () => {
-    const { maxMembers, errorMessage, submit } = useUpdateLobby(LOBBY_ID);
+    const { maxMembers, errorMessages, submit } = useUpdateLobby(LOBBY_ID);
     maxMembers.value = '21';
 
     await submit();
 
     expect(updateLobby).not.toHaveBeenCalled();
-    expect(errorMessage.value).not.toBe('');
+    expect(errorMessages.value).toEqual([
+      '募集人数は2〜20人の範囲で入力してください',
+    ]);
   });
 
   it('updates the lobby and returns to its detail page', async () => {
@@ -101,10 +104,57 @@ describe('useUpdateLobby', () => {
     expect(bulkUpdateLobbyAvailabilityDates).toHaveBeenCalledWith(LOBBY_ID, {
       dates: ['2026-07-25'],
     });
-    expect(pushMock).toHaveBeenCalledWith({
-      name: 'lobbies-detail',
-      params: { lobbyId: LOBBY_ID },
-    });
+    expect(pushMock).toHaveBeenCalledWith({ name: 'lobbies-list' });
+  });
+
+  it('初期取得に失敗したとき fetchError を設定し、errorMessages には入れない', async () => {
+    // Arrange
+    vi.mocked(getLobby).mockRejectedValue(
+      new ApiError(404, 'ロビーが見つかりません'),
+    );
+    const { fetchInitialValues, fetchError, errorMessages } =
+      useUpdateLobby(LOBBY_ID);
+
+    // Act
+    await fetchInitialValues();
+
+    // Assert
+    expect(fetchError.value).toBe('ロビーが見つかりません');
+    expect(errorMessages.value).toEqual([]);
+  });
+
+  it('初期取得の再試行に成功したとき fetchError をクリアする', async () => {
+    // Arrange
+    vi.mocked(getLobby).mockRejectedValueOnce(
+      new ApiError(500, 'サーバーエラー'),
+    );
+    const { fetchInitialValues, fetchError, title } = useUpdateLobby(LOBBY_ID);
+    await fetchInitialValues();
+    expect(fetchError.value).not.toBe('');
+
+    // Act
+    await fetchInitialValues();
+
+    // Assert
+    expect(fetchError.value).toBe('');
+    expect(title.value).toBe('Test lobby');
+  });
+
+  it('更新に失敗したとき errorMessages を設定し、fetchError には入れない', async () => {
+    // Arrange
+    vi.mocked(updateLobby).mockRejectedValue(
+      new ApiError(403, '権限がありません'),
+    );
+    const { submit, errorMessages, fetchError, pendingDates } =
+      useUpdateLobby(LOBBY_ID);
+    pendingDates.value = ['2026-07-25'];
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(errorMessages.value).toEqual(['権限がありません']);
+    expect(fetchError.value).toBe('');
   });
 
   it('returns to the previous page when cancelled', () => {

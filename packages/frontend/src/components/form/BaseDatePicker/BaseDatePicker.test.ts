@@ -70,6 +70,28 @@ describe('BaseDatePicker', () => {
     });
   });
 
+  describe('required', () => {
+    it('required=true のときラベルに必須マークが表示される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { label: '開始日', required: true },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__required').exists()).toBe(true);
+    });
+
+    it('required 未指定のとき必須マークが表示されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { label: '開始日' },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__required').exists()).toBe(false);
+    });
+  });
+
   describe('multiple', () => {
     it('multiple=true のとき複数日選択でカウントラベルが表示される', () => {
       // Arrange & Act

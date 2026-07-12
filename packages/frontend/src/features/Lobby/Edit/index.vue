@@ -80,7 +80,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
       </BaseButton>
       <BaseButton
         size="lg"
-        :disabled="loading || !hasErrors"
+        :disabled="loading || hasErrors"
         @click="emit('submit')"
       >
         {{ submitButtonLabel }}

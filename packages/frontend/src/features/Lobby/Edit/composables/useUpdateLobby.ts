@@ -1,4 +1,4 @@
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   bulkUpdateLobbyAvailabilityDates,
@@ -27,6 +27,17 @@ export const useUpdateLobby = (id: string) => {
   const errorMessages = ref<string[]>([]);
   /** 初期取得失敗時のエラー。フォーム自体を表示できない状態を表す */
   const fetchError = ref('');
+
+  // エラー表示中は送信ボタンを無効化しているため、
+  // 入力の変更を修正の開始とみなしてエラーをクリアし、再送信できるようにする。
+  // flush: 'sync' で変更の瞬間にクリアし、submit が直後に設定するエラーを消さない
+  watch(
+    [title, scenarioName, maxMembers, description, openUntil, location, pendingDates],
+    () => {
+      errorMessages.value = [];
+    },
+    { flush: 'sync' },
+  );
 
   /** Loads the lobby values to initialize the edit form. */
   async function fetchInitialValues() {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { useUpdateLobby } from '@/features/Lobby/Edit/composables/useUpdateLobby';
@@ -155,6 +156,21 @@ describe('useUpdateLobby', () => {
     // Assert
     expect(errorMessages.value).toEqual(['権限がありません']);
     expect(fetchError.value).toBe('');
+  });
+
+  it('エラー後に入力を変更すると errorMessages がクリアされる', async () => {
+    // Arrange
+    const { maxMembers, errorMessages, submit } = useUpdateLobby(LOBBY_ID);
+    maxMembers.value = '21';
+    await submit();
+    expect(errorMessages.value).not.toEqual([]);
+
+    // Act
+    maxMembers.value = '4';
+    await nextTick();
+
+    // Assert
+    expect(errorMessages.value).toEqual([]);
   });
 
   it('returns to the previous page when cancelled', () => {

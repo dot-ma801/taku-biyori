@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nextTick } from 'vue';
 import { useCreateLobby } from '@/features/Lobby/Edit/composables/useCreateLobby';
 import type { Lobby } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
@@ -223,6 +224,40 @@ describe('useCreateLobby', () => {
           openUntil: '2025-04-30',
         }),
       );
+    });
+  });
+
+  describe('エラーメッセージのクリア', () => {
+    it('バリデーションエラー後に入力を変更すると errorMessages がクリアされる', async () => {
+      // Arrange
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      title.value = '';
+      pendingDates.value = [];
+      await submit();
+      expect(errorMessages.value).not.toEqual([]);
+
+      // Act
+      title.value = '募集枠';
+      await nextTick();
+
+      // Assert
+      expect(errorMessages.value).toEqual([]);
+    });
+
+    it('候補日を変更した場合も errorMessages がクリアされる', async () => {
+      // Arrange
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      title.value = '募集枠';
+      pendingDates.value = [];
+      await submit();
+      expect(errorMessages.value).not.toEqual([]);
+
+      // Act
+      pendingDates.value = ['2025-05-01'];
+      await nextTick();
+
+      // Assert
+      expect(errorMessages.value).toEqual([]);
     });
   });
 

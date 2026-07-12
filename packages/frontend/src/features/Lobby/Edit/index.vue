@@ -12,10 +12,6 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessages: string[];
-  /** 更新フローのときのみ渡す */
-  gameSessionId?: string;
-  /** 更新フローで日程が確定済みのとき true */
-  isScheduled?: boolean;
 }>();
 
 const title = defineModel<string>('title', { default: '' });

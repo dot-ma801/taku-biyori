@@ -52,6 +52,11 @@ const router = createRouter({
         gameSessionId: to.params.gameSessionId,
       }),
     },
+    {
+      path: '/lobbies/new',
+      name: 'lobbies-new',
+      component: () => import('@/views/Lobby/CreateView.vue'),
+    },
   ],
 });
 

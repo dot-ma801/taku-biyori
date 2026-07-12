@@ -80,7 +80,10 @@ describe('useUpdateLobby', () => {
   });
 
   it('does not update when max members is outside the allowed range', async () => {
-    const { maxMembers, errorMessages, submit } = useUpdateLobby(LOBBY_ID);
+    const { title, pendingDates, maxMembers, errorMessages, submit } =
+      useUpdateLobby(LOBBY_ID);
+    title.value = 'Test lobby';
+    pendingDates.value = ['2026-07-25'];
     maxMembers.value = '21';
 
     await submit();
@@ -89,6 +92,36 @@ describe('useUpdateLobby', () => {
     expect(errorMessages.value).toEqual([
       '募集人数は2〜20人の範囲で入力してください',
     ]);
+  });
+
+  it('does not update when title is empty', async () => {
+    // Arrange
+    const { title, pendingDates, errorMessages, submit } =
+      useUpdateLobby(LOBBY_ID);
+    title.value = '   ';
+    pendingDates.value = ['2026-07-25'];
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(updateLobby).not.toHaveBeenCalled();
+    expect(errorMessages.value).toEqual(['タイトルを入力してください']);
+  });
+
+  it('does not update when there are no pending dates', async () => {
+    // Arrange
+    const { title, pendingDates, errorMessages, submit } =
+      useUpdateLobby(LOBBY_ID);
+    title.value = 'Test lobby';
+    pendingDates.value = [];
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(updateLobby).not.toHaveBeenCalled();
+    expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
   });
 
   it('updates the lobby and returns to its detail page', async () => {
@@ -164,8 +197,9 @@ describe('useUpdateLobby', () => {
     vi.mocked(updateLobby).mockRejectedValue(
       new ApiError(403, '権限がありません'),
     );
-    const { submit, errorMessages, fetchError, pendingDates } =
+    const { submit, errorMessages, fetchError, title, pendingDates } =
       useUpdateLobby(LOBBY_ID);
+    title.value = 'Test lobby';
     pendingDates.value = ['2026-07-25'];
 
     // Act

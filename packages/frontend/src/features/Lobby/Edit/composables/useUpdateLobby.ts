@@ -81,9 +81,18 @@ export const useUpdateLobby = (id: string) => {
   function validate(): string[] {
     const errors: string[] = [];
 
+    if (title.value.trim() === '') {
+      errors.push('タイトルを入力してください');
+    }
+
     const maxMembersError = getMaxMembersError(maxMembers.value);
     if (maxMembersError) {
       errors.push(maxMembersError);
+    }
+
+    // 候補日は募集枠の存在意義であるため、更新時も1件以上必須（design-v1.1 §6）
+    if (pendingDates.value.length === 0) {
+      errors.push('候補日を1件以上指定してください');
     }
 
     return errors;
@@ -100,7 +109,7 @@ export const useUpdateLobby = (id: string) => {
     try {
       const parsedMaxMembers = parseMaxMembers(maxMembers.value);
       await updateLobby(id, {
-        ...(title.value.trim() ? { title: title.value } : {}),
+        title: title.value,
         scenarioName: scenarioName.value || null,
         maxPlayers: parsedMaxMembers,
         description: description.value || null,

@@ -3,6 +3,7 @@ import {
   count,
   eq,
   exists,
+  inArray,
   isNull,
   or,
   sql,
@@ -28,6 +29,10 @@ import {
   lobbyCandidates,
   lobbyAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
+import {
+  gameSessions,
+  gameSessionMembers,
+} from '@/system/infrastructure/database/game-session-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getLobbyStatus } from '@/lobby/domain/lobby-status';
 import type { ListLobbiesRepository } from '@/lobby/application/list-lobbies';
@@ -47,6 +52,8 @@ import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/
 import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delete-availability-date';
 import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
+import type { ConfirmLobbyRepository } from '@/lobby/application/confirm-lobby';
+import { toGameSession } from '@/game-session/infrastructure/game-session-repository';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -64,7 +71,8 @@ export type LobbyRepository = ListLobbiesRepository &
   BulkUpdateAvailabilityDatesRepository &
   DeleteAvailabilityDateRepository &
   UpdateAvailabilityDateResponseRepository &
-  UpdateGuestAvailabilityDateResponseRepository;
+  UpdateGuestAvailabilityDateResponseRepository &
+  ConfirmLobbyRepository;
 
 type LobbyRow = {
   id: string;
@@ -666,5 +674,103 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       answer: answerValue,
       comment: row.comment,
     };
+  },
+
+  async findLobbyCore(id: string) {
+    const row = await db
+      .select({
+        hostUserId: lobbies.hostUserId,
+        title: lobbies.title,
+        scenarioName: lobbies.scenarioName,
+        description: lobbies.description,
+        location: lobbies.location,
+        maxPlayers: lobbies.maxPlayers,
+      })
+      .from(lobbies)
+      .where(eq(lobbies.id, id))
+      .limit(1);
+    return row[0] ?? null;
+  },
+
+  async findMemberCoresByIds(lobbyId: string, memberIds: string[]) {
+    if (memberIds.length === 0) return [];
+
+    // FOR KEY SHARE で選出メンバー行をロックする。
+    // executeWithLock のロビー行ロックだけでは lobby_members はロックされず、
+    // このメソッドの読み取り〜卓確定（game_session_members INSERT）の間に
+    // leave-lobby 等による選出メンバーの DELETE がコミットされると
+    // FK 違反（23503）で確定処理が失敗しうる。
+    // FOR KEY SHARE を取ることで、同じ行を消そうとする DELETE をこのトランザクションの
+    // コミットまでブロックし、確定処理と退出の競合を防ぐ。
+    const rows = await db
+      .select({
+        id: lobbyMembers.id,
+        userId: lobbyMembers.userId,
+        guestName: lobbyMembers.guestName,
+      })
+      .from(lobbyMembers)
+      .where(
+        and(
+          eq(lobbyMembers.lobbyId, lobbyId),
+          inArray(lobbyMembers.id, memberIds),
+        ),
+      )
+      .for('key share');
+
+    return rows;
+  },
+
+  async closeLobby(id: string, closedAt: Date): Promise<boolean> {
+    // closed_at・cancelled_at の両方が NULL の行だけを更新する
+    // （二重確定・確定と中止の並行実行を排他する。design-v1.1 §5・意思決定ログ）
+    const result = await db
+      .update(lobbies)
+      .set({ closedAt })
+      .where(
+        and(
+          eq(lobbies.id, id),
+          isNull(lobbies.closedAt),
+          isNull(lobbies.cancelledAt),
+        ),
+      )
+      .returning();
+
+    return result.length > 0;
+  },
+
+  async createGameSessionFromLobby(params) {
+    const result = await db
+      .insert(gameSessions)
+      .values({
+        hostUserId: params.hostUserId,
+        title: params.title,
+        scenarioName: params.scenarioName,
+        description: params.description,
+        location: params.location,
+        maxPlayers: params.maxPlayers,
+        guestLinkToken: params.guestLinkToken,
+        isPublished: true,
+        openUntil: params.openUntil,
+        scheduledAt: params.scheduledAt,
+        lobbyId: params.lobbyId,
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('卓の作成に失敗しました');
+
+    if (params.members.length > 0) {
+      await db.insert(gameSessionMembers).values(
+        params.members.map((member) => ({
+          gameSessionId: row.id,
+          userId: member.userId,
+          guestName: member.guestName,
+          lobbyMemberId: member.id,
+          characterName: null,
+        })),
+      );
+    }
+
+    return toGameSession(row);
   },
 });

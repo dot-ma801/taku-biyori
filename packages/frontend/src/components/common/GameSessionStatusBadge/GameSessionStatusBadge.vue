@@ -15,6 +15,7 @@ const LABEL_MAP: Record<GameSessionStatus, string> = {
   [GameSessionStatus.confirmed]: '実施前',
   [GameSessionStatus.today]: '当日',
   [GameSessionStatus.completed]: '通過済み',
+  [GameSessionStatus.cancelled]: '中止',
 };
 
 const VARIANT_MAP: Record<GameSessionStatus, Variant> = {
@@ -24,6 +25,7 @@ const VARIANT_MAP: Record<GameSessionStatus, Variant> = {
   [GameSessionStatus.confirmed]: 'success',
   [GameSessionStatus.today]: 'error',
   [GameSessionStatus.completed]: 'muted',
+  [GameSessionStatus.cancelled]: 'error',
 };
 
 const label = computed(() => LABEL_MAP[props.status]);

@@ -12,6 +12,10 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { user } from '@/system/infrastructure/database/schema';
+import {
+  lobbies,
+  lobbyMembers,
+} from '@/system/infrastructure/database/lobby-schema';
 
 /**
  * 卓（ゲームセッション）機能用の PostgreSQL スキーマです。
@@ -19,27 +23,40 @@ import { user } from '@/system/infrastructure/database/schema';
  */
 export const gameSessionSchema = pgSchema('game_session');
 
-export const gameSessions = gameSessionSchema.table('game_sessions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  hostUserId: text('host_user_id')
-    .notNull()
-    .references(() => user.id),
-  title: text('title').notNull(),
-  scenarioName: text('scenario_name'),
-  description: text('description'),
-  location: text('location'),
-  maxPlayers: integer('max_players'),
-  guestLinkToken: text('guest_link_token').notNull(),
-  isPublished: boolean('is_published').notNull().default(false),
-  openUntil: date('open_until'),
-  scheduledAt: date('scheduled_at'),
-  completedAt: timestamp('completed_at'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const gameSessions = gameSessionSchema.table(
+  'game_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hostUserId: text('host_user_id')
+      .notNull()
+      .references(() => user.id),
+    title: text('title').notNull(),
+    scenarioName: text('scenario_name'),
+    description: text('description'),
+    location: text('location'),
+    maxPlayers: integer('max_players'),
+    guestLinkToken: text('guest_link_token').notNull(),
+    isPublished: boolean('is_published').notNull().default(false),
+    openUntil: date('open_until'),
+    scheduledAt: date('scheduled_at'),
+    completedAt: timestamp('completed_at'),
+    cancelledAt: timestamp('cancelled_at'),
+    // 出自の募集枠。直接卓立ては null（design-v1.1 §3）
+    lobbyId: uuid('lobby_id').references(() => lobbies.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    // lobby_id は ON DELETE SET NULL の FK。インデックスがないと募集枠削除時に
+    // 参照側（本テーブル）がフルスキャンされるため付与する。
+    lobbyIdIdx: index('game_sessions_lobby_id_idx').on(table.lobbyId),
+  }),
+);
 
 export const gameSessionMembers = gameSessionSchema.table(
   'game_session_members',
@@ -51,6 +68,10 @@ export const gameSessionMembers = gameSessionSchema.table(
     userId: text('user_id').references(() => user.id),
     guestName: text('guest_name'),
     characterName: text('character_name'),
+    // 卓確定でコピーされたメンバーの出自（募集枠メンバーID）。直接参加は null（design-v1.1 §3）
+    lobbyMemberId: uuid('lobby_member_id').references(() => lobbyMembers.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()
@@ -64,6 +85,11 @@ export const gameSessionMembers = gameSessionSchema.table(
     )
       .on(table.gameSessionId, table.userId)
       .where(sql`${table.userId} IS NOT NULL`),
+    // lobby_member_id は ON DELETE SET NULL の FK。インデックスがないと募集枠メンバー
+    // 削除時に参照側（本テーブル）がフルスキャンされるため付与する。
+    lobbyMemberIdIdx: index('game_session_members_lobby_member_id_idx').on(
+      table.lobbyMemberId,
+    ),
   }),
 );
 
@@ -129,6 +155,10 @@ export const gameSessionsRelations = relations(
       fields: [gameSessions.hostUserId],
       references: [user.id],
     }),
+    lobby: one(lobbies, {
+      fields: [gameSessions.lobbyId],
+      references: [lobbies.id],
+    }),
     members: many(gameSessionMembers),
     candidates: many(gameSessionCandidates),
   }),
@@ -144,6 +174,10 @@ export const gameSessionMembersRelations = relations(
     user: one(user, {
       fields: [gameSessionMembers.userId],
       references: [user.id],
+    }),
+    lobbyMember: one(lobbyMembers, {
+      fields: [gameSessionMembers.lobbyMemberId],
+      references: [lobbyMembers.id],
     }),
     answers: many(gameSessionAnswers),
   }),

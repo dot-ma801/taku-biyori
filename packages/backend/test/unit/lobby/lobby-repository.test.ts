@@ -764,3 +764,262 @@ describe('upsertAnswer', () => {
     ).rejects.toThrow();
   });
 });
+
+// ----------------------------------------------------------------
+// 卓確定（POST /api/lobbies/:id/confirm）関連
+// ----------------------------------------------------------------
+
+describe('findLobbyCore', () => {
+  it('卓生成に必要なフィールドを返す', async () => {
+    // Arrange
+    const { db } = makeSelectLimitDb([
+      {
+        hostUserId: 'user-1',
+        title: 'テスト募集',
+        scenarioName: 'シナリオA',
+        description: '説明',
+        location: '会場',
+        maxPlayers: 4,
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findLobbyCore(mockLobbyRow.id);
+
+    // Assert
+    expect(result).toEqual({
+      hostUserId: 'user-1',
+      title: 'テスト募集',
+      scenarioName: 'シナリオA',
+      description: '説明',
+      location: '会場',
+      maxPlayers: 4,
+    });
+  });
+
+  it('募集枠が存在しなければ null を返す', async () => {
+    // Arrange
+    const { db } = makeSelectLimitDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findLobbyCore('nonexistent');
+
+    // Assert
+    expect(result).toBeNull();
+  });
+});
+
+describe('findMemberCoresByIds', () => {
+  const makeSelectWhereDb = (rows: unknown[]) => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      for: vi.fn().mockResolvedValue(rows),
+    };
+    const db = {
+      select: vi.fn().mockReturnValue(chain),
+    } as unknown as Database;
+    return { db, chain };
+  };
+
+  it('この募集枠に属する指定 ID のメンバーのみ返す', async () => {
+    // Arrange
+    const { db } = makeSelectWhereDb([
+      { id: 'member-1', userId: 'user-2', guestName: null },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findMemberCoresByIds(mockLobbyRow.id, [
+      'member-1',
+    ]);
+
+    // Assert
+    expect(result).toEqual([
+      { id: 'member-1', userId: 'user-2', guestName: null },
+    ]);
+  });
+
+  it('FOR KEY SHARE でメンバー行をロックする（並行退出との競合防止）', async () => {
+    // Arrange
+    const { db, chain } = makeSelectWhereDb([
+      { id: 'member-1', userId: 'user-2', guestName: null },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.findMemberCoresByIds(mockLobbyRow.id, ['member-1']);
+
+    // Assert
+    expect(chain.for).toHaveBeenCalledWith('key share');
+  });
+
+  it('memberIds が空配列ならクエリを発行せず空配列を返す', async () => {
+    // Arrange
+    const { db } = makeSelectWhereDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findMemberCoresByIds(mockLobbyRow.id, []);
+
+    // Assert
+    expect(result).toEqual([]);
+    expect(db.select).not.toHaveBeenCalled();
+  });
+});
+
+describe('closeLobby', () => {
+  it('closed_at・cancelled_at の両方が NULL の行だけを更新する（二重確定の排他）', async () => {
+    // Arrange
+    const closedAt = new Date('2026-07-11T10:00:00.000Z');
+    const { db, whereSql } = makeUpdateDb([{ ...mockLobbyRow, closedAt }]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.closeLobby(mockLobbyRow.id, closedAt);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"closed_at" is null');
+    expect(sql).toContain('"cancelled_at" is null');
+  });
+
+  it('更新行が 0 件なら false を返す', async () => {
+    // Arrange
+    const { db } = makeUpdateDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.closeLobby(
+      mockLobbyRow.id,
+      new Date('2026-07-11T10:00:00.000Z'),
+    );
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it('更新に成功したら true を返す', async () => {
+    // Arrange
+    const closedAt = new Date('2026-07-11T10:00:00.000Z');
+    const { db } = makeUpdateDb([{ ...mockLobbyRow, closedAt }]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.closeLobby(mockLobbyRow.id, closedAt);
+
+    // Assert
+    expect(result).toBe(true);
+  });
+});
+
+describe('createGameSessionFromLobby', () => {
+  const mockGameSessionRow = {
+    id: 'game-session-1',
+    hostUserId: 'user-1',
+    title: 'テスト募集',
+    scenarioName: null,
+    description: null,
+    location: null,
+    maxPlayers: null,
+    guestLinkToken: 'new-token',
+    isPublished: true,
+    openUntil: '2026-07-11',
+    scheduledAt: '2026-07-20',
+    completedAt: null,
+    cancelledAt: null,
+    lobbyId: mockLobbyRow.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const makeCreateDb = () => {
+    const memberInsert = { values: vi.fn().mockResolvedValue([]) };
+    const sessionInsert = {
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([mockGameSessionRow]),
+      }),
+    };
+    let callCount = 0;
+    const insert = vi
+      .fn()
+      .mockImplementation(() =>
+        callCount++ === 0 ? sessionInsert : memberInsert,
+      );
+    const db = { insert } as unknown as Database;
+    return { db, sessionInsert, memberInsert };
+  };
+
+  it('GameSession に変換して返す', async () => {
+    // Arrange
+    const { db } = makeCreateDb();
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.createGameSessionFromLobby({
+      lobbyId: mockLobbyRow.id,
+      hostUserId: 'user-1',
+      title: 'テスト募集',
+      scenarioName: null,
+      description: null,
+      location: null,
+      maxPlayers: null,
+      scheduledAt: '2026-07-20',
+      openUntil: '2026-07-11',
+      guestLinkToken: 'new-token',
+      members: [{ id: 'member-1', userId: 'user-2', guestName: null }],
+    });
+
+    // Assert
+    expect(result).toMatchObject({
+      id: 'game-session-1',
+      title: 'テスト募集',
+      lobbyId: mockLobbyRow.id,
+      status: 'confirmed',
+    });
+  });
+
+  it('選出メンバーを lobbyMemberId 付きで game_session_members に INSERT する', async () => {
+    // Arrange
+    const { db, memberInsert } = makeCreateDb();
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.createGameSessionFromLobby({
+      lobbyId: mockLobbyRow.id,
+      hostUserId: 'user-1',
+      title: 'テスト募集',
+      scenarioName: null,
+      description: null,
+      location: null,
+      maxPlayers: null,
+      scheduledAt: '2026-07-20',
+      openUntil: '2026-07-11',
+      guestLinkToken: 'new-token',
+      members: [
+        { id: 'member-1', userId: 'user-2', guestName: null },
+        { id: 'member-2', userId: null, guestName: 'ゲスト太郎' },
+      ],
+    });
+
+    // Assert
+    expect(memberInsert.values).toHaveBeenCalledWith([
+      expect.objectContaining({
+        gameSessionId: 'game-session-1',
+        userId: 'user-2',
+        guestName: null,
+        lobbyMemberId: 'member-1',
+        characterName: null,
+      }),
+      expect.objectContaining({
+        gameSessionId: 'game-session-1',
+        userId: null,
+        guestName: 'ゲスト太郎',
+        lobbyMemberId: 'member-2',
+        characterName: null,
+      }),
+    ]);
+  });
+});

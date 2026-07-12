@@ -32,7 +32,10 @@ export const GameSessionSchema = z.object({
   openUntil: z.string().nullable().optional(),
   scheduledAt: z.string().nullable().optional(),
   completedAt: z.string().nullable().optional(),
+  cancelledAt: z.string().nullable().optional(),
   maxMembers: z.number().int().nullable().optional(),
+  // 出自の募集枠。直接卓立ては null（design-v1.1 §6）
+  lobbyId: z.string().uuid().nullable().optional(),
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -88,7 +91,7 @@ export type UpdateGameSessionInput = z.infer<
 >;
 
 export const UpdateGameSessionStatusInputSchema = z.object({
-  status: z.enum(['open', 'completed']),
+  status: z.enum(['open', 'completed', 'cancelled']),
 });
 export type UpdateGameSessionStatusInput = z.infer<
   typeof UpdateGameSessionStatusInputSchema
@@ -136,6 +139,8 @@ export const GameSessionMemberSchema = z.object({
   userName: z.string().nullable(),
   guestName: z.string().nullable(),
   characterName: z.string().nullable(),
+  // 卓確定でコピーされたメンバーの出自（募集枠メンバーID）。直接参加は null（design-v1.1 §3）
+  lobbyMemberId: z.string().uuid().nullable().optional(),
   joinedAt: z.string(),
 });
 export type GameSessionMember = z.infer<typeof GameSessionMemberSchema>;

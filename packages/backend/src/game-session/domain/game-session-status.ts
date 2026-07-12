@@ -5,12 +5,15 @@ export type GameSessionStatusInput = {
   openUntil: Date | null;
   scheduledAt: Date | null;
   completedAt: Date | null;
+  cancelledAt: Date | null;
 };
 
 export const getGameSessionStatus = (
   session: GameSessionStatusInput,
   now: Date = new Date(),
 ): GameSessionStatus => {
+  // 中止は最優先の終端状態（design-v1.1 §8・completedAt と対称なファクト）
+  if (session.cancelledAt) return GameSessionStatus.cancelled;
   if (!session.isPublished) return GameSessionStatus.draft;
   if (!session.openUntil || now < session.openUntil)
     return GameSessionStatus.open;

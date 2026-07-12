@@ -73,6 +73,8 @@ export {
   type UpdateLobbyInput,
   UpdateLobbyStatusInputSchema,
   type UpdateLobbyStatusInput,
+  ConfirmLobbyInputSchema,
+  type ConfirmLobbyInput,
   LobbyMemberSchema,
   type LobbyMember,
   LobbyDetailSchema,

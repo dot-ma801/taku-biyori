@@ -5,16 +5,20 @@ import type {
   CreateLobbyInput,
   UpdateLobbyInput,
   UpdateLobbyStatusInput,
+  ConfirmLobbyInput,
+  GameSession,
 } from '@taku-biyori/shared';
 import {
   CreateLobbyInputSchema,
   UpdateLobbyInputSchema,
   UpdateLobbyStatusInputSchema,
+  ConfirmLobbyInputSchema,
 } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyResult } from '@/lobby/application/update-lobby';
 import type { DeleteLobbyResult } from '@/lobby/application/delete-lobby';
 import type { UpdateLobbyStatusResult } from '@/lobby/application/update-lobby-status';
+import type { ConfirmLobbyResult } from '@/lobby/application/confirm-lobby';
 
 export interface RegisterLobbyRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
@@ -32,6 +36,11 @@ export interface RegisterLobbyRouteOptions {
     userId: string,
     input: UpdateLobbyStatusInput,
   ) => Promise<UpdateLobbyStatusResult>;
+  confirmLobby: (
+    id: string,
+    userId: string,
+    input: ConfirmLobbyInput,
+  ) => Promise<ConfirmLobbyResult>;
 }
 
 /**
@@ -43,6 +52,17 @@ const hasCandidateDates = (body: unknown): boolean => {
   if (typeof body !== 'object' || body === null) return false;
   const candidateDates = (body as Record<string, unknown>).candidateDates;
   return Array.isArray(candidateDates) && candidateDates.length > 0;
+};
+
+/**
+ * memberIds が「1件以上の配列」であるかだけを先に検査する。
+ * 選出対象0人での確定は許可しない（design-v1.1 §5・意思決定ログ）ため、
+ * 通常のバリデーションエラー（400）と区別して 422 を返す。
+ */
+const hasMemberIds = (body: unknown): boolean => {
+  if (typeof body !== 'object' || body === null) return false;
+  const memberIds = (body as Record<string, unknown>).memberIds;
+  return Array.isArray(memberIds) && memberIds.length > 0;
 };
 
 export const registerLobbyRoute = (
@@ -183,5 +203,51 @@ export const registerLobbyRoute = (
       return c.json({ error: 'Invalid status transition' }, 409);
     }
     return c.json(result.lobby);
+  });
+
+  // 卓確定（選出）。design-v1.1 §5 参照。
+  app.post('/api/lobbies/:id/confirm', async (c) => {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'Invalid JSON' }, 400);
+    }
+
+    if (!hasMemberIds(body)) {
+      return c.json({ error: 'メンバーを1件以上選出してください' }, 422);
+    }
+
+    const parsed = ConfirmLobbyInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues }, 400);
+    }
+
+    const result = await options.confirmLobby(
+      c.req.param('id'),
+      authSession.user.id,
+      parsed.data,
+    );
+
+    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'invalidStatus') {
+      return c.json({ error: 'Cannot confirm lobby in this status' }, 422);
+    }
+    if (result.type === 'candidateNotFound') {
+      return c.json({ error: 'Candidate date not found' }, 404);
+    }
+    if (result.type === 'invalidMembers') {
+      return c.json({ error: 'Invalid member selection' }, 422);
+    }
+    if (result.type === 'conflict') {
+      return c.json({ error: 'Lobby already confirmed' }, 409);
+    }
+    return c.json(result.gameSession satisfies GameSession, 201);
   });
 };

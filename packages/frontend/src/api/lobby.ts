@@ -7,6 +7,10 @@ import type {
 } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
 
+export async function listLobbies(): Promise<Lobby[]> {
+  return (await apiRequest<Lobby[]>('/api/lobbies'))!;
+}
+
 export async function createLobby(input: CreateLobbyInput): Promise<Lobby> {
   return (await apiRequest<Lobby>('/api/lobbies', {
     method: 'POST',

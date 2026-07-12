@@ -6,7 +6,7 @@
 
 | Prop          | Type      | Default        | Description                        |
 | ------------- | --------- | -------------- | ---------------------------------- |
-| `required`    | `boolean` | `false`        | ラベルに必須マーク（`*`）を表示 |
+| `required`    | `boolean` | `false`        | ラベルに必須マーク（`*`）を表示    |
 | `label`       | `string`  | —              | ラベル文字列                       |
 | `placeholder` | `string`  | `'日付を選択'` | 未選択時のプレースホルダー         |
 | `disabled`    | `boolean` | `false`        | 無効化                             |

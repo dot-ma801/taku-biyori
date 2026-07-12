@@ -7,7 +7,9 @@ const existingDates: LobbyAvailabilityDate[] = [
   {
     id: 'date-1',
     date: '2025-10-01',
-    answers: [{ id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null }],
+    answers: [
+      { id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null },
+    ],
   },
   { id: 'date-2', date: '2025-10-02', answers: [] },
 ];

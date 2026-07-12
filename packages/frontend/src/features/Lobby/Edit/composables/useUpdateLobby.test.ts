@@ -56,7 +56,16 @@ beforeEach(() => {
 
 describe('useUpdateLobby', () => {
   it('fetches the lobby and initializes the form values', async () => {
-    const { fetchInitialValues, title, scenarioName, maxMembers, description, openUntil, location, pendingDates } = useUpdateLobby(LOBBY_ID);
+    const {
+      fetchInitialValues,
+      title,
+      scenarioName,
+      maxMembers,
+      description,
+      openUntil,
+      location,
+      pendingDates,
+    } = useUpdateLobby(LOBBY_ID);
 
     await fetchInitialValues();
 
@@ -83,7 +92,16 @@ describe('useUpdateLobby', () => {
   });
 
   it('updates the lobby and returns to its detail page', async () => {
-    const { title, scenarioName, maxMembers, description, openUntil, location, pendingDates, submit } = useUpdateLobby(LOBBY_ID);
+    const {
+      title,
+      scenarioName,
+      maxMembers,
+      description,
+      openUntil,
+      location,
+      pendingDates,
+      submit,
+    } = useUpdateLobby(LOBBY_ID);
     title.value = 'Updated lobby';
     scenarioName.value = '';
     maxMembers.value = '';

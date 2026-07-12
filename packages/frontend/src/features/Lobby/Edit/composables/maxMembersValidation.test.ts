@@ -4,7 +4,7 @@ import {
   MAX_MEMBERS_MAX,
   parseMaxMembers,
   getMaxMembersError,
-} from '@/features/GameSession/Edit/maxMembersValidation';
+} from '@/features/Lobby/Edit/composables/maxMembersValidation';
 
 describe('parseMaxMembers', () => {
   it('空文字なら null を返す', () => {

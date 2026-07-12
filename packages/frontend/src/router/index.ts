@@ -57,6 +57,14 @@ const router = createRouter({
       name: 'lobbies-new',
       component: () => import('@/views/Lobby/CreateView.vue'),
     },
+    {
+      path: '/lobbies/edit/:lobbyId',
+      name: 'lobbies-edit',
+      component: () => import('@/views/Lobby/EditView.vue'),
+      props: (to) => ({
+        lobbyId: to.params.lobbyId,
+      }),
+    },
   ],
 });
 

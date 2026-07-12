@@ -1,6 +1,7 @@
 import type {
   CreateLobbyInput,
   Lobby,
+  LobbyAvailabilityDate,
   LobbyDetail,
   UpdateLobbyInput,
 } from '@taku-biyori/shared';
@@ -25,4 +26,22 @@ export async function updateLobby(
     method: 'PATCH',
     body: input,
   }))!;
+}
+
+export async function listLobbyAvailabilityDates(
+  id: string,
+): Promise<LobbyAvailabilityDate[]> {
+  return (await apiRequest<LobbyAvailabilityDate[]>(
+    `/api/lobbies/${id}/availability-dates`,
+  ))!;
+}
+
+export async function bulkUpdateLobbyAvailabilityDates(
+  id: string,
+  input: { dates: string[] },
+): Promise<LobbyAvailabilityDate[]> {
+  return (await apiRequest<LobbyAvailabilityDate[]>(
+    `/api/lobbies/${id}/availability-dates`,
+    { method: 'PUT', body: input },
+  ))!;
 }

@@ -1,4 +1,5 @@
 import type {
+  BulkUpdateLobbyAvailabilityDatesInput,
   CreateLobbyInput,
   Lobby,
   LobbyAvailabilityDate,
@@ -42,7 +43,7 @@ export async function listLobbyAvailabilityDates(
 
 export async function bulkUpdateLobbyAvailabilityDates(
   id: string,
-  input: { dates: string[] },
+  input: BulkUpdateLobbyAvailabilityDatesInput,
 ): Promise<LobbyAvailabilityDate[]> {
   return (await apiRequest<LobbyAvailabilityDate[]>(
     `/api/lobbies/${id}/availability-dates`,

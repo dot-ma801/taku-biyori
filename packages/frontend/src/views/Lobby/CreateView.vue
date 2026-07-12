@@ -12,7 +12,7 @@ const {
   location,
   pendingDates,
   loading,
-  errorMessage,
+  errorMessages,
   submit,
   cancel,
 } = useCreateLobby();
@@ -31,7 +31,7 @@ const {
       v-model:location="location"
       v-model:pendingDates="pendingDates"
       :loading="loading"
-      :error-message="errorMessage"
+      :error-messages="errorMessages"
       @submit="submit"
       @cancel="cancel"
     ></LobbyEdit>

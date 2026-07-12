@@ -2,6 +2,7 @@
 defineOptions({ name: 'LobbyEdit' });
 import InputBasicInfo from '@/features/Lobby/Edit/InputBasicInfo.vue';
 import InputScheduleInfo from '@/features/Lobby/Edit/InputScheduleInfo.vue';
+import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import { computed } from 'vue';
@@ -10,7 +11,7 @@ const props = defineProps<{
   heading: string;
   submitLabel: string;
   loading: boolean;
-  errorMessage: string;
+  errorMessages: string[];
   /** 更新フローのときのみ渡す */
   gameSessionId?: string;
   /** 更新フローで日程が確定済みのとき true */
@@ -36,6 +37,8 @@ const emit = defineEmits<{
 const submitButtonLabel = computed(() =>
   props.loading ? '処理中…' : props.submitLabel,
 );
+
+const hasErrors = computed(() => props.errorMessages.length > 0);
 </script>
 
 <template>
@@ -56,6 +59,16 @@ const submitButtonLabel = computed(() =>
       v-model:pendingDates="pendingDates"
     />
 
+    <div v-if="hasErrors" class="error-area">
+      <BaseAlert
+        v-for="message in errorMessages"
+        :key="message"
+        variant="error"
+      >
+        {{ message }}
+      </BaseAlert>
+    </div>
+
     <div class="button-area">
       <BaseButton
         size="lg"
@@ -67,7 +80,7 @@ const submitButtonLabel = computed(() =>
       </BaseButton>
       <BaseButton
         size="lg"
-        :disabled="loading"
+        :disabled="loading || !hasErrors"
         @click="emit('submit')"
       >
         {{ submitButtonLabel }}
@@ -81,6 +94,12 @@ const submitButtonLabel = computed(() =>
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+.error-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .button-area {

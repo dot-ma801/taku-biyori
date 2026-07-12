@@ -53,6 +53,11 @@ const router = createRouter({
       }),
     },
     {
+      path: '/lobbies',
+      name: 'lobbies-list',
+      component: () => import('@/views/Lobby/ListView.vue'),
+    },
+    {
       path: '/lobbies/new',
       name: 'lobbies-new',
       component: () => import('@/views/Lobby/CreateView.vue'),

@@ -35,6 +35,7 @@ import {
 } from '@/system/infrastructure/database/game-session-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getLobbyStatus } from '@/lobby/domain/lobby-status';
+import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
 import type { ListLobbiesRepository } from '@/lobby/application/list-lobbies';
 import type { CreateLobbyRepository } from '@/lobby/application/create-lobby';
 import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
@@ -579,27 +580,29 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     await db.delete(lobbyCandidates).where(eq(lobbyCandidates.id, dateId));
   },
 
-  async replaceAllDates(
+  async applyDateChanges(
     lobbyId: string,
-    dates: string[],
-  ): Promise<LobbyAvailabilityDate[]> {
-    return db.transaction(async (tx) => {
-      await tx
-        .delete(lobbyCandidates)
-        .where(eq(lobbyCandidates.lobbyId, lobbyId));
+    diff: CandidateDateDiff,
+  ): Promise<void> {
+    // 残る候補日の行は触らない（DELETE→INSERT の全置換にすると行 ID が変わり、
+    // lobby_answers が onDelete: cascade で消えてしまう）
+    await db.transaction(async (tx) => {
+      if (diff.dateIdsToRemove.length > 0) {
+        await tx
+          .delete(lobbyCandidates)
+          .where(
+            and(
+              eq(lobbyCandidates.lobbyId, lobbyId),
+              inArray(lobbyCandidates.id, diff.dateIdsToRemove),
+            ),
+          );
+      }
 
-      if (dates.length === 0) return [];
-
-      const inserted = await tx
-        .insert(lobbyCandidates)
-        .values(dates.map((date) => ({ lobbyId, date })))
-        .returning();
-
-      return inserted.map((row) => ({
-        id: row.id,
-        date: row.date,
-        answers: [],
-      }));
+      if (diff.datesToAdd.length > 0) {
+        await tx
+          .insert(lobbyCandidates)
+          .values(diff.datesToAdd.map((date) => ({ lobbyId, date })));
+      }
     });
   },
 

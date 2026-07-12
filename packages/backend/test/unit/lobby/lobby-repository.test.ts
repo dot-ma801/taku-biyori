@@ -601,13 +601,19 @@ describe('deleteDateById', () => {
   });
 });
 
-describe('replaceAllDates', () => {
-  // トランザクション内で delete().where() → insert().values().returning() の順に呼ばれることをモックする
-  const makeReplaceTransactionDb = (insertedRows: unknown[]) => {
-    const deleteChain = { where: vi.fn().mockResolvedValue(undefined) };
+describe('applyDateChanges', () => {
+  // トランザクション内で delete().where() と insert().values() が呼ばれることをモックする。
+  // delete の where に渡された条件式をキャプチャして SQL 文字列で検証する。
+  const makeApplyTransactionDb = () => {
+    let capturedWhere: SQL | undefined;
+    const deleteChain = {
+      where: vi.fn().mockImplementation((condition: SQL) => {
+        capturedWhere = condition;
+        return Promise.resolve(undefined);
+      }),
+    };
     const insertChain = {
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue(insertedRows),
+      values: vi.fn().mockResolvedValue(undefined),
     };
     const tx = {
       delete: vi.fn().mockReturnValue(deleteChain),
@@ -618,44 +624,70 @@ describe('replaceAllDates', () => {
         .fn()
         .mockImplementation((fn: (tx: typeof tx) => unknown) => fn(tx)),
     } as unknown as Database;
-    return { db, tx, deleteChain, insertChain };
+    return {
+      db,
+      tx,
+      insertChain,
+      whereSql: () => {
+        if (!capturedWhere) throw new Error('where が呼ばれていません');
+        return new PgDialect().sqlToQuery(capturedWhere).sql;
+      },
+    };
   };
 
-  it('全候補日を削除してから新しい候補日を挿入する', async () => {
+  it('削除対象の候補日だけを削除し、追加対象の候補日だけを挿入する', async () => {
     // Arrange
-    const { db, tx } = makeReplaceTransactionDb([
-      { id: 'date-1', date: '2025-10-01' },
-      { id: 'date-2', date: '2025-10-02' },
-    ]);
+    const { db, tx, insertChain, whereSql } = makeApplyTransactionDb();
     const repo = createLobbyRepository(db);
 
     // Act
-    const result = await repo.replaceAllDates(mockLobbyRow.id, [
-      '2025-10-01',
-      '2025-10-02',
-    ]);
+    await repo.applyDateChanges(mockLobbyRow.id, {
+      datesToAdd: ['2025-10-05'],
+      dateIdsToRemove: ['date-2'],
+    });
 
     // Assert
     expect(tx.delete).toHaveBeenCalledTimes(1);
     expect(tx.insert).toHaveBeenCalledTimes(1);
-    expect(result).toEqual([
-      { id: 'date-1', date: '2025-10-01', answers: [] },
-      { id: 'date-2', date: '2025-10-02', answers: [] },
+    expect(insertChain.values).toHaveBeenCalledWith([
+      { lobbyId: mockLobbyRow.id, date: '2025-10-05' },
     ]);
+    // 削除は対象募集枠の行に限定される（他の募集枠の候補日を誤って消さない）
+    const sql = whereSql();
+    expect(sql).toContain('"lobby_id" = ');
+    expect(sql).toContain('"id" in ');
   });
 
-  it('dates が空配列なら insert を呼ばず空配列を返す', async () => {
+  it('追加対象が無ければ insert を呼ばない', async () => {
     // Arrange
-    const { db, tx } = makeReplaceTransactionDb([]);
+    const { db, tx } = makeApplyTransactionDb();
     const repo = createLobbyRepository(db);
 
     // Act
-    const result = await repo.replaceAllDates(mockLobbyRow.id, []);
+    await repo.applyDateChanges(mockLobbyRow.id, {
+      datesToAdd: [],
+      dateIdsToRemove: ['date-1'],
+    });
 
     // Assert
     expect(tx.delete).toHaveBeenCalledTimes(1);
     expect(tx.insert).not.toHaveBeenCalled();
-    expect(result).toEqual([]);
+  });
+
+  it('削除対象が無ければ delete を呼ばない', async () => {
+    // Arrange
+    const { db, tx } = makeApplyTransactionDb();
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.applyDateChanges(mockLobbyRow.id, {
+      datesToAdd: ['2025-10-05'],
+      dateIdsToRemove: [],
+    });
+
+    // Assert
+    expect(tx.delete).not.toHaveBeenCalled();
+    expect(tx.insert).toHaveBeenCalledTimes(1);
   });
 });
 

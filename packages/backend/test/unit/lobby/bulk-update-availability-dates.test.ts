@@ -3,8 +3,12 @@ import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-ava
 import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
 import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
 
-const mockDates: LobbyAvailabilityDate[] = [
-  { id: 'date-1', date: '2025-10-01', answers: [] },
+const existingDates: LobbyAvailabilityDate[] = [
+  {
+    id: 'date-1',
+    date: '2025-10-01',
+    answers: [{ id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null }],
+  },
   { id: 'date-2', date: '2025-10-02', answers: [] },
 ];
 
@@ -18,27 +22,97 @@ const makeRepo = (
     closedAt: null,
     cancelledAt: null,
   }),
-  replaceAllDates: vi.fn().mockResolvedValue(mockDates),
+  findByLobbyId: vi.fn().mockResolvedValue(existingDates),
+  applyDateChanges: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 });
 
 describe('bulkUpdateAvailabilityDates', () => {
-  it('ホストが候補日を一括更新できる', async () => {
+  it('ホストが候補日を一括更新でき、更新後の一覧を返す', async () => {
     // Arrange
-    const repo = makeRepo();
+    const updatedDates: LobbyAvailabilityDate[] = [
+      ...existingDates,
+      { id: 'date-3', date: '2025-10-03', answers: [] },
+    ];
+    const findByLobbyId = vi
+      .fn()
+      .mockResolvedValueOnce(existingDates) // 差分計算用
+      .mockResolvedValueOnce(updatedDates); // 更新後の返却用
+    const repo = makeRepo({ findByLobbyId });
 
     // Act
     const result = await bulkUpdateAvailabilityDates(
       repo,
       'lobby-1',
       'user-1',
-      {
-        dates: ['2025-10-01', '2025-10-02'],
-      },
+      { dates: ['2025-10-01', '2025-10-02', '2025-10-03'] },
     );
 
     // Assert
-    expect(result).toEqual({ type: 'ok', dates: mockDates });
+    expect(result).toEqual({ type: 'ok', dates: updatedDates });
+  });
+
+  it('残る日付は削除対象にせず、追加分と削除分だけを applyDateChanges に渡す', async () => {
+    // Arrange
+    const applyDateChanges = vi.fn().mockResolvedValue(undefined);
+    const repo = makeRepo({ applyDateChanges });
+
+    // Act
+    // date-1 (2025-10-01) は残し、date-2 (2025-10-02) を消して 2025-10-05 を足す
+    await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
+      dates: ['2025-10-01', '2025-10-05'],
+    });
+
+    // Assert
+    expect(applyDateChanges).toHaveBeenCalledWith('lobby-1', {
+      datesToAdd: ['2025-10-05'],
+      dateIdsToRemove: ['date-2'],
+    });
+  });
+
+  it('既存と同じ内容なら書き込みを行わない', async () => {
+    // Arrange
+    const applyDateChanges = vi.fn().mockResolvedValue(undefined);
+    const repo = makeRepo({ applyDateChanges });
+
+    // Act
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'lobby-1',
+      'user-1',
+      { dates: ['2025-10-01', '2025-10-02'] },
+    );
+
+    // Assert
+    expect(applyDateChanges).not.toHaveBeenCalled();
+    expect(result).toEqual({ type: 'ok', dates: existingDates });
+  });
+
+  it('残った候補日の回答が返却結果に保持される', async () => {
+    // Arrange
+    const afterUpdate: LobbyAvailabilityDate[] = [
+      existingDates[0]!, // date-1 は回答付きのまま残る
+      { id: 'date-3', date: '2025-10-03', answers: [] },
+    ];
+    const findByLobbyId = vi
+      .fn()
+      .mockResolvedValueOnce(existingDates)
+      .mockResolvedValueOnce(afterUpdate);
+    const repo = makeRepo({ findByLobbyId });
+
+    // Act
+    const result = await bulkUpdateAvailabilityDates(
+      repo,
+      'lobby-1',
+      'user-1',
+      { dates: ['2025-10-01', '2025-10-03'] },
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'ok', dates: afterUpdate });
+    expect(afterUpdate[0]!.answers).toEqual([
+      { id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null },
+    ]);
   });
 
   it('存在しない募集枠IDは notFound を返す', async () => {
@@ -57,10 +131,12 @@ describe('bulkUpdateAvailabilityDates', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('ホスト以外は forbidden を返す', async () => {
+  it('ホスト以外は forbidden を返し、書き込みを行わない', async () => {
     // Arrange
+    const applyDateChanges = vi.fn().mockResolvedValue(undefined);
     const repo = makeRepo({
       findHostUserId: vi.fn().mockResolvedValue('other-user'),
+      applyDateChanges,
     });
 
     // Act
@@ -68,13 +144,12 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      {
-        dates: ['2025-10-01'],
-      },
+      { dates: ['2025-10-01'] },
     );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
+    expect(applyDateChanges).not.toHaveBeenCalled();
   });
 
   it('募集枠が確定済みの場合は invalidStatus を返す', async () => {
@@ -93,9 +168,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      {
-        dates: ['2026-07-01'],
-      },
+      { dates: ['2026-07-01'] },
     );
 
     // Assert
@@ -118,29 +191,10 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      {
-        dates: ['2026-07-01'],
-      },
+      { dates: ['2026-07-01'] },
     );
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });
-  });
-
-  it('replaceAllDates に lobbyId と dates を渡す', async () => {
-    // Arrange
-    const replaceAllDates = vi.fn().mockResolvedValue(mockDates);
-    const repo = makeRepo({ replaceAllDates });
-
-    // Act
-    await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2025-10-01', '2025-10-02'],
-    });
-
-    // Assert
-    expect(replaceAllDates).toHaveBeenCalledWith('lobby-1', [
-      '2025-10-01',
-      '2025-10-02',
-    ]);
   });
 });

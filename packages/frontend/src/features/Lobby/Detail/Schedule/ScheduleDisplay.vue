@@ -9,13 +9,18 @@ import type { LobbyDetail } from '@taku-biyori/shared';
 import { isGuestMember } from '@taku-biyori/shared';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { CalendarCheck, SquarePen, Check, RotateCcw } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSchedule';
 import { useMyLobbyMemberId } from '@/features/Lobby/Detail/composables/useMyLobbyMemberId';
+import { useScheduleConfirm } from '@/features/Lobby/Detail/Schedule/useScheduleConfirm';
 
 const props = defineProps<{
   lobby: LobbyDetail;
+}>();
+
+const emit = defineEmits<{
+  'confirm-date': [dateId: string];
 }>();
 
 const { myMemberId } = useMyLobbyMemberId(() => props.lobby.members);
@@ -54,6 +59,13 @@ const {
   availabilityDates,
   () => props.lobby.status,
   refetchSchedule,
+);
+
+const selectedDateId = ref<string | null>(null);
+
+const { canConfirm } = useScheduleConfirm(
+  () => props.lobby.hostUserId,
+  () => props.lobby.status,
 );
 
 // ===== 表（ScheduleTable）への入力をモードに応じて組み立てる =====
@@ -145,7 +157,10 @@ const canEditSchedule = computed(
           :my-member-id="myMemberId"
           :editable-member-ids="editableMemberIds"
           :draft-answers="tableDraftAnswers"
+          :can-confirm="canConfirm"
+          :selected-date-id="selectedDateId"
           @cell-click="onCellClick"
+          @date-select="(id) => (selectedDateId = id)"
         />
       </div>
       <div class="schedule-cards">
@@ -155,7 +170,10 @@ const canEditSchedule = computed(
           :my-member-id="myMemberId"
           :editable-member-ids="editableMemberIds"
           :draft-answers="tableDraftAnswers"
+          :can-confirm="canConfirm"
+          :selected-date-id="selectedDateId"
           @cell-click="onCellClick"
+          @date-select="(id) => (selectedDateId = id)"
         />
       </div>
       <div v-if="displayMemberId" class="actions">
@@ -178,12 +196,29 @@ const canEditSchedule = computed(
         </template>
         <template v-else>
           <BaseButton
+            v-if="canConfirm && selectedDateId"
+            variant="secondary"
+            :left-icon="RotateCcw"
+            class="reset-btn"
+            @click="selectedDateId = null"
+          >
+            選択を解除
+          </BaseButton>
+          <BaseButton
             v-if="canEditSchedule"
             variant="secondary"
             :left-icon="SquarePen"
             @click="startScheduleEdit"
           >
             回答を編集する
+          </BaseButton>
+          <BaseButton
+            v-if="canConfirm"
+            :left-icon="CalendarCheck"
+            :disabled="!selectedDateId"
+            @click="selectedDateId && emit('confirm-date', selectedDateId)"
+          >
+            開催日を確定
           </BaseButton>
         </template>
       </div>
@@ -204,6 +239,10 @@ const canEditSchedule = computed(
 
 .state-message.error {
   color: var(--color-error);
+}
+
+.reset-btn {
+  margin-right: auto;
 }
 
 .actions {

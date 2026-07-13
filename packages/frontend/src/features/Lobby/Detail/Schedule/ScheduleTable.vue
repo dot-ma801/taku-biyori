@@ -15,10 +15,13 @@ const props = defineProps<{
   editableMemberIds: string[];
   // 編集中ドラフト。`${memberId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
+  canConfirm?: boolean;
+  selectedDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
   cellClick: [memberId: string, dateId: string];
+  dateSelect: [dateId: string];
 }>();
 
 const { getAnswer } = useScheduleView(
@@ -26,8 +29,10 @@ const { getAnswer } = useScheduleView(
   toRef(props, 'draftAnswers'),
 );
 
-// 空行の colspan（候補日列 + メンバー列）
-const emptyRowColspan = computed(() => props.members.length + 1);
+// 空行の colspan（確定列? + 候補日列 + メンバー列）
+const emptyRowColspan = computed(
+  () => props.members.length + 1 + (props.canConfirm ? 1 : 0),
+);
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
 function isMe(member: LobbyMember): boolean {
@@ -64,6 +69,7 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
     <table class="table">
       <thead>
         <tr>
+          <th v-if="canConfirm" scope="col" class="th th--confirm">確定</th>
           <th scope="col" class="th th--date">候補日程</th>
           <th
             v-for="member in members"
@@ -78,6 +84,16 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
       </thead>
       <tbody>
         <tr v-for="date in availabilityDates" :key="date.id" class="tr">
+          <td v-if="canConfirm" class="td td--confirm">
+            <input
+              type="radio"
+              name="confirm-date"
+              :value="date.id"
+              :checked="selectedDateId === date.id"
+              :aria-label="`${formatDateWithWeekday(date.date)} を確定`"
+              @change="emit('dateSelect', date.id)"
+            />
+          </td>
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
           <td
             v-for="member in members"
@@ -127,6 +143,16 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.th--confirm {
+  text-align: center;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.td--confirm {
+  text-align: center;
 }
 
 .th--date {

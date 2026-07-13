@@ -4,7 +4,7 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import { UsersRound, SquarePen, Check } from '@lucide/vue';
+import { UsersRound } from '@lucide/vue';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
@@ -13,7 +13,7 @@ const props = defineProps<{
 }>();
 
 const displayMembers = computed(() => {
-  props.lobby.members.map((member) => ({
+  return props.lobby.members.map((member) => ({
     id: member.id,
     userName: memberDisplayName(member),
     // アバターの色を変えないため、サフィックスなしの名前を渡す
@@ -40,11 +40,7 @@ const displayMembers = computed(() => {
       ></UserAvatar>
 
       <p>
-        <span v-if="member.characterName">
-          {{ member.characterName }}
-          <span class="user-name">@ </span>
-        </span>
-        <span class="user-name">{{ member.userName }}</span>
+        {{ member.userName }}
       </p>
     </div>
   </BaseCard>

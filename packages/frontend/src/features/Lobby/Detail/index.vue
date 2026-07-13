@@ -37,7 +37,7 @@ const maxMembers = computed(() => {
 </script>
 
 <template>
-  <template v-if="lobby">
+  <div class="container" v-if="lobby">
     <BaseSectionHeading level="h1">
       {{ lobby.title }}
     </BaseSectionHeading>
@@ -58,12 +58,21 @@ const maxMembers = computed(() => {
     </div>
 
     <StatusDisplay :lobby-status="lobby.status" />
-    <MemoDisplay :text="lobby.description ?? undefined" />
+    <MemoDisplay
+      v-if="lobby.description"
+      :text="lobby.description ?? undefined"
+    />
     <MemberDisplay :lobby="lobby" />
-  </template>
+  </div>
 </template>
 
 <style scoped>
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
 .session-meta-bar {
   display: flex;
   justify-content: space-between;

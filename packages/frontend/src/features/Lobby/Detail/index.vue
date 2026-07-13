@@ -4,6 +4,7 @@ defineOptions({ name: 'LobbyDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
+import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
 import { computed } from 'vue';
 import { Album, UsersRound, CalendarDays } from '@lucide/vue';
@@ -58,6 +59,7 @@ const maxMembers = computed(() => {
 
     <StatusDisplay :lobby-status="lobby.status" />
     <MemoDisplay :text="lobby.description ?? undefined" />
+    <MemberDisplay :lobby="lobby" />
   </template>
 </template>
 

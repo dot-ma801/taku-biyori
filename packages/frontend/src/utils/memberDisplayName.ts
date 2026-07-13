@@ -1,4 +1,4 @@
-import type { GameSessionMember } from '@taku-biyori/shared';
+import type { GameSessionMember, LobbyMember } from '@taku-biyori/shared';
 import { isGuestMember } from '@taku-biyori/shared';
 
 const UNSET = '（未設定）';
@@ -8,7 +8,8 @@ const UNSET = '（未設定）';
  * vue-boring-avatars は name から色を導出するため、
  * 表示名にサフィックスを付けてもアバター色が変わらないよう分けて公開する。
  */
-export function memberBaseName(member: GameSessionMember): string {
+// FIXME: ここは汎用的な user を受け取るべきでは？
+export function memberBaseName(member: GameSessionMember | LobbyMember): string {
   return member.userName ?? member.guestName ?? UNSET;
 }
 
@@ -16,7 +17,8 @@ export function memberBaseName(member: GameSessionMember): string {
  * メンバーの表示名。ゲスト（アカウントなし）には末尾に「（ゲスト）」を付ける。
  * 名前が未設定の場合はゲストでも「（未設定）」のみを返す。
  */
-export function memberDisplayName(member: GameSessionMember): string {
+// FIXME: ここは汎用的な user を受け取るべきでは？
+export function memberDisplayName(member: GameSessionMember | LobbyMember): string {
   const base = memberBaseName(member);
   if (isGuestMember(member) && base !== UNSET) {
     return `${base}（ゲスト）`;

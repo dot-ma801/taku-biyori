@@ -7,6 +7,7 @@ import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
 import { computed } from 'vue';
 import { Album, UsersRound, CalendarDays } from '@lucide/vue';
+import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
@@ -56,6 +57,7 @@ const maxMembers = computed(() => {
     </div>
 
     <StatusDisplay :lobby-status="lobby.status" />
+    <MemoDisplay :text="lobby.description ?? undefined" />
   </template>
 </template>
 

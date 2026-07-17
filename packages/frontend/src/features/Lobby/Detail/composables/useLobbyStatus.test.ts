@@ -148,8 +148,10 @@ describe('canPublish', () => {
 });
 
 describe('canCancel', () => {
+  // UI 仕様: 未公開（draft）の募集枠に「募集中止」ボタンは出さない。
+  // API 上は draft からの中止も許可される（shared の LOBBY_ACTION_POLICIES 参照）
   describe.each([
-    { status: LobbyStatus.draft, expected: true },
+    { status: LobbyStatus.draft, expected: false },
     { status: LobbyStatus.open, expected: true },
     { status: LobbyStatus.scheduling, expected: true },
     { status: LobbyStatus.confirmed, expected: false },
@@ -168,10 +170,10 @@ describe('canCancel', () => {
     });
   });
 
-  it('ホスト以外は status が draft でも false を返す', () => {
+  it('ホスト以外は status が open でも false を返す', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
-    const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
+    const lobby = ref(makeLobby({ status: LobbyStatus.open }));
 
     // Act
     const { canCancel } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -190,6 +192,52 @@ describe('canCancel', () => {
 
     // Assert
     expect(canCancel.value).toBe(false);
+  });
+});
+
+describe('canEdit', () => {
+  describe.each([
+    { status: LobbyStatus.draft, expected: true },
+    { status: LobbyStatus.open, expected: true },
+    { status: LobbyStatus.scheduling, expected: true },
+    { status: LobbyStatus.confirmed, expected: false },
+    { status: LobbyStatus.cancelled, expected: false },
+  ])('ステータス policy (status=$status)', ({ status, expected }) => {
+    it(`ホストのとき ${expected} を返す`, () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const lobby = ref(makeLobby({ status }));
+
+      // Act
+      const { canEdit } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+      // Assert
+      expect(canEdit.value).toBe(expected);
+    });
+  });
+
+  it('ホスト以外は status が draft でも false を返す', () => {
+    // Arrange
+    setupAuthAs(OTHER_USER_ID);
+    const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
+
+    // Act
+    const { canEdit } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Assert
+    expect(canEdit.value).toBe(false);
+  });
+
+  it('lobby が null のとき false を返す', () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const lobby = ref<LobbyDetail | null>(null);
+
+    // Act
+    const { canEdit } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Assert
+    expect(canEdit.value).toBe(false);
   });
 });
 
@@ -430,6 +478,19 @@ describe('cancelLobby', () => {
     expect(updateLobbyStatus).not.toHaveBeenCalled();
   });
 
+  it('status が draft のときは API を呼ばない（UI では未公開の中止を提供しない）', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
+    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Act
+    await cancelLobby();
+
+    // Assert
+    expect(updateLobbyStatus).not.toHaveBeenCalled();
+  });
+
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
@@ -450,67 +511,5 @@ describe('cancelLobby', () => {
 
     // Assert
     expect(updateLobbyStatus).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('publish と cancel の排他', () => {
-  it('publishLobby の loading 中は cancelLobby を無視する', async () => {
-    // Arrange
-    // draft のときは canPublish・canCancel が両方 true になるため、
-    // loading を共有して並行リクエストを防ぐことを検証する
-    setupAuthAs(HOST_USER_ID);
-    let resolve!: (v: Lobby) => void;
-    vi.mocked(updateLobbyStatus).mockReturnValue(
-      new Promise((r) => {
-        resolve = r;
-      }),
-    );
-    const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
-    const { publishLobby, cancelLobby } = useLobbyStatus(
-      LOBBY_ID,
-      lobby,
-      vi.fn(),
-    );
-
-    // Act
-    const first = publishLobby();
-    await cancelLobby();
-    resolve(makeUpdatedLobby(LobbyStatus.open));
-    await first;
-
-    // Assert
-    expect(updateLobbyStatus).toHaveBeenCalledTimes(1);
-    expect(updateLobbyStatus).toHaveBeenCalledWith(LOBBY_ID, {
-      status: 'open',
-    });
-  });
-
-  it('cancelLobby の loading 中は publishLobby を無視する', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    let resolve!: (v: Lobby) => void;
-    vi.mocked(updateLobbyStatus).mockReturnValue(
-      new Promise((r) => {
-        resolve = r;
-      }),
-    );
-    const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
-    const { publishLobby, cancelLobby } = useLobbyStatus(
-      LOBBY_ID,
-      lobby,
-      vi.fn(),
-    );
-
-    // Act
-    const first = cancelLobby();
-    await publishLobby();
-    resolve(makeUpdatedLobby(LobbyStatus.cancelled));
-    await first;
-
-    // Assert
-    expect(updateLobbyStatus).toHaveBeenCalledTimes(1);
-    expect(updateLobbyStatus).toHaveBeenCalledWith(LOBBY_ID, {
-      status: 'cancelled',
-    });
   });
 });

@@ -74,13 +74,25 @@ describe('canIssueGuestLink', () => {
     expect(canIssueGuestLink.value).toBe(false);
   });
 
-  it('status が open 以外のとき false', () => {
+  it('ホストかつ status が scheduling のとき true', () => {
     // Act
     const { canIssueGuestLink } = useGuestLink(
       LOBBY_ID,
       HOST_ID,
       LobbyStatus.scheduling,
     );
+
+    // Assert
+    expect(canIssueGuestLink.value).toBe(true);
+  });
+
+  it.each([
+    { status: LobbyStatus.draft },
+    { status: LobbyStatus.confirmed },
+    { status: LobbyStatus.cancelled },
+  ])('status が $status のとき false', ({ status }) => {
+    // Act
+    const { canIssueGuestLink } = useGuestLink(LOBBY_ID, HOST_ID, status);
 
     // Assert
     expect(canIssueGuestLink.value).toBe(false);

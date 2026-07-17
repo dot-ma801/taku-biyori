@@ -5,6 +5,12 @@ import { getLobbyGuestLink } from '@/api/lobby';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
+/** 招待リンクボタンを表示するステータス（UI 仕様） */
+const GUEST_LINK_VISIBLE_STATUSES: LobbyStatus[] = [
+  LobbyStatus.open,
+  LobbyStatus.scheduling,
+];
+
 /**
  * ホストがゲスト招待リンクを取得してクリップボードにコピーするための composable。
  * トークン取得 API はホスト限定（非ホストは 403）なので、発行可否もホストで判定する。
@@ -34,11 +40,18 @@ export const useGuestLink = (
 
   /**
    * ゲスト招待リンクを発行できるか。ボタンの出し分けに使う。
-   * トークン取得 API がホスト限定のため、ホストかつ status が open（募集中）のときのみ true。
+   * トークン取得 API がホスト限定のため、ホストかつ status が open / scheduling のときのみ true。
+   * 参加自体は open のみ API 許可（scheduling では 422）だが、
+   * scheduling では参加済みゲストへのリンク再共有（閲覧・日程回答）用途で発行を許す。
    */
-  const canIssueGuestLink = computed(
-    () => isHost.value && toValue(status) === LobbyStatus.open,
-  );
+  const canIssueGuestLink = computed(() => {
+    const current = toValue(status);
+    return (
+      isHost.value &&
+      current !== undefined &&
+      GUEST_LINK_VISIBLE_STATUSES.includes(current)
+    );
+  });
 
   /** 招待リンクを組み立てる。ゲストはログインユーザーと同じ募集枠詳細画面を ?token 付きで開く */
   function buildLink(token: string): string {

@@ -9,7 +9,9 @@ const UNSET = '（未設定）';
  * 表示名にサフィックスを付けてもアバター色が変わらないよう分けて公開する。
  */
 // FIXME: ここは汎用的な user を受け取るべきでは？
-export function memberBaseName(member: GameSessionMember | LobbyMember): string {
+export function memberBaseName(
+  member: GameSessionMember | LobbyMember,
+): string {
   return member.userName ?? member.guestName ?? UNSET;
 }
 
@@ -18,7 +20,9 @@ export function memberBaseName(member: GameSessionMember | LobbyMember): string 
  * 名前が未設定の場合はゲストでも「（未設定）」のみを返す。
  */
 // FIXME: ここは汎用的な user を受け取るべきでは？
-export function memberDisplayName(member: GameSessionMember | LobbyMember): string {
+export function memberDisplayName(
+  member: GameSessionMember | LobbyMember,
+): string {
   const base = memberBaseName(member);
   if (isGuestMember(member) && base !== UNSET) {
     return `${base}（ゲスト）`;

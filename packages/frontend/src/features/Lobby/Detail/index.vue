@@ -12,16 +12,7 @@ import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
-const {
-  lobby,
-  loading,
-  errorMessage,
-  fetch,
-  patchLobby,
-  addMember,
-  removeMember,
-  memberCount,
-} = useGetLobbyDetail(props.lobbyId);
+const { lobby, patchLobby } = useGetLobbyDetail(props.lobbyId);
 
 const scenarioName = computed(() => {
   return lobby.value?.scenarioName ?? '未設定';

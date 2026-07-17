@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
-import BaseButton from '@/components/button/BaseButton.vue';
-import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import { UsersRound } from '@lucide/vue';

@@ -53,7 +53,7 @@ const maxMembers = computed(() => {
       </div>
 
       <div class="action-bar-wrapper">
-        <ActionBar />
+        <ActionBar :lobby="lobby" @updated="patchLobby" />
       </div>
     </div>
 

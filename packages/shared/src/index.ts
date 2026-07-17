@@ -98,3 +98,9 @@ export {
   GuestUpdateLobbyAvailabilityDateResponseInputSchema,
   type GuestUpdateLobbyAvailabilityDateResponseInput,
 } from './lobby.js';
+export {
+  type LobbyRole,
+  LobbyAction,
+  LOBBY_ACTION_POLICIES,
+  canPerformLobbyAction,
+} from './lobby/permissions.js';

@@ -70,6 +70,14 @@ const router = createRouter({
         lobbyId: to.params.lobbyId,
       }),
     },
+    {
+      path: '/lobbies/:lobbyId',
+      name: 'lobbies-detail',
+      component: () => import('@/views/Lobby/DetailView.vue'),
+      props: (to) => ({
+        lobbyId: to.params.lobbyId,
+      }),
+    },
   ],
 });
 

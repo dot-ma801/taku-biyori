@@ -4,10 +4,12 @@ import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStat
 import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
 import type { Lobby, LobbyDetail } from '@taku-biyori/shared';
 import { Share2, SquarePen, Ban, Globe } from '@lucide/vue';
+import { useRouter } from 'vue-router';
 
 const props = defineProps<{ lobby: LobbyDetail }>();
 const emit = defineEmits<{ updated: [updated: Lobby] }>();
 
+const router = useRouter();
 const { canPublish, canEdit, canCancel, loading, publishLobby, cancelLobby } =
   useLobbyStatus(
     props.lobby.id,
@@ -20,6 +22,10 @@ const { canIssueGuestLink } = useGuestLink(
   () => props.lobby.hostUserId,
   () => props.lobby.status,
 );
+
+const onClickEdit = () => {
+    router.push({ name: 'lobbies-edit', params: { globbyIdameSessionId: props.lobby.id } });
+}
 </script>
 
 <template>
@@ -33,7 +39,7 @@ const { canIssueGuestLink } = useGuestLink(
       公開
     </BaseButton>
 
-    <BaseButton v-if="canEdit" variant="secondary" :left-icon="SquarePen">
+    <BaseButton v-if="canEdit" variant="secondary" :left-icon="SquarePen" @click="onClickEdit">
       編集
     </BaseButton>
 

@@ -9,6 +9,7 @@ import type {
   LobbyAvailabilityDateAnswer,
   LobbyDetail,
   LobbyGuestLinkResponse,
+  LobbyListItem,
   LobbyMember,
   UpdateLobbyAvailabilityDateResponseInput,
   UpdateLobbyInput,
@@ -17,8 +18,8 @@ import type {
 import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
 
-export async function listLobbies(): Promise<Lobby[]> {
-  return (await apiRequest<Lobby[]>('/api/lobbies'))!;
+export async function listLobbies(): Promise<LobbyListItem[]> {
+  return (await apiRequest<LobbyListItem[]>('/api/lobbies'))!;
 }
 
 export async function createLobby(input: CreateLobbyInput): Promise<Lobby> {

@@ -1,7 +1,7 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
-  type Lobby, 
+  type Lobby,
   type LobbyDetail,
   LobbyAction,
   LobbyStatus,

@@ -17,25 +17,20 @@ const { canPublish, canEdit, canCancel, loading, publishLobby, cancelLobby } =
     (updated) => emit('updated', updated),
   );
 
-const { canIssueGuestLink } = useGuestLink(
+const { canIssueGuestLink, copyGuestLink } = useGuestLink(
   props.lobby.id,
   () => props.lobby.hostUserId,
   () => props.lobby.status,
 );
 
 const onClickEdit = () => {
-    router.push({ name: 'lobbies-edit', params: { globbyIdameSessionId: props.lobby.id } });
+  router.push({ name: 'lobbies-edit', params: { globbyIdameSessionId: props.lobby.id } });
 }
 </script>
 
 <template>
   <div class="button-area">
-    <BaseButton
-      v-if="canPublish"
-      :loading="loading"
-      :left-icon="Globe"
-      @click="publishLobby"
-    >
+    <BaseButton v-if="canPublish" :loading="loading" :left-icon="Globe" @click="publishLobby">
       公開
     </BaseButton>
 
@@ -43,21 +38,11 @@ const onClickEdit = () => {
       編集
     </BaseButton>
 
-    <BaseButton
-      v-if="canIssueGuestLink"
-      :left-icon="Share2"
-      variant="secondary"
-    >
+    <BaseButton v-if="canIssueGuestLink" :left-icon="Share2" variant="secondary" @click="copyGuestLink">
       招待リンクを取得
     </BaseButton>
 
-    <BaseButton
-      v-if="canCancel"
-      :loading="loading"
-      variant="danger"
-      :left-icon="Ban"
-      @click="cancelLobby"
-    >
+    <BaseButton v-if="canCancel" :loading="loading" variant="danger" :left-icon="Ban" @click="cancelLobby">
       募集中止
     </BaseButton>
   </div>
@@ -65,7 +50,7 @@ const onClickEdit = () => {
 
 <style scoped>
 .button-area {
-  > * {
+  >* {
     margin: 0 var(--space-1);
   }
 }

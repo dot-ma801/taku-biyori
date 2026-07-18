@@ -1,7 +1,8 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { Lobby, LobbyDetail } from '@taku-biyori/shared';
 import {
+  type Lobby, 
+  type LobbyDetail,
   LobbyAction,
   LobbyStatus,
   canPerformLobbyAction,

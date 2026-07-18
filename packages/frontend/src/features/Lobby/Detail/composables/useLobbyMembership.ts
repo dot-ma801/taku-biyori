@@ -1,6 +1,6 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { LobbyDetail } from '@taku-biyori/shared';
+import type { LobbyDetail, LobbyMember } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { joinLobby, leaveLobby } from '@/api/lobby';
 import { useAuthStore } from '@/stores/auth';
@@ -11,8 +11,10 @@ export const useLobbyMembership = (
   // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
   lobby: MaybeRefOrGetter<LobbyDetail | null>,
-  // NOTE: 変更後の再取得を呼び出し元に委譲する。
-  onRefresh: () => void,
+  // NOTE: 追加されたメンバーの差分反映を呼び出し元に委譲する（join / ゲスト参加後）。
+  onMemberAdded: (member: LobbyMember) => void,
+  // NOTE: 削除されたメンバーの差分反映を呼び出し元に委譲する（退出・ホスト取り消し後）。
+  onMemberRemoved: (memberId: string) => void,
 ) => {
   const authStore = useAuthStore();
   const toast = useToast();
@@ -60,7 +62,7 @@ export const useLobbyMembership = (
 
   /**
    * ロビーに参加する。
-   * 成功後に onRefresh を呼び出す。
+   * 成功後に onMemberAdded で作成されたメンバーを呼び出し元へ返す。
    * loading 中の重複呼び出しは無視する。
    */
   async function join() {
@@ -69,8 +71,8 @@ export const useLobbyMembership = (
     }
     loading.value = true;
     try {
-      await joinLobby(lobbyId, {});
-      onRefresh();
+      const member = await joinLobby(lobbyId, {});
+      onMemberAdded(member);
     } catch {
       toast.error('参加に失敗しました');
     } finally {
@@ -80,7 +82,7 @@ export const useLobbyMembership = (
 
   /**
    * ロビーから自分自身を退出させる。
-   * 成功後に onRefresh を呼び出す。
+   * 成功後に onMemberRemoved で退出した memberId を呼び出し元へ返す。
    * loading 中・未参加時の呼び出しは無視する。
    */
   async function leave() {
@@ -91,7 +93,7 @@ export const useLobbyMembership = (
     const memberId = myMember.value.id;
     try {
       await leaveLobby(lobbyId, memberId);
-      onRefresh();
+      onMemberRemoved(memberId);
     } catch {
       toast.error('退出に失敗しました');
     } finally {
@@ -101,7 +103,7 @@ export const useLobbyMembership = (
 
   /**
    * ホストが指定したメンバーを取り消す。
-   * 成功後に onRefresh を呼び出す。
+   * 成功後に onMemberRemoved で取り消した memberId を呼び出し元へ返す。
    * loading 中・canRemoveMember が false のときは何もしない。
    */
   async function removeMember(memberId: string) {
@@ -111,7 +113,7 @@ export const useLobbyMembership = (
     loading.value = true;
     try {
       await leaveLobby(lobbyId, memberId);
-      onRefresh();
+      onMemberRemoved(memberId);
     } catch {
       toast.error('メンバーの取り消しに失敗しました');
     } finally {

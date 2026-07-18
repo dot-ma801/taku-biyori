@@ -60,10 +60,12 @@ function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
 }
 
 function setup(lobby: MaybeRefOrGetter<LobbyDetail | null>) {
-  const onRefresh = vi.fn();
+  const onMemberAdded = vi.fn();
+  const onMemberRemoved = vi.fn();
   return {
-    onRefresh,
-    ...useLobbyMembership(LOBBY_ID, lobby, onRefresh),
+    onMemberAdded,
+    onMemberRemoved,
+    ...useLobbyMembership(LOBBY_ID, lobby, onMemberAdded, onMemberRemoved),
   };
 }
 
@@ -350,18 +352,19 @@ describe('canRemoveMember', () => {
 });
 
 describe('join', () => {
-  it('API を呼び出して onRefresh を実行する', async () => {
+  it('API を呼び出して onMemberAdded に作成されたメンバーを渡す', async () => {
     // Arrange
-    vi.mocked(joinLobby).mockResolvedValue(makeMember());
+    const member = makeMember();
+    vi.mocked(joinLobby).mockResolvedValue(member);
     const lobby = ref(makeLobby({ members: [] }));
 
     // Act
-    const { join, onRefresh } = setup(lobby);
+    const { join, onMemberAdded } = setup(lobby);
     await join();
 
     // Assert
     expect(joinLobby).toHaveBeenCalledWith(LOBBY_ID, {});
-    expect(onRefresh).toHaveBeenCalled();
+    expect(onMemberAdded).toHaveBeenCalledWith(member);
   });
 
   it('API 呼び出し中は loading が true になる', async () => {
@@ -395,12 +398,12 @@ describe('join', () => {
     const lobby = ref(makeLobby({ members: [] }));
 
     // Act
-    const { join, onRefresh } = setup(lobby);
+    const { join, onMemberAdded } = setup(lobby);
     await join();
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('参加に失敗しました');
-    expect(onRefresh).not.toHaveBeenCalled();
+    expect(onMemberAdded).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
@@ -426,18 +429,18 @@ describe('join', () => {
 });
 
 describe('leave', () => {
-  it('API を myMember の id で呼び出して onRefresh を実行する', async () => {
+  it('API を myMember の id で呼び出して onMemberRemoved に memberId を渡す', async () => {
     // Arrange
     vi.mocked(leaveLobby).mockResolvedValue(undefined);
     const lobby = ref(makeLobby({ members: [makeMember()] }));
 
     // Act
-    const { leave, onRefresh } = setup(lobby);
+    const { leave, onMemberRemoved } = setup(lobby);
     await leave();
 
     // Assert
     expect(leaveLobby).toHaveBeenCalledWith(LOBBY_ID, MEMBER_ID);
-    expect(onRefresh).toHaveBeenCalled();
+    expect(onMemberRemoved).toHaveBeenCalledWith(MEMBER_ID);
   });
 
   it('自分がメンバーでない場合は API を呼び出さない', async () => {
@@ -445,12 +448,12 @@ describe('leave', () => {
     const lobby = ref(makeLobby({ members: [] }));
 
     // Act
-    const { leave, onRefresh } = setup(lobby);
+    const { leave, onMemberRemoved } = setup(lobby);
     await leave();
 
     // Assert
     expect(leaveLobby).not.toHaveBeenCalled();
-    expect(onRefresh).not.toHaveBeenCalled();
+    expect(onMemberRemoved).not.toHaveBeenCalled();
   });
 
   it('API が失敗した場合は toast.error を呼び出す', async () => {
@@ -463,12 +466,12 @@ describe('leave', () => {
     const lobby = ref(makeLobby({ members: [makeMember()] }));
 
     // Act
-    const { leave, onRefresh } = setup(lobby);
+    const { leave, onMemberRemoved } = setup(lobby);
     await leave();
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('退出に失敗しました');
-    expect(onRefresh).not.toHaveBeenCalled();
+    expect(onMemberRemoved).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {
@@ -494,7 +497,7 @@ describe('leave', () => {
 });
 
 describe('removeMember', () => {
-  it('ホストが指定 memberId で API を呼び出して onRefresh を実行する', async () => {
+  it('ホストが指定 memberId で API を呼び出して onMemberRemoved に memberId を渡す', async () => {
     // Arrange
     vi.mocked(leaveLobby).mockResolvedValue(undefined);
     const lobby = ref(
@@ -506,12 +509,12 @@ describe('removeMember', () => {
     );
 
     // Act
-    const { removeMember, onRefresh } = setup(lobby);
+    const { removeMember, onMemberRemoved } = setup(lobby);
     await removeMember(MEMBER_ID);
 
     // Assert
     expect(leaveLobby).toHaveBeenCalledWith(LOBBY_ID, MEMBER_ID);
-    expect(onRefresh).toHaveBeenCalled();
+    expect(onMemberRemoved).toHaveBeenCalledWith(MEMBER_ID);
   });
 
   it('canRemoveMember が false（非ホスト）の場合は API を呼び出さない', async () => {
@@ -525,12 +528,12 @@ describe('removeMember', () => {
     );
 
     // Act
-    const { removeMember, onRefresh } = setup(lobby);
+    const { removeMember, onMemberRemoved } = setup(lobby);
     await removeMember(MEMBER_ID);
 
     // Assert
     expect(leaveLobby).not.toHaveBeenCalled();
-    expect(onRefresh).not.toHaveBeenCalled();
+    expect(onMemberRemoved).not.toHaveBeenCalled();
   });
 
   it('API が失敗した場合は toast.error を呼び出す', async () => {
@@ -549,12 +552,12 @@ describe('removeMember', () => {
     );
 
     // Act
-    const { removeMember, onRefresh } = setup(lobby);
+    const { removeMember, onMemberRemoved } = setup(lobby);
     await removeMember(MEMBER_ID);
 
     // Assert
     expect(toastError).toHaveBeenCalledWith('メンバーの取り消しに失敗しました');
-    expect(onRefresh).not.toHaveBeenCalled();
+    expect(onMemberRemoved).not.toHaveBeenCalled();
   });
 
   it('二重送信を防ぐ（loading 中は再呼び出しを無視する）', async () => {

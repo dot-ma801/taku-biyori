@@ -56,6 +56,7 @@ const hiddenCount = computed(
 );
 
 const hasMore = computed(() => hiddenCount.value > 0);
+const isEmpty = computed(() => formattedMySessions.value.length === 0);
 
 const onClickOpen = (id: string) => {
   router.push({
@@ -72,6 +73,8 @@ const onClickOpen = (id: string) => {
     <BaseSectionHeading class="card-header" level="h3" :icon="Bookmark">
       あなたのセッション
     </BaseSectionHeading>
+
+    <p v-if="isEmpty" class="empty-message">まだ参加しているセッションはありません</p>
 
     <div v-for="item in visibleSessions" :key="item.id" class="item">
       <div>
@@ -159,6 +162,13 @@ const onClickOpen = (id: string) => {
   &:hover {
     color: var(--color-text);
   }
+}
+
+.empty-message {
+  padding: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .session-meta {

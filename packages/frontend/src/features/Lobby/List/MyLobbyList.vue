@@ -46,6 +46,7 @@ const hiddenCount = computed(
 );
 
 const hasMore = computed(() => hiddenCount.value > 0);
+const isEmpty = computed(() => formattedMyLobbies.value.length === 0);
 
 const onClickOpen = (id: string) => {
   router.push({
@@ -60,6 +61,8 @@ const onClickOpen = (id: string) => {
     <BaseSectionHeading class="card-header" level="h3" :icon="Bookmark">
       あなたの募集枠
     </BaseSectionHeading>
+
+    <p v-if="isEmpty" class="empty-message">まだ参加している募集枠はありません</p>
 
     <div v-for="item in visibleLobbies" :key="item.id" class="item">
       <div>
@@ -143,6 +146,13 @@ const onClickOpen = (id: string) => {
   &:hover {
     color: var(--color-text);
   }
+}
+
+.empty-message {
+  padding: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .lobby-meta {

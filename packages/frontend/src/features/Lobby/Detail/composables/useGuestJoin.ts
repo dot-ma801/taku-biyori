@@ -1,6 +1,7 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
+import type { LobbyMember } from '@taku-biyori/shared';
 import { joinLobbyAsGuest } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
 
@@ -13,8 +14,8 @@ export const useGuestJoin = (
   // NOTE: 読み取りは getter で受ける。token は招待リンク（?token=）由来でクエリから渡る。
   token: MaybeRefOrGetter<string | null>,
   status: MaybeRefOrGetter<LobbyStatus | undefined>,
-  // NOTE: 参加成功後の再取得を呼び出し元に委譲する。
-  onJoined: () => void,
+  // NOTE: 作成されたメンバーの反映（addMember 等）を呼び出し元に委譲する。
+  onJoined: (member: LobbyMember) => void,
 ) => {
   const toast = useToast();
   const loading = ref(false);
@@ -53,10 +54,10 @@ export const useGuestJoin = (
     }
     loading.value = true;
     try {
-      await joinLobbyAsGuest(lobbyId, currentToken, {
+      const member = await joinLobbyAsGuest(lobbyId, currentToken, {
         guestName: guestName.value.trim(),
       });
-      onJoined();
+      onJoined(member);
       guestName.value = '';
       toast.success('参加しました');
     } catch {

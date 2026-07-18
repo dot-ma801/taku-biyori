@@ -143,15 +143,16 @@ describe('join', () => {
     });
   });
 
-  it('成功時に onJoined を呼び出し、入力をリセットする', async () => {
+  it('成功時に作成されたメンバーを onJoined へ渡し、入力をリセットする', async () => {
     // Arrange
-    vi.mocked(joinLobbyAsGuest).mockResolvedValue({
+    const createdMember: LobbyMember = {
       id: 'member-guest-1',
       userId: null,
       userName: null,
       guestName: 'ゲスト太郎',
       joinedAt: '2026-01-01T00:00:00Z',
-    });
+    };
+    vi.mocked(joinLobbyAsGuest).mockResolvedValue(createdMember);
     const onJoined = vi.fn();
     const { guestName, join } = useGuestJoin(
       LOBBY_ID,
@@ -165,7 +166,7 @@ describe('join', () => {
     await join();
 
     // Assert
-    expect(onJoined).toHaveBeenCalled();
+    expect(onJoined).toHaveBeenCalledWith(createdMember);
     expect(guestName.value).toBe('');
   });
 

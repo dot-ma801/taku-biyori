@@ -1,13 +1,16 @@
 import type {
   BulkUpdateLobbyAvailabilityDatesInput,
   CreateLobbyInput,
+  GuestUpdateLobbyAvailabilityDateResponseInput,
   JoinLobbyAsGuestInput,
   JoinLobbyInput,
   Lobby,
   LobbyAvailabilityDate,
+  LobbyAvailabilityDateAnswer,
   LobbyDetail,
   LobbyGuestLinkResponse,
   LobbyMember,
+  UpdateLobbyAvailabilityDateResponseInput,
   UpdateLobbyInput,
   UpdateLobbyStatusInput,
 } from '@taku-biyori/shared';
@@ -53,6 +56,17 @@ export async function bulkUpdateLobbyAvailabilityDates(
 ): Promise<LobbyAvailabilityDate[]> {
   return (await apiRequest<LobbyAvailabilityDate[]>(
     `/api/lobbies/${id}/availability-dates`,
+    { method: 'PUT', body: input },
+  ))!;
+}
+
+export async function updateLobbyAvailabilityDateResponse(
+  lobbyId: string,
+  dateId: string,
+  input: UpdateLobbyAvailabilityDateResponseInput,
+): Promise<LobbyAvailabilityDateAnswer> {
+  return (await apiRequest<LobbyAvailabilityDateAnswer>(
+    `/api/lobbies/${lobbyId}/availability-dates/${dateId}/responses`,
     { method: 'PUT', body: input },
   ))!;
 }
@@ -107,4 +121,20 @@ export async function joinLobbyAsGuest(
     body: input,
     headers: { [GUEST_TOKEN_HEADER]: token },
   }))!;
+}
+
+/**
+ * ゲストとして日程候補に回答する。認証不要で、トークンは Guest-Token ヘッダーで送る。
+ * input には対象ゲスト列を示す memberId を含める。
+ */
+export async function updateGuestLobbyAvailabilityDateResponse(
+  lobbyId: string,
+  dateId: string,
+  token: string,
+  input: GuestUpdateLobbyAvailabilityDateResponseInput,
+): Promise<LobbyAvailabilityDateAnswer> {
+  return (await apiRequest<LobbyAvailabilityDateAnswer>(
+    `/api/lobbies/${lobbyId}/availability-dates/${dateId}/guest-responses`,
+    { method: 'PUT', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
+  ))!;
 }

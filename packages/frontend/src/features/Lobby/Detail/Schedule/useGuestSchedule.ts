@@ -1,0 +1,192 @@
+import { computed, ref, toValue } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
+import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
+import { updateGuestLobbyAvailabilityDateResponse } from '@/api/lobby';
+import { useToast } from '@/composables/useToast';
+import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
+
+const CYCLE: Record<Answer, Answer> = {
+  ok: 'maybe',
+  maybe: 'ng',
+  ng: 'ok',
+};
+
+/** 編集ドラフト1件。どのゲスト列・どの候補日を何に変えるかを保持する */
+interface DraftAnswer {
+  memberId: string;
+  dateId: string;
+  answer: Answer;
+}
+
+/**
+ * ゲスト（完全匿名・本人確認なし）が全ゲスト列の日程回答を編集するための composable。
+ * 調整さん方式で、memberId を指定して任意のゲスト列を更新できる。
+ * サーバ値（availabilityDates）は親が所有し getter で受け取る。書き込みは onUpdated で親へ委譲する。
+ */
+export const useGuestSchedule = (
+  lobbyId: string,
+  // NOTE: token は招待リンク（?token=）由来。読み取りは getter で受ける。
+  token: MaybeRefOrGetter<string | null>,
+  availabilityDates: MaybeRefOrGetter<LobbyAvailabilityDate[]>,
+  status: MaybeRefOrGetter<LobbyStatus | undefined>,
+  // サーバが SSOT。更新成功後に所有者へ「再取得」を依頼する（クライアント側で状態を組み立てない）。
+  onUpdated: () => void | Promise<void>,
+) => {
+  const toast = useToast();
+  /** API 送信中かどうか */
+  const loading = ref(false);
+  /** 編集モード中かどうか */
+  const isEditing = ref(false);
+
+  /**
+   * 編集ドラフト（`${memberId}::${dateId}` → 回答）。
+   * サーバ値とは分離して保持し、変更検知・キャンセルを成立させる。
+   * この ref はこの composable が所有する。
+   */
+  const draftAnswers = ref<Map<string, DraftAnswer>>(new Map());
+
+  function keyOf(memberId: string, dateId: string): string {
+    return `${memberId}::${dateId}`;
+  }
+
+  /**
+   * 表示用ドラフト。`${memberId}::${dateId}` → 回答。
+   * ScheduleTable に渡して編集中セルの描画に使う（メンバー編集と同じキー形式に揃える）。
+   */
+  const draftAnswerMap = computed<Map<string, Answer>>(() => {
+    const map = new Map<string, Answer>();
+    for (const { memberId, dateId, answer } of draftAnswers.value.values()) {
+      map.set(keyOf(memberId, dateId), answer);
+    }
+    return map;
+  });
+
+  /** 招待トークンが付与されているか */
+  const hasToken = computed(() => !!toValue(token));
+
+  /** ゲストが日程回答を編集できるか。トークンがあり status が open / scheduling のときのみ true */
+  const canEditGuestSchedule = computed(() => {
+    const s = toValue(status);
+    return (
+      hasToken.value && (s === LobbyStatus.open || s === LobbyStatus.scheduling)
+    );
+  });
+
+  /** サーバ値における指定ゲスト列・候補日の回答（なければ null） */
+  function originalAnswerOf(memberId: string, dateId: string): Answer | null {
+    const date = toValue(availabilityDates).find((d) => d.id === dateId);
+    const found = date?.answers.find((a) => a.memberId === memberId);
+    return found?.answer ?? null;
+  }
+
+  /** 現在の回答（ドラフトを優先し、なければサーバ値） */
+  function currentAnswerOf(memberId: string, dateId: string): Answer | null {
+    return (
+      draftAnswers.value.get(keyOf(memberId, dateId))?.answer ??
+      originalAnswerOf(memberId, dateId)
+    );
+  }
+
+  /** いずれかのドラフトがサーバ値と異なるか */
+  const hasChanges = computed(() => {
+    for (const { memberId, dateId, answer } of draftAnswers.value.values()) {
+      if (originalAnswerOf(memberId, dateId) !== answer) return true;
+    }
+    return false;
+  });
+
+  /** 編集モードを開始する。ドラフトは空から始め、操作したセルだけ記録する */
+  function enterEditMode() {
+    draftAnswers.value = new Map();
+    isEditing.value = true;
+  }
+
+  /** 編集をキャンセルしてドラフトを破棄する */
+  function cancelEdit() {
+    draftAnswers.value = new Map();
+    isEditing.value = false;
+  }
+
+  /** 指定セルの回答を ok → maybe → ng → ok の順に循環させる（未回答は ok から） */
+  function cycleAnswer(memberId: string, dateId: string) {
+    const cur = currentAnswerOf(memberId, dateId);
+    draftAnswers.value.set(keyOf(memberId, dateId), {
+      memberId,
+      dateId,
+      answer: cur ? CYCLE[cur] : 'ok',
+    });
+  }
+
+  /**
+   * サーバ値と異なるドラフトをまとめて送信する。
+   * 並列送信し、1件でも失敗したときは error トーストを出してから onUpdated を呼ぶ。
+   * 途中失敗による半 commit を避けるため、成否によらず親状態を再同期させる。
+   * トークン未設定・変更なし・loading 中の呼び出しは無視する。
+   */
+  async function submitEdit() {
+    if (loading.value) return;
+    const currentToken = toValue(token);
+    if (!currentToken) return;
+
+    const changes = [...draftAnswers.value.values()].filter(
+      ({ memberId, dateId, answer }) =>
+        originalAnswerOf(memberId, dateId) !== answer,
+    );
+    if (changes.length === 0) {
+      draftAnswers.value = new Map();
+      isEditing.value = false;
+      return;
+    }
+
+    loading.value = true;
+    try {
+      const results = await Promise.allSettled(
+        changes.map(({ memberId, dateId, answer }) =>
+          updateGuestLobbyAvailabilityDateResponse(
+            lobbyId,
+            dateId,
+            currentToken,
+            {
+              memberId,
+              answer,
+            },
+          ),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected');
+      if (failed.length > 0) {
+        for (const r of failed) {
+          if (r.status === 'rejected') {
+            console.error('日程回答の更新に失敗しました', r.reason);
+          }
+        }
+        toast.error('日程回答の更新に失敗しました');
+      }
+
+      // 成否によらず親状態を再同期して半 commit 状態を解消する
+      await onUpdated();
+      draftAnswers.value = new Map();
+      isEditing.value = false;
+    } catch {
+      toast.error('日程回答の更新に失敗しました');
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return {
+    loading,
+    isEditing,
+    hasToken,
+    canEditGuestSchedule,
+    hasChanges,
+    draftAnswers: draftAnswerMap,
+    currentAnswerOf,
+    cycleAnswer,
+    enterEditMode,
+    cancelEdit,
+    submitEdit,
+  };
+};

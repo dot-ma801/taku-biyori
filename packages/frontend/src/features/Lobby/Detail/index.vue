@@ -5,10 +5,11 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
 import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
+import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
+import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
 import { computed } from 'vue';
 import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
-import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
@@ -65,6 +66,7 @@ const location = computed(() => lobby.value?.location ?? '');
       v-if="lobby.description"
       :text="lobby.description ?? undefined"
     />
+    <ScheduleDisplay :lobby="lobby" />
     <MemberDisplay :lobby="lobby" @member-removed="removeMember" />
   </div>
 </template>

@@ -1,20 +1,34 @@
 <script setup lang="ts">
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
+import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import { UsersRound } from '@lucide/vue';
+import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
+import { UsersRound, UserRoundX } from '@lucide/vue';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
+
 const props = defineProps<{
   lobby: LobbyDetail;
 }>();
+
+const emit = defineEmits<{
+  'member-removed': [memberId: string];
+}>();
+
+const { canRemoveMember, removeMember, loading } = useLobbyMembership(
+  props.lobby.id,
+  () => props.lobby,
+  // メンバー追加はこのコンポーネントの関心外
+  () => {},
+  (memberId) => emit('member-removed', memberId),
+);
 
 const displayMembers = computed(() => {
   return props.lobby.members.map((member) => ({
     id: member.id,
     userName: memberDisplayName(member),
-    // アバターの色を変えないため、サフィックスなしの名前を渡す
     baseName: memberBaseName(member),
   }));
 });
@@ -31,15 +45,19 @@ const displayMembers = computed(() => {
       :key="member.id"
       class="user-container"
     >
-      <UserAvatar
-        class="avatar"
-        :size="35"
-        :name="member.baseName"
-      ></UserAvatar>
+      <UserAvatar class="avatar" :size="35" :name="member.baseName" />
 
-      <p>
-        {{ member.userName }}
-      </p>
+      <p>{{ member.userName }}</p>
+
+      <BaseButton
+        v-if="canRemoveMember"
+        variant="secondary"
+        :left-icon="UserRoundX"
+        :loading="loading"
+        @click="removeMember(member.id)"
+      >
+        取り消し
+      </BaseButton>
     </div>
   </BaseCard>
 </template>
@@ -51,7 +69,7 @@ const displayMembers = computed(() => {
 
 .user-container {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
 
   gap: var(--space-2);
@@ -60,24 +78,7 @@ const displayMembers = computed(() => {
   border-top: solid 2px var(--color-border);
 }
 
-.edit-char-name {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .user-name {
   color: var(--color-text-muted);
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--space-3);
-
-  > * {
-    margin: 0 var(--space-1);
-  }
 }
 </style>

@@ -228,7 +228,37 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         joinedAt: r.memberCreatedAt!.toISOString(),
       }));
 
-    return { ...lobby, members };
+    if (first.closedAt === null) {
+      return { ...lobby, members };
+    }
+
+    // 確定済みの場合、作成された卓と選出メンバーの lobbyMemberId を取得する
+    const gsRows = await db
+      .select({
+        gameSessionId: gameSessions.id,
+        lobbyMemberId: gameSessionMembers.lobbyMemberId,
+      })
+      .from(gameSessions)
+      .leftJoin(
+        gameSessionMembers,
+        eq(gameSessionMembers.gameSessionId, gameSessions.id),
+      )
+      .where(eq(gameSessions.lobbyId, id));
+
+    if (gsRows.length === 0 || gsRows[0]?.gameSessionId == null) {
+      return { ...lobby, members, confirmedGameSession: null };
+    }
+
+    const gameSessionId = gsRows[0].gameSessionId;
+    const selectedLobbyMemberIds = gsRows
+      .filter((r) => r.lobbyMemberId !== null)
+      .map((r) => r.lobbyMemberId!);
+
+    return {
+      ...lobby,
+      members,
+      confirmedGameSession: { id: gameSessionId, selectedLobbyMemberIds },
+    };
   },
 
   async updateById(id: string, input: UpdateLobbyInput): Promise<Lobby | null> {

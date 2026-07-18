@@ -798,6 +798,143 @@ describe('upsertAnswer', () => {
 });
 
 // ----------------------------------------------------------------
+// findDetailById
+// ----------------------------------------------------------------
+
+describe('findDetailById', () => {
+  const closedAt = new Date('2026-07-18T10:00:00.000Z');
+
+  // 1 回目の select は lobby+members の leftJoin クエリ（.where() で解決）
+  // 2 回目の select は gameSessions+gameSessionMembers の leftJoin クエリ（.where() で解決）
+  const makeFindDetailDb = (lobbyRows: unknown[], gsRows?: unknown[]) => {
+    let callCount = 0;
+    const firstChain = {
+      from: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(lobbyRows),
+    };
+    const secondChain = {
+      from: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(gsRows ?? []),
+    };
+    const db = {
+      select: vi
+        .fn()
+        .mockImplementation(() => (callCount++ === 0 ? firstChain : secondChain)),
+    } as unknown as Database;
+    return { db };
+  };
+
+  it('ロビーが存在しなければ null を返す', async () => {
+    // Arrange
+    const { db } = makeFindDetailDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findDetailById('nonexistent');
+
+    // Assert
+    expect(result).toBeNull();
+  });
+
+  it('closedAt が null なら confirmedGameSession を含まない', async () => {
+    // Arrange
+    const { db } = makeFindDetailDb([
+      {
+        ...mockLobbyRow,
+        memberId: 'member-1',
+        memberUserId: 'user-2',
+        memberUserName: 'テストユーザー',
+        memberGuestName: null,
+        memberCreatedAt: now,
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockLobbyRow.id);
+
+    // Assert
+    expect(result?.members).toHaveLength(1);
+    expect(result?.confirmedGameSession).toBeUndefined();
+  });
+
+  it('closedAt がある場合 confirmedGameSession を含む', async () => {
+    // Arrange
+    const { db } = makeFindDetailDb(
+      [
+        {
+          ...mockLobbyRow,
+          closedAt,
+          memberId: 'member-1',
+          memberUserId: 'user-2',
+          memberUserName: 'テストユーザー',
+          memberGuestName: null,
+          memberCreatedAt: now,
+        },
+      ],
+      [
+        { gameSessionId: 'gs-1', lobbyMemberId: 'member-1' },
+      ],
+    );
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockLobbyRow.id);
+
+    // Assert
+    expect(result?.confirmedGameSession).toEqual({
+      id: 'gs-1',
+      selectedLobbyMemberIds: ['member-1'],
+    });
+  });
+
+  it('lobbyMemberId が null の行（メンバー未選出行）は除外される', async () => {
+    // Arrange
+    const { db } = makeFindDetailDb(
+      [
+        {
+          ...mockLobbyRow,
+          closedAt,
+          memberId: null,
+          memberUserId: null,
+          memberUserName: null,
+          memberGuestName: null,
+          memberCreatedAt: null,
+        },
+      ],
+      [{ gameSessionId: 'gs-1', lobbyMemberId: null }],
+    );
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockLobbyRow.id);
+
+    // Assert
+    expect(result?.confirmedGameSession).toEqual({
+      id: 'gs-1',
+      selectedLobbyMemberIds: [],
+    });
+  });
+
+  it('closedAt があっても卓が見つからなければ confirmedGameSession は null', async () => {
+    // Arrange
+    const { db } = makeFindDetailDb(
+      [{ ...mockLobbyRow, closedAt, memberId: null, memberUserId: null, memberUserName: null, memberGuestName: null, memberCreatedAt: null }],
+      [],
+    );
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findDetailById(mockLobbyRow.id);
+
+    // Assert
+    expect(result?.confirmedGameSession).toBeNull();
+  });
+});
+
+// ----------------------------------------------------------------
 // 卓確定（POST /api/lobbies/:id/confirm）関連
 // ----------------------------------------------------------------
 

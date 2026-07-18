@@ -27,7 +27,7 @@ export const useLobbyList = () => {
     try {
       allLobbies.value = await listLobbies();
     } catch {
-      errorMessage.value = '募集枠一覧の取得に失敗しました';
+      errorMessage.value = 'ロビー一覧の取得に失敗しました';
     } finally {
       loading.value = false;
     }

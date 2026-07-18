@@ -27,7 +27,7 @@ const lobbyLink = (item: { id: string; title: string }) => ({
 
 <template>
   <BaseSectionHeading class="card-header" level="h2">
-    募集中の募集枠
+    募集中のロビー
   </BaseSectionHeading>
 
   <BaseCard

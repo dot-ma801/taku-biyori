@@ -67,7 +67,7 @@ function removeDate(date: string) {
         </li>
       </ul>
 
-      <p class="info">※ 候補日は募集枠作成後も追加・削除できます。</p>
+      <p class="info">※ 候補日はロビー作成後も追加・削除できます。</p>
     </template>
   </BaseCard>
 </template>

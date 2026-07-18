@@ -91,7 +91,7 @@ describe('useLobbyList', () => {
       await fetch();
 
       // Assert
-      expect(errorMessage.value).toBe('募集枠一覧の取得に失敗しました');
+      expect(errorMessage.value).toBe('ロビー一覧の取得に失敗しました');
     });
 
     it('取得失敗時は loading が false に戻る', async () => {

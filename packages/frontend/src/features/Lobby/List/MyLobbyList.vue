@@ -59,10 +59,10 @@ const onClickOpen = (id: string) => {
 <template>
   <BaseCard>
     <BaseSectionHeading class="card-header" level="h3" :icon="Bookmark">
-      あなたの募集枠
+      あなたのロビー
     </BaseSectionHeading>
 
-    <p v-if="isEmpty" class="empty-message">まだ参加している募集枠はありません</p>
+    <p v-if="isEmpty" class="empty-message">まだ参加しているロビーはありません</p>
 
     <div v-for="item in visibleLobbies" :key="item.id" class="item">
       <div>

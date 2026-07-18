@@ -6,7 +6,7 @@ import LobbyList from '@/features/Lobby/List/index.vue';
 
 <template>
   <div class="dashboard">
-    <LobbyList title="募集枠" />
+    <LobbyList title="ロビー" />
     <GameSessionList title="セッション" />
   </div>
 </template>

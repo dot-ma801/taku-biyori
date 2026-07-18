@@ -27,10 +27,10 @@ const onClickCreate = () => {
   <div class="container">
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
-      <BaseButton :left-icon="Plus" @click="onClickCreate">募集枠を作成</BaseButton>
+      <BaseButton :left-icon="Plus" @click="onClickCreate">ロビーを作成</BaseButton>
     </div>
     <BaseButton v-else class="create-btn" :left-icon="Plus" @click="onClickCreate"
-      >募集枠を作成</BaseButton
+      >ロビーを作成</BaseButton
     >
     <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>
     <PublicLobbyList

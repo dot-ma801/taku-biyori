@@ -6,14 +6,8 @@ import LobbyList from '@/features/Lobby/List/index.vue';
 
 <template>
   <div class="dashboard">
-    <section>
-      <h2 class="section-title">募集枠</h2>
-      <LobbyList />
-    </section>
-    <section>
-      <h2 class="section-title">セッション</h2>
-      <GameSessionList />
-    </section>
+    <LobbyList title="募集枠" />
+    <GameSessionList title="セッション" />
   </div>
 </template>
 
@@ -22,12 +16,5 @@ import LobbyList from '@/features/Lobby/List/index.vue';
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-}
-
-.section-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  margin-bottom: var(--space-3);
-  color: var(--color-text);
 }
 </style>

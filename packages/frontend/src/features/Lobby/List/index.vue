@@ -8,9 +8,14 @@ import { Plus } from '@lucide/vue';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
+const props = defineProps<{
+  title?: string;
+}>();
+
 const router = useRouter();
 const { myLobbies, publicLobbies } = useLobbyList();
 
+const hasTitle = computed(() => props.title != null);
 const hasPublicLobbies = computed(() => publicLobbies.value.length > 0);
 
 const onClickCreate = () => {
@@ -20,7 +25,11 @@ const onClickCreate = () => {
 
 <template>
   <div class="container">
-    <BaseButton class="create-btn" :left-icon="Plus" @click="onClickCreate"
+    <div v-if="hasTitle" class="section-header">
+      <h2 class="section-title">{{ title }}</h2>
+      <BaseButton :left-icon="Plus" @click="onClickCreate">募集枠を作成</BaseButton>
+    </div>
+    <BaseButton v-else class="create-btn" :left-icon="Plus" @click="onClickCreate"
       >募集枠を作成</BaseButton
     >
     <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>
@@ -36,6 +45,18 @@ const onClickCreate = () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .create-btn {

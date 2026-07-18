@@ -4,6 +4,7 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/Lobby/Detail/Schedule/ScheduleTable.vue';
 import ScheduleCardList from '@/features/Lobby/Detail/Schedule/ScheduleCardList.vue';
+import ConfirmFlowDialog from '@/features/Lobby/Detail/Schedule/ConfirmFlow/ConfirmFlowDialog.vue';
 import { useSchedule } from '@/features/Lobby/Detail/Schedule/useSchedule';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { isGuestMember } from '@taku-biyori/shared';
@@ -20,8 +21,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'confirm-date': [dateId: string];
+  'lobby-changed': [];
 }>();
+
+const confirmFlowDialogModel = ref(false);
 
 const { myMemberId } = useMyLobbyMemberId(() => props.lobby.members);
 
@@ -215,15 +218,21 @@ const canEditSchedule = computed(
           <BaseButton
             v-if="canConfirm"
             :left-icon="CalendarCheck"
-            :disabled="!selectedDateId"
-            @click="selectedDateId && emit('confirm-date', selectedDateId)"
+            @click="confirmFlowDialogModel = true"
           >
-            開催日を確定
+            卓を確定する
           </BaseButton>
         </template>
       </div>
     </template>
   </BaseCard>
+
+  <ConfirmFlowDialog
+    v-model="confirmFlowDialogModel"
+    :lobby="lobby"
+    :availability-dates="availabilityDates"
+    @lobby-changed="emit('lobby-changed')"
+  />
 </template>
 
 <style scoped>

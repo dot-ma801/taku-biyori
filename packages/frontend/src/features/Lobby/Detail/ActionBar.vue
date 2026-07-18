@@ -1,21 +1,29 @@
 <script setup lang="ts">
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/Lobby/Detail/Dialog/GuestJoinDialog.vue';
+import CancelDialog from '@/features/Lobby/Detail/Dialog/CancelDialog.vue';
 import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStatus';
 import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
 import { useGuestJoin } from '@/features/Lobby/Detail/composables/useGuestJoin';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { useAuthStore } from '@/stores/auth';
 import type { Lobby, LobbyDetail, LobbyMember } from '@taku-biyori/shared';
-import { Share2, SquarePen, Ban, Globe, UserRoundPlus } from '@lucide/vue';
+import {
+  Share2,
+  SquarePen,
+  Ban,
+  Globe,
+  UserRoundPlus,
+  UserRoundMinus,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 const props = defineProps<{ lobby: LobbyDetail }>();
 const emit = defineEmits<{
   updated: [updated: Lobby];
-  joined: [member: LobbyMember];
-  refresh: [];
+  'member-added': [member: LobbyMember];
+  'member-removed': [memberId: string];
 }>();
 
 const router = useRouter();
@@ -23,6 +31,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const guestJoinDialogModel = ref(false);
+const cancelDialogModel = ref(false);
 
 const { canPublish, canEdit, canCancel, loading, publishLobby, cancelLobby } =
   useLobbyStatus(
@@ -39,12 +48,15 @@ const { canIssueGuestLink, copyGuestLink } = useGuestLink(
 
 const {
   canJoin,
+  canLeave,
   join: joinUser,
+  leave,
   loading: loadingMember,
 } = useLobbyMembership(
   props.lobby.id,
   () => props.lobby,
-  () => emit('refresh'),
+  (member) => emit('member-added', member),
+  (memberId) => emit('member-removed', memberId),
 );
 
 const { canGuestJoin } = useGuestJoin(
@@ -71,7 +83,12 @@ const onJoinClick = () => {
 
 const onGuestJoined = (member: LobbyMember) => {
   guestJoinDialogModel.value = false;
-  emit('joined', member);
+  emit('member-added', member);
+};
+
+const onConfirmCancel = () => {
+  cancelDialogModel.value = false;
+  cancelLobby();
 };
 </script>
 
@@ -93,6 +110,16 @@ const onGuestJoined = (member: LobbyMember) => {
       @click="onJoinClick"
     >
       参加
+    </BaseButton>
+
+    <BaseButton
+      v-if="canLeave"
+      :loading="loadingMember"
+      variant="secondary"
+      :left-icon="UserRoundMinus"
+      @click="leave"
+    >
+      退出
     </BaseButton>
 
     <BaseButton
@@ -118,7 +145,7 @@ const onGuestJoined = (member: LobbyMember) => {
       :loading="loading"
       variant="danger"
       :left-icon="Ban"
-      @click="cancelLobby"
+      @click="cancelDialogModel = true"
     >
       募集中止
     </BaseButton>
@@ -130,6 +157,7 @@ const onGuestJoined = (member: LobbyMember) => {
     :lobby-status="lobby.status"
     @joined="onGuestJoined"
   />
+  <CancelDialog v-model="cancelDialogModel" @confirm="onConfirmCancel" />
 </template>
 
 <style scoped>

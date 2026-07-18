@@ -1,8 +1,9 @@
 import { computed, onMounted, ref } from 'vue';
 import type { LobbyListItem } from '@taku-biyori/shared';
+import type { LobbyStatus } from '@taku-biyori/shared';
 import { listLobbies } from '@/api/lobby';
 
-export const useLobbyList = () => {
+export const useLobbyList = (statuses?: LobbyStatus[]) => {
   /** 全募集枠（APIレスポンスそのまま） */
   const allLobbies = ref<LobbyListItem[]>([]);
 
@@ -19,6 +20,11 @@ export const useLobbyList = () => {
   const myLobbies = computed(() =>
     allLobbies.value.filter((l) => l.role !== null),
   );
+
+  const filteredLobbies = computed(() => {
+    if (statuses === undefined) return allLobbies.value;
+    return allLobbies.value.filter((l) => statuses.includes(l.status));
+  });
 
   /** 募集枠一覧を取得する */
   async function fetch() {
@@ -39,6 +45,7 @@ export const useLobbyList = () => {
     allLobbies,
     publicLobbies,
     myLobbies,
+    filteredLobbies,
     loading,
     errorMessage,
     fetch,

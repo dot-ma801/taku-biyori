@@ -7,26 +7,27 @@ import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
 import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
 import { computed } from 'vue';
-import { Album, UsersRound, CalendarDays } from '@lucide/vue';
+import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
 import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
-const { lobby, patchLobby, addMember, fetch } = useGetLobbyDetail(
-  props.lobbyId,
-);
+const { lobby, patchLobby, addMember, removeMember, memberCount } =
+  useGetLobbyDetail(props.lobbyId);
 
-const scenarioName = computed(() => {
-  return lobby.value?.scenarioName ?? '未設定';
+const scenarioName = computed(() => lobby.value?.scenarioName ?? '未設定');
+
+const gameSessionDateTime = computed(() => lobby.value?.closedAt ?? '未設定');
+
+const capacityText = computed(() => {
+  const max = lobby.value?.maxPlayers;
+  return max != null
+    ? `${memberCount.value} / 定員${max}`
+    : `${memberCount.value} / 定員未設定`;
 });
 
-const gameSessionDateTime = computed(() => {
-  return lobby.value?.closedAt ?? '未設定';
-});
-
-const maxMembers = computed(() => {
-  return lobby.value?.maxPlayers ?? '未設定';
-});
+const hasLocation = computed(() => !!lobby.value?.location);
+const location = computed(() => lobby.value?.location ?? '');
 </script>
 
 <template>
@@ -42,15 +43,19 @@ const maxMembers = computed(() => {
         <CalendarDays :size="16" />
         <p>日時：{{ gameSessionDateTime }}</p>
         <UsersRound :size="16" />
-        <p>募集人数: {{ maxMembers }}</p>
+        <p>参加者：{{ capacityText }}</p>
+        <template v-if="hasLocation">
+          <MapPin :size="16" />
+          <p>場所：{{ location }}</p>
+        </template>
       </div>
 
       <div class="action-bar-wrapper">
         <ActionBar
           :lobby="lobby"
           @updated="patchLobby"
-          @joined="addMember"
-          @refresh="fetch"
+          @member-added="addMember"
+          @member-removed="removeMember"
         />
       </div>
     </div>
@@ -60,7 +65,7 @@ const maxMembers = computed(() => {
       v-if="lobby.description"
       :text="lobby.description ?? undefined"
     />
-    <MemberDisplay :lobby="lobby" />
+    <MemberDisplay :lobby="lobby" @member-removed="removeMember" />
   </div>
 </template>
 
@@ -78,7 +83,7 @@ const maxMembers = computed(() => {
   .description {
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-auto-rows: auto;
     align-items: center;
 
     gap: 0 var(--space-1);

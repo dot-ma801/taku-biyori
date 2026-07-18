@@ -2,6 +2,7 @@
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/Lobby/Detail/Dialog/GuestJoinDialog.vue';
 import CancelDialog from '@/features/Lobby/Detail/Dialog/CancelDialog.vue';
+import LeaveDialog from '@/features/Lobby/Detail/Dialog/LeaveDialog.vue';
 import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStatus';
 import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
 import { useGuestJoin } from '@/features/Lobby/Detail/composables/useGuestJoin';
@@ -32,6 +33,7 @@ const authStore = useAuthStore();
 
 const guestJoinDialogModel = ref(false);
 const cancelDialogModel = ref(false);
+const leaveDialogModel = ref(false);
 
 const { canPublish, canEdit, canCancel, loading, publishLobby, cancelLobby } =
   useLobbyStatus(
@@ -117,7 +119,7 @@ const onConfirmCancel = () => {
       :loading="loadingMember"
       variant="secondary"
       :left-icon="UserRoundMinus"
-      @click="leave"
+      @click="leaveDialogModel = true"
     >
       退出
     </BaseButton>
@@ -158,6 +160,7 @@ const onConfirmCancel = () => {
     @joined="onGuestJoined"
   />
   <CancelDialog v-model="cancelDialogModel" @confirm="onConfirmCancel" />
+  <LeaveDialog v-model="leaveDialogModel" @confirm="leave" />
 </template>
 
 <style scoped>

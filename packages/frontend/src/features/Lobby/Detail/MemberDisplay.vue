@@ -3,11 +3,12 @@ import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import RemoveMemberDialog from '@/features/Lobby/Detail/Dialog/RemoveMemberDialog.vue';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { UsersRound, UserRoundX } from '@lucide/vue';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
   lobby: LobbyDetail;
@@ -32,6 +33,30 @@ const displayMembers = computed(() => {
     baseName: memberBaseName(member),
   }));
 });
+
+/** 取り消し確認ダイアログの対象メンバー ID（null のときダイアログ非表示） */
+const pendingRemoveMemberId = ref<string | null>(null);
+
+const removeDialogOpen = computed({
+  get: () => pendingRemoveMemberId.value !== null,
+  set: (v) => {
+    if (!v) pendingRemoveMemberId.value = null;
+  },
+});
+
+const pendingMemberName = computed(() => {
+  const found = displayMembers.value.find(
+    (m) => m.id === pendingRemoveMemberId.value,
+  );
+  return found?.userName ?? '';
+});
+
+const onConfirmRemove = () => {
+  if (pendingRemoveMemberId.value) {
+    removeMember(pendingRemoveMemberId.value);
+  }
+  pendingRemoveMemberId.value = null;
+};
 </script>
 
 <template>
@@ -54,12 +79,18 @@ const displayMembers = computed(() => {
         variant="secondary"
         :left-icon="UserRoundX"
         :loading="loading"
-        @click="removeMember(member.id)"
+        @click="pendingRemoveMemberId = member.id"
       >
         取り消し
       </BaseButton>
     </div>
   </BaseCard>
+
+  <RemoveMemberDialog
+    v-model="removeDialogOpen"
+    :member-name="pendingMemberName"
+    @confirm="onConfirmRemove"
+  />
 </template>
 
 <style scoped>
@@ -76,9 +107,5 @@ const displayMembers = computed(() => {
   padding: var(--space-2);
 
   border-top: solid 2px var(--color-border);
-}
-
-.user-name {
-  color: var(--color-text-muted);
 }
 </style>

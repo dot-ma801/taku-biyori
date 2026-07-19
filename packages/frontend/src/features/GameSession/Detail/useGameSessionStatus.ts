@@ -116,7 +116,7 @@ export const useGameSessionStatus = (
   );
 
   async function cancelSession() {
-    if (loading.value || loadingDelete.value) {
+    if (loading.value || loadingDelete.value || !canCancel.value) {
       return;
     }
     loading.value = true;

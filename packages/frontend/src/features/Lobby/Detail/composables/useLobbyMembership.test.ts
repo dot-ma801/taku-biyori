@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import { createPinia, setActivePinia } from 'pinia';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyDetail } from '@taku-biyori/shared';
@@ -11,8 +10,22 @@ vi.mock('@/api/lobby', () => ({
   leaveLobby: vi.fn(),
 }));
 
-vi.mock('@/stores/auth', () => ({
-  useAuthStore: vi.fn(),
+// useSession（nanostores の Atom）のモック。
+// get() は現在値を返し、subscribe() はコールバックを保持して後から発火できるようにする。
+type SessionValue = { data: { user?: { id?: string | null } } | null };
+let sessionSubscribers: Array<(v: SessionValue) => void> = [];
+let currentSessionValue: SessionValue = { data: null };
+
+vi.mock('@/lib/auth', () => ({
+  useSession: {
+    get: vi.fn(() => currentSessionValue),
+    subscribe: vi.fn((cb: (v: SessionValue) => void) => {
+      sessionSubscribers.push(cb);
+      return () => {
+        sessionSubscribers = sessionSubscribers.filter((s) => s !== cb);
+      };
+    }),
+  },
 }));
 
 vi.mock('@/composables/useToast', () => ({
@@ -20,8 +33,12 @@ vi.mock('@/composables/useToast', () => ({
 }));
 
 import { joinLobby, leaveLobby } from '@/api/lobby';
-import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
+
+function setSession(value: SessionValue) {
+  currentSessionValue = value;
+  sessionSubscribers.forEach((cb) => cb(value));
+}
 
 const LOBBY_ID = 'lobby-1';
 const USER_ID = 'user-1';
@@ -70,11 +87,9 @@ function setup(lobby: MaybeRefOrGetter<LobbyDetail | null>) {
 }
 
 beforeEach(() => {
-  setActivePinia(createPinia());
+  sessionSubscribers = [];
+  currentSessionValue = { data: { user: { id: USER_ID } } };
   vi.clearAllMocks();
-  vi.mocked(useAuthStore).mockReturnValue({
-    currentUser: { id: USER_ID },
-  } as ReturnType<typeof useAuthStore>);
   vi.mocked(useToast).mockReturnValue({
     error: vi.fn(),
   } as unknown as ReturnType<typeof useToast>);
@@ -138,6 +153,53 @@ describe('isMember / myMember', () => {
     // Assert
     expect(isMember.value).toBe(false);
     expect(myMember.value).toBeUndefined();
+  });
+
+  it('参加直後に members が更新されると isMember / canJoin が追従する', () => {
+    // Arrange
+    const lobby = ref(
+      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, members: [] }),
+    );
+
+    // Act
+    const { isMember, canJoin } = setup(lobby);
+
+    // Assert（参加前）
+    expect(isMember.value).toBe(false);
+    expect(canJoin.value).toBe(true);
+
+    // Act（members に自分が追加される）
+    lobby.value = { ...lobby.value, members: [makeMember()] };
+
+    // Assert（参加後）
+    expect(isMember.value).toBe(true);
+    expect(canJoin.value).toBe(false);
+  });
+
+  it('セッションが後から変わった場合（subscribe コールバック発火）isMember / canJoin も追従する', () => {
+    // Arrange
+    currentSessionValue = { data: null };
+    const lobby = ref(
+      makeLobby({
+        status: LobbyStatus.open,
+        hostUserId: HOST_ID,
+        members: [makeMember(USER_ID)],
+      }),
+    );
+
+    // Act
+    const { isMember, canJoin } = setup(lobby);
+
+    // Assert（未ログインなので自分の member とは判定されない）
+    expect(isMember.value).toBe(false);
+    expect(canJoin.value).toBe(true);
+
+    // Act（ログイン状態に変わる）
+    setSession({ data: { user: { id: USER_ID } } });
+
+    // Assert
+    expect(isMember.value).toBe(true);
+    expect(canJoin.value).toBe(false);
   });
 });
 

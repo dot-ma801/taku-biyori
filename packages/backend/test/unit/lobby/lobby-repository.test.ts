@@ -821,7 +821,9 @@ describe('findDetailById', () => {
     const db = {
       select: vi
         .fn()
-        .mockImplementation(() => (callCount++ === 0 ? firstChain : secondChain)),
+        .mockImplementation(() =>
+          callCount++ === 0 ? firstChain : secondChain,
+        ),
     } as unknown as Database;
     return { db };
   };
@@ -874,9 +876,7 @@ describe('findDetailById', () => {
           memberCreatedAt: now,
         },
       ],
-      [
-        { gameSessionId: 'gs-1', lobbyMemberId: 'member-1' },
-      ],
+      [{ gameSessionId: 'gs-1', lobbyMemberId: 'member-1' }],
     );
     const repo = createLobbyRepository(db);
 
@@ -921,7 +921,17 @@ describe('findDetailById', () => {
   it('closedAt があっても卓が見つからなければ confirmedGameSession は null', async () => {
     // Arrange
     const { db } = makeFindDetailDb(
-      [{ ...mockLobbyRow, closedAt, memberId: null, memberUserId: null, memberUserName: null, memberGuestName: null, memberCreatedAt: null }],
+      [
+        {
+          ...mockLobbyRow,
+          closedAt,
+          memberId: null,
+          memberUserId: null,
+          memberUserName: null,
+          memberGuestName: null,
+          memberCreatedAt: null,
+        },
+      ],
       [],
     );
     const repo = createLobbyRepository(db);

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseDialog from '@/components/dialog/BaseDialog.vue';
+import BaseStepper from '@/components/common/BaseStepper/BaseStepper.vue';
 import CandidateStep from '@/features/Lobby/Detail/Schedule/ConfirmFlow/CandidateStep.vue';
 import MemberSelectStep from '@/features/Lobby/Detail/Schedule/ConfirmFlow/MemberSelectStep.vue';
 import ReviewStep from '@/features/Lobby/Detail/Schedule/ConfirmFlow/ReviewStep.vue';
@@ -8,6 +9,10 @@ import CapacityMismatchDialog from '@/features/Lobby/Detail/Schedule/ConfirmFlow
 import { useConfirmFlow } from '@/features/Lobby/Detail/Schedule/ConfirmFlow/useConfirmFlow';
 import type { LobbyAvailabilityDate, LobbyDetail } from '@taku-biyori/shared';
 import { computed, ref } from 'vue';
+
+// BaseStepper の steps.length と useConfirmFlow.ts の step 型上限（1 | 2 | 3）は
+// 連動していないため、ステップ数を変更する場合は両方を修正すること。
+const STEP_LABELS = ['候補日選択', '参加者選択', '確認'] as const;
 
 const props = defineProps<{
   lobby: LobbyDetail;
@@ -79,6 +84,8 @@ defineExpose({ handleOpen });
     title="卓を確定する"
     @update:model-value="(v: boolean) => !v && reset()"
   >
+    <BaseStepper :steps="STEP_LABELS" :current="step" label="卓確定の手順" />
+
     <CandidateStep
       v-if="step === 1"
       :candidate-options="candidateOptions"

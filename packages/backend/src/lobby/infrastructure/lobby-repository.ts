@@ -174,6 +174,13 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
                 ),
               ),
           ),
+          and(
+            eq(lobbies.isPublished, true),
+            or(
+              isNull(lobbies.openUntil),
+              sql`${lobbies.openUntil} > CURRENT_DATE`,
+            ),
+          ),
         ),
       )
       .groupBy(lobbies.id);

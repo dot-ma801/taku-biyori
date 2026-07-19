@@ -47,6 +47,99 @@ const makeUpdateDb = (rows: unknown[]) => {
   };
 };
 
+// select(...).from(...).leftJoin(...).where(...).groupBy(...) のチェーンをモックする
+const makeSelectGroupByDb = (rows: unknown[]) => {
+  let capturedWhere: SQL | undefined;
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockImplementation((condition: SQL) => {
+      capturedWhere = condition;
+      return chain;
+    }),
+    groupBy: vi.fn().mockResolvedValue(rows),
+  };
+  const db = {
+    select: vi.fn().mockReturnValue(chain),
+  } as unknown as Database;
+  return {
+    db,
+    whereSql: () => {
+      if (!capturedWhere) throw new Error('where が呼ばれていません');
+      return new PgDialect().sqlToQuery(capturedWhere).sql;
+    },
+  };
+};
+
+describe('findByUserId', () => {
+  it('未参加でも公開・募集中のロビーを対象にする WHERE 条件を含む', async () => {
+    // Arrange
+    const { db, whereSql } = makeSelectGroupByDb([]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.findByUserId('user-1');
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"is_published" = ');
+    expect(sql).toContain('"open_until"');
+  });
+
+  it('未参加でも公開・募集中のロビーは role: null で結果に含まれる', async () => {
+    // Arrange
+    const { db } = makeSelectGroupByDb([
+      {
+        ...mockLobbyRow,
+        hostUserId: 'other-user',
+        isPublished: true,
+        memberCount: 0,
+        userMemberId: null,
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]).toMatchObject({ role: null });
+  });
+
+  it('自分がホストの行は role: host になる', async () => {
+    // Arrange
+    const { db } = makeSelectGroupByDb([
+      { ...mockLobbyRow, memberCount: 1, userMemberId: null },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]).toMatchObject({ role: 'host' });
+  });
+
+  it('自分がメンバーの行は role: member になる', async () => {
+    // Arrange
+    const { db } = makeSelectGroupByDb([
+      {
+        ...mockLobbyRow,
+        hostUserId: 'other-user',
+        memberCount: 1,
+        userMemberId: 'member-uuid',
+      },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result[0]).toMatchObject({ role: 'member' });
+  });
+});
+
 describe('cancel', () => {
   it('cancelled_at と closed_at の両方が NULL の行だけを更新する（確定との排他）', async () => {
     // Arrange

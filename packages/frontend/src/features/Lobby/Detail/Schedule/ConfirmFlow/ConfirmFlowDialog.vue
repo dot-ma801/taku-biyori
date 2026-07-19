@@ -48,7 +48,9 @@ const {
 const showCapacityDialog = ref(false);
 
 const selectedDate = computed(
-  () => candidateOptions.value.find((d) => d.id === selectedCandidateId.value) ?? null,
+  () =>
+    candidateOptions.value.find((d) => d.id === selectedCandidateId.value) ??
+    null,
 );
 
 const selectedMembers = computed(() =>
@@ -75,7 +77,7 @@ defineExpose({ handleOpen });
   <BaseDialog
     v-model="model"
     title="卓を確定する"
-    @update:model-value="if (!$event) reset()"
+    @update:model-value="(v: boolean) => !v && reset()"
   >
     <CandidateStep
       v-if="step === 1"
@@ -121,7 +123,12 @@ defineExpose({ handleOpen });
     v-model="showCapacityDialog"
     :max-players="lobby.maxPlayers"
     :selected-count="selectedCount"
-    @confirm="() => { showCapacityDialog = false; goNext(); }"
+    @confirm="
+      () => {
+        showCapacityDialog = false;
+        goNext();
+      }
+    "
   />
 </template>
 

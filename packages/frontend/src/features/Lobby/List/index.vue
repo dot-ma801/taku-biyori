@@ -15,7 +15,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { myLobbies, publicLobbies, filteredLobbies } = useLobbyList(
+const { myLobbies, publicLobbies, filteredMyLobbies } = useLobbyList(
   props.statuses,
 );
 
@@ -44,7 +44,7 @@ const onClickCreate = () => {
       >ロビーを作成</BaseButton
     >
     <template v-if="isFiltered">
-      <MyLobbyList :my-lobbies="filteredLobbies"></MyLobbyList>
+      <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
     </template>
     <template v-else>
       <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>

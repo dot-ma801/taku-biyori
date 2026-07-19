@@ -176,58 +176,44 @@ describe('useLobbyList', () => {
     });
   });
 
-  describe('filteredLobbies（statuses フィルタ）', () => {
-    it('statuses を指定しない場合は allLobbies をそのまま返す', async () => {
+  describe('filteredMyLobbies（自分のロビーを statuses で絞り込む）', () => {
+    it('statuses を指定しない場合は myLobbies をそのまま返す', async () => {
       // Arrange
-      const lobbies = [
-        makeLobby({ status: LobbyStatus.draft }),
-        makeLobby({ status: LobbyStatus.open }),
-        makeLobby({ status: LobbyStatus.confirmed }),
-      ];
-      mockListLobbies.mockResolvedValue(lobbies);
+      const myLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
+      const publicLobby = makeLobby({ role: null, status: LobbyStatus.open });
+      mockListLobbies.mockResolvedValue([myLobby, publicLobby]);
 
       // Act
-      const { filteredLobbies, fetch } = useLobbyList();
+      const { filteredMyLobbies, fetch } = useLobbyList();
       await fetch();
 
       // Assert
-      expect(filteredLobbies.value).toEqual(lobbies);
+      expect(filteredMyLobbies.value).toEqual([myLobby]);
     });
 
-    it('statuses を指定した場合は該当するステータスのみ返す', async () => {
+    it('statuses を指定した場合は自分のロビーのうち該当ステータスのみ返す', async () => {
       // Arrange
-      const openLobby = makeLobby({ status: LobbyStatus.open });
-      const schedulingLobby = makeLobby({ status: LobbyStatus.scheduling });
-      const confirmedLobby = makeLobby({ status: LobbyStatus.confirmed });
+      const myOpenLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
+      const myDraftLobby = makeLobby({
+        role: 'host',
+        status: LobbyStatus.draft,
+      });
+      const publicOpenLobby = makeLobby({
+        role: null,
+        status: LobbyStatus.open,
+      });
       mockListLobbies.mockResolvedValue([
-        openLobby,
-        schedulingLobby,
-        confirmedLobby,
+        myOpenLobby,
+        myDraftLobby,
+        publicOpenLobby,
       ]);
 
       // Act
-      const { filteredLobbies, fetch } = useLobbyList([
-        LobbyStatus.open,
-        LobbyStatus.scheduling,
-      ]);
+      const { filteredMyLobbies, fetch } = useLobbyList([LobbyStatus.open]);
       await fetch();
 
       // Assert
-      expect(filteredLobbies.value).toEqual([openLobby, schedulingLobby]);
-    });
-
-    it('statuses が空配列の場合は何も返さない', async () => {
-      // Arrange
-      mockListLobbies.mockResolvedValue([
-        makeLobby({ status: LobbyStatus.open }),
-      ]);
-
-      // Act
-      const { filteredLobbies, fetch } = useLobbyList([]);
-      await fetch();
-
-      // Assert
-      expect(filteredLobbies.value).toHaveLength(0);
+      expect(filteredMyLobbies.value).toEqual([myOpenLobby]);
     });
   });
 });

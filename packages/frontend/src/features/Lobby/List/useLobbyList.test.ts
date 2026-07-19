@@ -175,4 +175,45 @@ describe('useLobbyList', () => {
       expect(myLobbies.value).not.toContainEqual(publicLobby);
     });
   });
+
+  describe('filteredMyLobbies（自分のロビーを statuses で絞り込む）', () => {
+    it('statuses を指定しない場合は myLobbies をそのまま返す', async () => {
+      // Arrange
+      const myLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
+      const publicLobby = makeLobby({ role: null, status: LobbyStatus.open });
+      mockListLobbies.mockResolvedValue([myLobby, publicLobby]);
+
+      // Act
+      const { filteredMyLobbies, fetch } = useLobbyList();
+      await fetch();
+
+      // Assert
+      expect(filteredMyLobbies.value).toEqual([myLobby]);
+    });
+
+    it('statuses を指定した場合は自分のロビーのうち該当ステータスのみ返す', async () => {
+      // Arrange
+      const myOpenLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
+      const myDraftLobby = makeLobby({
+        role: 'host',
+        status: LobbyStatus.draft,
+      });
+      const publicOpenLobby = makeLobby({
+        role: null,
+        status: LobbyStatus.open,
+      });
+      mockListLobbies.mockResolvedValue([
+        myOpenLobby,
+        myDraftLobby,
+        publicOpenLobby,
+      ]);
+
+      // Act
+      const { filteredMyLobbies, fetch } = useLobbyList([LobbyStatus.open]);
+      await fetch();
+
+      // Assert
+      expect(filteredMyLobbies.value).toEqual([myOpenLobby]);
+    });
+  });
 });

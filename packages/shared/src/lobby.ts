@@ -115,8 +115,15 @@ export const LobbyMemberSchema = z.object({
 });
 export type LobbyMember = z.infer<typeof LobbyMemberSchema>;
 
+export const ConfirmedGameSessionSchema = z.object({
+  id: z.string().uuid(),
+  selectedLobbyMemberIds: z.array(z.string().uuid()),
+});
+export type ConfirmedGameSession = z.infer<typeof ConfirmedGameSessionSchema>;
+
 export const LobbyDetailSchema = LobbySchema.extend({
   members: z.array(LobbyMemberSchema),
+  confirmedGameSession: ConfirmedGameSessionSchema.nullable().optional(),
 });
 export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
 

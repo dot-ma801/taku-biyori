@@ -4,19 +4,24 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import MyLobbyList from '@/features/Lobby/List/MyLobbyList.vue';
 import PublicLobbyList from '@/features/Lobby/List/PublicLobbyList.vue';
 import { useLobbyList } from '@/features/Lobby/List/useLobbyList';
+import type { LobbyStatus } from '@taku-biyori/shared';
 import { Plus } from '@lucide/vue';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 const props = defineProps<{
   title?: string;
+  statuses?: LobbyStatus[];
 }>();
 
 const router = useRouter();
-const { myLobbies, publicLobbies } = useLobbyList();
+const { myLobbies, publicLobbies, filteredMyLobbies } = useLobbyList(
+  props.statuses,
+);
 
 const hasTitle = computed(() => props.title != null);
 const hasPublicLobbies = computed(() => publicLobbies.value.length > 0);
+const isFiltered = computed(() => props.statuses !== undefined);
 
 const onClickCreate = () => {
   router.push({ name: 'lobbies-new' });
@@ -38,11 +43,16 @@ const onClickCreate = () => {
       @click="onClickCreate"
       >ロビーを作成</BaseButton
     >
-    <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>
-    <PublicLobbyList
-      v-if="hasPublicLobbies"
-      :public-lobbies="publicLobbies"
-    ></PublicLobbyList>
+    <template v-if="isFiltered">
+      <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
+    </template>
+    <template v-else>
+      <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>
+      <PublicLobbyList
+        v-if="hasPublicLobbies"
+        :public-lobbies="publicLobbies"
+      ></PublicLobbyList>
+    </template>
   </div>
 </template>
 

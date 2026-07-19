@@ -77,6 +77,8 @@ export {
   type ConfirmLobbyInput,
   LobbyMemberSchema,
   type LobbyMember,
+  ConfirmedGameSessionSchema,
+  type ConfirmedGameSession,
   LobbyDetailSchema,
   type LobbyDetail,
   JoinLobbyInputSchema,

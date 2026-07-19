@@ -8,12 +8,14 @@ import {
   Trophy,
   Share2,
   Trash,
+  XCircle,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
 import DeleteDialog from '@/features/GameSession/Detail/Dialog/DeleteDialog.vue';
+import CancelSessionDialog from '@/features/GameSession/Detail/Dialog/CancelSessionDialog.vue';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
@@ -36,6 +38,7 @@ const authStore = useAuthStore();
 
 const deleteDialogModel = ref(false);
 const guestJoinDialogModel = ref(false);
+const cancelSessionDialogModel = ref(false);
 
 const onRefresh = () => emit('sessionChanged');
 
@@ -43,10 +46,12 @@ const {
   isHost,
   canPublish,
   canComplete,
+  canCancel,
   canDelete,
   loading: loadingStatus,
   publishSession,
   completeSession,
+  cancelSession,
   deleteSession,
 } = useGameSessionStatus(
   props.gameSessionId,
@@ -151,6 +156,15 @@ function onGuestJoined() {
       セッション完了！
     </BaseButton>
     <BaseButton
+      v-if="canCancel"
+      :left-icon="XCircle"
+      variant="danger"
+      :loading="loadingStatus"
+      @click="cancelSessionDialogModel = true"
+    >
+      開催を中止する
+    </BaseButton>
+    <BaseButton
       v-if="canJoinAny"
       :left-icon="UserRoundPlus"
       :loading="loadingMember"
@@ -177,6 +191,10 @@ function onGuestJoined() {
     @joined="onGuestJoined"
   />
   <DeleteDialog v-model="deleteDialogModel" @delete="deleteSession" />
+  <CancelSessionDialog
+    v-model="cancelSessionDialogModel"
+    @cancel="cancelSession"
+  />
 </template>
 
 <style scoped>

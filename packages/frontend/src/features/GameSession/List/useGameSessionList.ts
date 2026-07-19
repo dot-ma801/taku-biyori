@@ -1,8 +1,15 @@
 import { computed, onMounted, ref } from 'vue';
 import type { GameSessionListItem } from '@taku-biyori/shared';
+import type { GameSessionStatus } from '@taku-biyori/shared';
 import { listGameSessions } from '@/api/game-session';
 
-export const useGameSessionList = () => {
+interface UseGameSessionListOptions {
+  statuses?: GameSessionStatus[];
+  sortByScheduledAt?: boolean;
+}
+
+export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
+  const { statuses, sortByScheduledAt = false } = options;
   /** 全セッション（APIレスポンスそのまま） */
   const allSessions = ref<GameSessionListItem[]>([]);
 
@@ -19,6 +26,24 @@ export const useGameSessionList = () => {
   const mySessions = computed(() =>
     allSessions.value.filter((s) => s.role !== null),
   );
+
+  const filteredSessions = computed(() => {
+    let result =
+      statuses !== undefined
+        ? allSessions.value.filter((s) => statuses.includes(s.status))
+        : allSessions.value;
+    if (sortByScheduledAt) {
+      result = [...result].sort((a, b) => {
+        if (a.scheduledAt == null && b.scheduledAt == null) return 0;
+        if (a.scheduledAt == null) return 1;
+        if (b.scheduledAt == null) return -1;
+        return (
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+        );
+      });
+    }
+    return result;
+  });
 
   /**
    * 次の卓。
@@ -59,6 +84,7 @@ export const useGameSessionList = () => {
     allSessions,
     publicSessions,
     mySessions,
+    filteredSessions,
     nextSession,
     loading,
     errorMessage,

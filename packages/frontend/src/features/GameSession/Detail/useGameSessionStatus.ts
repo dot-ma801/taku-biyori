@@ -107,6 +107,29 @@ export const useGameSessionStatus = (
     }
   }
 
+  /** キャンセル可能か。ホストかつ status が confirmed または today のときのみ true */
+  const canCancel = computed(
+    () =>
+      isHost.value &&
+      (toValue(gameSession)?.status === GameSessionStatus.confirmed ||
+        toValue(gameSession)?.status === GameSessionStatus.today),
+  );
+
+  async function cancelSession() {
+    if (loading.value || loadingDelete.value || !canCancel.value) {
+      return;
+    }
+    loading.value = true;
+    try {
+      await updateGameSessionStatus(gameSessionId, { status: 'cancelled' });
+      onRefresh();
+    } catch {
+      toast.error('開催の中止に失敗しました');
+    } finally {
+      loading.value = false;
+    }
+  }
+
   /**
    * 卓を削除する。成功後は卓一覧ページへ遷移する。
    * 削除可否を満たさない場合・loadingDelete 中の重複呼び出しは無視する。
@@ -132,11 +155,13 @@ export const useGameSessionStatus = (
     isHost,
     canPublish,
     canComplete,
+    canCancel,
     canDelete,
     loading,
     loadingDelete,
     publishSession,
     completeSession,
+    cancelSession,
     deleteSession,
   };
 };

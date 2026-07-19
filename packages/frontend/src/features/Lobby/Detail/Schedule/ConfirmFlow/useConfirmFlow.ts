@@ -13,6 +13,8 @@ export const useConfirmFlow = (
   availabilityDates: MaybeRefOrGetter<LobbyAvailabilityDate[]>,
   maxPlayers: MaybeRefOrGetter<number | null | undefined>,
   onConflict: () => void,
+  // NOTE: 表（ラジオボタン）側の選択を初期選択として取り込む。ダイアログを開くたびに reset() から参照する。
+  initialCandidateId: MaybeRefOrGetter<string | null> = () => null,
 ) => {
   const router = useRouter();
   const toast = useToast();
@@ -92,8 +94,13 @@ export const useConfirmFlow = (
 
   function reset() {
     step.value = 1;
-    selectedCandidateId.value = null;
-    selectedMemberIds.value = new Set();
+    const initialId = toValue(initialCandidateId);
+    if (initialId) {
+      selectCandidate(initialId);
+    } else {
+      selectedCandidateId.value = null;
+      selectedMemberIds.value = new Set();
+    }
   }
 
   async function confirm() {

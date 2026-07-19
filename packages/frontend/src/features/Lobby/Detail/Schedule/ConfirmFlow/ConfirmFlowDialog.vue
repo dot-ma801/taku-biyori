@@ -17,6 +17,7 @@ const STEP_LABELS = ['候補日選択', '参加者選択', '確認'] as const;
 const props = defineProps<{
   lobby: LobbyDetail;
   availabilityDates: LobbyAvailabilityDate[];
+  initialDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -48,6 +49,7 @@ const {
   () => props.availabilityDates,
   () => props.lobby.maxPlayers,
   () => emit('lobby-changed'),
+  () => props.initialDateId ?? null,
 );
 
 const showCapacityDialog = ref(false);
@@ -66,13 +68,9 @@ const isNextDisabled = computed(() =>
   step.value === 1 ? !canProceedCandidate.value : !canProceedMembers.value,
 );
 
-function handleOpen() {
+// 開いたとき・閉じたとき両方で reset する。開くときに initialDateId（表のラジオ選択）を取り込む。
+function handleModelUpdate() {
   reset();
-  model.value = true;
-}
-
-function handleModelUpdate(value: boolean) {
-  if (!value) reset();
 }
 
 function handleNextFromStep2() {
@@ -90,8 +88,6 @@ function handleNext() {
     handleNextFromStep2();
   }
 }
-
-defineExpose({ handleOpen });
 </script>
 
 <template>

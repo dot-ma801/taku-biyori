@@ -44,7 +44,8 @@ const model = defineModel<boolean>({ default: false });
   cursor: not-allowed;
 }
 
-.checkbox__root {
+:deep(.checkbox__root) {
+  appearance: none;
   flex-shrink: 0;
   width: 16px;
   height: 16px;
@@ -60,21 +61,21 @@ const model = defineModel<boolean>({ default: false });
     border-color 0.15s;
   padding: 0;
 }
-.checkbox__root[aria-checked='true'],
-.checkbox__root[data-state='checked'] {
+:deep(.checkbox__root[aria-checked='true']),
+:deep(.checkbox__root[data-state='checked']) {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-on-primary);
 }
-.checkbox__root:focus-visible {
+:deep(.checkbox__root:focus-visible) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
-.checkbox__root:hover:not(:disabled) {
+:deep(.checkbox__root:hover:not(:disabled)) {
   border-color: var(--color-primary);
 }
 
-.checkbox__indicator {
+:deep(.checkbox__indicator) {
   display: flex;
   align-items: center;
   justify-content: center;

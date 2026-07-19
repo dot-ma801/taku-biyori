@@ -62,9 +62,17 @@ const selectedMembers = computed(() =>
   props.lobby.members.filter((m) => selectedMemberIds.value.has(m.id)),
 );
 
+const isNextDisabled = computed(() =>
+  step.value === 1 ? !canProceedCandidate.value : !canProceedMembers.value,
+);
+
 function handleOpen() {
   reset();
   model.value = true;
+}
+
+function handleModelUpdate(value: boolean) {
+  if (!value) reset();
 }
 
 function handleNextFromStep2() {
@@ -75,6 +83,14 @@ function handleNextFromStep2() {
   }
 }
 
+function handleNext() {
+  if (step.value === 1) {
+    goNext();
+  } else {
+    handleNextFromStep2();
+  }
+}
+
 defineExpose({ handleOpen });
 </script>
 
@@ -82,7 +98,7 @@ defineExpose({ handleOpen });
   <BaseDialog
     v-model="model"
     title="卓を確定する"
-    @update:model-value="(v: boolean) => !v && reset()"
+    @update:model-value="handleModelUpdate"
   >
     <BaseStepper :steps="STEP_LABELS" :current="step" label="卓確定の手順" />
 
@@ -115,8 +131,8 @@ defineExpose({ handleOpen });
       <div class="spacer" />
       <BaseButton
         v-if="step < 3"
-        :disabled="step === 1 ? !canProceedCandidate : !canProceedMembers"
-        @click="step === 1 ? goNext() : handleNextFromStep2()"
+        :disabled="isNextDisabled"
+        @click="handleNext"
       >
         次へ
       </BaseButton>

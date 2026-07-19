@@ -62,7 +62,9 @@ const onClickOpen = (id: string) => {
       あなたのロビー
     </BaseSectionHeading>
 
-    <p v-if="isEmpty" class="empty-message">まだ参加しているロビーはありません</p>
+    <p v-if="isEmpty" class="empty-message">
+      まだ参加しているロビーはありません
+    </p>
 
     <div v-for="item in visibleLobbies" :key="item.id" class="item">
       <div>

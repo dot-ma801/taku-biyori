@@ -74,7 +74,9 @@ const onClickOpen = (id: string) => {
       あなたのセッション
     </BaseSectionHeading>
 
-    <p v-if="isEmpty" class="empty-message">まだ参加しているセッションはありません</p>
+    <p v-if="isEmpty" class="empty-message">
+      まだ参加しているセッションはありません
+    </p>
 
     <div v-for="item in visibleSessions" :key="item.id" class="item">
       <div>

@@ -26,9 +26,15 @@ const onClickCreate = () => {
   <div class="container">
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
-      <BaseButton :left-icon="Plus" @click="onClickCreate">セッションを作成</BaseButton>
+      <BaseButton :left-icon="Plus" @click="onClickCreate"
+        >セッションを作成</BaseButton
+      >
     </div>
-    <BaseButton v-else class="create-btn" :left-icon="Plus" @click="onClickCreate"
+    <BaseButton
+      v-else
+      class="create-btn"
+      :left-icon="Plus"
+      @click="onClickCreate"
       >セッションを作成</BaseButton
     >
     <MySessionList :my-sessions="mySessions"></MySessionList>

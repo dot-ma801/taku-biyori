@@ -51,9 +51,27 @@ const baseLobby: LobbyDetail = {
   createdAt: '2026-07-01T00:00:00Z',
   updatedAt: '2026-07-18T10:00:00Z',
   members: [
-    { id: 'member-1', userId: HOST_ID, userName: 'ホスト', guestName: null, joinedAt: '2026-07-01T00:00:00Z' },
-    { id: 'member-2', userId: MEMBER_ID, userName: 'メンバー', guestName: null, joinedAt: '2026-07-01T00:00:00Z' },
-    { id: 'member-3', userId: 'user-not-selected', userName: '非選出', guestName: null, joinedAt: '2026-07-01T00:00:00Z' },
+    {
+      id: 'member-1',
+      userId: HOST_ID,
+      userName: 'ホスト',
+      guestName: null,
+      joinedAt: '2026-07-01T00:00:00Z',
+    },
+    {
+      id: 'member-2',
+      userId: MEMBER_ID,
+      userName: 'メンバー',
+      guestName: null,
+      joinedAt: '2026-07-01T00:00:00Z',
+    },
+    {
+      id: 'member-3',
+      userId: 'user-not-selected',
+      userName: '非選出',
+      guestName: null,
+      joinedAt: '2026-07-01T00:00:00Z',
+    },
   ],
   confirmedGameSession: {
     id: GAME_SESSION_ID,

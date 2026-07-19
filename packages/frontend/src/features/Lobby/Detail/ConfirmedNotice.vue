@@ -28,7 +28,9 @@ function goToGameSession() {
 <template>
   <BaseCard class="confirmed-notice">
     <template v-if="viewerKind === 'selected'">
-      <p class="notice-message">卓が確定しました。当日を楽しみにしていてください！</p>
+      <p class="notice-message">
+        卓が確定しました。当日を楽しみにしていてください！
+      </p>
       <BaseButton
         v-if="canNavigate"
         variant="primary"

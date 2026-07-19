@@ -5,7 +5,11 @@ import type { LobbyMember } from '@taku-biyori/shared';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  selectedDate: { id: string; date: string; counts: { ok: number; maybe: number; ng: number } } | null;
+  selectedDate: {
+    id: string;
+    date: string;
+    counts: { ok: number; maybe: number; ng: number };
+  } | null;
   selectedMembers: LobbyMember[];
 }>();
 
@@ -21,9 +25,15 @@ const dateLabel = computed(() =>
       <span class="review-value">{{ dateLabel }}</span>
     </div>
     <div class="review-row">
-      <span class="review-label">参加者（{{ selectedMembers.length }} 名）</span>
+      <span class="review-label"
+        >参加者（{{ selectedMembers.length }} 名）</span
+      >
       <ul class="review-members">
-        <li v-for="member in selectedMembers" :key="member.id" class="review-member">
+        <li
+          v-for="member in selectedMembers"
+          :key="member.id"
+          class="review-member"
+        >
           {{ memberDisplayName(member) }}
         </li>
       </ul>

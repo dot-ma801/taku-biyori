@@ -15,7 +15,9 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { myLobbies, publicLobbies, filteredLobbies } = useLobbyList(props.statuses);
+const { myLobbies, publicLobbies, filteredLobbies } = useLobbyList(
+  props.statuses,
+);
 
 const hasTitle = computed(() => props.title != null);
 const hasPublicLobbies = computed(() => publicLobbies.value.length > 0);

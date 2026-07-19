@@ -286,13 +286,23 @@ describe('useGameSessionList', () => {
 
     it('statuses を指定した場合は該当するステータスのみ返す', async () => {
       // Arrange
-      const confirmedSession = makeSession({ status: GameSessionStatus.confirmed });
+      const confirmedSession = makeSession({
+        status: GameSessionStatus.confirmed,
+      });
       const todaySession = makeSession({ status: GameSessionStatus.today });
-      const completedSession = makeSession({ status: GameSessionStatus.completed });
-      mockListGameSessions.mockResolvedValue([confirmedSession, todaySession, completedSession]);
+      const completedSession = makeSession({
+        status: GameSessionStatus.completed,
+      });
+      mockListGameSessions.mockResolvedValue([
+        confirmedSession,
+        todaySession,
+        completedSession,
+      ]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList({ statuses: [GameSessionStatus.confirmed, GameSessionStatus.today] });
+      const { filteredSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
+      });
       await fetch();
 
       // Assert
@@ -303,12 +313,20 @@ describe('useGameSessionList', () => {
   describe('filteredSessions（sortByScheduledAt ソート）', () => {
     it('sortByScheduledAt=true の場合 scheduledAt 昇順で返す', async () => {
       // Arrange
-      const first = makeSession({ scheduledAt: '2026-08-01T10:00:00Z', role: 'host' });
-      const second = makeSession({ scheduledAt: '2026-08-10T10:00:00Z', role: 'host' });
+      const first = makeSession({
+        scheduledAt: '2026-08-01T10:00:00Z',
+        role: 'host',
+      });
+      const second = makeSession({
+        scheduledAt: '2026-08-10T10:00:00Z',
+        role: 'host',
+      });
       mockListGameSessions.mockResolvedValue([second, first]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList({ sortByScheduledAt: true });
+      const { filteredSessions, fetch } = useGameSessionList({
+        sortByScheduledAt: true,
+      });
       await fetch();
 
       // Assert
@@ -318,8 +336,14 @@ describe('useGameSessionList', () => {
 
     it('sortByScheduledAt=false の場合は元の順序を保つ', async () => {
       // Arrange
-      const s1 = makeSession({ scheduledAt: '2026-08-10T10:00:00Z', role: 'host' });
-      const s2 = makeSession({ scheduledAt: '2026-08-01T10:00:00Z', role: 'host' });
+      const s1 = makeSession({
+        scheduledAt: '2026-08-10T10:00:00Z',
+        role: 'host',
+      });
+      const s2 = makeSession({
+        scheduledAt: '2026-08-01T10:00:00Z',
+        role: 'host',
+      });
       mockListGameSessions.mockResolvedValue([s1, s2]);
 
       // Act
@@ -333,12 +357,17 @@ describe('useGameSessionList', () => {
 
     it('scheduledAt が null のセッションはソート時に末尾に置かれる', async () => {
       // Arrange
-      const withDate = makeSession({ scheduledAt: '2026-08-01T10:00:00Z', role: 'host' });
+      const withDate = makeSession({
+        scheduledAt: '2026-08-01T10:00:00Z',
+        role: 'host',
+      });
       const noDate = makeSession({ scheduledAt: null, role: 'host' });
       mockListGameSessions.mockResolvedValue([noDate, withDate]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList({ sortByScheduledAt: true });
+      const { filteredSessions, fetch } = useGameSessionList({
+        sortByScheduledAt: true,
+      });
       await fetch();
 
       // Assert

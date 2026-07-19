@@ -191,7 +191,10 @@ function onGuestJoined() {
     @joined="onGuestJoined"
   />
   <DeleteDialog v-model="deleteDialogModel" @delete="deleteSession" />
-  <CancelSessionDialog v-model="cancelSessionDialogModel" @cancel="cancelSession" />
+  <CancelSessionDialog
+    v-model="cancelSessionDialogModel"
+    @cancel="cancelSession"
+  />
 </template>
 
 <style scoped>

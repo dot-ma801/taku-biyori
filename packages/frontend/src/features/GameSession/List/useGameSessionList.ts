@@ -28,15 +28,18 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
   );
 
   const filteredSessions = computed(() => {
-    let result = statuses !== undefined
-      ? allSessions.value.filter((s) => statuses.includes(s.status))
-      : allSessions.value;
+    let result =
+      statuses !== undefined
+        ? allSessions.value.filter((s) => statuses.includes(s.status))
+        : allSessions.value;
     if (sortByScheduledAt) {
       result = [...result].sort((a, b) => {
         if (a.scheduledAt == null && b.scheduledAt == null) return 0;
         if (a.scheduledAt == null) return 1;
         if (b.scheduledAt == null) return -1;
-        return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+        return (
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+        );
       });
     }
     return result;

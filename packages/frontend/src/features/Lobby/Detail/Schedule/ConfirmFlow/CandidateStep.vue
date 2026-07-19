@@ -2,7 +2,11 @@
 import { formatDateWithWeekday } from '@/utils/date';
 
 defineProps<{
-  candidateOptions: { id: string; date: string; counts: { ok: number; maybe: number; ng: number } }[];
+  candidateOptions: {
+    id: string;
+    date: string;
+    counts: { ok: number; maybe: number; ng: number };
+  }[];
   selectedCandidateId: string | null;
 }>();
 
@@ -17,10 +21,15 @@ const emit = defineEmits<{
     <li
       v-for="option in candidateOptions"
       :key="option.id"
-      :class="['candidate-item', { 'candidate-item--selected': selectedCandidateId === option.id }]"
+      :class="[
+        'candidate-item',
+        { 'candidate-item--selected': selectedCandidateId === option.id },
+      ]"
       @click="emit('select', option.id)"
     >
-      <span class="candidate-date">{{ formatDateWithWeekday(option.date) }}</span>
+      <span class="candidate-date">{{
+        formatDateWithWeekday(option.date)
+      }}</span>
       <span class="candidate-counts">
         <span class="count ok">◯ {{ option.counts.ok }}</span>
         <span class="count maybe">△ {{ option.counts.maybe }}</span>
@@ -54,7 +63,9 @@ const emit = defineEmits<{
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
   font-size: 14px;
 }
 

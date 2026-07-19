@@ -73,7 +73,9 @@ export const useConfirmFlow = (
   }
 
   const selectedCount = computed(() => selectedMemberIds.value.size);
-  const canProceedCandidate = computed(() => selectedCandidateId.value !== null);
+  const canProceedCandidate = computed(
+    () => selectedCandidateId.value !== null,
+  );
   const canProceedMembers = computed(() => selectedCount.value >= 1);
   const capacityMismatch = computed(() => {
     const max = toValue(maxPlayers);
@@ -95,7 +97,11 @@ export const useConfirmFlow = (
   }
 
   async function confirm() {
-    if (loading.value || !selectedCandidateId.value || selectedCount.value === 0)
+    if (
+      loading.value ||
+      !selectedCandidateId.value ||
+      selectedCount.value === 0
+    )
       return;
     loading.value = true;
     try {

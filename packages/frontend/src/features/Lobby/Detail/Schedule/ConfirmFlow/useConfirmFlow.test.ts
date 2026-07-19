@@ -19,9 +19,27 @@ import { confirmLobby } from '@/api/lobby';
 const LOBBY_ID = 'lobby-1';
 
 const members: LobbyMember[] = [
-  { id: 'member-1', userId: 'user-1', userName: 'Alice', guestName: null, joinedAt: '2025-01-01T00:00:00Z' },
-  { id: 'member-2', userId: 'user-2', userName: 'Bob', guestName: null, joinedAt: '2025-01-01T00:00:00Z' },
-  { id: 'member-3', userId: null, userName: null, guestName: 'Guest', joinedAt: '2025-01-01T00:00:00Z' },
+  {
+    id: 'member-1',
+    userId: 'user-1',
+    userName: 'Alice',
+    guestName: null,
+    joinedAt: '2025-01-01T00:00:00Z',
+  },
+  {
+    id: 'member-2',
+    userId: 'user-2',
+    userName: 'Bob',
+    guestName: null,
+    joinedAt: '2025-01-01T00:00:00Z',
+  },
+  {
+    id: 'member-3',
+    userId: null,
+    userName: null,
+    guestName: 'Guest',
+    joinedAt: '2025-01-01T00:00:00Z',
+  },
 ];
 
 const dates: LobbyAvailabilityDate[] = [
@@ -52,7 +70,13 @@ beforeEach(() => {
 describe('candidateOptions', () => {
   it('各候補日の ok/maybe/ng 件数を含む配列を返す', () => {
     // Arrange
-    const { candidateOptions } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { candidateOptions } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
 
     // Act & Assert
     expect(candidateOptions.value).toEqual([
@@ -64,12 +88,24 @@ describe('candidateOptions', () => {
 
 describe('canProceedCandidate', () => {
   it('候補日を選択していないとき false を返す', () => {
-    const { canProceedCandidate } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { canProceedCandidate } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     expect(canProceedCandidate.value).toBe(false);
   });
 
   it('候補日を選択したとき true を返す', () => {
-    const { canProceedCandidate, selectCandidate } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { canProceedCandidate, selectCandidate } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
     expect(canProceedCandidate.value).toBe(true);
   });
@@ -78,7 +114,13 @@ describe('canProceedCandidate', () => {
 describe('selectCandidate', () => {
   it('ok/maybe 回答者をデフォルト選択する', () => {
     // Arrange
-    const { selectCandidate, selectedMemberIds } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, selectedMemberIds } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
 
     // Act
     selectCandidate('date-1');
@@ -91,7 +133,13 @@ describe('selectCandidate', () => {
 
   it('候補日を変更するとデフォルト選択がリセットされる', () => {
     // Arrange
-    const { selectCandidate, selectedMemberIds } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, selectedMemberIds } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
     expect(selectedMemberIds.value.has('member-2')).toBe(true);
 
@@ -107,7 +155,13 @@ describe('selectCandidate', () => {
 describe('toggleMember', () => {
   it('未選択メンバーを選択状態にする', () => {
     // Arrange
-    const { selectCandidate, toggleMember, selectedMemberIds } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, toggleMember, selectedMemberIds } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
 
     // Act
@@ -119,7 +173,13 @@ describe('toggleMember', () => {
 
   it('選択済みメンバーを未選択状態にする', () => {
     // Arrange
-    const { selectCandidate, toggleMember, selectedMemberIds } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, toggleMember, selectedMemberIds } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
     expect(selectedMemberIds.value.has('member-1')).toBe(true);
 
@@ -134,7 +194,13 @@ describe('toggleMember', () => {
 describe('canProceedMembers', () => {
   it('選択メンバーが 0 人のとき false を返す', () => {
     // Arrange
-    const { selectCandidate, toggleMember, canProceedMembers } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, toggleMember, canProceedMembers } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-2'); // member-1 のみデフォルト選択
     toggleMember('member-1'); // 全員解除
 
@@ -144,7 +210,13 @@ describe('canProceedMembers', () => {
 
   it('1 人以上選択されていれば true を返す', () => {
     // Arrange
-    const { selectCandidate, canProceedMembers } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, canProceedMembers } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
 
     // Assert
@@ -155,7 +227,13 @@ describe('canProceedMembers', () => {
 describe('capacityMismatch', () => {
   it('maxPlayers が null なら false を返す', () => {
     // Arrange
-    const { selectCandidate, capacityMismatch } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, capacityMismatch } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1'); // 2人選択
 
     // Assert
@@ -164,7 +242,13 @@ describe('capacityMismatch', () => {
 
   it('選択数と maxPlayers が一致するとき false を返す', () => {
     // Arrange
-    const { selectCandidate, capacityMismatch } = useConfirmFlow(LOBBY_ID, members, dates, 2, onConflict);
+    const { selectCandidate, capacityMismatch } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      2,
+      onConflict,
+    );
     selectCandidate('date-1'); // member-1, member-2 の 2人選択
 
     // Assert
@@ -173,7 +257,13 @@ describe('capacityMismatch', () => {
 
   it('選択数と maxPlayers が不一致のとき true を返す', () => {
     // Arrange
-    const { selectCandidate, capacityMismatch } = useConfirmFlow(LOBBY_ID, members, dates, 3, onConflict);
+    const { selectCandidate, capacityMismatch } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      3,
+      onConflict,
+    );
     selectCandidate('date-1'); // 2人選択、定員は3
 
     // Assert
@@ -184,7 +274,13 @@ describe('capacityMismatch', () => {
 describe('isWarnedMember', () => {
   it('選択中候補日の回答が ng のメンバーは true を返す', () => {
     // Arrange
-    const { selectCandidate, isWarnedMember } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, isWarnedMember } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
 
     // Assert: member-3 は ng
@@ -193,7 +289,13 @@ describe('isWarnedMember', () => {
 
   it('選択中候補日に未回答のメンバーは true を返す', () => {
     // Arrange
-    const { selectCandidate, isWarnedMember } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, isWarnedMember } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-2'); // member-2 は date-2 に未回答
 
     // Assert
@@ -202,7 +304,13 @@ describe('isWarnedMember', () => {
 
   it('ok/maybe 回答者は false を返す', () => {
     // Arrange
-    const { selectCandidate, isWarnedMember } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, isWarnedMember } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
 
     // Assert
@@ -218,7 +326,13 @@ describe('step management', () => {
   });
 
   it('goNext でステップが進む', () => {
-    const { step, goNext, selectCandidate } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { step, goNext, selectCandidate } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
     goNext();
     expect(step.value).toBe(2);
@@ -227,7 +341,13 @@ describe('step management', () => {
   });
 
   it('goBack でステップが戻る', () => {
-    const { step, goNext, goBack, selectCandidate } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { step, goNext, goBack, selectCandidate } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
     goNext();
     goBack();
@@ -235,7 +355,13 @@ describe('step management', () => {
   });
 
   it('reset でステップ 1 に戻る', () => {
-    const { step, goNext, reset, selectCandidate } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { step, goNext, reset, selectCandidate } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
     goNext();
     reset();
@@ -247,7 +373,13 @@ describe('confirm', () => {
   it('API を呼び出す', async () => {
     // Arrange
     vi.mocked(confirmLobby).mockResolvedValue({ id: 'gs-1' } as never);
-    const { selectCandidate, confirm } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    const { selectCandidate, confirm } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
     selectCandidate('date-1');
 
     // Act

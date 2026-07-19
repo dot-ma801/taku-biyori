@@ -5,7 +5,9 @@ import { useSession } from '@/lib/auth';
 
 export type ViewerKind = 'selected' | 'notSelected' | 'neutral';
 
-export const useConfirmedLobby = (lobby: MaybeRefOrGetter<LobbyDetail | null>) => {
+export const useConfirmedLobby = (
+  lobby: MaybeRefOrGetter<LobbyDetail | null>,
+) => {
   const sessionData = ref(useSession.get());
   const unsub = useSession.subscribe((v) => {
     sessionData.value = v;

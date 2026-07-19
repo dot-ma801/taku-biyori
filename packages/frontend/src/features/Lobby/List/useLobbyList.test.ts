@@ -199,10 +199,17 @@ describe('useLobbyList', () => {
       const openLobby = makeLobby({ status: LobbyStatus.open });
       const schedulingLobby = makeLobby({ status: LobbyStatus.scheduling });
       const confirmedLobby = makeLobby({ status: LobbyStatus.confirmed });
-      mockListLobbies.mockResolvedValue([openLobby, schedulingLobby, confirmedLobby]);
+      mockListLobbies.mockResolvedValue([
+        openLobby,
+        schedulingLobby,
+        confirmedLobby,
+      ]);
 
       // Act
-      const { filteredLobbies, fetch } = useLobbyList([LobbyStatus.open, LobbyStatus.scheduling]);
+      const { filteredLobbies, fetch } = useLobbyList([
+        LobbyStatus.open,
+        LobbyStatus.scheduling,
+      ]);
       await fetch();
 
       // Assert
@@ -211,7 +218,9 @@ describe('useLobbyList', () => {
 
     it('statuses が空配列の場合は何も返さない', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([makeLobby({ status: LobbyStatus.open })]);
+      mockListLobbies.mockResolvedValue([
+        makeLobby({ status: LobbyStatus.open }),
+      ]);
 
       // Act
       const { filteredLobbies, fetch } = useLobbyList([]);

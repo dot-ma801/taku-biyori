@@ -738,10 +738,16 @@ describe('canCancel', () => {
   it('ホストかつ status が confirmed のとき true を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.confirmed }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.confirmed }),
+    );
 
     // Act
-    const { canCancel } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canCancel } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canCancel.value).toBe(true);
@@ -750,10 +756,16 @@ describe('canCancel', () => {
   it('ホストかつ status が today のとき true を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.today }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.today }),
+    );
 
     // Act
-    const { canCancel } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canCancel } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canCancel.value).toBe(true);
@@ -762,10 +774,16 @@ describe('canCancel', () => {
   it('ホスト以外は false を返す', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.confirmed }));
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.confirmed }),
+    );
 
     // Act
-    const { canCancel } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canCancel } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canCancel.value).toBe(false);
@@ -783,7 +801,11 @@ describe('canCancel', () => {
     const gameSession = ref(makeGameSession({ status }));
 
     // Act
-    const { canCancel } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const { canCancel } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Assert
     expect(canCancel.value).toBe(false);
@@ -796,14 +818,22 @@ describe('cancelSession', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateGameSessionStatus).mockResolvedValue({} as never);
     const onRefresh = vi.fn();
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.confirmed }));
-    const { cancelSession } = useGameSessionStatus(SESSION_ID, gameSession, onRefresh);
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.confirmed }),
+    );
+    const { cancelSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      onRefresh,
+    );
 
     // Act
     await cancelSession();
 
     // Assert
-    expect(updateGameSessionStatus).toHaveBeenCalledWith(SESSION_ID, { status: 'cancelled' });
+    expect(updateGameSessionStatus).toHaveBeenCalledWith(SESSION_ID, {
+      status: 'cancelled',
+    });
     expect(onRefresh).toHaveBeenCalled();
   });
 
@@ -811,8 +841,14 @@ describe('cancelSession', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateGameSessionStatus).mockRejectedValue(new Error('fail'));
-    const gameSession = ref(makeGameSession({ status: GameSessionStatus.confirmed }));
-    const { cancelSession } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.confirmed }),
+    );
+    const { cancelSession } = useGameSessionStatus(
+      SESSION_ID,
+      gameSession,
+      vi.fn(),
+    );
 
     // Act
     await cancelSession();

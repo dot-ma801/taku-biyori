@@ -16,12 +16,20 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { mySessions, publicSessions, filteredSessions } = useGameSessionList({
+const {
+  mySessions,
+  publicSessions,
+  filteredMySessions,
+  filteredPublicSessions,
+} = useGameSessionList({
   statuses: props.statuses,
   sortByScheduledAt: props.sortByScheduledAt,
 });
 
 const hasTitle = computed(() => props.title != null);
+const hasFilteredPublicSessions = computed(
+  () => filteredPublicSessions.value.length > 0,
+);
 const isFiltered = computed(() => props.statuses !== undefined);
 
 const onClickCreate = () => {
@@ -45,7 +53,11 @@ const onClickCreate = () => {
       >セッションを作成</BaseButton
     >
     <template v-if="isFiltered">
-      <MySessionList :my-sessions="filteredSessions"></MySessionList>
+      <MySessionList :my-sessions="filteredMySessions"></MySessionList>
+      <PublicSessionList
+        v-if="hasFilteredPublicSessions"
+        :public-sessions="filteredPublicSessions"
+      ></PublicSessionList>
     </template>
     <template v-else>
       <MySessionList :my-sessions="mySessions"></MySessionList>

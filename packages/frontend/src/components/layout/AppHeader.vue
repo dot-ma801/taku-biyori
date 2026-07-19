@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 const onClickTitle = () => {
-  router.push('/');
+  router.push({ name: 'dashboard' });
 };
 </script>
 

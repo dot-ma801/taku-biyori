@@ -2,68 +2,56 @@
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
-import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionListItem } from '@taku-biyori/shared';
-import {
-  Bookmark,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  UsersRound,
-} from '@lucide/vue';
+import LobbyStatusBadge from '@/components/common/LobbyStatusBadge/LobbyStatusBadge.vue';
+import { LobbyStatus } from '@taku-biyori/shared';
+import type { LobbyListItem } from '@taku-biyori/shared';
+import { Bookmark, ChevronDown, ChevronUp, UsersRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const props = defineProps<{
-  mySessions: GameSessionListItem[];
+  myLobbies: LobbyListItem[];
 }>();
 
 const router = useRouter();
 
-const STATUS_ORDER: Record<GameSessionStatus, number> = {
-  [GameSessionStatus.today]: 0,
-  [GameSessionStatus.confirmed]: 1,
-  [GameSessionStatus.scheduling]: 2,
-  [GameSessionStatus.open]: 3,
-  [GameSessionStatus.draft]: 4,
-  [GameSessionStatus.completed]: 5,
-  [GameSessionStatus.cancelled]: 6,
+const STATUS_ORDER: Record<LobbyStatus, number> = {
+  [LobbyStatus.open]: 0,
+  [LobbyStatus.scheduling]: 1,
+  [LobbyStatus.confirmed]: 2,
+  [LobbyStatus.draft]: 3,
+  [LobbyStatus.cancelled]: 4,
 };
 
 const INITIAL_VISIBLE_COUNT = 3;
 const isExpanded = ref(false);
 
-const formattedMySessions = computed(() =>
-  [...props.mySessions]
-    // FIXME: これは、バックエンド側でやるべきでは？ > issue を起票したらその番号を付記すること
+const formattedMyLobbies = computed(() =>
+  [...props.myLobbies]
     .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
     .map((item) => ({
       ...item,
-      formattedDate: item.scheduledAt ?? '調整中',
-      formattedMaxMembers: item.maxMembers ?? '-',
+      formattedMaxPlayers: item.maxPlayers ?? '-',
     })),
 );
 
-const visibleSessions = computed(() =>
+const visibleLobbies = computed(() =>
   isExpanded.value
-    ? formattedMySessions.value
-    : formattedMySessions.value.slice(0, INITIAL_VISIBLE_COUNT),
+    ? formattedMyLobbies.value
+    : formattedMyLobbies.value.slice(0, INITIAL_VISIBLE_COUNT),
 );
 
 const hiddenCount = computed(
-  () => formattedMySessions.value.length - INITIAL_VISIBLE_COUNT,
+  () => formattedMyLobbies.value.length - INITIAL_VISIBLE_COUNT,
 );
 
 const hasMore = computed(() => hiddenCount.value > 0);
-const isEmpty = computed(() => formattedMySessions.value.length === 0);
+const isEmpty = computed(() => formattedMyLobbies.value.length === 0);
 
 const onClickOpen = (id: string) => {
   router.push({
-    name: 'game-sessions-detail',
-    params: {
-      gameSessionId: id,
-    },
+    name: 'lobbies-detail',
+    params: { lobbyId: id },
   });
 };
 </script>
@@ -71,29 +59,25 @@ const onClickOpen = (id: string) => {
 <template>
   <BaseCard>
     <BaseSectionHeading class="card-header" level="h3" :icon="Bookmark">
-      あなたのセッション
+      あなたのロビー
     </BaseSectionHeading>
 
     <p v-if="isEmpty" class="empty-message">
-      まだ参加しているセッションはありません
+      まだ参加しているロビーはありません
     </p>
 
-    <div v-for="item in visibleSessions" :key="item.id" class="item">
+    <div v-for="item in visibleLobbies" :key="item.id" class="item">
       <div>
         <BaseSectionHeading level="h4">{{ item.title }}</BaseSectionHeading>
-        <div class="session-meta">
-          <span class="meta-group">
-            <Calendar :size="16" />
-            <p>{{ item.formattedDate }}</p>
-          </span>
+        <div class="lobby-meta">
           <span class="meta-group">
             <UsersRound :size="16" />
-            <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
+            <p>{{ item.memberCount }}/{{ item.formattedMaxPlayers }}</p>
           </span>
         </div>
       </div>
       <div class="right-area">
-        <GameSessionStatusBadge :status="item.status" />
+        <LobbyStatusBadge :status="item.status" />
         <BaseButton variant="secondary" @click="onClickOpen(item.id)">
           開く
         </BaseButton>
@@ -173,7 +157,7 @@ const onClickOpen = (id: string) => {
   font-size: var(--font-size-sm);
 }
 
-.session-meta {
+.lobby-meta {
   display: flex;
   align-items: center;
   gap: var(--space-2);

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-defineOptions({ name: 'GameSessionList' });
+defineOptions({ name: 'LobbyList' });
 import BaseButton from '@/components/button/BaseButton.vue';
-import MySessionList from '@/features/GameSession/List/MySessionList.vue';
-import PublicSessionList from '@/features/GameSession/List/PublicSessionList.vue';
-import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
+import MyLobbyList from '@/features/Lobby/List/MyLobbyList.vue';
+import PublicLobbyList from '@/features/Lobby/List/PublicLobbyList.vue';
+import { useLobbyList } from '@/features/Lobby/List/useLobbyList';
 import { Plus } from '@lucide/vue';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -13,12 +13,13 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { mySessions, publicSessions } = useGameSessionList();
+const { myLobbies, publicLobbies } = useLobbyList();
 
 const hasTitle = computed(() => props.title != null);
+const hasPublicLobbies = computed(() => publicLobbies.value.length > 0);
 
 const onClickCreate = () => {
-  router.push({ name: 'game-sessions-new' });
+  router.push({ name: 'lobbies-new' });
 };
 </script>
 
@@ -27,7 +28,7 @@ const onClickCreate = () => {
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
       <BaseButton :left-icon="Plus" @click="onClickCreate"
-        >セッションを作成</BaseButton
+        >ロビーを作成</BaseButton
       >
     </div>
     <BaseButton
@@ -35,10 +36,13 @@ const onClickCreate = () => {
       class="create-btn"
       :left-icon="Plus"
       @click="onClickCreate"
-      >セッションを作成</BaseButton
+      >ロビーを作成</BaseButton
     >
-    <MySessionList :my-sessions="mySessions"></MySessionList>
-    <PublicSessionList :public-sessions="publicSessions"></PublicSessionList>
+    <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>
+    <PublicLobbyList
+      v-if="hasPublicLobbies"
+      :public-lobbies="publicLobbies"
+    ></PublicLobbyList>
   </div>
 </template>
 

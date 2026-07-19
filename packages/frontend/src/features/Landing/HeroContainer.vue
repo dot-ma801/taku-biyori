@@ -2,20 +2,13 @@
 defineOptions({ name: 'LandingPage' });
 import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
-import { Plus, UserPlus2 } from '@lucide/vue';
+import { List } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
-const onClickCreate = () => {
-  router.push({
-    name: 'login',
-    query: { tab: 'signup', 'next-page': 'game-sessions-new' },
-  });
-};
-
 const onClickToList = () => {
-  router.push({ name: 'game-sessions-list' });
+  router.push({ name: 'dashboard' });
 };
 </script>
 
@@ -31,26 +24,10 @@ const onClickToList = () => {
     </div>
 
     <div class="button-area">
-      <BaseButton
-        size="lg"
-        :left-icon="Plus"
-        variant="primary"
-        @click="onClickCreate"
-        >卓を立てる</BaseButton
-      >
-      <BaseButton
-        size="lg"
-        :left-icon="UserPlus2"
-        variant="secondary"
-        @click="onClickToList"
-      >
-        募集中の卓を見る
+      <BaseButton size="lg" :left-icon="List" variant="primary" @click="onClickToList">
+        一覧画面へ  
       </BaseButton>
     </div>
-
-    <p class="caution">
-      ＊ 卓の作成にはアカウント登録 / 参加だけならアカウント不要
-    </p>
   </div>
 </template>
 
@@ -61,7 +38,8 @@ const onClickToList = () => {
 
 .description {
   margin: var(--space-4) 0;
-  > p {
+
+  >p {
     color: var(--color-text-muted);
   }
 }

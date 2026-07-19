@@ -6,6 +6,7 @@ import { confirmLobby } from '@/api/lobby';
 import { ApiError } from '@/lib/api-client';
 import { useToast } from '@/composables/useToast';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
+import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 
 export const useConfirmFlow = (
   lobbyId: string,
@@ -49,14 +50,28 @@ export const useConfirmFlow = (
     );
   }
 
-  function isWarnedMember(memberId: string): boolean {
-    if (!selectedCandidateId.value) return false;
-    const date = toValue(availabilityDates).find(
-      (d) => d.id === selectedCandidateId.value,
+  /** 選択中候補日（LobbyAvailabilityDate）。未選択・存在しなければ null */
+  const selectedCandidateDate = computed<LobbyAvailabilityDate | null>(() => {
+    if (!selectedCandidateId.value) return null;
+    return (
+      toValue(availabilityDates).find(
+        (d) => d.id === selectedCandidateId.value,
+      ) ?? null
     );
+  });
+
+  function isWarnedMember(memberId: string): boolean {
+    const date = selectedCandidateDate.value;
     if (!date) return false;
     const answer = getAnswer(date, memberId);
     return answer === 'ng' || answer === null;
+  }
+
+  /** 選択中候補日における指定メンバーの回答。未選択・未回答なら null */
+  function getMemberAnswer(memberId: string): Answer | null {
+    const date = selectedCandidateDate.value;
+    if (!date) return null;
+    return getAnswer(date, memberId);
   }
 
   function selectCandidate(id: string) {
@@ -144,6 +159,7 @@ export const useConfirmFlow = (
     canProceedMembers,
     capacityMismatch,
     isWarnedMember,
+    getMemberAnswer,
     selectCandidate,
     toggleMember,
     goNext,

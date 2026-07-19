@@ -319,6 +319,54 @@ describe('isWarnedMember', () => {
   });
 });
 
+describe('getMemberAnswer', () => {
+  it('候補日を選択していないとき null を返す', () => {
+    // Arrange
+    const { getMemberAnswer } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
+
+    // Assert
+    expect(getMemberAnswer('member-1')).toBeNull();
+  });
+
+  it('選択中候補日の各メンバーの回答を返す', () => {
+    // Arrange
+    const { selectCandidate, getMemberAnswer } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
+    selectCandidate('date-1');
+
+    // Assert
+    expect(getMemberAnswer('member-1')).toBe('ok');
+    expect(getMemberAnswer('member-2')).toBe('maybe');
+    expect(getMemberAnswer('member-3')).toBe('ng');
+  });
+
+  it('選択中候補日に未回答のメンバーは null を返す', () => {
+    // Arrange
+    const { selectCandidate, getMemberAnswer } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
+    selectCandidate('date-2'); // member-2 は date-2 に未回答
+
+    // Assert
+    expect(getMemberAnswer('member-2')).toBeNull();
+  });
+});
+
 describe('step management', () => {
   it('初期ステップは 1', () => {
     const { step } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);

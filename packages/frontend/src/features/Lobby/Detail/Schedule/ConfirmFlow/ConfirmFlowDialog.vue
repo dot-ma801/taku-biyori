@@ -37,6 +37,7 @@ const {
   canProceedMembers,
   capacityMismatch,
   isWarnedMember,
+  getMemberAnswer,
   selectCandidate,
   toggleMember,
   goNext,
@@ -110,6 +111,7 @@ function handleNext() {
       :members="lobby.members"
       :selected-member-ids="selectedMemberIds"
       :is-warned-member="isWarnedMember"
+      :get-member-answer="getMemberAnswer"
       @toggle="toggleMember"
     />
 

@@ -40,7 +40,7 @@ const {
     </BaseSectionHeading>
 
     <div class="user-container">
-      <UserAvatar class="avatar" :size="48" :user-id="profile.id" />
+      <UserAvatar class="avatar" :size="96" :user-id="profile.id" />
 
       <p v-if="!isEditing" class="user-name">{{ displayName }}</p>
 
@@ -100,7 +100,7 @@ const {
 }
 
 .user-name {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 600;
 }
 

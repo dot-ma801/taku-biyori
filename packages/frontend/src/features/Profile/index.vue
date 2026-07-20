@@ -2,6 +2,7 @@
 defineOptions({ name: 'ProfileDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import ProfileDisplay from '@/features/Profile/ProfileDisplay.vue';
+import PasswordChangeCard from '@/features/Profile/PasswordChangeCard.vue';
 import { useGetProfile } from '@/features/Profile/useGetProfile';
 import { useAuthStore } from '@/stores/auth';
 import type { ProfileResponse } from '@taku-biyori/shared';
@@ -27,6 +28,8 @@ function onProfileUpdated(updated: ProfileResponse) {
       :profile="profile"
       @profile-updated="onProfileUpdated"
     ></ProfileDisplay>
+
+    <PasswordChangeCard></PasswordChangeCard>
   </div>
 </template>
 

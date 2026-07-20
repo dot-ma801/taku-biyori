@@ -1188,6 +1188,12 @@ describe('closeLobby', () => {
 });
 
 describe('createGameSessionFromLobby', () => {
+  // 「今日」と一致すると status が today になり confirmed を期待するテストが
+  // 落ちるため、実行時刻から十分離れた未来日を動的に計算する
+  const farFutureScheduledAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365)
+    .toISOString()
+    .slice(0, 10);
+
   const mockGameSessionRow = {
     id: 'game-session-1',
     hostUserId: 'user-1',
@@ -1199,7 +1205,7 @@ describe('createGameSessionFromLobby', () => {
     guestLinkToken: 'new-token',
     isPublished: true,
     openUntil: '2026-07-11',
-    scheduledAt: '2026-07-20',
+    scheduledAt: farFutureScheduledAt,
     completedAt: null,
     cancelledAt: null,
     lobbyId: mockLobbyRow.id,
@@ -1238,7 +1244,7 @@ describe('createGameSessionFromLobby', () => {
       description: null,
       location: null,
       maxPlayers: null,
-      scheduledAt: '2026-07-20',
+      scheduledAt: farFutureScheduledAt,
       openUntil: '2026-07-11',
       guestLinkToken: 'new-token',
       members: [{ id: 'member-1', userId: 'user-2', guestName: null }],
@@ -1267,7 +1273,7 @@ describe('createGameSessionFromLobby', () => {
       description: null,
       location: null,
       maxPlayers: null,
-      scheduledAt: '2026-07-20',
+      scheduledAt: farFutureScheduledAt,
       openUntil: '2026-07-11',
       guestLinkToken: 'new-token',
       members: [

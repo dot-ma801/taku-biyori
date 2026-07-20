@@ -27,11 +27,12 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
     allSessions.value.filter((s) => s.role !== null),
   );
 
-  const filteredSessions = computed(() => {
+  /** 自分のセッションのうち statuses に該当するもの（未指定時は mySessions をそのまま返す） */
+  const filteredMySessions = computed(() => {
     let result =
       statuses !== undefined
-        ? allSessions.value.filter((s) => statuses.includes(s.status))
-        : allSessions.value;
+        ? mySessions.value.filter((s) => statuses.includes(s.status))
+        : mySessions.value;
     if (sortByScheduledAt) {
       result = [...result].sort((a, b) => {
         if (a.scheduledAt == null && b.scheduledAt == null) return 0;
@@ -43,6 +44,12 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
       });
     }
     return result;
+  });
+
+  /** 公開セッションのうち statuses に該当するもの（未指定時は publicSessions をそのまま返す） */
+  const filteredPublicSessions = computed(() => {
+    if (statuses === undefined) return publicSessions.value;
+    return publicSessions.value.filter((s) => statuses.includes(s.status));
   });
 
   /**
@@ -84,7 +91,8 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
     allSessions,
     publicSessions,
     mySessions,
-    filteredSessions,
+    filteredMySessions,
+    filteredPublicSessions,
     nextSession,
     loading,
     errorMessage,

@@ -278,7 +278,7 @@ describe('useCreateLobby', () => {
   });
 
   describe('送信成功時の遷移', () => {
-    it('ロビー一覧画面へ遷移する', async () => {
+    it('作成したロビーの詳細画面へ遷移する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
@@ -288,7 +288,10 @@ describe('useCreateLobby', () => {
       await submit();
 
       // Assert
-      expect(pushMock).toHaveBeenCalledWith({ name: 'lobbies-list' });
+      expect(pushMock).toHaveBeenCalledWith({
+        name: 'lobbies-detail',
+        params: { lobbyId: mockLobby.id },
+      });
     });
   });
 

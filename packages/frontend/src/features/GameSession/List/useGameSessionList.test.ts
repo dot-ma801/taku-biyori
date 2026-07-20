@@ -266,51 +266,111 @@ describe('useGameSessionList', () => {
     });
   });
 
-  describe('filteredSessions（statuses フィルタ）', () => {
-    it('statuses を指定しない場合は allSessions をそのまま返す', async () => {
+  describe('filteredMySessions（自分のセッションを statuses で絞り込む）', () => {
+    it('statuses を指定しない場合は mySessions をそのまま返す', async () => {
       // Arrange
-      const sessions = [
-        makeSession({ status: GameSessionStatus.draft }),
-        makeSession({ status: GameSessionStatus.confirmed }),
-        makeSession({ status: GameSessionStatus.completed }),
-      ];
-      mockListGameSessions.mockResolvedValue(sessions);
+      const mySession = makeSession({
+        role: 'host',
+        status: GameSessionStatus.draft,
+      });
+      const publicSession = makeSession({
+        role: null,
+        status: GameSessionStatus.draft,
+      });
+      mockListGameSessions.mockResolvedValue([mySession, publicSession]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList();
+      const { filteredMySessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
-      expect(filteredSessions.value).toEqual(sessions);
+      expect(filteredMySessions.value).toEqual([mySession]);
     });
 
-    it('statuses を指定した場合は該当するステータスのみ返す', async () => {
+    it('statuses を指定した場合は自分のセッションのうち該当ステータスのみ返す', async () => {
       // Arrange
-      const confirmedSession = makeSession({
+      const myConfirmedSession = makeSession({
+        role: 'host',
         status: GameSessionStatus.confirmed,
       });
-      const todaySession = makeSession({ status: GameSessionStatus.today });
-      const completedSession = makeSession({
-        status: GameSessionStatus.completed,
+      const myDraftSession = makeSession({
+        role: 'host',
+        status: GameSessionStatus.draft,
+      });
+      const publicConfirmedSession = makeSession({
+        role: null,
+        status: GameSessionStatus.confirmed,
       });
       mockListGameSessions.mockResolvedValue([
-        confirmedSession,
-        todaySession,
-        completedSession,
+        myConfirmedSession,
+        myDraftSession,
+        publicConfirmedSession,
       ]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList({
+      const { filteredMySessions, fetch } = useGameSessionList({
         statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
       });
       await fetch();
 
       // Assert
-      expect(filteredSessions.value).toEqual([confirmedSession, todaySession]);
+      expect(filteredMySessions.value).toEqual([myConfirmedSession]);
     });
   });
 
-  describe('filteredSessions（sortByScheduledAt ソート）', () => {
+  describe('filteredPublicSessions（公開セッションを statuses で絞り込む）', () => {
+    it('statuses を指定しない場合は publicSessions をそのまま返す', async () => {
+      // Arrange
+      const mySession = makeSession({
+        role: 'host',
+        status: GameSessionStatus.draft,
+      });
+      const publicSession = makeSession({
+        role: null,
+        status: GameSessionStatus.draft,
+      });
+      mockListGameSessions.mockResolvedValue([mySession, publicSession]);
+
+      // Act
+      const { filteredPublicSessions, fetch } = useGameSessionList();
+      await fetch();
+
+      // Assert
+      expect(filteredPublicSessions.value).toEqual([publicSession]);
+    });
+
+    it('statuses を指定した場合は公開セッションのうち該当ステータスのみ返す', async () => {
+      // Arrange
+      const publicConfirmedSession = makeSession({
+        role: null,
+        status: GameSessionStatus.confirmed,
+      });
+      const publicDraftSession = makeSession({
+        role: null,
+        status: GameSessionStatus.draft,
+      });
+      const myConfirmedSession = makeSession({
+        role: 'host',
+        status: GameSessionStatus.confirmed,
+      });
+      mockListGameSessions.mockResolvedValue([
+        publicConfirmedSession,
+        publicDraftSession,
+        myConfirmedSession,
+      ]);
+
+      // Act
+      const { filteredPublicSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
+      });
+      await fetch();
+
+      // Assert
+      expect(filteredPublicSessions.value).toEqual([publicConfirmedSession]);
+    });
+  });
+
+  describe('filteredMySessions（sortByScheduledAt ソート）', () => {
     it('sortByScheduledAt=true の場合 scheduledAt 昇順で返す', async () => {
       // Arrange
       const first = makeSession({
@@ -324,14 +384,14 @@ describe('useGameSessionList', () => {
       mockListGameSessions.mockResolvedValue([second, first]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList({
+      const { filteredMySessions, fetch } = useGameSessionList({
         sortByScheduledAt: true,
       });
       await fetch();
 
       // Assert
-      expect(filteredSessions.value[0]?.id).toBe(first.id);
-      expect(filteredSessions.value[1]?.id).toBe(second.id);
+      expect(filteredMySessions.value[0]?.id).toBe(first.id);
+      expect(filteredMySessions.value[1]?.id).toBe(second.id);
     });
 
     it('sortByScheduledAt=false の場合は元の順序を保つ', async () => {
@@ -347,12 +407,12 @@ describe('useGameSessionList', () => {
       mockListGameSessions.mockResolvedValue([s1, s2]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList();
+      const { filteredMySessions, fetch } = useGameSessionList();
       await fetch();
 
       // Assert
-      expect(filteredSessions.value[0]?.id).toBe(s1.id);
-      expect(filteredSessions.value[1]?.id).toBe(s2.id);
+      expect(filteredMySessions.value[0]?.id).toBe(s1.id);
+      expect(filteredMySessions.value[1]?.id).toBe(s2.id);
     });
 
     it('scheduledAt が null のセッションはソート時に末尾に置かれる', async () => {
@@ -365,14 +425,14 @@ describe('useGameSessionList', () => {
       mockListGameSessions.mockResolvedValue([noDate, withDate]);
 
       // Act
-      const { filteredSessions, fetch } = useGameSessionList({
+      const { filteredMySessions, fetch } = useGameSessionList({
         sortByScheduledAt: true,
       });
       await fetch();
 
       // Assert
-      expect(filteredSessions.value[0]?.id).toBe(withDate.id);
-      expect(filteredSessions.value[1]?.id).toBe(noDate.id);
+      expect(filteredMySessions.value[0]?.id).toBe(withDate.id);
+      expect(filteredMySessions.value[1]?.id).toBe(noDate.id);
     });
   });
 });

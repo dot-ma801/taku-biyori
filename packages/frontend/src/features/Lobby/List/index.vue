@@ -15,12 +15,14 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { myLobbies, publicLobbies, filteredMyLobbies } = useLobbyList(
-  props.statuses,
-);
+const { myLobbies, publicLobbies, filteredMyLobbies, filteredPublicLobbies } =
+  useLobbyList(props.statuses);
 
 const hasTitle = computed(() => props.title != null);
 const hasPublicLobbies = computed(() => publicLobbies.value.length > 0);
+const hasFilteredPublicLobbies = computed(
+  () => filteredPublicLobbies.value.length > 0,
+);
 const isFiltered = computed(() => props.statuses !== undefined);
 
 const onClickCreate = () => {
@@ -45,6 +47,10 @@ const onClickCreate = () => {
     >
     <template v-if="isFiltered">
       <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
+      <PublicLobbyList
+        v-if="hasFilteredPublicLobbies"
+        :public-lobbies="filteredPublicLobbies"
+      ></PublicLobbyList>
     </template>
     <template v-else>
       <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>

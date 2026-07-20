@@ -224,7 +224,9 @@ paths:
     get:
       tags: [GameSessions]
       summary: 卓（ゲームセッション）一覧取得
-      description: ログインユーザーが参加・作成した卓（ゲームセッション）一覧を返す。
+      description: >-
+        ログインユーザーが参加・作成した卓（ゲームセッション）に加えて、
+        未参加でも公開・募集中（openUntil 未到来）の卓を一覧で返す（絞り込みはフロント）。
       operationId: listGameSessions
       responses:
         '200':
@@ -796,7 +798,9 @@ paths:
     get:
       tags: [Lobbies]
       summary: 募集枠一覧取得
-      description: ログインユーザーが参加・作成した募集枠の一覧を全件返す（絞り込みはフロント）。
+      description: >-
+        ログインユーザーが参加・作成した募集枠に加えて、未参加でも公開・募集中
+        （openUntil 未到来）の募集枠を一覧で返す（絞り込みはフロント）。
       operationId: listLobbies
       responses:
         '200':

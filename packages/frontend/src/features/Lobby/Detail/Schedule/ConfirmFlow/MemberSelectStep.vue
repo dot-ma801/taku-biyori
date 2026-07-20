@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import BaseCheckbox from '@/components/form/BaseCheckbox/BaseCheckbox.vue';
+import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import { memberDisplayName } from '@/utils/memberDisplayName';
 import type { LobbyMember } from '@taku-biyori/shared';
+import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { AlertTriangle } from '@lucide/vue';
 
 const props = defineProps<{
   members: LobbyMember[];
   selectedMemberIds: Set<string>;
   isWarnedMember: (memberId: string) => boolean;
+  getMemberAnswer: (memberId: string) => Answer | null;
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +28,7 @@ const emit = defineEmits<{
           @update:model-value="emit('toggle', member.id)"
         />
         <span class="member-name">{{ memberDisplayName(member) }}</span>
+        <AnswerCell :answer="props.getMemberAnswer(member.id)" />
         <span v-if="props.isWarnedMember(member.id)" class="warn">
           <AlertTriangle :size="14" />
           ×・未回答

@@ -1,9 +1,9 @@
-import { computed, ref, toValue } from 'vue';
+import { computed, getCurrentInstance, onUnmounted, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyDetail, LobbyMember } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { joinLobby, leaveLobby } from '@/api/lobby';
-import { useAuthStore } from '@/stores/auth';
+import { useSession } from '@/lib/auth';
 import { useToast } from '@/composables/useToast';
 
 export const useLobbyMembership = (
@@ -16,22 +16,33 @@ export const useLobbyMembership = (
   // NOTE: 削除されたメンバーの差分反映を呼び出し元に委譲する（退出・ホスト取り消し後）。
   onMemberRemoved: (memberId: string) => void,
 ) => {
-  const authStore = useAuthStore();
+  // useSession は nanostores の Atom なので Vue の ref に変換する
+  const sessionData = ref(useSession.get());
+  const unsubscribeSession = useSession.subscribe((v) => {
+    sessionData.value = v;
+  });
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      unsubscribeSession();
+    });
+  }
+
   const toast = useToast();
   const loading = ref(false);
 
+  /** ログインユーザーの id */
+  const myUserId = computed(() => sessionData.value.data?.user?.id ?? null);
+
   /** ログインユーザーに対応する members 内のエントリ（未参加なら undefined） */
   const myMember = computed(() =>
-    toValue(lobby)?.members.find((m) => m.userId === authStore.currentUser?.id),
+    toValue(lobby)?.members.find((m) => m.userId === myUserId.value),
   );
 
   /** ログインユーザーがこのロビーのメンバーかどうか */
   const isMember = computed(() => !!myMember.value);
 
   /** ログインユーザーがこのロビーのホストかどうか（hostUserId で判定。members には含まれない） */
-  const isHost = computed(
-    () => toValue(lobby)?.hostUserId === authStore.currentUser?.id,
-  );
+  const isHost = computed(() => toValue(lobby)?.hostUserId === myUserId.value);
 
   /** 参加可能かどうか。ホストでなく・未参加で・募集中（open）のときのみ true */
   const canJoin = computed(

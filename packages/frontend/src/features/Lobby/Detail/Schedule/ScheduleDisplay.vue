@@ -231,6 +231,7 @@ const canEditSchedule = computed(
     v-model="confirmFlowDialogModel"
     :lobby="lobby"
     :availability-dates="availabilityDates"
+    :initial-date-id="selectedDateId"
     @lobby-changed="emit('lobby-changed')"
   />
 </template>

@@ -319,6 +319,54 @@ describe('isWarnedMember', () => {
   });
 });
 
+describe('getMemberAnswer', () => {
+  it('候補日を選択していないとき null を返す', () => {
+    // Arrange
+    const { getMemberAnswer } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
+
+    // Assert
+    expect(getMemberAnswer('member-1')).toBeNull();
+  });
+
+  it('選択中候補日の各メンバーの回答を返す', () => {
+    // Arrange
+    const { selectCandidate, getMemberAnswer } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
+    selectCandidate('date-1');
+
+    // Assert
+    expect(getMemberAnswer('member-1')).toBe('ok');
+    expect(getMemberAnswer('member-2')).toBe('maybe');
+    expect(getMemberAnswer('member-3')).toBe('ng');
+  });
+
+  it('選択中候補日に未回答のメンバーは null を返す', () => {
+    // Arrange
+    const { selectCandidate, getMemberAnswer } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+    );
+    selectCandidate('date-2'); // member-2 は date-2 に未回答
+
+    // Assert
+    expect(getMemberAnswer('member-2')).toBeNull();
+  });
+});
+
 describe('step management', () => {
   it('初期ステップは 1', () => {
     const { step } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
@@ -365,6 +413,78 @@ describe('step management', () => {
     selectCandidate('date-1');
     goNext();
     reset();
+    expect(step.value).toBe(1);
+  });
+});
+
+describe('reset（初期選択の反映）', () => {
+  it('initialCandidateId を指定して reset すると selectedCandidateId に反映される', () => {
+    // Arrange
+    const { reset, selectedCandidateId } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+      () => 'date-2',
+    );
+
+    // Act
+    reset();
+
+    // Assert
+    expect(selectedCandidateId.value).toBe('date-2');
+  });
+
+  it('initialCandidateId 指定時、reset すると対応するデフォルトメンバーも選択される', () => {
+    // Arrange
+    const { reset, selectedMemberIds } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+      () => 'date-1',
+    );
+
+    // Act
+    reset();
+
+    // Assert: member-1 (ok) と member-2 (maybe) が選択される
+    expect(selectedMemberIds.value.has('member-1')).toBe(true);
+    expect(selectedMemberIds.value.has('member-2')).toBe(true);
+  });
+
+  it('initialCandidateId が null の場合、reset すると選択がクリアされる（既存動作を維持）', () => {
+    // Arrange
+    const { selectCandidate, reset, selectedCandidateId, selectedMemberIds } =
+      useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
+    selectCandidate('date-1');
+
+    // Act
+    reset();
+
+    // Assert
+    expect(selectedCandidateId.value).toBeNull();
+    expect(selectedMemberIds.value.size).toBe(0);
+  });
+
+  it('reset は常にステップ 1 に戻す', () => {
+    // Arrange
+    const { goNext, reset, step } = useConfirmFlow(
+      LOBBY_ID,
+      members,
+      dates,
+      null,
+      onConflict,
+      () => 'date-1',
+    );
+    goNext();
+
+    // Act
+    reset();
+
+    // Assert
     expect(step.value).toBe(1);
   });
 });

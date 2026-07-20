@@ -74,7 +74,7 @@ export const useCreateLobby = () => {
     try {
       const parsedMaxMembers = parseMaxMembers(maxMembers.value);
 
-      await createLobby({
+      const lobby = await createLobby({
         title: title.value,
         ...(scenarioName.value && { scenarioName: scenarioName.value }),
         ...(parsedMaxMembers !== null && { maxPlayers: parsedMaxMembers }),
@@ -84,8 +84,7 @@ export const useCreateLobby = () => {
         candidateDates: pendingDates.value,
       });
 
-      // 詳細画面が未実装のため、当面は一覧へ遷移する
-      router.push({ name: 'lobbies-list' });
+      router.push({ name: 'lobbies-detail', params: { lobbyId: lobby.id } });
     } catch (err) {
       if (err instanceof ApiError) {
         errorMessages.value = [err.message];

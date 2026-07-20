@@ -24,8 +24,13 @@ const onClickToList = () => {
     </div>
 
     <div class="button-area">
-      <BaseButton size="lg" :left-icon="List" variant="primary" @click="onClickToList">
-        一覧画面へ  
+      <BaseButton
+        size="lg"
+        :left-icon="List"
+        variant="primary"
+        @click="onClickToList"
+      >
+        一覧画面へ
       </BaseButton>
     </div>
   </div>
@@ -39,7 +44,7 @@ const onClickToList = () => {
 .description {
   margin: var(--space-4) 0;
 
-  >p {
+  > p {
     color: var(--color-text-muted);
   }
 }

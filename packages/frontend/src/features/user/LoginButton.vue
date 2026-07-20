@@ -27,8 +27,8 @@ const onClickLogout = async () => {
 };
 
 const onClickUserName = () => {
-  // FIXME:
-  // router.push({ name: 'login' });
+  isOpen.value = false;
+  router.push({ name: 'profile-setting' });
 };
 </script>
 

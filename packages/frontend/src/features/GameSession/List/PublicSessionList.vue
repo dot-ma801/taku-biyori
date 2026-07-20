@@ -37,11 +37,13 @@ const sessionLink = (item: { id: string; title: string }) => ({
     :link="sessionLink(item)"
   >
     <div class="header-area">
-      <GameSessionStatusBadge
-        class="status-badge"
-        :status="item.status"
-      ></GameSessionStatusBadge>
-      <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
+      <div class="header-main">
+        <GameSessionStatusBadge
+          class="status-badge"
+          :status="item.status"
+        ></GameSessionStatusBadge>
+        <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
+      </div>
 
       <p v-if="item.formattedRemainingMembers != null" class="remaining">
         残り
@@ -69,19 +71,19 @@ const sessionLink = (item: { id: string; title: string }) => ({
 
 <style scoped>
 .header-area {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--space-2);
 
   margin-bottom: var(--space-2);
+}
 
-  .status-badge {
-    justify-self: start;
-  }
-  .remaining {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-  }
+.header-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }
 
 .remaining {

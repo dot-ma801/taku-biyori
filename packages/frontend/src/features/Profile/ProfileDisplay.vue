@@ -18,7 +18,6 @@ const emit = defineEmits<{
 }>();
 
 const displayName = computed(() => props.profile.name ?? '未設定');
-const avatarName = computed(() => props.profile.name ?? undefined);
 
 const {
   isEditing,
@@ -41,7 +40,7 @@ const {
     </BaseSectionHeading>
 
     <div class="user-container">
-      <UserAvatar class="avatar" :size="48" :name="avatarName" />
+      <UserAvatar class="avatar" :size="48" :user-id="profile.id" />
 
       <p v-if="!isEditing" class="user-name">{{ displayName }}</p>
 

@@ -58,6 +58,11 @@ const router = createRouter({
       }),
     },
     {
+      path: '/profile/setting',
+      name: 'profile-setting',
+      component: () => import('@/views/ProfileView.vue'),
+    },
+    {
       path: '/lobbies',
       name: 'lobbies-list',
       component: () => import('@/views/Lobby/ListView.vue'),

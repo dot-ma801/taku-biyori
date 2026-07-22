@@ -72,6 +72,6 @@ const onConfirmLogout = async () => {
 
 .logout-area {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
 </style>

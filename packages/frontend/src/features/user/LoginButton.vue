@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { UserRound } from '@lucide/vue';
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
+import LogoutDialog from '@/features/user/LogoutDialog.vue';
 import BasePopover from '@/components/common/BasePopover/BasePopover.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useRouter } from 'vue-router';
@@ -10,16 +11,22 @@ import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore();
 const router = useRouter();
 const isOpen = ref(false);
+const logoutDialogModel = ref(false);
 
 const onClickLogin = () => {
   isOpen.value = false;
   router.push({ name: 'login' });
 };
 
-const onClickLogout = async () => {
+const onClickLogout = () => {
+  isOpen.value = false;
+  logoutDialogModel.value = true;
+};
+
+const onConfirmLogout = async () => {
   try {
     await authStore.logout();
-    isOpen.value = false;
+    logoutDialogModel.value = false;
     router.push('/');
   } catch (error) {
     console.error(error);
@@ -79,6 +86,8 @@ const onClickUserName = () => {
       </li>
     </ul>
   </BasePopover>
+
+  <LogoutDialog v-model="logoutDialogModel" @confirm="onConfirmLogout" />
 </template>
 
 <style scoped>

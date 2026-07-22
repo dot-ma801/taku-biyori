@@ -4,7 +4,7 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ProfileDisplay from '@/features/Profile/ProfileDisplay.vue';
 import PasswordChangeCard from '@/features/Profile/PasswordChangeCard.vue';
-import LogoutDialog from '@/features/Profile/LogoutDialog.vue';
+import LogoutDialog from '@/features/user/LogoutDialog.vue';
 import { useGetProfile } from '@/features/Profile/useGetProfile';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';

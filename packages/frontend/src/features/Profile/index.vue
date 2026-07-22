@@ -4,9 +4,11 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ProfileDisplay from '@/features/Profile/ProfileDisplay.vue';
 import PasswordChangeCard from '@/features/Profile/PasswordChangeCard.vue';
+import LogoutDialog from '@/features/Profile/LogoutDialog.vue';
 import { useGetProfile } from '@/features/Profile/useGetProfile';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
+import { ref } from 'vue';
 import { LogOut } from '@lucide/vue';
 import type { ProfileResponse } from '@taku-biyori/shared';
 
@@ -14,15 +16,18 @@ const { profile, loading, errorMessage, patchProfile } = useGetProfile();
 const authStore = useAuthStore();
 const router = useRouter();
 
+const logoutDialogModel = ref(false);
+
 // ヘッダー等が参照する authStore.user も、更新後のセッションで同期する
 function onProfileUpdated(updated: ProfileResponse) {
   patchProfile(updated);
   authStore.initSession();
 }
 
-const onClickLogout = async () => {
+const onConfirmLogout = async () => {
   try {
     await authStore.logout();
+    logoutDialogModel.value = false;
     router.push('/');
   } catch (error) {
     console.error(error);
@@ -45,10 +50,16 @@ const onClickLogout = async () => {
     <PasswordChangeCard></PasswordChangeCard>
 
     <div class="logout-area">
-      <BaseButton variant="ghost" :left-icon="LogOut" @click="onClickLogout">
+      <BaseButton
+        variant="ghost"
+        :left-icon="LogOut"
+        @click="logoutDialogModel = true"
+      >
         ログアウト
       </BaseButton>
     </div>
+
+    <LogoutDialog v-model="logoutDialogModel" @confirm="onConfirmLogout" />
   </div>
 </template>
 
@@ -61,6 +72,6 @@ const onClickLogout = async () => {
 
 .logout-area {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
 }
 </style>

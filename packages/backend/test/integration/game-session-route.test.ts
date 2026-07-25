@@ -3,11 +3,7 @@ import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
 import type { LobbyUseCases } from '@/lobby/application/use-cases';
-import type {
-  GameSessionListItem,
-  GameSession,
-  AvailabilityDate,
-} from '@taku-biyori/shared';
+import type { GameSessionListItem, GameSession } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -42,12 +38,6 @@ const mockGetOk: GetGameSessionResult = {
   gameSession: mockGameSessionDetail,
 };
 
-const mockAvailabilityDate: AvailabilityDate = {
-  id: 'date-1',
-  date: '2025-09-01',
-  answers: [],
-};
-
 const stubProfile = {} as unknown as ProfileUseCases;
 const stubLobby = {} as unknown as LobbyUseCases;
 
@@ -71,24 +61,6 @@ const makeApp = (
     updateGameSessionStatus:
       overrides.updateGameSessionStatus ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
-    listAvailabilityDates:
-      overrides.listAvailabilityDates ??
-      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
-    addAvailabilityDate:
-      overrides.addAvailabilityDate ??
-      vi.fn().mockResolvedValue({ type: 'ok', date: mockAvailabilityDate }),
-    deleteAvailabilityDate:
-      overrides.deleteAvailabilityDate ??
-      vi.fn().mockResolvedValue({ type: 'ok' }),
-    confirmAvailabilityDate:
-      overrides.confirmAvailabilityDate ??
-      vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
-    bulkUpdateAvailabilityDates:
-      overrides.bulkUpdateAvailabilityDates ??
-      vi.fn().mockResolvedValue({ type: 'ok', dates: [] }),
-    updateAvailabilityDateResponse:
-      overrides.updateAvailabilityDateResponse ??
-      vi.fn().mockResolvedValue({ type: 'ok', answer: {} }),
     listMembers:
       overrides.listMembers ??
       vi.fn().mockResolvedValue({ type: 'ok', members: [] }),

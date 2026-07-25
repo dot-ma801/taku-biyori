@@ -5,8 +5,6 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import {
   type LucideIcon,
   EyeOff,
-  Megaphone,
-  CalendarClock,
   CalendarCheck,
   CircleDot,
   Flag,
@@ -19,28 +17,23 @@ const props = defineProps<{ gameSessionStatus: GameSessionStatus }>();
 type StatusAppearance = {
   label: string;
   text: string;
-  variant: 'default' | 'primary' | 'success' | 'warning' | 'error';
+  variant: 'default' | 'success' | 'warning' | 'error';
   icon: LucideIcon;
 };
 
-const STATUS_APPEARANCE: Record<GameSessionStatus, StatusAppearance> = {
+/**
+ * 卓が取りうるステータスの表示定義。
+ *
+ * `open`（募集中）・`scheduling`（日程調整中）は募集枠（lobby）へ移管したため卓では表示しない。
+ * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもカードを描画しないよう
+ * Partial（未定義なら非表示）で持つ。
+ */
+const STATUS_APPEARANCE: Partial<Record<GameSessionStatus, StatusAppearance>> = {
   [GameSessionStatus.draft]: {
     label: '非公開',
     text: 'まだ公開していません。準備ができたら公開しましょう。',
     variant: 'default',
     icon: EyeOff,
-  },
-  [GameSessionStatus.open]: {
-    label: '募集中',
-    text: '参加者を募集しています。',
-    variant: 'primary',
-    icon: Megaphone,
-  },
-  [GameSessionStatus.scheduling]: {
-    label: '日程調整中',
-    text: '募集を終了し、開催日を調整しています。',
-    variant: 'warning',
-    icon: CalendarClock,
   },
   [GameSessionStatus.confirmed]: {
     label: '実施前',
@@ -72,7 +65,11 @@ const appearance = computed(() => STATUS_APPEARANCE[props.gameSessionStatus]);
 </script>
 
 <template>
-  <BaseCard :data-variant="appearance.variant" class="status-card">
+  <BaseCard
+    v-if="appearance"
+    :data-variant="appearance.variant"
+    class="status-card"
+  >
     <div class="left-area">
       <div class="icon-wrapper">
         <component class="icon" :is="appearance.icon" />
@@ -96,10 +93,6 @@ const appearance = computed(() => STATUS_APPEARANCE[props.gameSessionStatus]);
   );
 }
 
-[data-variant='primary'] {
-  --status-color: var(--color-primary);
-  --status-bg: var(--color-primary-soft);
-}
 [data-variant='warning'] {
   --status-color: var(--color-warning);
   --status-bg: var(--color-warning-soft);

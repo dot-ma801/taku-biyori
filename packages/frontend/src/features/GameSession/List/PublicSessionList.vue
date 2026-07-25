@@ -13,7 +13,7 @@ const props = defineProps<{
 const formattedPublishSessions = computed(() => {
   return [...props.publicSessions].map((item) => ({
     ...item,
-    formattedDate: item.scheduledAt ?? '調整中',
+    formattedDate: item.scheduledAt ?? '未設定',
     formattedMaxMembers: item.maxMembers ?? '-',
     formattedRemainingMembers:
       item.maxMembers != null ? item.maxMembers - item.memberCount : null,

@@ -6,35 +6,35 @@ const props = defineProps<{
   status: GameSessionStatus;
 }>();
 
-type Variant = 'muted' | 'primary' | 'warning' | 'success' | 'error';
+type Variant = 'muted' | 'success' | 'error';
+type Appearance = { label: string; variant: Variant };
 
-const LABEL_MAP: Record<GameSessionStatus, string> = {
-  [GameSessionStatus.draft]: '非公開',
-  [GameSessionStatus.open]: '募集中',
-  [GameSessionStatus.scheduling]: '日程調整中',
-  [GameSessionStatus.confirmed]: '実施前',
-  [GameSessionStatus.today]: '当日',
-  [GameSessionStatus.completed]: '通過済み',
-  [GameSessionStatus.cancelled]: '中止',
+/**
+ * 卓が取りうるステータスの表示定義。
+ *
+ * `open`（募集中）・`scheduling`（日程調整中）は募集枠（lobby）へ移管したため卓では表示しない。
+ * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもバッジを描画しないよう
+ * Partial（未定義なら非表示）で持つ。
+ */
+const APPEARANCE_MAP: Partial<Record<GameSessionStatus, Appearance>> = {
+  [GameSessionStatus.draft]: { label: '非公開', variant: 'muted' },
+  [GameSessionStatus.confirmed]: { label: '実施前', variant: 'success' },
+  [GameSessionStatus.today]: { label: '当日', variant: 'error' },
+  [GameSessionStatus.completed]: { label: '通過済み', variant: 'muted' },
+  [GameSessionStatus.cancelled]: { label: '中止', variant: 'error' },
 };
 
-const VARIANT_MAP: Record<GameSessionStatus, Variant> = {
-  [GameSessionStatus.draft]: 'muted',
-  [GameSessionStatus.open]: 'primary',
-  [GameSessionStatus.scheduling]: 'warning',
-  [GameSessionStatus.confirmed]: 'success',
-  [GameSessionStatus.today]: 'error',
-  [GameSessionStatus.completed]: 'muted',
-  [GameSessionStatus.cancelled]: 'error',
-};
-
-const label = computed(() => LABEL_MAP[props.status]);
-const variant = computed(() => VARIANT_MAP[props.status]);
+const appearance = computed(() => APPEARANCE_MAP[props.status]);
+const badgeClass = computed(() =>
+  appearance.value
+    ? ['status-badge', `status-badge--${appearance.value.variant}`]
+    : [],
+);
 </script>
 
 <template>
-  <span :class="['status-badge', `status-badge--${variant}`]">
-    {{ label }}
+  <span v-if="appearance" :class="badgeClass">
+    {{ appearance.label }}
   </span>
 </template>
 
@@ -55,24 +55,6 @@ const variant = computed(() => VARIANT_MAP[props.status]);
 .status-badge--muted {
   background: var(--color-surface-muted);
   color: var(--color-text-secondary);
-}
-
-.status-badge--primary {
-  background: color-mix(
-    in srgb,
-    var(--color-primary) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-primary);
-}
-
-.status-badge--warning {
-  background: color-mix(
-    in srgb,
-    var(--color-warning) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-warning);
 }
 
 .status-badge--success {

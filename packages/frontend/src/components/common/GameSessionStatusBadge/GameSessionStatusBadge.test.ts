@@ -11,7 +11,7 @@ describe('GameSessionStatusBadge', () => {
     it('デフォルト props でレンダリングされる', () => {
       // Arrange & Act
       const wrapper = mount(GameSessionStatusBadge, {
-        props: { status: GameSessionStatus.open },
+        props: { status: GameSessionStatus.confirmed },
       });
 
       // Assert
@@ -22,11 +22,10 @@ describe('GameSessionStatusBadge', () => {
   describe('ラベル', () => {
     it.each([
       [GameSessionStatus.draft, '非公開'],
-      [GameSessionStatus.open, '募集中'],
-      [GameSessionStatus.scheduling, '日程調整中'],
       [GameSessionStatus.confirmed, '実施前'],
       [GameSessionStatus.today, '当日'],
       [GameSessionStatus.completed, '通過済み'],
+      [GameSessionStatus.cancelled, '中止'],
     ] as const)(
       'status="%s" のとき "%s" と表示される',
       (status, expectedLabel) => {
@@ -42,11 +41,10 @@ describe('GameSessionStatusBadge', () => {
   describe('バリアント', () => {
     it.each([
       [GameSessionStatus.draft, 'status-badge--muted'],
-      [GameSessionStatus.open, 'status-badge--primary'],
-      [GameSessionStatus.scheduling, 'status-badge--warning'],
       [GameSessionStatus.confirmed, 'status-badge--success'],
       [GameSessionStatus.today, 'status-badge--error'],
       [GameSessionStatus.completed, 'status-badge--muted'],
+      [GameSessionStatus.cancelled, 'status-badge--error'],
     ] as const)(
       'status="%s" のとき %s クラスが付与される',
       (status, className) => {
@@ -55,6 +53,19 @@ describe('GameSessionStatusBadge', () => {
 
         // Assert
         expect(wrapper.find('.status-badge').classes()).toContain(className);
+      },
+    );
+  });
+
+  describe('卓では扱わないステータス', () => {
+    it.each([GameSessionStatus.open, GameSessionStatus.scheduling] as const)(
+      'status="%s"（募集枠へ移管）のときバッジを描画しない',
+      (status) => {
+        // Arrange & Act
+        const wrapper = mount(GameSessionStatusBadge, { props: { status } });
+
+        // Assert
+        expect(wrapper.find('.status-badge').exists()).toBe(false);
       },
     );
   });

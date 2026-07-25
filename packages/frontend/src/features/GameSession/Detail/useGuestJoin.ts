@@ -1,6 +1,10 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import {
+  type GameSessionStatus,
+  GameSessionAction,
+  canPerform,
+} from '@taku-biyori/shared';
 import { joinAsGuest } from '@/api/game-session';
 import { useToast } from '@/composables/useToast';
 
@@ -25,10 +29,21 @@ export const useGuestJoin = (
   /** 招待トークンが付与されているか（招待リンク経由のアクセスか） */
   const hasToken = computed(() => !!toValue(token));
 
-  /** ゲスト参加フォームを表示できるか。トークンがあり status が open のときのみ true */
-  const canGuestJoin = computed(
-    () => hasToken.value && toValue(status) === GameSessionStatus.open,
-  );
+  /**
+   * ゲスト参加フォームを表示できるか。トークンがあり、shared の ACTION_POLICIES が
+   * joinSession を許可するステータス（confirmed / today）のときのみ true。
+   * 判定は API 契約（canPerform）に委譲し、ゲスト参加 API のバリデーションと同じ表を使う。
+   */
+  const canGuestJoin = computed(() => {
+    const currentStatus = toValue(status);
+    if (currentStatus === undefined) {
+      return false;
+    }
+    return (
+      hasToken.value &&
+      canPerform(GameSessionAction.joinSession, currentStatus, 'member')
+    );
+  });
 
   /** ゲスト名が入力済みか。送信ボタンの活性判定に使う */
   const canSubmit = computed(() => guestName.value.trim().length > 0);

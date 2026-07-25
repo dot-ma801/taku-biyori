@@ -14,17 +14,17 @@ type Appearance = { label: string; variant: Variant };
  *
  * `open`（募集中）・`scheduling`（日程調整中）は募集枠（lobby）へ移管したため卓では表示しない。
  * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもバッジを描画しないよう
- * Partial（未定義なら非表示）で持つ。
+ * 「キーが無いことがありうる」ルックアップとして Map で持つ。
  */
-const APPEARANCE_MAP: Partial<Record<GameSessionStatus, Appearance>> = {
-  [GameSessionStatus.draft]: { label: '非公開', variant: 'muted' },
-  [GameSessionStatus.confirmed]: { label: '実施前', variant: 'success' },
-  [GameSessionStatus.today]: { label: '当日', variant: 'error' },
-  [GameSessionStatus.completed]: { label: '通過済み', variant: 'muted' },
-  [GameSessionStatus.cancelled]: { label: '中止', variant: 'error' },
-};
+const APPEARANCE_MAP = new Map<GameSessionStatus, Appearance>([
+  [GameSessionStatus.draft, { label: '非公開', variant: 'muted' }],
+  [GameSessionStatus.confirmed, { label: '実施前', variant: 'success' }],
+  [GameSessionStatus.today, { label: '当日', variant: 'error' }],
+  [GameSessionStatus.completed, { label: '通過済み', variant: 'muted' }],
+  [GameSessionStatus.cancelled, { label: '中止', variant: 'error' }],
+]);
 
-const appearance = computed(() => APPEARANCE_MAP[props.status]);
+const appearance = computed(() => APPEARANCE_MAP.get(props.status));
 const badgeClass = computed(() =>
   appearance.value
     ? ['status-badge', `status-badge--${appearance.value.variant}`]

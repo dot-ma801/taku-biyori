@@ -71,7 +71,7 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   gap: var(--space-2);
   font-family: var(--font-family-base);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   line-height: 1.2;
   border-radius: var(--radius-sm);

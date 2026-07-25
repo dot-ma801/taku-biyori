@@ -65,7 +65,7 @@ const open = defineModel<boolean>({ default: false });
 
 .collapsible__title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
   letter-spacing: 0.01em;
 }

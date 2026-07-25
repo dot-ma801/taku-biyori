@@ -146,7 +146,7 @@ function onCellKeydown(
 .th {
   padding: var(--space-3) var(--space-4);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-secondary);
   background: var(--color-surface-raised);
   border-bottom: 1px solid var(--color-border);

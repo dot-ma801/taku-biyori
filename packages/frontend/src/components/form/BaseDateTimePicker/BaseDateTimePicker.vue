@@ -62,7 +62,7 @@ const model = defineModel<string>({ default: '' });
 
 .datetimepicker__label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
 }

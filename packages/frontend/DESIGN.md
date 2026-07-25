@@ -33,37 +33,37 @@ colors:
   info: '#005F6B'
 typography:
   headline-lg:
-    fontFamily: '"Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+    fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 32px
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: -0.02em
   headline-md:
-    fontFamily: '"Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+    fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 24px
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: -0.015em
   body-md:
-    fontFamily: '"Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+    fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 16px
     fontWeight: 400
     lineHeight: 1.65
     letterSpacing: 0
   body-sm:
-    fontFamily: '"Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+    fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 14px
     fontWeight: 400
     lineHeight: 1.55
     letterSpacing: 0
   label-md:
-    fontFamily: '"Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+    fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 13px
-    fontWeight: 600
+    fontWeight: 500
     lineHeight: 1.2
     letterSpacing: 0.01em
   code-sm:
-    fontFamily: '"Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+    fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 13px
     fontWeight: 400
     lineHeight: 1.45
@@ -130,8 +130,9 @@ components:
 ## Overview
 
 This product should feel like a friendly, practical workbench for text and
-structured content. The tone is calm, efficient, and slightly code-like rather
-than playful. It should feel approachable without becoming soft or decorative.
+structured content. The tone is calm, efficient, and warm rather than clinical
+or code-like. It should feel approachable and welcoming without becoming
+childish or gimmicky.
 
 The system uses a restrained teal-blue accent. It should read as dependable,
 moderately muted, and not overly bright.
@@ -165,15 +166,22 @@ Dark theme surfaces should stay graphite-like instead of pure black:
 ## Typography
 
 Typography should remain highly readable and consistent across the UI. Use the
-same monospace family everywhere, but vary size, weight, and spacing to create
-hierarchy rather than switching font families.
+same rounded sans-serif pairing everywhere — Quicksand for Latin characters and
+numerals, M PLUS Rounded 1c for Japanese — and vary size, weight, and spacing to
+create hierarchy rather than switching font families.
 
 Headings should feel strong and compact. Body text should stay at a standard
 reading size with comfortable line height. Labels should be slightly tighter and
 heavier than body copy so controls remain easy to scan.
 
-Code-like or telemetry-like text may use the same family with smaller size and
-slightly reduced emphasis, but it should never become tiny or hard to read.
+Only the weights 400, 500, and 700 may be used. M PLUS Rounded 1c has no static
+600 weight, so a `font-weight: 600` request resolves to 700 for Japanese while
+Latin resolves to a real 600 — the two scripts end up mismatched, and bold
+kanji clog together at small sizes. Labels and controls therefore use 500.
+
+Telemetry-like or meta text (timestamps, counters) may use the same family with
+smaller size and slightly reduced emphasis, but it should never become tiny or
+hard to read.
 
 ## Layout
 

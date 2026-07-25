@@ -192,7 +192,7 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 
 .card-date {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
 }
 
@@ -201,7 +201,7 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
   display: inline-flex;
   gap: var(--space-2);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 

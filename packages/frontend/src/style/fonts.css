@@ -1,0 +1,9 @@
+/* 読み込むウェイトは実際に使われているものだけに絞る（400 / 500 / 700）。
+   M PLUS Rounded 1c に静的 600 が存在せず、font-weight:600 だと和文だけ
+   700 に繰り上がって欧文とズレるため、ラベル系は 500 で統一している。 */
+@import '@fontsource/quicksand/400.css';
+@import '@fontsource/quicksand/500.css';
+@import '@fontsource/quicksand/700.css';
+@import '@fontsource/m-plus-rounded-1c/400.css';
+@import '@fontsource/m-plus-rounded-1c/500.css';
+@import '@fontsource/m-plus-rounded-1c/700.css';

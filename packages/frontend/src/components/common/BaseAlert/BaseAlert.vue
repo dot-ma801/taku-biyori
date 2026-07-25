@@ -129,7 +129,7 @@ const icon = computed(
 }
 
 .alert__title {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 13px;
   margin: 0 0 2px;
 }

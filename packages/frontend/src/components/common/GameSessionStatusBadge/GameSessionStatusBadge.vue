@@ -45,7 +45,7 @@ const variant = computed(() => VARIANT_MAP[props.status]);
   padding: 3px 10px;
   font-family: var(--font-family-base);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
   border-radius: var(--radius-full);
   white-space: nowrap;

@@ -427,7 +427,7 @@ const emailRules = [
 }
 .section__title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-muted);

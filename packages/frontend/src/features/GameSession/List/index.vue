@@ -81,7 +81,7 @@ const onClickCreate = () => {
 
 .section-title {
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
 }
 

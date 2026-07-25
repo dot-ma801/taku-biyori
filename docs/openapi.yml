@@ -1793,13 +1793,13 @@ components:
       type: object
       required: [memberId, answer]
       description: |
-        ゲスト用。memberId 必須。指定したメンバーはその卓のゲストメンバー
+        ゲスト用。memberId 必須。指定したメンバーはその募集枠のゲストメンバー
         （user_id = null）でなければならない。認可は Guest-Token ヘッダーで行う。
       properties:
         memberId:
           type: string
           format: uuid
-          description: 回答対象のゲストメンバー（game_session_members.id, user_id = null）
+          description: 回答対象のゲストメンバー（lobby_members.id, user_id = null）
         answer:
           $ref: '#/components/schemas/ScheduleAnswer'
         comment:
@@ -1952,8 +1952,8 @@ components:
     LobbyAvailabilityDateAnswer:
       type: object
       description: |
-        募集枠の候補日に対する◯△×回答。game-session の `AvailabilityResponse` と異なり、
-        `dateId`（親候補日への逆参照）と `createdAt` は持たない（候補日配下に入れ子で返すため不要）。
+        募集枠の候補日に対する◯△×回答。`LobbyAvailabilityDate.answers` に入れ子で返すため、
+        `dateId`（親候補日への逆参照）と `createdAt` は持たない。
       required: [id, memberId, answer]
       properties:
         id:
@@ -1972,8 +1972,7 @@ components:
     LobbyAvailabilityDate:
       type: object
       description: |
-        募集枠の候補日。game-session の `AvailabilityDate` と異なり、回答一覧は
-        `answers`（`responses` ではない）に入り、`createdAt` は持たない。
+        募集枠の候補日。各メンバーの回答一覧を `answers` に入れ子で持ち、`createdAt` は持たない。
       required: [id, date, answers]
       properties:
         id:

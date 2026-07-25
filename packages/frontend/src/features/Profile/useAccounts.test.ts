@@ -28,6 +28,19 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe('初期状態', () => {
+  it('取得前は loading が true になる（未確定の状態で UI を出さないため）', () => {
+    // Arrange
+    vi.mocked(listAccounts).mockResolvedValue({ data: [], error: null });
+
+    // Act
+    const { loading } = useAccounts();
+
+    // Assert
+    expect(loading.value).toBe(true);
+  });
+});
+
 describe('fetch', () => {
   it('credential プロバイダーのアカウントがあれば hasPassword が true になる', async () => {
     // Arrange

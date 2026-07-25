@@ -65,17 +65,33 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus(input)).toBe('scheduling');
   });
 
+  // isToday はローカル日時（getFullYear/getMonth/getDate）で比較するため、
+  // フィクスチャも UTC 文字列ではなくローカル時刻で組み立てて
+  // 実行環境のタイムゾーンに依存しないようにする。
   it('now を注入して比較できる', () => {
     // Arrange
-    const fixedNow = new Date('2025-08-10T12:00:00Z');
+    const fixedNow = new Date(2025, 7, 10, 12, 0, 0);
     const input = {
       ...base,
       isPublished: true,
-      scheduledAt: new Date('2025-08-10T00:00:00Z'),
+      scheduledAt: new Date(2025, 7, 10, 0, 0, 0),
     };
 
     // Act / Assert
     expect(getGameSessionStatus(input, fixedNow)).toBe('today');
+  });
+
+  it('now を注入したとき別日の scheduled_at は confirmed になる', () => {
+    // Arrange
+    const fixedNow = new Date(2025, 7, 10, 12, 0, 0);
+    const input = {
+      ...base,
+      isPublished: true,
+      scheduledAt: new Date(2025, 7, 11, 0, 0, 0),
+    };
+
+    // Act / Assert
+    expect(getGameSessionStatus(input, fixedNow)).toBe('confirmed');
   });
 
   it('cancelled_at がセットされていれば cancelled（最優先・非公開でも）', () => {

@@ -30,7 +30,7 @@ export const leaveGameSession = async (
 
   const status = await repo.findGameSessionStatus(gameSessionId);
   // 退出可能なステータスは ACTION_POLICIES の leaveSession に委譲する
-  // （段階6b で open を導出しなくなったため confirmed / scheduling が該当）
+  // （段階6b で open を導出しなくなったため confirmed / today / scheduling が該当）
   if (
     status === null ||
     !canPerform(GameSessionAction.leaveSession, status, 'member')

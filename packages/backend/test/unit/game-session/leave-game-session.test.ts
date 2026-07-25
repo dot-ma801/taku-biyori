@@ -52,6 +52,25 @@ describe('leaveGameSession', () => {
     expect(result).toEqual({ type: 'ok' });
   });
 
+  // 当日参加したユーザーがその日のうちに退出できる必要がある（joinSession と対称）
+  it('実施日当日（today）でも退出できる', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.today),
+    });
+
+    // Act
+    const result = await leaveGameSession(
+      repo,
+      'session-1',
+      'member-1',
+      'user-2',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'ok' });
+  });
+
   it('ホストが他のメンバーを削除できる', async () => {
     // Arrange
     const repo = makeRepo();
@@ -125,10 +144,9 @@ describe('leaveGameSession', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  // 退出可能なのは公開済み・実施前（confirmed）と日程未確定（scheduling）（ACTION_POLICIES）
+  // 退出可能なのは公開済み・実施前（confirmed）／当日（today）／日程未確定（scheduling）（ACTION_POLICIES）
   it.each([
     GameSessionStatus.draft,
-    GameSessionStatus.today,
     GameSessionStatus.completed,
     GameSessionStatus.cancelled,
   ])('退出できないステータス（%s）は sessionNotOpen を返す', async (status) => {

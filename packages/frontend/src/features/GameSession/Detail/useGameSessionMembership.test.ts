@@ -235,22 +235,23 @@ describe('join', () => {
 });
 
 describe('canLeave', () => {
-  // ACTION_POLICIES.leaveSession の statuses（confirmed / scheduling）に従う
-  it.each([GameSessionStatus.confirmed, GameSessionStatus.scheduling] as const)(
-    '自分がメンバーで %s ステータスの場合は true',
-    (status) => {
-      // Arrange
-      const gameSession = ref(
-        makeGameSession({ status, members: [makeMember()] }),
-      );
+  // ACTION_POLICIES.leaveSession の statuses（confirmed / today / scheduling）に従う
+  it.each([
+    GameSessionStatus.confirmed,
+    GameSessionStatus.today,
+    GameSessionStatus.scheduling,
+  ] as const)('自分がメンバーで %s ステータスの場合は true', (status) => {
+    // Arrange
+    const gameSession = ref(
+      makeGameSession({ status, members: [makeMember()] }),
+    );
 
-      // Act
-      const { canLeave } = setup(gameSession);
+    // Act
+    const { canLeave } = setup(gameSession);
 
-      // Assert
-      expect(canLeave.value).toBe(true);
-    },
-  );
+    // Assert
+    expect(canLeave.value).toBe(true);
+  });
 
   it('自分がメンバーでない場合は false', () => {
     // Arrange
@@ -265,7 +266,6 @@ describe('canLeave', () => {
 
   it.each([
     GameSessionStatus.draft,
-    GameSessionStatus.today,
     GameSessionStatus.completed,
     GameSessionStatus.cancelled,
   ] as const)('退出できない %s ステータスの場合は false', (status) => {

@@ -71,7 +71,7 @@ const model = defineModel<string>();
 .tabs__item {
   padding: 10px var(--space-4);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--color-text-muted);
   border: none;

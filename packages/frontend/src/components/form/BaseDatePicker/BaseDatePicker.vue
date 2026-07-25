@@ -265,7 +265,7 @@ function selectDate(dateStr: string | null) {
 
 .datepicker__label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
 }
@@ -337,7 +337,7 @@ function selectDate(dateStr: string | null) {
 
 .datepicker__nav-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
 }
 
@@ -372,7 +372,7 @@ function selectDate(dateStr: string | null) {
 .datepicker__weekday {
   text-align: center;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-muted);
   padding: 4px 0;
 }
@@ -432,7 +432,7 @@ function selectDate(dateStr: string | null) {
 .datepicker__cell--selected {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
-  font-weight: 600;
+  font-weight: 500;
 }
 .datepicker__cell--selected:hover {
   background: color-mix(

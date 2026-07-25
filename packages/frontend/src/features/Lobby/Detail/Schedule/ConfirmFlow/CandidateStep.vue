@@ -80,7 +80,7 @@ const emit = defineEmits<{
 }
 
 .candidate-date {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .candidate-counts {

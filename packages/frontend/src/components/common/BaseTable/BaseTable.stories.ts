@@ -86,15 +86,15 @@ export const AllVariants: Story = {
     template: `
       <div style="display: flex; flex-direction: column; gap: 24px;">
         <div>
-          <p style="margin-bottom: 8px; font-weight: 600;">デフォルト（ソートあり）</p>
+          <p style="margin-bottom: 8px; font-weight: 500;">デフォルト（ソートあり）</p>
           <BaseTable :columns="columns" :rows="rows" />
         </div>
         <div>
-          <p style="margin-bottom: 8px; font-weight: 600;">ストライプ</p>
+          <p style="margin-bottom: 8px; font-weight: 500;">ストライプ</p>
           <BaseTable :columns="columns" :rows="rows" :striped="true" />
         </div>
         <div>
-          <p style="margin-bottom: 8px; font-weight: 600;">空テーブル</p>
+          <p style="margin-bottom: 8px; font-weight: 500;">空テーブル</p>
           <BaseTable :columns="columns" :rows="[]" />
         </div>
       </div>

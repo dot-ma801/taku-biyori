@@ -67,7 +67,7 @@ withDefaults(
 }
 .progress-wrap__label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-secondary);
 }
 .progress-wrap__value {

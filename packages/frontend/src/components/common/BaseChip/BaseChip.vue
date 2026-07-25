@@ -69,7 +69,7 @@ const removeIconSize = computed(() => ICON_SIZE[props.size]);
   align-items: center;
   gap: var(--space-1);
   font-family: var(--font-family-base);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   line-height: 1.2;
   border-radius: var(--radius-full);

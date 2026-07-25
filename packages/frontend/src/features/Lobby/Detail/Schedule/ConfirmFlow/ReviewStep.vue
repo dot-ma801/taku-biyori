@@ -57,7 +57,7 @@ const dateLabel = computed(() =>
 }
 
 .review-label {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 12px;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -66,7 +66,7 @@ const dateLabel = computed(() =>
 
 .review-value {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .review-members {

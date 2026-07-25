@@ -173,7 +173,7 @@ const sortedRows = computed(() => {
 .table__th {
   padding: var(--space-3) var(--space-4);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-secondary);
   white-space: nowrap;
   border-bottom: 1px solid var(--color-border);

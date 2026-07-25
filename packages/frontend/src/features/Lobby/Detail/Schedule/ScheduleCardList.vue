@@ -184,7 +184,7 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 
 .card-date {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
 }
 

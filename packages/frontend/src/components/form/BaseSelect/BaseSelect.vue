@@ -79,7 +79,7 @@ const model = defineModel<string>();
 
 .select-wrap__label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
 }
@@ -167,7 +167,7 @@ const model = defineModel<string>();
 }
 .select__item--selected {
   color: var(--color-primary-text);
-  font-weight: 600;
+  font-weight: 500;
 }
 .select__item--disabled {
   opacity: 0.45;

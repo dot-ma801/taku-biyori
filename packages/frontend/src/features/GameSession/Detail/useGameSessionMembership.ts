@@ -1,7 +1,10 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { GameSessionDetail } from '@taku-biyori/shared';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import {
+  type GameSessionDetail,
+  GameSessionAction,
+  canPerform,
+} from '@taku-biyori/shared';
 import { joinGameSession, leaveGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
@@ -26,22 +29,42 @@ export const useGameSessionMembership = (
 
   const isMember = computed(() => !!myMember.value);
 
-  const canJoin = computed(
-    () =>
+  /**
+   * 参加ボタンを表示できるか。未参加かつ shared の ACTION_POLICIES が
+   * joinSession を許可するステータス（confirmed / today）のときのみ true。
+   * 判定は API 契約（canPerform）に委譲し、参加 API のバリデーションと同じ表を使う。
+   */
+  const canJoin = computed(() => {
+    const status = toValue(gameSession)?.status;
+    if (status === undefined) {
+      return false;
+    }
+    return (
       !isMember.value &&
-      toValue(gameSession)?.status === GameSessionStatus.open,
-  );
+      canPerform(GameSessionAction.joinSession, status, 'member')
+    );
+  });
 
   const isHost = computed(
     () => toValue(gameSession)?.createdBy === authStore.currentUser?.id,
   );
 
-  const canLeave = computed(
-    () =>
+  /**
+   * 退出ボタンを表示できるか。参加済みかつ非ホストで、shared の ACTION_POLICIES が
+   * leaveSession を許可するステータス（confirmed / today / scheduling）のときのみ true。
+   * ホストは退出ではなく中止・削除で卓を畳むため対象外。
+   */
+  const canLeave = computed(() => {
+    const status = toValue(gameSession)?.status;
+    if (status === undefined) {
+      return false;
+    }
+    return (
       isMember.value &&
       !isHost.value &&
-      toValue(gameSession)?.status === GameSessionStatus.open,
-  );
+      canPerform(GameSessionAction.leaveSession, status, 'member')
+    );
+  });
 
   async function join() {
     if (loading.value) return;

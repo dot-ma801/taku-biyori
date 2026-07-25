@@ -26,7 +26,6 @@ const mockGameSessionDetail: GameSessionDetail = {
   maxMembers: 4,
   status: GameSessionStatus.draft,
   isPublished: false,
-  openUntil: null,
   scheduledAt: SCHEDULED_AT,
   completedAt: null,
   createdBy: 'user-1',

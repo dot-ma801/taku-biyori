@@ -1,6 +1,10 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import {
+  type GameSessionStatus,
+  GameSessionAction,
+  canPerform,
+} from '@taku-biyori/shared';
 import { getGuestLink } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
@@ -32,11 +36,21 @@ export const useGuestLink = (
 
   /**
    * ゲスト招待リンクを発行できるか。ボタンの出し分けに使う。
-   * トークン取得 API がホスト限定のため、ホストかつ status が open（募集中）のときのみ true。
+   * トークン取得 API がホスト限定なので、まずホストであることを要求する。
+   * そのうえで「今この卓にゲストが参加できる状態か」を shared の ACTION_POLICIES
+   * （joinSession: confirmed / today）に委譲して判定する。
+   * ロールに 'member' を渡すのは、参加するのがホスト自身ではなく招待されるゲストだから。
    */
-  const canIssueGuestLink = computed(
-    () => isHost.value && toValue(status) === GameSessionStatus.open,
-  );
+  const canIssueGuestLink = computed(() => {
+    const currentStatus = toValue(status);
+    if (currentStatus === undefined) {
+      return false;
+    }
+    return (
+      isHost.value &&
+      canPerform(GameSessionAction.joinSession, currentStatus, 'member')
+    );
+  });
 
   /** 招待リンクを組み立てる。ゲストはログインユーザーと同じ卓詳細画面を ?token 付きで開く */
   function buildLink(token: string): string {

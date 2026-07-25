@@ -4,9 +4,6 @@ import type {
   CreateGameSessionInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
-  CreateAvailabilityDateInput,
-  BulkUpdateAvailabilityDatesInput,
-  UpdateAvailabilityDateResponseInput,
   JoinGameSessionInput,
   JoinAsGuestInput,
   UpdateMemberInput,
@@ -15,13 +12,6 @@ import type { GetGameSessionResult } from '@/game-session/application/get-game-s
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionResult } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
-import type { ListAvailabilityDatesResult } from '@/game-session/application/list-availability-dates';
-import type { AddAvailabilityDateResult } from '@/game-session/application/add-availability-date';
-import type { DeleteAvailabilityDateResult } from '@/game-session/application/delete-availability-date';
-import type { ConfirmAvailabilityDateResult } from '@/game-session/application/confirm-availability-date';
-import type { BulkUpdateAvailabilityDatesResult } from '@/game-session/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseResult } from '@/game-session/application/update-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseResult } from '@/game-session/application/update-guest-availability-date-response';
 import type { ListMembersResult } from '@/game-session/application/list-members';
 import type { JoinGameSessionResult } from '@/game-session/application/join-game-session';
 import type { JoinAsGuestResult } from '@/game-session/application/join-as-guest';
@@ -35,13 +25,6 @@ import type { GetGameSessionRepository } from '@/game-session/application/get-ga
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
-import type { ListAvailabilityDatesRepository } from '@/game-session/application/list-availability-dates';
-import type { AddAvailabilityDateRepository } from '@/game-session/application/add-availability-date';
-import type { DeleteAvailabilityDateRepository } from '@/game-session/application/delete-availability-date';
-import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
-import type { BulkUpdateAvailabilityDatesRepository } from '@/game-session/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseRepository } from '@/game-session/application/update-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseRepository } from '@/game-session/application/update-guest-availability-date-response';
 import type { ListMembersRepository } from '@/game-session/application/list-members';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
 import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
@@ -55,13 +38,6 @@ import { getGameSession } from '@/game-session/application/get-game-session';
 import { updateGameSession } from '@/game-session/application/update-game-session';
 import { deleteGameSession } from '@/game-session/application/delete-game-session';
 import { updateGameSessionStatus } from '@/game-session/application/update-game-session-status';
-import { listAvailabilityDates } from '@/game-session/application/list-availability-dates';
-import { addAvailabilityDate } from '@/game-session/application/add-availability-date';
-import { deleteAvailabilityDate } from '@/game-session/application/delete-availability-date';
-import { confirmAvailabilityDate } from '@/game-session/application/confirm-availability-date';
-import { bulkUpdateAvailabilityDates } from '@/game-session/application/bulk-update-availability-dates';
-import { updateAvailabilityDateResponse } from '@/game-session/application/update-availability-date-response';
-import { updateGuestAvailabilityDateResponse } from '@/game-session/application/update-guest-availability-date-response';
 import { listMembers } from '@/game-session/application/list-members';
 import { joinGameSession } from '@/game-session/application/join-game-session';
 import { joinAsGuest } from '@/game-session/application/join-as-guest';
@@ -76,13 +52,6 @@ type GameSessionRepo = ListGameSessionsRepository &
   UpdateGameSessionRepository &
   DeleteGameSessionRepository &
   UpdateGameSessionStatusRepository &
-  ListAvailabilityDatesRepository &
-  AddAvailabilityDateRepository &
-  DeleteAvailabilityDateRepository &
-  ConfirmAvailabilityDateRepository &
-  BulkUpdateAvailabilityDatesRepository &
-  UpdateAvailabilityDateResponseRepository &
-  UpdateGuestAvailabilityDateResponseRepository &
   ListMembersRepository &
   JoinGameSessionRepository &
   JoinAsGuestRepository &
@@ -115,42 +84,6 @@ export interface GameSessionUseCases {
     userId: string,
     input: UpdateGameSessionStatusInput,
   ): Promise<UpdateGameSessionStatusResult>;
-  listAvailabilityDates(
-    gameSessionId: string,
-  ): Promise<ListAvailabilityDatesResult>;
-  addAvailabilityDate(
-    gameSessionId: string,
-    userId: string,
-    input: CreateAvailabilityDateInput,
-  ): Promise<AddAvailabilityDateResult>;
-  deleteAvailabilityDate(
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-  ): Promise<DeleteAvailabilityDateResult>;
-  confirmAvailabilityDate(
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-  ): Promise<ConfirmAvailabilityDateResult>;
-  bulkUpdateAvailabilityDates(
-    gameSessionId: string,
-    userId: string,
-    input: BulkUpdateAvailabilityDatesInput,
-  ): Promise<BulkUpdateAvailabilityDatesResult>;
-  updateAvailabilityDateResponse(
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-    input: UpdateAvailabilityDateResponseInput,
-  ): Promise<UpdateAvailabilityDateResponseResult>;
-  updateGuestAvailabilityDateResponse(
-    gameSessionId: string,
-    dateId: string,
-    token: string,
-    memberId: string,
-    input: UpdateAvailabilityDateResponseInput,
-  ): Promise<UpdateGuestAvailabilityDateResponseResult>;
   listMembers(gameSessionId: string): Promise<ListMembersResult>;
   joinGameSession(
     gameSessionId: string,
@@ -206,56 +139,6 @@ export const createGameSessionUseCases = (
     input: UpdateGameSessionStatusInput,
   ): Promise<UpdateGameSessionStatusResult> =>
     updateGameSessionStatus(repo, id, userId, input),
-  listAvailabilityDates: (
-    gameSessionId: string,
-  ): Promise<ListAvailabilityDatesResult> =>
-    listAvailabilityDates(repo, gameSessionId),
-  addAvailabilityDate: (
-    gameSessionId: string,
-    userId: string,
-    input: CreateAvailabilityDateInput,
-  ): Promise<AddAvailabilityDateResult> =>
-    addAvailabilityDate(repo, gameSessionId, userId, input),
-  deleteAvailabilityDate: (
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-  ): Promise<DeleteAvailabilityDateResult> =>
-    deleteAvailabilityDate(repo, gameSessionId, dateId, userId),
-  confirmAvailabilityDate: (
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-  ): Promise<ConfirmAvailabilityDateResult> =>
-    confirmAvailabilityDate(repo, gameSessionId, dateId, userId),
-  bulkUpdateAvailabilityDates: (
-    gameSessionId: string,
-    userId: string,
-    input: BulkUpdateAvailabilityDatesInput,
-  ): Promise<BulkUpdateAvailabilityDatesResult> =>
-    bulkUpdateAvailabilityDates(repo, gameSessionId, userId, input),
-  updateAvailabilityDateResponse: (
-    gameSessionId: string,
-    dateId: string,
-    userId: string,
-    input: UpdateAvailabilityDateResponseInput,
-  ): Promise<UpdateAvailabilityDateResponseResult> =>
-    updateAvailabilityDateResponse(repo, gameSessionId, dateId, userId, input),
-  updateGuestAvailabilityDateResponse: (
-    gameSessionId: string,
-    dateId: string,
-    token: string,
-    memberId: string,
-    input: UpdateAvailabilityDateResponseInput,
-  ): Promise<UpdateGuestAvailabilityDateResponseResult> =>
-    updateGuestAvailabilityDateResponse(
-      repo,
-      gameSessionId,
-      dateId,
-      token,
-      memberId,
-      input,
-    ),
   listMembers: (gameSessionId: string): Promise<ListMembersResult> =>
     listMembers(repo, gameSessionId),
   joinGameSession: (

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCreateGameSession } from '@/features/GameSession/Edit/useCreateGameSession';
 import type { GameSession } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
@@ -24,7 +24,6 @@ const mockGameSession: GameSession = {
   maxMembers: null,
   status: GameSessionStatus.draft,
   isPublished: false,
-  openUntil: null,
   scheduledAt: SCHEDULED_AT,
   completedAt: null,
   createdBy: 'user-1',
@@ -154,28 +153,19 @@ describe('useCreateGameSession', () => {
     });
   });
 
-  describe('募集締め切り（openUntil）', () => {
-    afterEach(() => {
-      vi.useRealTimers();
-    });
+  // 募集締め切り（openUntil）は募集枠（lobby）の関心事。段階6b で卓の入力から削除した
+  it('openUntil を送信しない', async () => {
+    // Arrange
+    const { title, scheduledAt, submit } = useCreateGameSession();
+    title.value = '卓';
+    scheduledAt.value = SCHEDULED_AT;
 
-    // NOTE: 段階6c で getGameSessionStatus が簡素化されるまでの暫定措置。
-    //       openUntil を作成日にしておかないと公開時に open（募集中）へ導出されてしまう。
-    it('作成日（UTC 基準）を openUntil として送信する', async () => {
-      // Arrange
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date('2025-06-01T15:30:00.000Z'));
-      const { title, scheduledAt, submit } = useCreateGameSession();
-      title.value = '卓';
-      scheduledAt.value = SCHEDULED_AT;
+    // Act
+    await submit();
 
-      // Act
-      await submit();
-
-      // Assert
-      expect(createGameSession).toHaveBeenCalledWith(
-        expect.objectContaining({ openUntil: '2025-06-01' }),
-      );
-    });
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ openUntil: expect.anything() }),
+    );
   });
 });

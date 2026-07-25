@@ -48,7 +48,7 @@ export const useGameSessionStatus = (
    * 削除可能か。次の全条件を満たすときのみ true。
    * - ホストである（削除 API がホスト限定）
    * - ステータスが ACTION_POLICIES の deleteSession に含まれる
-   *   （draft / open / scheduling。confirmed 以降は参加者の予定が確定しているため不可）
+   *   （draft / scheduling。confirmed 以降は参加者の予定が確定しているため不可）
    * - 自分以外のメンバーがいない（参加者がいる卓を勝手に消さない）
    */
   const canDelete = computed(() => {

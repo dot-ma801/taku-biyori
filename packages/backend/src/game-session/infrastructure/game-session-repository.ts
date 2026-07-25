@@ -9,15 +9,12 @@ import {
   getTableColumns,
 } from 'drizzle-orm';
 import type {
-  AvailabilityDate,
-  AvailabilityDateAnswer,
   GameSession,
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
   JoinAsGuestInput,
   JoinGameSessionInput,
-  UpdateAvailabilityDateResponseInput,
   UpdateGameSessionInput,
   UpdateMemberInput,
 } from '@taku-biyori/shared';
@@ -26,8 +23,6 @@ import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
   gameSessionMembers,
-  gameSessionCandidates,
-  gameSessionAnswers,
 } from '@/system/infrastructure/database/game-session-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
@@ -37,13 +32,6 @@ import type { GetGameSessionRepository } from '@/game-session/application/get-ga
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
-import type { ListAvailabilityDatesRepository } from '@/game-session/application/list-availability-dates';
-import type { AddAvailabilityDateRepository } from '@/game-session/application/add-availability-date';
-import type { DeleteAvailabilityDateRepository } from '@/game-session/application/delete-availability-date';
-import type { ConfirmAvailabilityDateRepository } from '@/game-session/application/confirm-availability-date';
-import type { BulkUpdateAvailabilityDatesRepository } from '@/game-session/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseRepository } from '@/game-session/application/update-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseRepository } from '@/game-session/application/update-guest-availability-date-response';
 import type { ListMembersRepository } from '@/game-session/application/list-members';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
 import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
@@ -58,13 +46,6 @@ export type GameSessionRepository = ListGameSessionsRepository &
   UpdateGameSessionRepository &
   DeleteGameSessionRepository &
   UpdateGameSessionStatusRepository &
-  ListAvailabilityDatesRepository &
-  AddAvailabilityDateRepository &
-  DeleteAvailabilityDateRepository &
-  ConfirmAvailabilityDateRepository &
-  BulkUpdateAvailabilityDatesRepository &
-  UpdateAvailabilityDateResponseRepository &
-  UpdateGuestAvailabilityDateResponseRepository &
   ListMembersRepository &
   JoinGameSessionRepository &
   JoinAsGuestRepository &
@@ -82,7 +63,6 @@ export type GameSessionRow = {
   location: string | null;
   maxPlayers: number | null;
   isPublished: boolean;
-  openUntil: string | null;
   scheduledAt: string | null;
   completedAt: Date | null;
   cancelledAt: Date | null;
@@ -107,13 +87,11 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   location: row.location,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
-    openUntil: toDateOrNull(row.openUntil),
     scheduledAt: toDateOrNull(row.scheduledAt),
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
-  openUntil: row.openUntil,
   scheduledAt: row.scheduledAt,
   completedAt: row.completedAt?.toISOString() ?? null,
   cancelledAt: row.cancelledAt?.toISOString() ?? null,
@@ -130,13 +108,11 @@ const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
   scenarioName: row.scenarioName,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
-    openUntil: toDateOrNull(row.openUntil),
     scheduledAt: toDateOrNull(row.scheduledAt),
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
-  openUntil: row.openUntil,
   memberCount: row.memberCount,
   maxMembers: row.maxPlayers,
   scheduledAt: row.scheduledAt,
@@ -184,12 +160,14 @@ export const createGameSessionRepository = (
                 ),
               ),
           ),
+          // 公開済みの卓は誰でも閲覧できる（design-v1.1 §8 の認可モデル）。
+          // ただし終端状態（完了・中止）の他人の卓は一覧に出さない。
+          // 終端条件はこのブランチにのみ付ける。自分がホストの卓・自分が参加している卓は
+          // 上の 2 ブランチで拾われ、完了・中止済みでも引き続き一覧に出る。
           and(
             eq(gameSessions.isPublished, true),
-            or(
-              isNull(gameSessions.openUntil),
-              sql`${gameSessions.openUntil} > CURRENT_DATE`,
-            ),
+            isNull(gameSessions.completedAt),
+            isNull(gameSessions.cancelledAt),
           ),
         ),
       )
@@ -272,7 +250,6 @@ export const createGameSessionRepository = (
         }),
         ...(input.location !== undefined && { location: input.location }),
         ...(input.maxMembers !== undefined && { maxPlayers: input.maxMembers }),
-        ...(input.openUntil !== undefined && { openUntil: input.openUntil }),
         ...(input.scheduledAt !== undefined && {
           scheduledAt: input.scheduledAt,
         }),
@@ -331,7 +308,6 @@ export const createGameSessionRepository = (
     const row = await db
       .select({
         isPublished: gameSessions.isPublished,
-        openUntil: gameSessions.openUntil,
         scheduledAt: gameSessions.scheduledAt,
         completedAt: gameSessions.completedAt,
         cancelledAt: gameSessions.cancelledAt,
@@ -344,7 +320,6 @@ export const createGameSessionRepository = (
     const r = row[0];
     return {
       isPublished: r.isPublished,
-      openUntil: toDateOrNull(r.openUntil),
       scheduledAt: toDateOrNull(r.scheduledAt),
       completedAt: r.completedAt,
       cancelledAt: r.cancelledAt,
@@ -420,8 +395,8 @@ export const createGameSessionRepository = (
           scenarioName: params.scenarioName ?? null,
           location: params.location ?? null,
           maxPlayers: params.maxMembers ?? null,
-          openUntil: params.openUntil ?? null,
-          scheduledAt: params.scheduledAt ?? null,
+          // 卓は日程が確定した状態でのみ作られるため scheduledAt は必須（フォールバック不要）
+          scheduledAt: params.scheduledAt,
           guestLinkToken: params.guestLinkToken,
           isPublished: false,
         })
@@ -446,123 +421,6 @@ export const createGameSessionRepository = (
       .where(eq(gameSessions.id, id))
       .limit(1);
     return row.length > 0;
-  },
-
-  async findByGameSessionId(
-    gameSessionId: string,
-  ): Promise<AvailabilityDate[]> {
-    const rows = await db
-      .select({
-        candidateId: gameSessionCandidates.id,
-        date: gameSessionCandidates.date,
-        answerId: gameSessionAnswers.id,
-        memberId: gameSessionAnswers.memberId,
-        answer: gameSessionAnswers.answer,
-        comment: gameSessionAnswers.comment,
-      })
-      .from(gameSessionCandidates)
-      .leftJoin(
-        gameSessionAnswers,
-        eq(gameSessionAnswers.candidateId, gameSessionCandidates.id),
-      )
-      .where(eq(gameSessionCandidates.gameSessionId, gameSessionId))
-      .orderBy(gameSessionCandidates.date);
-
-    const map = new Map<string, AvailabilityDate>();
-    for (const row of rows) {
-      if (!map.has(row.candidateId)) {
-        map.set(row.candidateId, {
-          id: row.candidateId,
-          date: row.date,
-          answers: [],
-        });
-      }
-      if (row.answerId !== null && row.memberId !== null) {
-        const entry = map.get(row.candidateId)!;
-        const answerValue = row.answer as AvailabilityDateAnswer['answer'];
-        entry.answers.push({
-          id: row.answerId,
-          memberId: row.memberId,
-          answer: answerValue,
-          comment: row.comment,
-        });
-      }
-    }
-
-    return [...map.values()];
-  },
-
-  async addDate(
-    gameSessionId: string,
-    date: string,
-  ): Promise<AvailabilityDate> {
-    const result = await db
-      .insert(gameSessionCandidates)
-      .values({ gameSessionId, date })
-      .returning();
-
-    const row = result[0];
-    if (!row) throw new Error('候補日の追加に失敗しました');
-    return { id: row.id, date: row.date, answers: [] };
-  },
-
-  async findCandidateOwner(
-    dateId: string,
-  ): Promise<{ gameSessionId: string; date: string } | null> {
-    const row = await db
-      .select({
-        gameSessionId: gameSessionCandidates.gameSessionId,
-        date: gameSessionCandidates.date,
-      })
-      .from(gameSessionCandidates)
-      .where(eq(gameSessionCandidates.id, dateId))
-      .limit(1);
-    return row[0] ?? null;
-  },
-
-  async deleteDateById(dateId: string): Promise<void> {
-    await db
-      .delete(gameSessionCandidates)
-      .where(eq(gameSessionCandidates.id, dateId));
-  },
-
-  async setScheduledAt(
-    gameSessionId: string,
-    date: string,
-  ): Promise<GameSession | null> {
-    const result = await db
-      .update(gameSessions)
-      .set({ scheduledAt: date })
-      .where(eq(gameSessions.id, gameSessionId))
-      .returning();
-
-    const session = result[0];
-    if (!session) return null;
-    return toGameSession(session);
-  },
-
-  async replaceAllDates(
-    gameSessionId: string,
-    dates: string[],
-  ): Promise<AvailabilityDate[]> {
-    return db.transaction(async (tx) => {
-      await tx
-        .delete(gameSessionCandidates)
-        .where(eq(gameSessionCandidates.gameSessionId, gameSessionId));
-
-      if (dates.length === 0) return [];
-
-      const inserted = await tx
-        .insert(gameSessionCandidates)
-        .values(dates.map((date) => ({ gameSessionId, date })))
-        .returning();
-
-      return inserted.map((row) => ({
-        id: row.id,
-        date: row.date,
-        answers: [],
-      }));
-    });
   },
 
   async findMemberByUserId(
@@ -755,24 +613,6 @@ export const createGameSessionRepository = (
     return row[0]?.guestLinkToken ?? null;
   },
 
-  async isGuestMember(
-    gameSessionId: string,
-    memberId: string,
-  ): Promise<boolean> {
-    const row = await db
-      .select({ userId: gameSessionMembers.userId })
-      .from(gameSessionMembers)
-      .where(
-        and(
-          eq(gameSessionMembers.id, memberId),
-          eq(gameSessionMembers.gameSessionId, gameSessionId),
-          isNull(gameSessionMembers.userId),
-        ),
-      )
-      .limit(1);
-    return row[0] !== undefined;
-  },
-
   async findByGuestLinkToken(token: string): Promise<GameSession | null> {
     const row = await db
       .select()
@@ -781,39 +621,5 @@ export const createGameSessionRepository = (
       .limit(1);
     if (!row[0]) return null;
     return toGameSession(row[0]);
-  },
-
-  async upsertAnswer(
-    candidateId: string,
-    memberId: string,
-    input: UpdateAvailabilityDateResponseInput,
-  ): Promise<AvailabilityDateAnswer> {
-    const result = await db
-      .insert(gameSessionAnswers)
-      .values({
-        candidateId,
-        memberId,
-        answer: input.answer,
-        comment: input.comment ?? null,
-      })
-      .onConflictDoUpdate({
-        target: [gameSessionAnswers.candidateId, gameSessionAnswers.memberId],
-        set: {
-          answer: input.answer,
-          comment: input.comment ?? null,
-        },
-      })
-      .returning();
-
-    const row = result[0];
-    if (!row) throw new Error('回答の登録に失敗しました');
-
-    const answerValue = row.answer as AvailabilityDateAnswer['answer'];
-    return {
-      id: row.id,
-      memberId: row.memberId,
-      answer: answerValue,
-      comment: row.comment,
-    };
   },
 });

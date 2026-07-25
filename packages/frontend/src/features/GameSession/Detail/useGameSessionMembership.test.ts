@@ -45,7 +45,9 @@ function makeGameSession(
   return {
     id: SESSION_ID,
     title: 'テストセッション',
-    status: GameSessionStatus.open,
+    // NOTE: 段階6b 以降 open は導出されないため、参加・退出ともに許可される
+    //       confirmed（公開済み・実施前）を既定値にする。
+    status: GameSessionStatus.confirmed,
     isPublished: true,
     createdBy: HOST_ID,
     createdAt: '2024-01-01T00:00:00Z',
@@ -75,22 +77,25 @@ beforeEach(() => {
 });
 
 describe('canJoin', () => {
-  it('未参加かつ open ステータスのセッションでは true', () => {
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.open, members: [] }),
-    );
+  // ACTION_POLICIES.joinSession の statuses（confirmed / today）に従う
+  it.each([GameSessionStatus.confirmed, GameSessionStatus.today] as const)(
+    '未参加かつ %s ステータスのセッションでは true',
+    (status) => {
+      // Arrange
+      const gameSession = ref(makeGameSession({ status, members: [] }));
 
-    // Act
-    const { canJoin } = setup(gameSession);
+      // Act
+      const { canJoin } = setup(gameSession);
 
-    // Assert
-    expect(canJoin.value).toBe(true);
-  });
+      // Assert
+      expect(canJoin.value).toBe(true);
+    },
+  );
 
   it('すでにメンバーの場合は false', () => {
     const gameSession = ref(
       makeGameSession({
-        status: GameSessionStatus.open,
+        status: GameSessionStatus.confirmed,
         members: [makeMember()],
       }),
     );
@@ -102,10 +107,14 @@ describe('canJoin', () => {
     expect(canJoin.value).toBe(false);
   });
 
-  it('open 以外のステータスの場合は false', () => {
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.draft, members: [] }),
-    );
+  it.each([
+    GameSessionStatus.draft,
+    GameSessionStatus.scheduling,
+    GameSessionStatus.completed,
+    GameSessionStatus.cancelled,
+  ] as const)('参加できない %s ステータスの場合は false', (status) => {
+    // Arrange
+    const gameSession = ref(makeGameSession({ status, members: [] }));
 
     // Act
     const { canJoin } = setup(gameSession);
@@ -226,9 +235,16 @@ describe('join', () => {
 });
 
 describe('canLeave', () => {
-  it('自分がメンバーの場合は true', () => {
+  // ACTION_POLICIES.leaveSession の statuses（confirmed / today / scheduling）に従う
+  it.each([
+    GameSessionStatus.confirmed,
+    GameSessionStatus.today,
+    GameSessionStatus.scheduling,
+  ] as const)('自分がメンバーで %s ステータスの場合は true', (status) => {
     // Arrange
-    const gameSession = ref(makeGameSession({ members: [makeMember()] }));
+    const gameSession = ref(
+      makeGameSession({ status, members: [makeMember()] }),
+    );
 
     // Act
     const { canLeave } = setup(gameSession);
@@ -248,14 +264,26 @@ describe('canLeave', () => {
     expect(canLeave.value).toBe(false);
   });
 
-  it('open 以外のステータスの場合は false', () => {
+  it.each([
+    GameSessionStatus.draft,
+    GameSessionStatus.completed,
+    GameSessionStatus.cancelled,
+  ] as const)('退出できない %s ステータスの場合は false', (status) => {
     // Arrange
     const gameSession = ref(
-      makeGameSession({
-        status: GameSessionStatus.confirmed,
-        members: [makeMember()],
-      }),
+      makeGameSession({ status, members: [makeMember()] }),
     );
+
+    // Act
+    const { canLeave } = setup(gameSession);
+
+    // Assert
+    expect(canLeave.value).toBe(false);
+  });
+
+  it('gameSession が null の場合は false', () => {
+    // Arrange
+    const gameSession = ref<GameSessionDetail | null>(null);
 
     // Act
     const { canLeave } = setup(gameSession);

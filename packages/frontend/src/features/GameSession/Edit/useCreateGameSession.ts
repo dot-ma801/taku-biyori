@@ -8,20 +8,6 @@ import {
   getMaxMembersError,
 } from '@/features/GameSession/Edit/maxMembersValidation';
 
-/**
- * 作成時点の日付を `YYYY-MM-DD`（UTC 基準）で返す。
- *
- * 直接卓立ては募集を伴わないため本来 openUntil を持たないが、段階6c で
- * `getGameSessionStatus` を簡素化するまでは openUntil が未設定だと公開時に
- * `open`（募集中）へ導出されてしまう。募集枠からの卓確定と同じ回避策として
- * 作成時点の日付を入れ、`confirmed` / `today` へ到達させる。
- *
- * サーバ側は `new Date('YYYY-MM-DD')`（UTC 深夜0時）としてパースするため、
- * ローカル TZ ではなく UTC 基準で整形する（UTC より進んだ TZ で未来日となり
- * `open` に落ちるのを避ける）。段階6c で openUntil カラムごと削除する。
- */
-const closedOpenUntil = (): string => new Date().toISOString().slice(0, 10);
-
 export const useCreateGameSession = () => {
   const router = useRouter();
 
@@ -67,7 +53,6 @@ export const useCreateGameSession = () => {
         ...(description.value && { description: description.value }),
         ...(location.value && { location: location.value }),
         scheduledAt: scheduledAt.value,
-        openUntil: closedOpenUntil(),
       });
 
       router.push({

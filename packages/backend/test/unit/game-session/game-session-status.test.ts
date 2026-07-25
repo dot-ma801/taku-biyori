@@ -3,7 +3,6 @@ import { getGameSessionStatus } from '@/game-session/domain/game-session-status'
 
 const base = {
   isPublished: false,
-  openUntil: null,
   scheduledAt: null,
   completedAt: null,
   cancelledAt: null,
@@ -21,36 +20,12 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus({ ...base, isPublished: false })).toBe('draft');
   });
 
-  it('is_published=true かつ open_until が未来なら open', () => {
-    // Arrange
-    const input = { ...base, isPublished: true, openUntil: daysFromNow(1) };
-
-    // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('open');
-  });
-
-  it('is_published=true かつ open_until が過去なら scheduling', () => {
-    // Arrange
-    const input = { ...base, isPublished: true, openUntil: daysFromNow(-1) };
-
-    // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('scheduling');
-  });
-
-  it('is_published=true かつ open_until=null なら open（締め切りなし）', () => {
-    // Arrange
-    const input = { ...base, isPublished: true, openUntil: null };
-
-    // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('open');
-  });
-
-  it('open_until が過去かつ scheduled_at が確定済みで当日前なら confirmed', () => {
+  // 段階6b: 募集（open_until）は募集枠へ移したため、公開済みの卓は open に落ちない
+  it('is_published=true かつ scheduled_at が当日前なら confirmed', () => {
     // Arrange
     const input = {
       ...base,
       isPublished: true,
-      openUntil: daysFromNow(-7),
       scheduledAt: daysFromNow(7),
     };
 
@@ -58,27 +33,21 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus(input)).toBe('confirmed');
   });
 
-  it('open_until が過去かつ scheduled_at が今日なら today', () => {
+  it('is_published=true かつ scheduled_at が今日なら today', () => {
     // Arrange
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const input = {
-      ...base,
-      isPublished: true,
-      openUntil: daysFromNow(-1),
-      scheduledAt: today,
-    };
+    const input = { ...base, isPublished: true, scheduledAt: today };
 
     // Act / Assert
     expect(getGameSessionStatus(input)).toBe('today');
   });
 
-  it('open_until が過去かつ completed_at がセット済みなら completed', () => {
+  it('completed_at がセット済みなら completed', () => {
     // Arrange
     const input = {
       ...base,
       isPublished: true,
-      openUntil: daysFromNow(-7),
       scheduledAt: daysFromNow(-1),
       completedAt: new Date(),
     };
@@ -87,27 +56,42 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus(input)).toBe('completed');
   });
 
-  it('open_until が未来かつ scheduled_at が設定済みでも open（募集期間を優先）', () => {
+  // scheduled_at の NOT NULL 化は段階6c 担当のため、それまでのフォールバックとして残す
+  it('is_published=true かつ scheduled_at=null なら scheduling', () => {
     // Arrange
+    const input = { ...base, isPublished: true, scheduledAt: null };
+
+    // Act / Assert
+    expect(getGameSessionStatus(input)).toBe('scheduling');
+  });
+
+  // isToday はローカル日時（getFullYear/getMonth/getDate）で比較するため、
+  // フィクスチャも UTC 文字列ではなくローカル時刻で組み立てて
+  // 実行環境のタイムゾーンに依存しないようにする。
+  it('now を注入して比較できる', () => {
+    // Arrange
+    const fixedNow = new Date(2025, 7, 10, 12, 0, 0);
     const input = {
       ...base,
       isPublished: true,
-      openUntil: daysFromNow(3),
-      scheduledAt: daysFromNow(7),
+      scheduledAt: new Date(2025, 7, 10, 0, 0, 0),
     };
 
     // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('open');
+    expect(getGameSessionStatus(input, fixedNow)).toBe('today');
   });
 
-  it('now を注入して比較できる', () => {
+  it('now を注入したとき別日の scheduled_at は confirmed になる', () => {
     // Arrange
-    const fixedNow = new Date('2025-08-10T12:00:00Z');
-    const future = new Date('2025-08-15T00:00:00Z');
-    const input = { ...base, isPublished: true, openUntil: future };
+    const fixedNow = new Date(2025, 7, 10, 12, 0, 0);
+    const input = {
+      ...base,
+      isPublished: true,
+      scheduledAt: new Date(2025, 7, 11, 0, 0, 0),
+    };
 
     // Act / Assert
-    expect(getGameSessionStatus(input, fixedNow)).toBe('open');
+    expect(getGameSessionStatus(input, fixedNow)).toBe('confirmed');
   });
 
   it('cancelled_at がセットされていれば cancelled（最優先・非公開でも）', () => {
@@ -127,7 +111,6 @@ describe('getGameSessionStatus', () => {
     const input = {
       ...base,
       isPublished: true,
-      openUntil: daysFromNow(-7),
       scheduledAt: daysFromNow(7),
       cancelledAt: new Date('2025-01-01'),
     };
@@ -141,7 +124,6 @@ describe('getGameSessionStatus', () => {
     const input = {
       ...base,
       isPublished: true,
-      openUntil: daysFromNow(-7),
       scheduledAt: daysFromNow(-1),
       completedAt: new Date(),
       cancelledAt: new Date('2025-01-01'),

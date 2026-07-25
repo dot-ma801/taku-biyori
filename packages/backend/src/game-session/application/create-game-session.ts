@@ -9,8 +9,8 @@ export interface CreateGameSessionRepository {
     scenarioName?: string;
     location?: string;
     maxMembers?: number;
-    openUntil?: string;
-    scheduledAt?: string;
+    // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+    scheduledAt: string;
     guestLinkToken: string;
   }): Promise<GameSession>;
 }
@@ -28,7 +28,6 @@ export const createGameSession = async (
     scenarioName: input.scenarioName,
     location: input.location,
     maxMembers: input.maxMembers,
-    openUntil: input.openUntil,
     scheduledAt: input.scheduledAt,
     guestLinkToken,
   });

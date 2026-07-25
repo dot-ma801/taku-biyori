@@ -16,7 +16,7 @@ const mockMember: GameSessionMember = {
 const makeRepo = (
   overrides: Partial<JoinGameSessionRepository> = {},
 ): JoinGameSessionRepository => ({
-  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.open),
+  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.confirmed),
   findMemberByUserId: vi.fn().mockResolvedValue(null),
   addMember: vi.fn().mockResolvedValue(mockMember),
   ...overrides,
@@ -47,12 +47,29 @@ describe('joinGameSession', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('open 以外のステータスのセッションは sessionNotOpen を返す', async () => {
+  // 参加条件は「公開済み・未完了・実施日当日まで」= confirmed / today（design-v1.1 §8）
+  it('当日（today）のセッションにも参加できる', async () => {
     // Arrange
     const repo = makeRepo({
-      findGameSessionStatus: vi
-        .fn()
-        .mockResolvedValue(GameSessionStatus.confirmed),
+      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.today),
+    });
+
+    // Act
+    const result = await joinGameSession(repo, 'session-1', 'user-2', {});
+
+    // Assert
+    expect(result).toEqual({ type: 'ok', member: mockMember });
+  });
+
+  it.each([
+    GameSessionStatus.draft,
+    GameSessionStatus.scheduling,
+    GameSessionStatus.completed,
+    GameSessionStatus.cancelled,
+  ])('参加できないステータス（%s）は sessionNotOpen を返す', async (status) => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi.fn().mockResolvedValue(status),
     });
 
     // Act

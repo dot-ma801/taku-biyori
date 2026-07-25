@@ -18,7 +18,7 @@ const mockMember: GameSessionMember = {
 const makeRepo = (
   overrides: Partial<JoinAsGuestRepository> = {},
 ): JoinAsGuestRepository => ({
-  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.open),
+  findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.confirmed),
   findGuestLinkToken: vi.fn().mockResolvedValue(TOKEN),
   addGuestMember: vi.fn().mockResolvedValue(mockMember),
   ...overrides,
@@ -83,14 +83,29 @@ describe('joinAsGuest', () => {
     expect(result).toEqual({ type: 'invalidToken' });
   });
 
+  // 参加条件は「公開済み・未完了・実施日当日まで」= confirmed / today（design-v1.1 §8）
+  it('status が today でもゲスト参加できる', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findGameSessionStatus: vi.fn().mockResolvedValue(GameSessionStatus.today),
+    });
+
+    // Act
+    const result = await joinAsGuest(repo, 'session-1', TOKEN, {
+      guestName: 'ゲスト太郎',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'ok', member: mockMember });
+  });
+
   it.each([
     GameSessionStatus.draft,
     GameSessionStatus.scheduling,
-    GameSessionStatus.confirmed,
-    GameSessionStatus.today,
     GameSessionStatus.completed,
+    GameSessionStatus.cancelled,
   ])(
-    'status が %s（open でない）場合は sessionNotOpen を返す',
+    'status が %s（参加不可）の場合は sessionNotOpen を返す',
     async (status) => {
       // Arrange
       const repo = makeRepo({

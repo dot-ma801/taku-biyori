@@ -8,7 +8,6 @@ import { getHealth } from '@/health/application/get-health';
 import { registerAuthRoute } from '@/auth/presentation/controller/routes/auth-route';
 import { registerHealthRoute } from '@/health/presentation/controller/routes/health-route';
 import { registerGameSessionRoute } from '@/game-session/presentation/controller/routes/game-session-route';
-import { registerAvailabilityDateRoute } from '@/game-session/presentation/controller/routes/availability-date-route';
 import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
@@ -49,19 +48,6 @@ export const createApp = (options: CreateAppOptions) => {
     updateGameSession: options.gameSession.updateGameSession,
     deleteGameSession: options.gameSession.deleteGameSession,
     updateGameSessionStatus: options.gameSession.updateGameSessionStatus,
-  });
-  registerAvailabilityDateRoute(app, {
-    getSession: options.getSession,
-    listAvailabilityDates: options.gameSession.listAvailabilityDates,
-    addAvailabilityDate: options.gameSession.addAvailabilityDate,
-    bulkUpdateAvailabilityDates:
-      options.gameSession.bulkUpdateAvailabilityDates,
-    deleteAvailabilityDate: options.gameSession.deleteAvailabilityDate,
-    confirmAvailabilityDate: options.gameSession.confirmAvailabilityDate,
-    updateAvailabilityDateResponse:
-      options.gameSession.updateAvailabilityDateResponse,
-    updateGuestAvailabilityDateResponse:
-      options.gameSession.updateGuestAvailabilityDateResponse,
   });
   registerMemberRoute(app, {
     getSession: options.getSession,

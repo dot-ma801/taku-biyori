@@ -20,7 +20,6 @@ function makeSession(
     scenarioName: null,
     status: GameSessionStatus.draft,
     isPublished: false,
-    openUntil: null,
     memberCount: 1,
     scheduledAt: null,
     role: null,

@@ -388,7 +388,8 @@ export const createGameSessionRepository = (
           scenarioName: params.scenarioName ?? null,
           location: params.location ?? null,
           maxPlayers: params.maxMembers ?? null,
-          scheduledAt: params.scheduledAt ?? null,
+          // 卓は日程が確定した状態でのみ作られるため scheduledAt は必須（フォールバック不要）
+          scheduledAt: params.scheduledAt,
           guestLinkToken: params.guestLinkToken,
           isPublished: false,
         })

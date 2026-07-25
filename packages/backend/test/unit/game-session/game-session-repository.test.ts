@@ -6,6 +6,9 @@ import type { Database } from '@/system/infrastructure/database/client';
 
 const now = new Date('2025-01-01T00:00:00.000Z');
 
+/** 卓作成の scheduledAt は必須（design-v1.1 §8）。過去日バリデーションを踏まない日付を使う */
+const SCHEDULED_AT = '2999-12-31';
+
 const mockSessionRow = {
   id: 'aaaaaaaa-0000-0000-0000-000000000001',
   hostUserId: 'user-1',
@@ -225,6 +228,7 @@ describe('createWithHost', () => {
       hostUserId: 'user-1',
       title: 'テスト卓',
       guestLinkToken: 'token-abc',
+      scheduledAt: SCHEDULED_AT,
     });
 
     // Assert
@@ -250,11 +254,35 @@ describe('createWithHost', () => {
       hostUserId: 'user-1',
       title: 'テスト卓',
       guestLinkToken: 'token-abc',
+      scheduledAt: SCHEDULED_AT,
       maxMembers: 5,
     });
 
     // Assert
     expect(result.maxMembers).toBe(5);
+  });
+
+  // scheduledAt は必須（`string`）なので、フォールバックせずそのまま INSERT する
+  it('scheduledAt を values にそのまま渡す', async () => {
+    // Arrange
+    const { db, sessionInsert } = makeTransactionDb({
+      ...mockSessionRow,
+      scheduledAt: SCHEDULED_AT,
+    });
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.createWithHost({
+      hostUserId: 'user-1',
+      title: 'テスト卓',
+      guestLinkToken: 'token-abc',
+      scheduledAt: SCHEDULED_AT,
+    });
+
+    // Assert
+    expect(sessionInsert.values).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledAt: SCHEDULED_AT }),
+    );
   });
 
   it('ホストを game_session_members に追加する', async () => {
@@ -267,6 +295,7 @@ describe('createWithHost', () => {
       hostUserId: 'user-1',
       title: 'テスト卓',
       guestLinkToken: 'token-abc',
+      scheduledAt: SCHEDULED_AT,
     });
 
     // Assert
@@ -290,6 +319,7 @@ describe('createWithHost', () => {
       hostUserId: 'user-1',
       title: 'テスト卓',
       guestLinkToken: 'token-abc',
+      scheduledAt: SCHEDULED_AT,
     });
 
     // Assert

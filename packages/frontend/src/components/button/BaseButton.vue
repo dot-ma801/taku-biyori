@@ -101,7 +101,7 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
 }
 .btn--lg {
   padding: 14px 20px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 /* primary */

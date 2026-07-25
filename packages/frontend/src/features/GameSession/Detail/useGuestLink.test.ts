@@ -47,17 +47,18 @@ beforeEach(() => {
 });
 
 describe('canIssueGuestLink', () => {
-  it('ホストかつ status が open のとき true', () => {
-    // Act
-    const { canIssueGuestLink } = useGuestLink(
-      SESSION_ID,
-      HOST_ID,
-      GameSessionStatus.open,
-    );
+  // 「今この卓に参加できる状態か」で出し分けるため
+  // ACTION_POLICIES.joinSession の statuses（confirmed / today）に従う
+  it.each([GameSessionStatus.confirmed, GameSessionStatus.today] as const)(
+    'ホストかつ status が %s のとき true',
+    (status) => {
+      // Act
+      const { canIssueGuestLink } = useGuestLink(SESSION_ID, HOST_ID, status);
 
-    // Assert
-    expect(canIssueGuestLink.value).toBe(true);
-  });
+      // Assert
+      expect(canIssueGuestLink.value).toBe(true);
+    },
+  );
 
   it('ホスト以外のユーザーのとき false', () => {
     // Arrange: ログインユーザーがホストでない
@@ -67,20 +68,29 @@ describe('canIssueGuestLink', () => {
     const { canIssueGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Assert
     expect(canIssueGuestLink.value).toBe(false);
   });
 
-  it('status が open 以外のとき false', () => {
+  it.each([
+    GameSessionStatus.draft,
+    GameSessionStatus.scheduling,
+    GameSessionStatus.completed,
+    GameSessionStatus.cancelled,
+  ] as const)('参加できない status（%s）のとき false', (status) => {
     // Act
-    const { canIssueGuestLink } = useGuestLink(
-      SESSION_ID,
-      HOST_ID,
-      GameSessionStatus.scheduling,
-    );
+    const { canIssueGuestLink } = useGuestLink(SESSION_ID, HOST_ID, status);
+
+    // Assert
+    expect(canIssueGuestLink.value).toBe(false);
+  });
+
+  it('status が undefined のとき false', () => {
+    // Act
+    const { canIssueGuestLink } = useGuestLink(SESSION_ID, HOST_ID, undefined);
 
     // Assert
     expect(canIssueGuestLink.value).toBe(false);
@@ -94,7 +104,7 @@ describe('canIssueGuestLink', () => {
     const { canIssueGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Assert
@@ -109,7 +119,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act
@@ -125,7 +135,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act
@@ -142,7 +152,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act
@@ -160,7 +170,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink, loading } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act
@@ -176,7 +186,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act
@@ -194,7 +204,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act
@@ -215,7 +225,7 @@ describe('copyGuestLink', () => {
     const { copyGuestLink } = useGuestLink(
       SESSION_ID,
       HOST_ID,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
     );
 
     // Act

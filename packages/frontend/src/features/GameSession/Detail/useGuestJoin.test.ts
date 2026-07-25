@@ -24,25 +24,24 @@ beforeEach(() => {
 });
 
 describe('canGuestJoin', () => {
-  it('トークンがあり status が open のとき true', () => {
-    // Act
-    const { canGuestJoin } = useGuestJoin(
-      SESSION_ID,
-      TOKEN,
-      GameSessionStatus.open,
-      vi.fn(),
-    );
+  // ACTION_POLICIES.joinSession の statuses（confirmed / today）に従う
+  it.each([GameSessionStatus.confirmed, GameSessionStatus.today] as const)(
+    'トークンがあり status が %s のとき true',
+    (status) => {
+      // Act
+      const { canGuestJoin } = useGuestJoin(SESSION_ID, TOKEN, status, vi.fn());
 
-    // Assert
-    expect(canGuestJoin.value).toBe(true);
-  });
+      // Assert
+      expect(canGuestJoin.value).toBe(true);
+    },
+  );
 
   it('トークンが null のとき false', () => {
     // Act
     const { canGuestJoin } = useGuestJoin(
       SESSION_ID,
       null,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
 
@@ -50,12 +49,25 @@ describe('canGuestJoin', () => {
     expect(canGuestJoin.value).toBe(false);
   });
 
-  it('status が open 以外のとき false', () => {
+  it.each([
+    GameSessionStatus.draft,
+    GameSessionStatus.scheduling,
+    GameSessionStatus.completed,
+    GameSessionStatus.cancelled,
+  ] as const)('参加できない status（%s）のとき false', (status) => {
+    // Act
+    const { canGuestJoin } = useGuestJoin(SESSION_ID, TOKEN, status, vi.fn());
+
+    // Assert
+    expect(canGuestJoin.value).toBe(false);
+  });
+
+  it('status が undefined のとき false', () => {
     // Act
     const { canGuestJoin } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.scheduling,
+      undefined,
       vi.fn(),
     );
 
@@ -71,7 +83,7 @@ describe('canGuestJoin', () => {
     const { canGuestJoin } = useGuestJoin(
       SESSION_ID,
       () => token.value,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
     expect(canGuestJoin.value).toBe(false);
@@ -88,7 +100,7 @@ describe('canSubmit', () => {
     const { guestName, canSubmit } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
 
@@ -104,7 +116,7 @@ describe('canSubmit', () => {
     const { guestName, canSubmit } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
 
@@ -130,7 +142,7 @@ describe('join', () => {
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
     guestName.value = '  ゲスト太郎  ';
@@ -158,7 +170,7 @@ describe('join', () => {
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       onJoined,
     );
     guestName.value = 'ゲスト太郎';
@@ -176,7 +188,7 @@ describe('join', () => {
     const { join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
 
@@ -192,7 +204,7 @@ describe('join', () => {
     const { join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
 
@@ -210,7 +222,7 @@ describe('join', () => {
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       null,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
     guestName.value = 'ゲスト太郎';
@@ -229,7 +241,7 @@ describe('join', () => {
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       null,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
     guestName.value = 'ゲスト太郎';
@@ -247,7 +259,7 @@ describe('join', () => {
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
     guestName.value = 'ゲスト太郎';
@@ -270,7 +282,7 @@ describe('join', () => {
     const { guestName, join } = useGuestJoin(
       SESSION_ID,
       TOKEN,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       vi.fn(),
     );
     guestName.value = 'ゲスト太郎';

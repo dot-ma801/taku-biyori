@@ -822,3 +822,43 @@ describe('GET /api/join/:token', () => {
     expect(response.status).toBe(200);
   });
 });
+
+// 段階6b で廃止した卓側の募集・日程調整ルート（#70）。
+// ルート自体が未登録であることを保証し、うっかり復活したら気づけるようにする。
+// 募集枠（lobby）側の availability-dates は現役なので対象外。
+describe('廃止した卓の候補日・日程調整ルート', () => {
+  const sessionId = '00000000-0000-0000-0000-000000000000';
+  const dateId = '11111111-1111-1111-1111-111111111111';
+
+  it.each([
+    ['GET', `/api/game-sessions/${sessionId}/availability-dates`],
+    ['POST', `/api/game-sessions/${sessionId}/availability-dates`],
+    ['PUT', `/api/game-sessions/${sessionId}/availability-dates`],
+    ['DELETE', `/api/game-sessions/${sessionId}/availability-dates/${dateId}`],
+    [
+      'POST',
+      `/api/game-sessions/${sessionId}/availability-dates/${dateId}/confirm`,
+    ],
+    [
+      'PUT',
+      `/api/game-sessions/${sessionId}/availability-dates/${dateId}/responses`,
+    ],
+    [
+      'PUT',
+      `/api/game-sessions/${sessionId}/availability-dates/${dateId}/guest-responses`,
+    ],
+  ])('%s %s は 404 を返す', async (method, path) => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(path, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: method === 'GET' ? undefined : JSON.stringify({}),
+    });
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+});

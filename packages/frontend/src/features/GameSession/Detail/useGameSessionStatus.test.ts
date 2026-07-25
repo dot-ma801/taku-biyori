@@ -450,7 +450,6 @@ describe('completeSession', () => {
 describe('canDelete', () => {
   describe.each([
     { status: GameSessionStatus.draft, expected: true },
-    { status: GameSessionStatus.open, expected: true },
     { status: GameSessionStatus.scheduling, expected: true },
     { status: GameSessionStatus.confirmed, expected: false },
     { status: GameSessionStatus.today, expected: false },

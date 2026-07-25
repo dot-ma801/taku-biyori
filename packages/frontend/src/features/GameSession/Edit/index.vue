@@ -12,10 +12,6 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessage: string;
-  /** 更新フローのときのみ渡す */
-  gameSessionId?: string;
-  /** 更新フローで日程が確定済みのとき true */
-  isScheduled?: boolean;
 }>();
 
 const submitButtonLabel = computed(() =>
@@ -31,12 +27,13 @@ const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
 const maxMembers = defineModel<string>('maxMembers', { default: '' });
 const description = defineModel<string>('description', { default: '' });
-const openUntil = defineModel<string>('openUntil', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const location = defineModel<string>('location', { default: '' });
-const pendingDates = defineModel<string[]>('pendingDates', {
-  default: () => [],
-});
+
+/** 卓はタイトルと開催日が確定していないと作れない（design-v1.1 §8） */
+const canSubmit = computed(
+  () => !props.loading && !!title.value && !!scheduledAt.value,
+);
 </script>
 
 <template>
@@ -51,12 +48,8 @@ const pendingDates = defineModel<string[]>('pendingDates', {
       v-model:maxMembers="maxMembers"
     ></InputBasicInfo>
     <InputScheduleInfo
-      :game-session-id="gameSessionId"
-      :is-scheduled="isScheduled"
-      v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:location="location"
-      v-model:pendingDates="pendingDates"
     ></InputScheduleInfo>
     <InputMemo v-model:description="description"></InputMemo>
   </div>
@@ -72,7 +65,7 @@ const pendingDates = defineModel<string[]>('pendingDates', {
     >
       キャンセル
     </BaseButton>
-    <BaseButton size="lg" :disabled="loading || !title" @click="emit('submit')">
+    <BaseButton size="lg" :disabled="!canSubmit" @click="emit('submit')">
       {{ submitButtonLabel }}
     </BaseButton>
   </div>

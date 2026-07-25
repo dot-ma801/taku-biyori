@@ -1,15 +1,26 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import {
-  createGameSession,
-  bulkUpdateAvailabilityDates,
-} from '@/api/game-session';
+import { createGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 import {
   parseMaxMembers,
   getMaxMembersError,
 } from '@/features/GameSession/Edit/maxMembersValidation';
+
+/**
+ * 作成時点の日付を `YYYY-MM-DD`（UTC 基準）で返す。
+ *
+ * 直接卓立ては募集を伴わないため本来 openUntil を持たないが、段階6c で
+ * `getGameSessionStatus` を簡素化するまでは openUntil が未設定だと公開時に
+ * `open`（募集中）へ導出されてしまう。募集枠からの卓確定と同じ回避策として
+ * 作成時点の日付を入れ、`confirmed` / `today` へ到達させる。
+ *
+ * サーバ側は `new Date('YYYY-MM-DD')`（UTC 深夜0時）としてパースするため、
+ * ローカル TZ ではなく UTC 基準で整形する（UTC より進んだ TZ で未来日となり
+ * `open` に落ちるのを避ける）。段階6c で openUntil カラムごと削除する。
+ */
+const closedOpenUntil = (): string => new Date().toISOString().slice(0, 10);
 
 export const useCreateGameSession = () => {
   const router = useRouter();
@@ -18,10 +29,8 @@ export const useCreateGameSession = () => {
   const scenarioName = ref('');
   const maxMembers = ref('');
   const description = ref('');
-  const openUntil = ref('');
   const scheduledAt = ref('');
   const location = ref('');
-  const pendingDates = ref<string[]>([]);
 
   const loading = ref(false);
   const errorMessage = ref('');
@@ -32,6 +41,12 @@ export const useCreateGameSession = () => {
     const maxMembersError = getMaxMembersError(maxMembers.value);
     if (maxMembersError) {
       errorMessage.value = maxMembersError;
+      return;
+    }
+
+    // 卓は日程が確定した状態でのみ存在する（design-v1.1 §8）
+    if (!scheduledAt.value) {
+      errorMessage.value = '開催日を選択してください';
       return;
     }
 
@@ -50,22 +65,10 @@ export const useCreateGameSession = () => {
         ...(scenarioName.value && { scenarioName: scenarioName.value }),
         ...(parsedMaxMembers !== null && { maxMembers: parsedMaxMembers }),
         ...(description.value && { description: description.value }),
-        ...(openUntil.value && { openUntil: openUntil.value }),
-        ...(scheduledAt.value && { scheduledAt: scheduledAt.value }),
         ...(location.value && { location: location.value }),
+        scheduledAt: scheduledAt.value,
+        openUntil: closedOpenUntil(),
       });
-
-      // 候補日が選択されていればセッション作成後に一括 PUT
-      if (pendingDates.value.length > 0) {
-        try {
-          await bulkUpdateAvailabilityDates(gameSession.id, {
-            dates: pendingDates.value,
-          });
-        } catch {
-          errorMessage.value =
-            'セッションは作成されましたが、候補日の登録に失敗しました';
-        }
-      }
 
       router.push({
         name: 'game-sessions-detail',
@@ -91,10 +94,8 @@ export const useCreateGameSession = () => {
     scenarioName,
     maxMembers,
     description,
-    openUntil,
     scheduledAt,
     location,
-    pendingDates,
     loading,
     errorMessage,
     submit,

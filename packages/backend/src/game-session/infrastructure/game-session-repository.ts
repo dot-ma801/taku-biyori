@@ -63,7 +63,6 @@ export type GameSessionRow = {
   location: string | null;
   maxPlayers: number | null;
   isPublished: boolean;
-  openUntil: string | null;
   scheduledAt: string | null;
   completedAt: Date | null;
   cancelledAt: Date | null;
@@ -88,13 +87,11 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   location: row.location,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
-    openUntil: toDateOrNull(row.openUntil),
     scheduledAt: toDateOrNull(row.scheduledAt),
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
-  openUntil: row.openUntil,
   scheduledAt: row.scheduledAt,
   completedAt: row.completedAt?.toISOString() ?? null,
   cancelledAt: row.cancelledAt?.toISOString() ?? null,
@@ -111,13 +108,11 @@ const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
   scenarioName: row.scenarioName,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
-    openUntil: toDateOrNull(row.openUntil),
     scheduledAt: toDateOrNull(row.scheduledAt),
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
-  openUntil: row.openUntil,
   memberCount: row.memberCount,
   maxMembers: row.maxPlayers,
   scheduledAt: row.scheduledAt,
@@ -165,13 +160,8 @@ export const createGameSessionRepository = (
                 ),
               ),
           ),
-          and(
-            eq(gameSessions.isPublished, true),
-            or(
-              isNull(gameSessions.openUntil),
-              sql`${gameSessions.openUntil} > CURRENT_DATE`,
-            ),
-          ),
+          // 公開済みの卓は誰でも閲覧できる（design-v1.1 §8 の認可モデル）
+          eq(gameSessions.isPublished, true),
         ),
       )
       .groupBy(gameSessions.id);
@@ -311,7 +301,6 @@ export const createGameSessionRepository = (
     const row = await db
       .select({
         isPublished: gameSessions.isPublished,
-        openUntil: gameSessions.openUntil,
         scheduledAt: gameSessions.scheduledAt,
         completedAt: gameSessions.completedAt,
         cancelledAt: gameSessions.cancelledAt,
@@ -324,7 +313,6 @@ export const createGameSessionRepository = (
     const r = row[0];
     return {
       isPublished: r.isPublished,
-      openUntil: toDateOrNull(r.openUntil),
       scheduledAt: toDateOrNull(r.scheduledAt),
       completedAt: r.completedAt,
       cancelledAt: r.cancelledAt,

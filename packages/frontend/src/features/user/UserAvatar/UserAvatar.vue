@@ -21,12 +21,7 @@ const props = withDefaults(
 // 模様の種は表示名が変わっても見た目が変化しないよう、可能な限り不変な id を優先する。
 // name は id を持たない相手（ゲスト等）向けのフォールバック。
 const avatarName = computed(
-  () =>
-    props.userId ??
-    props.name ??
-    authStore.user?.id ??
-    authStore.user?.name ??
-    '',
+  () => props.userId ?? props.name ?? authStore.user?.id ?? '',
 );
 </script>
 

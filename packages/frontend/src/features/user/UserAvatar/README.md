@@ -26,7 +26,7 @@
 
 ## Design Notes
 
-- アバター生成のシードは `props.userId ?? props.name ?? authStore.user?.id ?? authStore.user?.name` の優先順位で決定する
+- アバター生成のシードは `props.userId ?? props.name ?? authStore.user?.id` の優先順位で決定する
 - **表示名ではなく、可能な限り不変な id を種にする**（表示名が変わるたびに見た目が変わってしまうのを避けるため）。id を持たない相手（ゲスト参加者など）では `name` を使う
 - `border-radius: var(--radius-full)` で円形表示
 - 装飾的な要素として `aria-hidden="true"` を付与

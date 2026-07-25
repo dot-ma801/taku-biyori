@@ -36,8 +36,8 @@ export const gameSessions = gameSessionSchema.table(
     maxPlayers: integer('max_players'),
     guestLinkToken: text('guest_link_token').notNull(),
     isPublished: boolean('is_published').notNull().default(false),
-    openUntil: date('open_until'),
-    scheduledAt: date('scheduled_at'),
+    // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+    scheduledAt: date('scheduled_at').notNull(),
     completedAt: timestamp('completed_at'),
     cancelledAt: timestamp('cancelled_at'),
     // 出自の募集枠。直接卓立ては null（design-v1.1 §3）

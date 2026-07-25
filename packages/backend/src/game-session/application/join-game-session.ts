@@ -1,8 +1,9 @@
 import type {
   GameSessionMember,
+  GameSessionStatus,
   JoinGameSessionInput,
 } from '@taku-biyori/shared';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import { GameSessionAction, canPerform } from '@taku-biyori/shared';
 
 export interface JoinGameSessionRepository {
   // null はセッションが存在しないことを表す
@@ -34,7 +35,11 @@ export const joinGameSession = async (
   // null はセッション非存在として扱い、クエリを1回に統合する
   const status = await repo.findGameSessionStatus(gameSessionId);
   if (status === null) return { type: 'notFound' };
-  if (status !== GameSessionStatus.open) return { type: 'sessionNotOpen' };
+  // 参加条件は「公開済み・未完了・実施日当日まで」（design-v1.1 §8）。
+  // フロントの参加ボタン表示制御と同じ ACTION_POLICIES を使う。
+  if (!canPerform(GameSessionAction.joinSession, status, 'member')) {
+    return { type: 'sessionNotOpen' };
+  }
 
   const existingMemberId = await repo.findMemberByUserId(gameSessionId, userId);
   if (existingMemberId !== null) return { type: 'alreadyJoined' };

@@ -10,7 +10,6 @@ const mockDetail: GameSessionDetail = {
   scenarioName: null,
   status: 'draft',
   isPublished: false,
-  openUntil: null,
   scheduledAt: null,
   completedAt: null,
   maxMembers: null,

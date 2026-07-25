@@ -15,7 +15,6 @@ const mockSessionRow = {
   maxPlayers: null,
   guestLinkToken: 'token-abc',
   isPublished: false,
-  openUntil: null,
   scheduledAt: null,
   completedAt: null,
   cancelledAt: null,
@@ -470,7 +469,6 @@ describe('complete', () => {
       {
         ...mockSessionRow,
         isPublished: true,
-        openUntil: '2025-04-01',
         scheduledAt: '2025-05-01',
         completedAt,
       },

@@ -7,12 +7,6 @@ export enum GameSessionAction {
   joinSession = 'joinSession',
   /** 退出 */
   leaveSession = 'leaveSession',
-  /** 日程の回答 */
-  inputScheduleResponse = 'inputScheduleResponse',
-  /** 候補日の追加 */
-  addCandidates = 'addCandidates',
-  /** 日程の確定 */
-  confirmSchedule = 'confirmSchedule',
   /** 詳細の編集 */
   editSession = 'editSession',
   /** 公開 */
@@ -28,36 +22,30 @@ type ActionPolicy = {
   statuses: GameSessionStatus[];
 };
 
+/**
+ * 卓の操作可否（API 契約）。フロントの表示制御とバックエンドのバリデーションで同じ表を使う。
+ *
+ * 段階6b で募集・日程調整を募集枠（lobby）へ移したため、卓では `open` を導出しない
+ * （`open` は公開遷移 `draft → open` のリクエスト値としてのみ残る）。
+ * 旧ポリシーが `open`（公開済み・募集中）を列挙していた箇所は
+ * `confirmed`（公開済み・実施前）へ読み替えている。
+ * `scheduling` は `scheduled_at` NOT NULL 化（段階6c）までのフォールバック。
+ */
 export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
+  // 参加条件は「公開済み・未完了・実施日当日まで」（design-v1.1 §8）
   [GameSessionAction.joinSession]: {
     roles: ['member'],
-    statuses: [GameSessionStatus.open],
+    statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
   },
   [GameSessionAction.leaveSession]: {
     roles: ['member'],
-    statuses: [GameSessionStatus.open, GameSessionStatus.scheduling],
-  },
-  [GameSessionAction.inputScheduleResponse]: {
-    roles: ['host', 'member'],
-    statuses: [GameSessionStatus.open, GameSessionStatus.scheduling],
-  },
-  [GameSessionAction.addCandidates]: {
-    roles: ['host'],
-    statuses: [
-      GameSessionStatus.draft,
-      GameSessionStatus.open,
-      GameSessionStatus.scheduling,
-    ],
-  },
-  [GameSessionAction.confirmSchedule]: {
-    roles: ['host'],
-    statuses: [GameSessionStatus.scheduling],
+    statuses: [GameSessionStatus.confirmed, GameSessionStatus.scheduling],
   },
   [GameSessionAction.editSession]: {
     roles: ['host'],
     statuses: [
       GameSessionStatus.draft,
-      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
       GameSessionStatus.scheduling,
     ],
   },
@@ -69,13 +57,10 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
     roles: ['host'],
     statuses: [GameSessionStatus.today],
   },
+  // 日程が確定した卓（confirmed 以降）は削除不可。「やめたい」の受け皿は中止（design-v1.1 §6）
   [GameSessionAction.deleteSession]: {
     roles: ['host'],
-    statuses: [
-      GameSessionStatus.draft,
-      GameSessionStatus.open,
-      GameSessionStatus.scheduling,
-    ],
+    statuses: [GameSessionStatus.draft, GameSessionStatus.scheduling],
   },
 };
 

@@ -10,7 +10,6 @@ const baseSession: GameSession = {
   scenarioName: null,
   status: 'draft',
   isPublished: false,
-  openUntil: null,
   scheduledAt: null,
   completedAt: null,
   cancelledAt: null,
@@ -27,7 +26,6 @@ const makeRepo = (
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
   findStatusFields: vi.fn().mockResolvedValue({
     isPublished: false,
-    openUntil: null,
     scheduledAt: null,
     completedAt: null,
     cancelledAt: null,
@@ -87,7 +85,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: null,
           scheduledAt: null,
           completedAt: null,
         }),
@@ -114,7 +111,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-01'),
           completedAt: null,
         }),
@@ -142,7 +138,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-01'),
           completedAt: null,
         }),
@@ -167,7 +162,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-01'),
           completedAt: null,
           cancelledAt: null,
@@ -194,7 +188,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-05'),
           completedAt: null,
         }),
@@ -225,14 +218,12 @@ describe('updateGameSessionStatus', () => {
           currentStatus === 'today'
             ? {
                 isPublished: true,
-                openUntil: new Date('2025-05-25'),
                 scheduledAt: new Date('2025-06-01'),
                 completedAt: null,
                 cancelledAt: null,
               }
             : {
                 isPublished: true,
-                openUntil: new Date('2025-05-25'),
                 scheduledAt: new Date('2025-06-10'),
                 completedAt: null,
                 cancelledAt: null,
@@ -264,7 +255,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-01'),
           completedAt: null,
           cancelledAt: null,
@@ -284,7 +274,7 @@ describe('updateGameSessionStatus', () => {
       expect(repo.cancel).toHaveBeenCalledWith('session-1', now);
     });
 
-    it.each(['draft', 'open', 'scheduling', 'completed'] as const)(
+    it.each(['draft', 'scheduling', 'completed'] as const)(
       '%s から cancelled に遷移しようとすると invalidTransition を返す',
       async (currentStatus) => {
         // Arrange
@@ -292,28 +282,18 @@ describe('updateGameSessionStatus', () => {
         const fieldsByStatus = {
           draft: {
             isPublished: false,
-            openUntil: null,
-            scheduledAt: null,
-            completedAt: null,
-            cancelledAt: null,
-          },
-          open: {
-            isPublished: true,
-            openUntil: new Date('2025-06-10'),
             scheduledAt: null,
             completedAt: null,
             cancelledAt: null,
           },
           scheduling: {
             isPublished: true,
-            openUntil: new Date('2025-05-25'),
             scheduledAt: null,
             completedAt: null,
             cancelledAt: null,
           },
           completed: {
             isPublished: true,
-            openUntil: new Date('2025-05-25'),
             scheduledAt: new Date('2025-05-30'),
             completedAt: new Date('2025-05-31'),
             cancelledAt: null,
@@ -346,7 +326,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-01'),
           completedAt: null,
           cancelledAt: new Date('2025-05-20'),
@@ -373,7 +352,6 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          openUntil: new Date('2025-05-25'),
           scheduledAt: new Date('2025-06-01'),
           completedAt: null,
           cancelledAt: null,

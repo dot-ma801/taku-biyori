@@ -1,5 +1,7 @@
 import {
+  GameSessionAction,
   GameSessionStatus,
+  canPerform,
   type GameSession,
   type UpdateGameSessionStatusInput,
 } from '@taku-biyori/shared';
@@ -36,8 +38,10 @@ export const updateGameSessionStatus = async (
 
   const currentStatus = getGameSessionStatus(fields, now);
 
+  // 公開遷移。段階6b 以降 open は導出されないが、公開（is_published = true）の
+  // リクエスト値としては維持する（design-v1.1 §6・migration-plan 段階6b）
   if (input.status === GameSessionStatus.open) {
-    if (currentStatus !== GameSessionStatus.draft)
+    if (!canPerform(GameSessionAction.publishSession, currentStatus, 'host'))
       return { type: 'invalidTransition' };
     const gameSession = await repo.publish(id);
     if (!gameSession) return { type: 'notFound' };
@@ -45,7 +49,7 @@ export const updateGameSessionStatus = async (
   }
 
   if (input.status === GameSessionStatus.completed) {
-    if (currentStatus !== GameSessionStatus.today)
+    if (!canPerform(GameSessionAction.completeSession, currentStatus, 'host'))
       return { type: 'invalidTransition' };
     const gameSession = await repo.complete(id, now);
     // この時点で findHostUserId / findStatusFields により存在は確認済みのため、

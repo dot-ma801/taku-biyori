@@ -11,7 +11,6 @@ const mockGameSession: GameSession = {
   location: null,
   status: 'open',
   isPublished: true,
-  openUntil: null,
   scheduledAt: null,
   completedAt: null,
   maxMembers: null,

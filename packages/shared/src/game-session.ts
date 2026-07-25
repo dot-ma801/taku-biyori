@@ -97,42 +97,6 @@ export type UpdateGameSessionStatusInput = z.infer<
   typeof UpdateGameSessionStatusInputSchema
 >;
 
-export const AvailabilityDateAnswerSchema = z.object({
-  id: z.string().uuid(),
-  memberId: z.string().uuid(),
-  answer: z.enum(['ok', 'maybe', 'ng']),
-  comment: z.string().nullable().optional(),
-});
-export type AvailabilityDateAnswer = z.infer<
-  typeof AvailabilityDateAnswerSchema
->;
-
-export const AvailabilityDateSchema = z.object({
-  id: z.string().uuid(),
-  date: z.iso.date(),
-  answers: z.array(AvailabilityDateAnswerSchema),
-});
-export type AvailabilityDate = z.infer<typeof AvailabilityDateSchema>;
-
-export const CreateAvailabilityDateInputSchema = z
-  .object({
-    date: z.iso.date(),
-  })
-  .refine((input) => input.date >= todayDateString(), {
-    message: '候補日には今日以降の日付を指定してください',
-    path: ['date'],
-  });
-export type CreateAvailabilityDateInput = z.infer<
-  typeof CreateAvailabilityDateInputSchema
->;
-
-export const BulkUpdateAvailabilityDatesInputSchema = z.object({
-  dates: z.array(z.iso.date()),
-});
-export type BulkUpdateAvailabilityDatesInput = z.infer<
-  typeof BulkUpdateAvailabilityDatesInputSchema
->;
-
 export const GameSessionMemberSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().nullable(),
@@ -149,23 +113,6 @@ export const GameSessionDetailSchema = GameSessionSchema.extend({
   members: z.array(GameSessionMemberSchema),
 });
 export type GameSessionDetail = z.infer<typeof GameSessionDetailSchema>;
-
-export const UpdateAvailabilityDateResponseInputSchema = z.object({
-  answer: z.enum(['ok', 'maybe', 'ng']),
-  comment: z.string().max(500).optional(),
-});
-export type UpdateAvailabilityDateResponseInput = z.infer<
-  typeof UpdateAvailabilityDateResponseInputSchema
->;
-
-// ゲストの日程回答。本人確認手段がないため、どのゲスト列を更新するかを memberId で明示する。
-export const GuestUpdateAvailabilityDateResponseInputSchema =
-  UpdateAvailabilityDateResponseInputSchema.extend({
-    memberId: z.string().uuid(),
-  });
-export type GuestUpdateAvailabilityDateResponseInput = z.infer<
-  typeof GuestUpdateAvailabilityDateResponseInputSchema
->;
 
 export const JoinGameSessionInputSchema = z.object({
   characterName: z.string().max(100).optional(),

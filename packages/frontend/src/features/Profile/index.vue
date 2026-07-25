@@ -28,7 +28,7 @@ const onConfirmLogout = async () => {
   try {
     await authStore.logout();
     logoutDialogModel.value = false;
-    router.push('/');
+    await router.push('/');
   } catch (error) {
     console.error(error);
   }

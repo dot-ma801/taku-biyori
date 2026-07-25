@@ -13,7 +13,7 @@ const props = defineProps<{
 const formattedPublishSessions = computed(() => {
   return [...props.publicSessions].map((item) => ({
     ...item,
-    formattedDate: item.scheduledAt ?? '調整中',
+    formattedDate: item.scheduledAt ?? '未設定',
     formattedMaxMembers: item.maxMembers ?? '-',
     formattedRemainingMembers:
       item.maxMembers != null ? item.maxMembers - item.memberCount : null,
@@ -28,7 +28,7 @@ const sessionLink = (item: { id: string; title: string }) => ({
 
 <template>
   <BaseSectionHeading class="card-header" level="h2">
-    募集中のセッション
+    公開中のセッション
   </BaseSectionHeading>
 
   <BaseCard

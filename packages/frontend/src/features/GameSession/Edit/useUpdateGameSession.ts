@@ -15,11 +15,9 @@ export const useUpdateGameSession = (id: string) => {
   const scenarioName = ref('');
   const maxMembers = ref('');
   const description = ref('');
-  const openUntil = ref('');
   const scheduledAt = ref('');
   const location = ref('');
 
-  const isScheduled = ref(false);
   const loading = ref(false);
   const errorMessage = ref('');
 
@@ -29,13 +27,11 @@ export const useUpdateGameSession = (id: string) => {
 
     try {
       const gameSession = await getGameSession(id);
-      isScheduled.value = gameSession.scheduledAt != null;
       title.value = gameSession.title;
       scenarioName.value = gameSession.scenarioName ?? '';
       maxMembers.value =
         gameSession.maxMembers != null ? String(gameSession.maxMembers) : '';
       description.value = gameSession.description ?? '';
-      openUntil.value = gameSession.openUntil ?? '';
       scheduledAt.value = gameSession.scheduledAt ?? '';
       location.value = gameSession.location ?? '';
     } catch (err) {
@@ -60,6 +56,12 @@ export const useUpdateGameSession = (id: string) => {
       return;
     }
 
+    // 卓は日程が確定した状態でのみ存在する（design-v1.1 §8）
+    if (!scheduledAt.value) {
+      errorMessage.value = '開催日を選択してください';
+      return;
+    }
+
     loading.value = true;
 
     try {
@@ -76,12 +78,9 @@ export const useUpdateGameSession = (id: string) => {
         ...(description.value
           ? { description: description.value }
           : { description: null }),
-        ...(openUntil.value
-          ? { openUntil: openUntil.value }
-          : { openUntil: null }),
-        ...(scheduledAt.value
-          ? { scheduledAt: scheduledAt.value }
-          : { scheduledAt: null }),
+        // openUntil は募集枠の関心事なので編集フォームから外した。
+        // 送らないことでサーバ側の値（作成時にセットした締め切り日）を保持する。
+        scheduledAt: scheduledAt.value,
         ...(location.value ? { location: location.value } : { location: null }),
       });
 
@@ -105,12 +104,10 @@ export const useUpdateGameSession = (id: string) => {
   }
 
   return {
-    isScheduled,
     title,
     scenarioName,
     maxMembers,
     description,
-    openUntil,
     scheduledAt,
     location,
     loading,

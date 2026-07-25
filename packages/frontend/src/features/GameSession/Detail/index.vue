@@ -3,7 +3,6 @@ defineOptions({ name: 'GameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
-import ScheduleDisplay from '@/features/GameSession/Detail/Schedule/ScheduleDisplay.vue';
 import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
@@ -17,7 +16,6 @@ const {
   loading: loadingDetail,
   errorMessage,
   fetch,
-  patchGameSession,
   updateMember,
 } = useGetGameSessionDetail(props.gameSessionId);
 
@@ -65,10 +63,6 @@ const gameSessionDateTime = computed(
     <!-- TODO: シナリオ詳細文が実装されたら表示する -->
     <StatusDisplay :game-session-status="gameSession.status" />
     <MemoDisplay :text="description" />
-    <ScheduleDisplay
-      :game-session="gameSession"
-      @session-updated="patchGameSession"
-    />
     <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
   </div>
 </template>

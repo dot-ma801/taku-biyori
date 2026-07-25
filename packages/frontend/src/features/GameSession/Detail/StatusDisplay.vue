@@ -5,8 +5,6 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import {
   type LucideIcon,
   EyeOff,
-  Megaphone,
-  CalendarClock,
   CalendarCheck,
   CircleDot,
   Flag,
@@ -19,60 +17,76 @@ const props = defineProps<{ gameSessionStatus: GameSessionStatus }>();
 type StatusAppearance = {
   label: string;
   text: string;
-  variant: 'default' | 'primary' | 'success' | 'warning' | 'error';
+  variant: 'default' | 'success' | 'warning' | 'error';
   icon: LucideIcon;
 };
 
-const STATUS_APPEARANCE: Record<GameSessionStatus, StatusAppearance> = {
-  [GameSessionStatus.draft]: {
-    label: '非公開',
-    text: 'まだ公開していません。準備ができたら公開しましょう。',
-    variant: 'default',
-    icon: EyeOff,
-  },
-  [GameSessionStatus.open]: {
-    label: '募集中',
-    text: '参加者を募集しています。',
-    variant: 'primary',
-    icon: Megaphone,
-  },
-  [GameSessionStatus.scheduling]: {
-    label: '日程調整中',
-    text: '募集を終了し、開催日を調整しています。',
-    variant: 'warning',
-    icon: CalendarClock,
-  },
-  [GameSessionStatus.confirmed]: {
-    label: '実施前',
-    text: '開催日が確定しました。当日を待っています。',
-    variant: 'success',
-    icon: CalendarCheck,
-  },
-  [GameSessionStatus.today]: {
-    label: '当日',
-    text: '本日開催です。',
-    variant: 'warning',
-    icon: CircleDot,
-  },
-  [GameSessionStatus.completed]: {
-    label: '通過済み',
-    text: '開催を終えた卓です。',
-    variant: 'success',
-    icon: Flag,
-  },
-  [GameSessionStatus.cancelled]: {
-    label: '中止',
-    text: 'この卓は中止になりました。',
-    variant: 'error',
-    icon: Ban,
-  },
-};
+/**
+ * 卓が取りうるステータスの表示定義。
+ *
+ * `open`（募集中）・`scheduling`（日程調整中）は募集枠（lobby）へ移管したため卓では表示しない。
+ * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもカードを描画しないよう
+ * 「キーが無いことがありうる」ルックアップとして Map で持つ。
+ */
+const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
+  [
+    GameSessionStatus.draft,
+    {
+      label: '非公開',
+      text: 'まだ公開していません。準備ができたら公開しましょう。',
+      variant: 'default',
+      icon: EyeOff,
+    },
+  ],
+  [
+    GameSessionStatus.confirmed,
+    {
+      label: '実施前',
+      text: '開催日が確定しました。当日を待っています。',
+      variant: 'success',
+      icon: CalendarCheck,
+    },
+  ],
+  [
+    GameSessionStatus.today,
+    {
+      label: '当日',
+      text: '本日開催です。',
+      variant: 'warning',
+      icon: CircleDot,
+    },
+  ],
+  [
+    GameSessionStatus.completed,
+    {
+      label: '通過済み',
+      text: '開催を終えた卓です。',
+      variant: 'success',
+      icon: Flag,
+    },
+  ],
+  [
+    GameSessionStatus.cancelled,
+    {
+      label: '中止',
+      text: 'この卓は中止になりました。',
+      variant: 'error',
+      icon: Ban,
+    },
+  ],
+]);
 
-const appearance = computed(() => STATUS_APPEARANCE[props.gameSessionStatus]);
+const appearance = computed(() =>
+  STATUS_APPEARANCE.get(props.gameSessionStatus),
+);
 </script>
 
 <template>
-  <BaseCard :data-variant="appearance.variant" class="status-card">
+  <BaseCard
+    v-if="appearance"
+    :data-variant="appearance.variant"
+    class="status-card"
+  >
     <div class="left-area">
       <div class="icon-wrapper">
         <component class="icon" :is="appearance.icon" />
@@ -96,10 +110,6 @@ const appearance = computed(() => STATUS_APPEARANCE[props.gameSessionStatus]);
   );
 }
 
-[data-variant='primary'] {
-  --status-color: var(--color-primary);
-  --status-bg: var(--color-primary-soft);
-}
 [data-variant='warning'] {
   --status-color: var(--color-warning);
   --status-bg: var(--color-warning-soft);

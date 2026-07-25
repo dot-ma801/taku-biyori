@@ -6,12 +6,10 @@ import { useUpdateGameSession } from '@/features/GameSession/Edit/useUpdateGameS
 const props = defineProps<{ gameSessionId: string }>();
 
 const {
-  isScheduled,
   title,
   scenarioName,
   maxMembers,
   description,
-  openUntil,
   scheduledAt,
   location,
   loading,
@@ -26,13 +24,10 @@ const {
     <GameSessionEdit
       heading="セッション編集"
       submit-label="セッションを更新する"
-      :game-session-id="props.gameSessionId"
-      :is-scheduled="isScheduled"
       v-model:title="title"
       v-model:scenarioName="scenarioName"
       v-model:maxMembers="maxMembers"
       v-model:description="description"
-      v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:location="location"
       :loading="loading"

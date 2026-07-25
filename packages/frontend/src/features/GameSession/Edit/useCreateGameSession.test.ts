@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useCreateGameSession } from '@/features/GameSession/Edit/useCreateGameSession';
 import type { GameSession } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   createGameSession: vi.fn(),
-  bulkUpdateAvailabilityDates: vi.fn(),
 }));
 
 vi.mock('vue-router', () => ({
@@ -13,6 +12,8 @@ vi.mock('vue-router', () => ({
 }));
 
 import { createGameSession } from '@/api/game-session';
+
+const SCHEDULED_AT = '2025-06-15';
 
 const mockGameSession: GameSession = {
   id: 'session-1',
@@ -24,7 +25,7 @@ const mockGameSession: GameSession = {
   status: GameSessionStatus.draft,
   isPublished: false,
   openUntil: null,
-  scheduledAt: null,
+  scheduledAt: SCHEDULED_AT,
   completedAt: null,
   createdBy: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
@@ -40,9 +41,10 @@ describe('useCreateGameSession', () => {
   describe('募集人数のバリデーション', () => {
     it('1（下限未満）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, maxMembers, errorMessage, submit } =
+      const { title, scheduledAt, maxMembers, errorMessage, submit } =
         useCreateGameSession();
       title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
       maxMembers.value = '1';
 
       // Act
@@ -57,9 +59,10 @@ describe('useCreateGameSession', () => {
 
     it('21（上限超過）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, maxMembers, errorMessage, submit } =
+      const { title, scheduledAt, maxMembers, errorMessage, submit } =
         useCreateGameSession();
       title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
       maxMembers.value = '21';
 
       // Act
@@ -74,8 +77,9 @@ describe('useCreateGameSession', () => {
 
     it('2（下限）を入力すると maxMembers: 2 で送信する', async () => {
       // Arrange
-      const { title, maxMembers, submit } = useCreateGameSession();
+      const { title, scheduledAt, maxMembers, submit } = useCreateGameSession();
       title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
       maxMembers.value = '2';
 
       // Act
@@ -89,8 +93,9 @@ describe('useCreateGameSession', () => {
 
     it('20（上限）を入力すると maxMembers: 20 で送信する', async () => {
       // Arrange
-      const { title, maxMembers, submit } = useCreateGameSession();
+      const { title, scheduledAt, maxMembers, submit } = useCreateGameSession();
       title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
       maxMembers.value = '20';
 
       // Act
@@ -104,8 +109,9 @@ describe('useCreateGameSession', () => {
 
     it('未入力なら maxMembers を含めずに送信する', async () => {
       // Arrange
-      const { title, maxMembers, submit } = useCreateGameSession();
+      const { title, scheduledAt, maxMembers, submit } = useCreateGameSession();
       title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
       maxMembers.value = '';
 
       // Act
@@ -114,6 +120,61 @@ describe('useCreateGameSession', () => {
       // Assert
       expect(createGameSession).toHaveBeenCalledWith(
         expect.not.objectContaining({ maxMembers: expect.anything() }),
+      );
+    });
+  });
+
+  describe('開催日（日程必須）', () => {
+    it('開催日が未入力なら送信をブロックしエラーメッセージを表示する', async () => {
+      // Arrange
+      const { title, errorMessage, submit } = useCreateGameSession();
+      title.value = '卓';
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(createGameSession).not.toHaveBeenCalled();
+      expect(errorMessage.value).toBe('開催日を選択してください');
+    });
+
+    it('開催日を入力すると scheduledAt を含めて送信する', async () => {
+      // Arrange
+      const { title, scheduledAt, submit } = useCreateGameSession();
+      title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(createGameSession).toHaveBeenCalledWith(
+        expect.objectContaining({ scheduledAt: SCHEDULED_AT }),
+      );
+    });
+  });
+
+  describe('募集締め切り（openUntil）', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    // NOTE: 段階6c で getGameSessionStatus が簡素化されるまでの暫定措置。
+    //       openUntil を作成日にしておかないと公開時に open（募集中）へ導出されてしまう。
+    it('作成日（UTC 基準）を openUntil として送信する', async () => {
+      // Arrange
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2025-06-01T15:30:00.000Z'));
+      const { title, scheduledAt, submit } = useCreateGameSession();
+      title.value = '卓';
+      scheduledAt.value = SCHEDULED_AT;
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(createGameSession).toHaveBeenCalledWith(
+        expect.objectContaining({ openUntil: '2025-06-01' }),
       );
     });
   });

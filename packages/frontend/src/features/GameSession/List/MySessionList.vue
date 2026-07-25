@@ -21,15 +21,22 @@ const props = defineProps<{
 
 const router = useRouter();
 
-const STATUS_ORDER: Record<GameSessionStatus, number> = {
-  [GameSessionStatus.today]: 0,
-  [GameSessionStatus.confirmed]: 1,
-  [GameSessionStatus.scheduling]: 2,
-  [GameSessionStatus.open]: 3,
-  [GameSessionStatus.draft]: 4,
-  [GameSessionStatus.completed]: 5,
-  [GameSessionStatus.cancelled]: 6,
-};
+/**
+ * 卓が取りうるステータスの並び順。
+ * `open` / `scheduling` は募集枠（lobby）へ移管したため卓では扱わない（enum の削除は段階6c）。
+ * 旧経路で作られた卓が残っていても落とさずに末尾へ送る。
+ */
+const STATUS_ORDER = new Map<GameSessionStatus, number>([
+  [GameSessionStatus.today, 0],
+  [GameSessionStatus.confirmed, 1],
+  [GameSessionStatus.draft, 2],
+  [GameSessionStatus.completed, 3],
+  [GameSessionStatus.cancelled, 4],
+]);
+const UNKNOWN_STATUS_ORDER = Number.MAX_SAFE_INTEGER;
+
+const orderOf = (status: GameSessionStatus) =>
+  STATUS_ORDER.get(status) ?? UNKNOWN_STATUS_ORDER;
 
 const INITIAL_VISIBLE_COUNT = 3;
 const isExpanded = ref(false);
@@ -37,10 +44,10 @@ const isExpanded = ref(false);
 const formattedMySessions = computed(() =>
   [...props.mySessions]
     // FIXME: これは、バックエンド側でやるべきでは？ > issue を起票したらその番号を付記すること
-    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+    .sort((a, b) => orderOf(a.status) - orderOf(b.status))
     .map((item) => ({
       ...item,
-      formattedDate: item.scheduledAt ?? '調整中',
+      formattedDate: item.scheduledAt ?? '未設定',
       formattedMaxMembers: item.maxMembers ?? '-',
     })),
 );

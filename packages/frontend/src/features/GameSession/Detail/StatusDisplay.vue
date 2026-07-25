@@ -28,38 +28,39 @@ type StatusAppearance = {
  * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもカードを描画しないよう
  * Partial（未定義なら非表示）で持つ。
  */
-const STATUS_APPEARANCE: Partial<Record<GameSessionStatus, StatusAppearance>> = {
-  [GameSessionStatus.draft]: {
-    label: '非公開',
-    text: 'まだ公開していません。準備ができたら公開しましょう。',
-    variant: 'default',
-    icon: EyeOff,
-  },
-  [GameSessionStatus.confirmed]: {
-    label: '実施前',
-    text: '開催日が確定しました。当日を待っています。',
-    variant: 'success',
-    icon: CalendarCheck,
-  },
-  [GameSessionStatus.today]: {
-    label: '当日',
-    text: '本日開催です。',
-    variant: 'warning',
-    icon: CircleDot,
-  },
-  [GameSessionStatus.completed]: {
-    label: '通過済み',
-    text: '開催を終えた卓です。',
-    variant: 'success',
-    icon: Flag,
-  },
-  [GameSessionStatus.cancelled]: {
-    label: '中止',
-    text: 'この卓は中止になりました。',
-    variant: 'error',
-    icon: Ban,
-  },
-};
+const STATUS_APPEARANCE: Partial<Record<GameSessionStatus, StatusAppearance>> =
+  {
+    [GameSessionStatus.draft]: {
+      label: '非公開',
+      text: 'まだ公開していません。準備ができたら公開しましょう。',
+      variant: 'default',
+      icon: EyeOff,
+    },
+    [GameSessionStatus.confirmed]: {
+      label: '実施前',
+      text: '開催日が確定しました。当日を待っています。',
+      variant: 'success',
+      icon: CalendarCheck,
+    },
+    [GameSessionStatus.today]: {
+      label: '当日',
+      text: '本日開催です。',
+      variant: 'warning',
+      icon: CircleDot,
+    },
+    [GameSessionStatus.completed]: {
+      label: '通過済み',
+      text: '開催を終えた卓です。',
+      variant: 'success',
+      icon: Flag,
+    },
+    [GameSessionStatus.cancelled]: {
+      label: '中止',
+      text: 'この卓は中止になりました。',
+      variant: 'error',
+      icon: Ban,
+    },
+  };
 
 const appearance = computed(() => STATUS_APPEARANCE[props.gameSessionStatus]);
 </script>

@@ -29,10 +29,6 @@ import {
   lobbyCandidates,
   lobbyAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
-import {
-  gameSessions,
-  gameSessionMembers,
-} from '@/system/infrastructure/database/game-session-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getLobbyStatus } from '@/lobby/domain/lobby-status';
 import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
@@ -54,7 +50,8 @@ import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delet
 import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
 import type { ConfirmLobbyRepository } from '@/lobby/application/confirm-lobby';
-import { toGameSession } from '@/game-session/infrastructure/game-session-repository';
+import { insertGameSessionWithMembers } from '@/game-session/infrastructure/insert-game-session-with-members';
+import { findConfirmedGameSessionByLobbyId } from '@/game-session/infrastructure/find-confirmed-game-session-by-lobby-id';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -240,32 +237,13 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     }
 
     // 確定済みの場合、作成された卓と選出メンバーの lobbyMemberId を取得する
-    const gsRows = await db
-      .select({
-        gameSessionId: gameSessions.id,
-        lobbyMemberId: gameSessionMembers.lobbyMemberId,
-      })
-      .from(gameSessions)
-      .leftJoin(
-        gameSessionMembers,
-        eq(gameSessionMembers.gameSessionId, gameSessions.id),
-      )
-      .where(eq(gameSessions.lobbyId, id));
+    // （卓のテーブルには触れず、卓機能側の関数に委譲する）
+    const confirmedGameSession = await findConfirmedGameSessionByLobbyId(
+      db,
+      id,
+    );
 
-    if (gsRows.length === 0 || gsRows[0]?.gameSessionId == null) {
-      return { ...lobby, members, confirmedGameSession: null };
-    }
-
-    const gameSessionId = gsRows[0].gameSessionId;
-    const selectedLobbyMemberIds = gsRows
-      .filter((r) => r.lobbyMemberId !== null)
-      .map((r) => r.lobbyMemberId!);
-
-    return {
-      ...lobby,
-      members,
-      confirmedGameSession: { id: gameSessionId, selectedLobbyMemberIds },
-    };
+    return { ...lobby, members, confirmedGameSession };
   },
 
   async updateById(id: string, input: UpdateLobbyInput): Promise<Lobby | null> {
@@ -778,38 +756,8 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return result.length > 0;
   },
 
+  // 卓の生成は卓機能側の責務なので、テーブル定義や行の変換には触れず委譲する
   async createGameSessionFromLobby(params) {
-    const result = await db
-      .insert(gameSessions)
-      .values({
-        hostUserId: params.hostUserId,
-        title: params.title,
-        scenarioName: params.scenarioName,
-        description: params.description,
-        location: params.location,
-        maxPlayers: params.maxPlayers,
-        guestLinkToken: params.guestLinkToken,
-        isPublished: true,
-        scheduledAt: params.scheduledAt,
-        lobbyId: params.lobbyId,
-      })
-      .returning();
-
-    const row = result[0];
-    if (!row) throw new Error('卓の作成に失敗しました');
-
-    if (params.members.length > 0) {
-      await db.insert(gameSessionMembers).values(
-        params.members.map((member) => ({
-          gameSessionId: row.id,
-          userId: member.userId,
-          guestName: member.guestName,
-          lobbyMemberId: member.id,
-          characterName: null,
-        })),
-      );
-    }
-
-    return toGameSession(row);
+    return insertGameSessionWithMembers(db, params);
   },
 });

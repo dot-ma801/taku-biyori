@@ -28,7 +28,7 @@ const sessionLink = (item: { id: string; title: string }) => ({
 
 <template>
   <BaseSectionHeading class="card-header" level="h2">
-    募集中のセッション
+    公開中のセッション
   </BaseSectionHeading>
 
   <BaseCard

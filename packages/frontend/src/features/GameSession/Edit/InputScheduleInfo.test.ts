@@ -37,7 +37,9 @@ describe('InputScheduleInfo', () => {
       await cell?.trigger('click');
 
       // Assert
-      expect(wrapper.emitted('update:scheduledAt')).toBeTruthy();
+      const emitted = wrapper.emitted('update:scheduledAt');
+      expect(emitted).toBeTruthy();
+      expect(emitted?.[0]?.[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
   });
 });

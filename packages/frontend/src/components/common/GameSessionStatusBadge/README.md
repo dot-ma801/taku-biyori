@@ -27,7 +27,7 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 | `completed` | 通過済み | muted（グレー）     |
 | `cancelled` | 中止     | error（レッド）     |
 
-`today` にのみ error（赤）を使い、当日開催の緊急感を他ステータスと区別する。  
+`today` と `cancelled` に error（赤）を使う。`today` は当日開催の緊急感を、`cancelled` は開催されない事実を、それぞれ他ステータスと区別して伝える。  
 バリアントのマッピングは `features/GameSession/Detail/StatusDisplay.vue` の設計方針に準拠している。
 
 `open`（募集中）・`scheduling`（日程調整中）は募集枠（lobby）へ移管したため卓では表示しない

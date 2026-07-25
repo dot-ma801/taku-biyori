@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginView from '@/views/LoginView.vue';
 import AfterLogin from '@/views/AfterLogin.vue';
+import { resolveAuthRedirect } from '@/router/guards';
+import { useAuthStore } from '@/stores/auth';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -58,6 +60,12 @@ const router = createRouter({
       }),
     },
     {
+      path: '/profile/setting',
+      name: 'profile-setting',
+      component: () => import('@/views/ProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/lobbies',
       name: 'lobbies-list',
       component: () => import('@/views/Lobby/ListView.vue'),
@@ -84,6 +92,13 @@ const router = createRouter({
       }),
     },
   ],
+});
+
+// main.ts で initSession() を await してから mount するため、
+// 初回ナビゲーション時点でセッションの復元は完了している。
+router.beforeEach((to) => {
+  const authStore = useAuthStore();
+  return resolveAuthRedirect(to, authStore.isAuthenticated) ?? true;
 });
 
 export default router;

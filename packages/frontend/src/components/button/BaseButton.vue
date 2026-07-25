@@ -70,7 +70,8 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   justify-content: center;
   gap: var(--space-2);
   font-family: var(--font-family-base);
-  font-size: 13px;
+  /* 13px だと dPR=1 環境で漢字が潰れるため 14px（md 基準） */
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.2;

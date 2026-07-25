@@ -21,7 +21,7 @@ function makeSession(
     status: GameSessionStatus.draft,
     isPublished: false,
     memberCount: 1,
-    scheduledAt: null,
+    scheduledAt: '2026-08-01T10:00:00Z',
     role: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -219,23 +219,6 @@ describe('useGameSessionList', () => {
       expect(nextSession.value).toBeNull();
     });
 
-    it('scheduledAt がないセッションは nextSession に含まれない', async () => {
-      // Arrange
-      const noDate = makeSession({
-        scheduledAt: null,
-        role: 'host',
-        status: GameSessionStatus.scheduling,
-      });
-      mockListGameSessions.mockResolvedValue([noDate]);
-
-      // Act
-      const { nextSession, fetch } = useGameSessionList();
-      await fetch();
-
-      // Assert
-      expect(nextSession.value).toBeNull();
-    });
-
     it('role=null のセッションは nextSession の対象外になる', async () => {
       // Arrange
       const publicSession = makeSession({
@@ -412,26 +395,6 @@ describe('useGameSessionList', () => {
       // Assert
       expect(filteredMySessions.value[0]?.id).toBe(s1.id);
       expect(filteredMySessions.value[1]?.id).toBe(s2.id);
-    });
-
-    it('scheduledAt が null のセッションはソート時に末尾に置かれる', async () => {
-      // Arrange
-      const withDate = makeSession({
-        scheduledAt: '2026-08-01T10:00:00Z',
-        role: 'host',
-      });
-      const noDate = makeSession({ scheduledAt: null, role: 'host' });
-      mockListGameSessions.mockResolvedValue([noDate, withDate]);
-
-      // Act
-      const { filteredMySessions, fetch } = useGameSessionList({
-        sortByScheduledAt: true,
-      });
-      await fetch();
-
-      // Assert
-      expect(filteredMySessions.value[0]?.id).toBe(withDate.id);
-      expect(filteredMySessions.value[1]?.id).toBe(noDate.id);
     });
   });
 });

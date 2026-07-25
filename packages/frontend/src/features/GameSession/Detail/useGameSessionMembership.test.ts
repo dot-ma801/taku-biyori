@@ -49,6 +49,7 @@ function makeGameSession(
     //       confirmed（公開済み・実施前）を既定値にする。
     status: GameSessionStatus.confirmed,
     isPublished: true,
+    scheduledAt: '2026-08-01',
     createdBy: HOST_ID,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
@@ -109,7 +110,6 @@ describe('canJoin', () => {
 
   it.each([
     GameSessionStatus.draft,
-    GameSessionStatus.scheduling,
     GameSessionStatus.completed,
     GameSessionStatus.cancelled,
   ] as const)('参加できない %s ステータスの場合は false', (status) => {
@@ -235,23 +235,22 @@ describe('join', () => {
 });
 
 describe('canLeave', () => {
-  // ACTION_POLICIES.leaveSession の statuses（confirmed / today / scheduling）に従う
-  it.each([
-    GameSessionStatus.confirmed,
-    GameSessionStatus.today,
-    GameSessionStatus.scheduling,
-  ] as const)('自分がメンバーで %s ステータスの場合は true', (status) => {
-    // Arrange
-    const gameSession = ref(
-      makeGameSession({ status, members: [makeMember()] }),
-    );
+  // ACTION_POLICIES.leaveSession の statuses（confirmed / today）に従う
+  it.each([GameSessionStatus.confirmed, GameSessionStatus.today] as const)(
+    '自分がメンバーで %s ステータスの場合は true',
+    (status) => {
+      // Arrange
+      const gameSession = ref(
+        makeGameSession({ status, members: [makeMember()] }),
+      );
 
-    // Act
-    const { canLeave } = setup(gameSession);
+      // Act
+      const { canLeave } = setup(gameSession);
 
-    // Assert
-    expect(canLeave.value).toBe(true);
-  });
+      // Assert
+      expect(canLeave.value).toBe(true);
+    },
+  );
 
   it('自分がメンバーでない場合は false', () => {
     // Arrange

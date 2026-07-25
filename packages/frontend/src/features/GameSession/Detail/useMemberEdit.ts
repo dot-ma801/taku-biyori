@@ -8,7 +8,6 @@ import { useToast } from '@/composables/useToast';
 
 const EDITABLE_STATUSES = new Set<GameSessionStatus>([
   GameSessionStatus.open,
-  GameSessionStatus.scheduling,
   GameSessionStatus.confirmed,
   GameSessionStatus.today,
 ]);

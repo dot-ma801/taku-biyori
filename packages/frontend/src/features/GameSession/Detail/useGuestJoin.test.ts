@@ -51,7 +51,6 @@ describe('canGuestJoin', () => {
 
   it.each([
     GameSessionStatus.draft,
-    GameSessionStatus.scheduling,
     GameSessionStatus.completed,
     GameSessionStatus.cancelled,
   ] as const)('参加できない status（%s）のとき false', (status) => {

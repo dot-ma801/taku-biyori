@@ -75,7 +75,6 @@ beforeEach(() => {
 describe('canEditCharacterName', () => {
   it.each([
     GameSessionStatus.open,
-    GameSessionStatus.scheduling,
     GameSessionStatus.confirmed,
     GameSessionStatus.today,
   ])('ホストかつ %s ステータスのとき true', (status) => {

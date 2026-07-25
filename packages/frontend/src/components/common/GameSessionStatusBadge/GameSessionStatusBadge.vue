@@ -12,8 +12,9 @@ type Appearance = { label: string; variant: Variant };
 /**
  * 卓が取りうるステータスの表示定義。
  *
- * `open`（募集中）・`scheduling`（日程調整中）は募集枠（lobby）へ移管したため卓では表示しない。
- * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもバッジを描画しないよう
+ * `open`（募集中）は募集枠（lobby）へ移管済みで卓では導出されず、公開遷移
+ * （`draft → open`）のリクエスト値としてのみ残るため表示しない。
+ * 導出されないステータスが渡ってもバッジを描画しないよう、
  * 「キーが無いことがありうる」ルックアップとして Map で持つ。
  */
 const APPEARANCE_MAP = new Map<GameSessionStatus, Appearance>([

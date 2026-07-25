@@ -51,7 +51,7 @@ export const useGameSessionMembership = (
 
   /**
    * 退出ボタンを表示できるか。参加済みかつ非ホストで、shared の ACTION_POLICIES が
-   * leaveSession を許可するステータス（confirmed / today / scheduling）のときのみ true。
+   * leaveSession を許可するステータス（confirmed / today）のときのみ true。
    * ホストは退出ではなく中止・削除で卓を畳むため対象外。
    */
   const canLeave = computed(() => {

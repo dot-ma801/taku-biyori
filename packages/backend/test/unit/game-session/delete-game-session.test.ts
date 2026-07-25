@@ -65,21 +65,6 @@ describe('deleteGameSession', () => {
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
 
-  it('status が scheduling のときも ok を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findGameSessionStatus: vi
-        .fn()
-        .mockResolvedValue(GameSessionStatus.scheduling),
-    });
-
-    // Act
-    const result = await deleteGameSession(repo, 'session-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
   it('status が confirmed のとき invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({

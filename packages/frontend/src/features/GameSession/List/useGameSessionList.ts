@@ -34,14 +34,11 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
         ? mySessions.value.filter((s) => statuses.includes(s.status))
         : mySessions.value;
     if (sortByScheduledAt) {
-      result = [...result].sort((a, b) => {
-        if (a.scheduledAt == null && b.scheduledAt == null) return 0;
-        if (a.scheduledAt == null) return 1;
-        if (b.scheduledAt == null) return -1;
-        return (
-          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
-        );
-      });
+      // 卓は日程が確定した状態でのみ存在するため scheduledAt は必ず入る（design-v1.1 §8）
+      result = [...result].sort(
+        (a, b) =>
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+      );
     }
     return result;
   });
@@ -60,13 +57,13 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
   const nextSession = computed<GameSessionListItem | null>(() => {
     const now = Date.now();
     const upcoming = mySessions.value.filter(
-      (s) => s.scheduledAt != null && new Date(s.scheduledAt).getTime() >= now,
+      (s) => new Date(s.scheduledAt).getTime() >= now,
     );
     if (upcoming.length === 0) return null;
     return (
       upcoming.reduce((nearest, s) => {
-        const nearestTime = new Date(nearest.scheduledAt!).getTime();
-        const sTime = new Date(s.scheduledAt!).getTime();
+        const nearestTime = new Date(nearest.scheduledAt).getTime();
+        const sTime = new Date(s.scheduledAt).getTime();
         return sTime < nearestTime ? s : nearest;
       }) ?? null
     );

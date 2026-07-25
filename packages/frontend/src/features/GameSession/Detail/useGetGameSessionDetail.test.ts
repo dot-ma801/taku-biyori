@@ -41,6 +41,7 @@ function makeGameSession(
     title: 'テストセッション',
     status: GameSessionStatus.open,
     isPublished: true,
+    scheduledAt: '2026-08-01',
     createdBy: 'host-1',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',

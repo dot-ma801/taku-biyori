@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 
-/** 卓が取りうるステータス（open / scheduling は募集枠へ移管したため含めない） */
+/** 卓が取りうるステータス（open は募集枠へ移管したため含めない） */
 const GAME_SESSION_STATUSES = [
   GameSessionStatus.draft,
   GameSessionStatus.confirmed,

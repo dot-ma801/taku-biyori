@@ -18,7 +18,7 @@ const mockSessionRow = {
   maxPlayers: null,
   guestLinkToken: 'token-abc',
   isPublished: false,
-  scheduledAt: null,
+  scheduledAt: '2025-05-30',
   completedAt: null,
   cancelledAt: null,
   lobbyId: null,

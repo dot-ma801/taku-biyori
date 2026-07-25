@@ -29,7 +29,8 @@ type ActionPolicy = {
  * （`open` は公開遷移 `draft → open` のリクエスト値としてのみ残る）。
  * 旧ポリシーが `open`（公開済み・募集中）を列挙していた箇所は
  * `confirmed`（公開済み・実施前）へ読み替えている。
- * `scheduling` は `scheduled_at` NOT NULL 化（段階6c）までのフォールバック。
+ * 段階6c で `scheduled_at` を NOT NULL 化したため `scheduling` も導出されなくなり、
+ * フォールバックとして列挙していた箇所は取り除いた。
  */
 export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   // 参加条件は「公開済み・未完了・実施日当日まで」（design-v1.1 §8）
@@ -41,19 +42,11 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   // 当日参加したユーザーがその日のうちに退出できなくなる
   [GameSessionAction.leaveSession]: {
     roles: ['member'],
-    statuses: [
-      GameSessionStatus.confirmed,
-      GameSessionStatus.today,
-      GameSessionStatus.scheduling,
-    ],
+    statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
   },
   [GameSessionAction.editSession]: {
     roles: ['host'],
-    statuses: [
-      GameSessionStatus.draft,
-      GameSessionStatus.confirmed,
-      GameSessionStatus.scheduling,
-    ],
+    statuses: [GameSessionStatus.draft, GameSessionStatus.confirmed],
   },
   [GameSessionAction.publishSession]: {
     roles: ['host'],
@@ -66,7 +59,7 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   // 日程が確定した卓（confirmed 以降）は削除不可。「やめたい」の受け皿は中止（design-v1.1 §6）
   [GameSessionAction.deleteSession]: {
     roles: ['host'],
-    statuses: [GameSessionStatus.draft, GameSessionStatus.scheduling],
+    statuses: [GameSessionStatus.draft],
   },
 };
 

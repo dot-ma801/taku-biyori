@@ -23,7 +23,7 @@ const router = useRouter();
 
 /**
  * 卓が取りうるステータスの並び順。
- * `open` / `scheduling` は募集枠（lobby）へ移管したため卓では扱わない（enum の削除は段階6c）。
+ * `open` は募集枠（lobby）へ移管したため卓では扱わない（公開遷移のリクエスト値としてのみ残る）。
  * 旧経路で作られた卓が残っていても落とさずに末尾へ送る。
  */
 const STATUS_ORDER = new Map<GameSessionStatus, number>([

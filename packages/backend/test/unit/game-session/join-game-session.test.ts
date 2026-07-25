@@ -63,7 +63,6 @@ describe('joinGameSession', () => {
 
   it.each([
     GameSessionStatus.draft,
-    GameSessionStatus.scheduling,
     GameSessionStatus.completed,
     GameSessionStatus.cancelled,
   ])('参加できないステータス（%s）は sessionNotOpen を返す', async (status) => {

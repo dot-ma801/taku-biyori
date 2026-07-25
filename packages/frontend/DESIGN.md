@@ -59,7 +59,7 @@ typography:
   label-md:
     fontFamily: '"Quicksand", "M PLUS Rounded 1c", sans-serif'
     fontSize: 13px
-    fontWeight: 600
+    fontWeight: 500
     lineHeight: 1.2
     letterSpacing: 0.01em
   code-sm:
@@ -173,6 +173,11 @@ create hierarchy rather than switching font families.
 Headings should feel strong and compact. Body text should stay at a standard
 reading size with comfortable line height. Labels should be slightly tighter and
 heavier than body copy so controls remain easy to scan.
+
+Only the weights 400, 500, and 700 may be used. M PLUS Rounded 1c has no static
+600 weight, so a `font-weight: 600` request resolves to 700 for Japanese while
+Latin resolves to a real 600 — the two scripts end up mismatched, and bold
+kanji clog together at small sizes. Labels and controls therefore use 500.
 
 Telemetry-like or meta text (timestamps, counters) may use the same family with
 smaller size and slightly reduced emphasis, but it should never become tiny or

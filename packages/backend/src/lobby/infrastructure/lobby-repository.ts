@@ -790,7 +790,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         maxPlayers: params.maxPlayers,
         guestLinkToken: params.guestLinkToken,
         isPublished: true,
-        openUntil: params.openUntil,
         scheduledAt: params.scheduledAt,
         lobbyId: params.lobbyId,
       })

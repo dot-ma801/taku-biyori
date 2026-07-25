@@ -39,6 +39,31 @@ const makeSelectDb = (rows: unknown[]) => {
   } as unknown as Database;
 };
 
+// select(...).from(...).leftJoin(...).where(...).groupBy() のチェーンをモックし、
+// where に渡された条件式を SQL 文字列に変換して検証する。
+const makeSelectDbCapturingWhere = (rows: unknown[]) => {
+  let capturedWhere: SQL | undefined;
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockImplementation((condition: SQL) => {
+      capturedWhere = condition;
+      return chain;
+    }),
+    groupBy: vi.fn().mockResolvedValue(rows),
+  };
+  const db = {
+    select: vi.fn().mockReturnValue(chain),
+  } as unknown as Database;
+  return {
+    db,
+    whereSql: () => {
+      if (!capturedWhere) throw new Error('where が呼ばれていません');
+      return new PgDialect().sqlToQuery(capturedWhere).sql;
+    },
+  };
+};
+
 // update(...).set(...).where(...).returning() のチェーンをモックし、
 // where に渡された条件式をキャプチャして SQL 文字列に変換して検証する。
 const makeUpdateDb = (rows: unknown[]) => {
@@ -212,6 +237,161 @@ describe('findByUserId', () => {
 
     // Assert
     expect(result).toEqual([]);
+  });
+});
+
+// ----------------------------------------------------------------
+
+// 公開卓ブランチ（他人の卓が一覧に混ざる経路）だけに終端状態の除外条件を付ける。
+// 自分がホストの卓・自分が参加している卓は終端状態でも一覧に出す必要があるため、
+// それらのブランチには条件を追加しない。
+describe('findByUserId の公開卓ブランチ', () => {
+  it('他人の完了済み公開卓を一覧に出さないため completed_at IS NULL を条件に含める', async () => {
+    // Arrange
+    const { db, whereSql } = makeSelectDbCapturingWhere([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findByUserId('user-1');
+
+    // Assert
+    expect(whereSql()).toContain('"completed_at" is null');
+  });
+
+  it('他人の中止済み公開卓を一覧に出さないため cancelled_at IS NULL を条件に含める', async () => {
+    // Arrange
+    const { db, whereSql } = makeSelectDbCapturingWhere([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findByUserId('user-1');
+
+    // Assert
+    expect(whereSql()).toContain('"cancelled_at" is null');
+  });
+
+  it('終端条件は is_published と AND で結合する（他人の実施前の公開卓は一覧に出る）', async () => {
+    // Arrange
+    const { db, whereSql } = makeSelectDbCapturingWhere([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findByUserId('user-1');
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toMatch(
+      /"is_published" = \$\d+ and "game_session"\."game_sessions"\."completed_at" is null and "game_session"\."game_sessions"\."cancelled_at" is null/,
+    );
+  });
+
+  it('ホストの卓・参加中の卓のブランチには終端条件を付けない（自分の完了済み・中止済みの卓は一覧に出る）', async () => {
+    // Arrange
+    const { db, whereSql } = makeSelectDbCapturingWhere([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findByUserId('user-1');
+
+    // Assert
+    const sql = whereSql();
+    // ホストブランチは host_user_id の比較のみ（終端条件が続かない）
+    expect(sql).toMatch(
+      /^\("game_session"\."game_sessions"\."host_user_id" = \$\d+ or exists/,
+    );
+    // 終端条件は公開卓ブランチの 2 つだけ（参加中ブランチにも付いていない）
+    expect(sql.match(/is null/g)).toHaveLength(2);
+  });
+
+  it('自分がホストの完了済みの卓は一覧に含まれる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        hostUserId: 'user-1',
+        isPublished: true,
+        scheduledAt: SCHEDULED_AT,
+        completedAt: now,
+        memberCount: 1,
+        userMemberId: 'member-uuid',
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ status: 'completed', role: 'host' });
+  });
+
+  it('自分がホストの中止済みの卓は一覧に含まれる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        hostUserId: 'user-1',
+        isPublished: true,
+        scheduledAt: SCHEDULED_AT,
+        cancelledAt: now,
+        memberCount: 1,
+        userMemberId: 'member-uuid',
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ status: 'cancelled', role: 'host' });
+  });
+
+  it('自分が参加している完了済みの卓は一覧に含まれる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        hostUserId: 'other-user',
+        isPublished: true,
+        scheduledAt: SCHEDULED_AT,
+        completedAt: now,
+        memberCount: 2,
+        userMemberId: 'member-uuid',
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ status: 'completed', role: 'member' });
+  });
+
+  it('他人の実施前の公開卓は一覧に含まれる', async () => {
+    // Arrange
+    const db = makeSelectDb([
+      {
+        ...mockSessionRow,
+        hostUserId: 'other-user',
+        isPublished: true,
+        scheduledAt: SCHEDULED_AT,
+        memberCount: 1,
+        userMemberId: null,
+      },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findByUserId('user-1');
+
+    // Assert
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ status: 'confirmed', role: null });
   });
 });
 

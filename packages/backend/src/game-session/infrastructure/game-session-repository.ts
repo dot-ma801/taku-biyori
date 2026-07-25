@@ -160,8 +160,15 @@ export const createGameSessionRepository = (
                 ),
               ),
           ),
-          // 公開済みの卓は誰でも閲覧できる（design-v1.1 §8 の認可モデル）
-          eq(gameSessions.isPublished, true),
+          // 公開済みの卓は誰でも閲覧できる（design-v1.1 §8 の認可モデル）。
+          // ただし終端状態（完了・中止）の他人の卓は一覧に出さない。
+          // 終端条件はこのブランチにのみ付ける。自分がホストの卓・自分が参加している卓は
+          // 上の 2 ブランチで拾われ、完了・中止済みでも引き続き一覧に出る。
+          and(
+            eq(gameSessions.isPublished, true),
+            isNull(gameSessions.completedAt),
+            isNull(gameSessions.cancelledAt),
+          ),
         ),
       )
       .groupBy(gameSessions.id);

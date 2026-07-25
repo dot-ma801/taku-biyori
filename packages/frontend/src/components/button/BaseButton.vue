@@ -70,8 +70,7 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   justify-content: center;
   gap: var(--space-2);
   font-family: var(--font-family-base);
-  /* 13px だと dPR=1 環境で漢字が潰れるため 14px（md 基準） */
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.2;
@@ -101,7 +100,7 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
 }
 .btn--lg {
   padding: 14px 20px;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* primary */

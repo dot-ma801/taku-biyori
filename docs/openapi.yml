@@ -35,8 +35,6 @@ tags:
     description: 卓（ゲームセッション）管理
   - name: GameSessionMembers
     description: 卓のメンバー管理
-  - name: Schedules
-    description: 日程調整（◯△×方式）
   - name: GuestLinks
     description: ゲストリンク管理
   - name: Lobbies
@@ -226,7 +224,7 @@ paths:
       summary: 卓（ゲームセッション）一覧取得
       description: >-
         ログインユーザーが参加・作成した卓（ゲームセッション）に加えて、
-        未参加でも公開・募集中（openUntil 未到来）の卓を一覧で返す（絞り込みはフロント）。
+        未参加でも公開済みの卓を一覧で返す（絞り込みはフロント）。
       operationId: listGameSessions
       responses:
         '200':
@@ -246,6 +244,7 @@ paths:
       description: |
         新しい卓を作成する。作成者は `createdBy` に自動セットされ、
         同時に `session_members` に作成者のレコードが自動追加される。
+        卓は日程が確定した状態でのみ存在するため `scheduledAt` は必須。
       operationId: createGameSession
       requestBody:
         required: true
@@ -346,14 +345,13 @@ paths:
         このエンドポイントは DB のファクトカラムを更新し、ステータスはサーバーが再導出して返す。
 
         操作内容：
-        - `open`: `is_published = true` にセットする。
-          `open_until` が設定済みで未来の場合は導出ステータスが `open` になる。
-          `open_until` が null または過去の場合は即座に `scheduling` になる。
+        - `open`: `is_published = true` にセットする（`draft` 状態のときのみ有効）。
+          公開のリクエスト値として `open` を使うが、導出ステータスは `scheduledAt` から
+          `confirmed`/`today` になる（卓に募集中の状態は存在しない）。
         - `completed`: `completed_at` に現在時刻をセットする（`today` 状態のときのみ有効）。
         - `cancelled`: `cancelled_at` に現在時刻をセットする（`confirmed`/`today` 状態のときのみ有効）。
           中止した卓は削除せず「中止」として残す。募集由来の卓でも募集枠は `confirmed` のまま戻らない。
 
-        `scheduling` → `confirmed` の遷移は `POST .../availability-dates/{dateId}/confirm` で行う。
         逆方向への遷移は不可。
       operationId: updateGameSessionStatus
       requestBody:
@@ -368,7 +366,7 @@ paths:
                   type: string
                   enum: [open, completed, cancelled]
                   description: |
-                    - `open`: `is_published = true` にセット（導出ステータスは open_until の値による）
+                    - `open`: `is_published = true` にセット（draft 状態のときのみ有効）
                     - `completed`: `completed_at` に現在時刻をセット（today 状態のときのみ有効）
                     - `cancelled`: `cancelled_at` に現在時刻をセット（confirmed/today 状態のときのみ有効）
       responses:
@@ -419,7 +417,7 @@ paths:
       summary: メンバー参加（通常）
       description: |
         ログイン済みユーザーが直接卓に参加する。
-        ステータスが `confirmed` 以降は参加不可。
+        参加できるのは「公開済み・未完了・実施日当日まで」（`confirmed`/`today`）の卓のみ。
         リクエストユーザーはCookieのセッション情報から自動取得する。
       operationId: joinGameSession
       requestBody:
@@ -550,216 +548,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '423':
           $ref: '#/components/responses/Locked'
-
-  # ========== Schedules ==========
-
-  /api/game-sessions/{id}/availability-dates:
-    parameters:
-      - $ref: '#/components/parameters/GameSessionId'
-
-    get:
-      tags: [Schedules]
-      summary: 日程候補一覧取得
-      description: 候補日時と各メンバーの◯△×回答をまとめて返す。
-      operationId: listAvailabilityDates
-      security: []
-      responses:
-        '200':
-          description: 日程候補一覧
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AvailabilityDate'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-    post:
-      tags: [Schedules]
-      summary: 日程候補追加
-      description: |
-        候補日時を追加する。作成者のみ操作可能。
-        ステータスが `confirmed` 以降は追加不可。
-      operationId: addAvailabilityDate
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAvailabilityDateInput'
-      responses:
-        '201':
-          description: 追加された日程候補
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AvailabilityDate'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '423':
-          $ref: '#/components/responses/Locked'
-
-  /api/game-sessions/{id}/availability-dates/{dateId}:
-    parameters:
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/DateId'
-
-    delete:
-      tags: [Schedules]
-      summary: 日程候補削除
-      description: |
-        作成者のみ操作可能。
-        ステータスが `confirmed` 以降は削除不可。
-      operationId: removeAvailabilityDate
-      responses:
-        '204':
-          description: 削除成功
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '423':
-          $ref: '#/components/responses/Locked'
-
-  /api/game-sessions/{id}/availability-dates/{dateId}/confirm:
-    parameters:
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/DateId'
-
-    post:
-      tags: [Schedules]
-      summary: 候補日を確定（scheduling → confirmed）
-      description: |
-        指定した候補日を `scheduled_at` にセットし、ステータスを `confirmed` に遷移させる。
-        作成者のみ操作可能。ステータスが `scheduling` のときのみ操作可能。
-      operationId: confirmAvailabilityDate
-      responses:
-        '200':
-          description: 更新後の卓（ゲームセッション）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GameSession'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '423':
-          $ref: '#/components/responses/Locked'
-
-  /api/game-sessions/{id}/availability-dates/{dateId}/responses:
-    parameters:
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/DateId'
-
-    put:
-      tags: [Schedules]
-      summary: 日程回答を登録・更新（◯△×・ログインユーザー）
-      description: |
-        ログインユーザーが候補日に対して回答する。既存の回答があれば上書き。
-        Cookie のセッション情報からユーザーを解決し、そのユーザーに紐づく
-        メンバーレコードを自動で特定する。**自分の回答のみ**編集可。
-
-        ゲスト（`user_id = null`）の回答はこのエンドポイントでは行わない。
-        ゲストは `PUT .../guest-responses` を使う。
-      operationId: upsertAvailabilityResponse
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpsertAvailabilityResponseInput'
-      responses:
-        '200':
-          description: 登録・更新後の回答
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AvailabilityResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '423':
-          $ref: '#/components/responses/Locked'
-
-  /api/game-sessions/{id}/availability-dates/{dateId}/guest-responses:
-    parameters:
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/DateId'
-      - $ref: '#/components/parameters/GuestToken'
-
-    put:
-      tags: [Schedules]
-      summary: ゲストの日程回答を登録・更新（◯△×・完全匿名）
-      description: |
-        ゲストが候補日に対して回答する。既存の回答があれば上書き。**認証不要**。
-
-        - `Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
-        - `memberId` は必須。指定した `memberId` がその卓の
-          **ゲストメンバー（`user_id = null`）**であることをサーバーで検証する。
-          `user_id != null`（ログイン参加者）のメンバーを指定した場合は `403`。
-        - 本人確認はしないため、トークンさえ持っていれば**どのゲストでも全ゲスト列を編集可**
-          （調整さん方式）。
-      operationId: upsertGuestAvailabilityResponse
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GuestUpsertAvailabilityResponseInput'
-      responses:
-        '200':
-          description: 登録・更新後の回答
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [id, memberId, answer]
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    description: availability_responses.id（回答レコード自体のID）
-                  memberId:
-                    type: string
-                    format: uuid
-                    description: game_session_members.id（ゲストメンバーID）
-                  answer:
-                    $ref: '#/components/schemas/ScheduleAnswer'
-                  comment:
-                    type: string
-                    nullable: true
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          description: トークン不一致、または非ゲストメンバーの回答を編集しようとした
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '423':
-          description: セッションが確定済み・完了済みなど回答不可能な状態（Locked）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   # ========== Guest Links ==========
 
@@ -1494,15 +1282,6 @@ components:
         type: string
         format: uuid
 
-    DateId:
-      name: dateId
-      in: path
-      required: true
-      description: 日程候補のID（availability_dates.id）
-      schema:
-        type: string
-        format: uuid
-
     LobbyId:
       name: id
       in: path
@@ -1770,8 +1549,8 @@ components:
         - cancelled
       description: |
         - `draft`: 非公開（公開前の下書き状態）
-        - `open`: 募集中（公開済み・募集期間内）
-        - `scheduling`: 日程調整中（募集期間終了・実施日未確定）
+        - `open`: 導出されない。公開遷移（`PATCH /:id/status`）のリクエスト値としてのみ使う
+        - `scheduling`: 実施日未確定（`scheduled_at` が null の旧経路データのみ。段階6c で廃止）
         - `confirmed`: 実施前（実施日確定・当日前）
         - `today`: 当日（実施日が今日）
         - `completed`: 通過済み（ホストの完了アクション後）
@@ -1808,10 +1587,6 @@ components:
         isPublished:
           type: boolean
           description: 公開フラグ。false の間は draft
-        openUntil:
-          type: [string, 'null']
-          format: date
-          description: 募集締め切り日。null なら募集期間なし
         memberCount:
           type: integer
         scheduledAt:
@@ -1848,10 +1623,6 @@ components:
         isPublished:
           type: boolean
           description: 公開フラグ。false の間は draft
-        openUntil:
-          type: [string, 'null']
-          format: date
-          description: 募集締め切り日。null なら募集期間なし
         scheduledAt:
           type: [string, 'null']
           format: date
@@ -1894,7 +1665,7 @@ components:
 
     CreateGameSessionInput:
       type: object
-      required: [title]
+      required: [title, scheduledAt]
       properties:
         title:
           type: string
@@ -1913,10 +1684,10 @@ components:
           type: integer
           minimum: 2
           maximum: 20
-        openUntil:
+        scheduledAt:
           type: string
           format: date
-          description: 募集締め切り日。null なら募集期間なし
+          description: 実施日。卓は日程が確定した状態でのみ存在するため必須（今日以降）
 
     UpdateGameSessionInput:
       type: object
@@ -1933,10 +1704,10 @@ components:
           description: 開催場所（オンライン等の自由入力）
         maxMembers:
           type: integer
-        openUntil:
+        scheduledAt:
           type: [string, 'null']
           format: date
-          description: 募集締め切り日。null を渡すと募集期間なしにリセット
+          description: 実施日（今日以降）
 
     # ---------- GameSessionMember ----------
 
@@ -1994,29 +1765,7 @@ components:
           type: string
           maxLength: 50
 
-    # ---------- AvailabilityDate ----------
-
-    AvailabilityDate:
-      type: object
-      required: [id, date, responses, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: availability_dates.id（AvailabilityResponseのdateIdと対応）
-        date:
-          type: string
-          format: date
-          example: '2025-08-10'
-          description: 候補日。時刻は持たない。確定日程ではなく調整中の選択肢。
-        responses:
-          type: array
-          description: この候補日に対する各メンバーの◯△×回答一覧
-          items:
-            $ref: '#/components/schemas/AvailabilityResponse'
-        createdAt:
-          type: string
-          format: date-time
+    # ---------- AvailabilityDate（募集枠の日程調整で使用） ----------
 
     CreateAvailabilityDateInput:
       type: object
@@ -2026,30 +1775,6 @@ components:
           type: string
           format: date
           description: 候補として追加する日付
-
-    AvailabilityResponse:
-      type: object
-      required: [id, dateId, memberId, answer, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: availability_responses.id（回答レコード自体のID）
-        dateId:
-          type: string
-          format: uuid
-          description: availability_dates.id（どの候補日への回答かを示す）
-        memberId:
-          type: string
-          format: uuid
-          description: game_session_members.id。ログインユーザー・ゲスト共通のメンバーID
-        answer:
-          $ref: '#/components/schemas/ScheduleAnswer'
-        comment:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
 
     UpsertAvailabilityResponseInput:
       type: object

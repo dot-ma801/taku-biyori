@@ -37,9 +37,15 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
     roles: ['member'],
     statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
   },
+  // 退出条件は参加条件と対称に保つ。`today` を含めないと
+  // 当日参加したユーザーがその日のうちに退出できなくなる
   [GameSessionAction.leaveSession]: {
     roles: ['member'],
-    statuses: [GameSessionStatus.confirmed, GameSessionStatus.scheduling],
+    statuses: [
+      GameSessionStatus.confirmed,
+      GameSessionStatus.today,
+      GameSessionStatus.scheduling,
+    ],
   },
   [GameSessionAction.editSession]: {
     roles: ['host'],

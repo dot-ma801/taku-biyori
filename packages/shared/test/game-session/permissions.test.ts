@@ -18,8 +18,10 @@ const ALLOWED: Record<
     { role: 'member', status: GameSessionStatus.confirmed },
     { role: 'member', status: GameSessionStatus.today },
   ],
+  // 退出条件は参加条件と対称に保つ（当日参加したユーザーが同日中に退出できるよう today を含める）
   [GameSessionAction.leaveSession]: [
     { role: 'member', status: GameSessionStatus.confirmed },
+    { role: 'member', status: GameSessionStatus.today },
     { role: 'member', status: GameSessionStatus.scheduling },
   ],
   [GameSessionAction.editSession]: [
@@ -55,6 +57,37 @@ describe('canPerform', () => {
       }
     });
   }
+});
+
+describe('leaveSession と joinSession の対称性', () => {
+  // 参加できるステータスでは必ず退出もできる必要がある。
+  // 当日（today）に参加したユーザーがその日のうちに退出できなくなる非対称を防ぐ。
+  it.each(ALL_STATUSES)('%s で参加できるなら退出もできる', (status) => {
+    // Arrange
+    const canJoin = canPerform(GameSessionAction.joinSession, status, 'member');
+
+    // Act
+    const canLeave = canPerform(
+      GameSessionAction.leaveSession,
+      status,
+      'member',
+    );
+
+    // Assert
+    if (canJoin) expect(canLeave).toBe(true);
+  });
+
+  it('today のメンバーは退出できる', () => {
+    // Arrange / Act
+    const result = canPerform(
+      GameSessionAction.leaveSession,
+      GameSessionStatus.today,
+      'member',
+    );
+
+    // Assert
+    expect(result).toBe(true);
+  });
 });
 
 describe('GameSessionAction', () => {

@@ -253,7 +253,6 @@ export const createGameSessionRepository = (
         }),
         ...(input.location !== undefined && { location: input.location }),
         ...(input.maxMembers !== undefined && { maxPlayers: input.maxMembers }),
-        ...(input.openUntil !== undefined && { openUntil: input.openUntil }),
         ...(input.scheduledAt !== undefined && {
           scheduledAt: input.scheduledAt,
         }),
@@ -401,7 +400,6 @@ export const createGameSessionRepository = (
           scenarioName: params.scenarioName ?? null,
           location: params.location ?? null,
           maxPlayers: params.maxMembers ?? null,
-          openUntil: params.openUntil ?? null,
           scheduledAt: params.scheduledAt ?? null,
           guestLinkToken: params.guestLinkToken,
           isPublished: false,

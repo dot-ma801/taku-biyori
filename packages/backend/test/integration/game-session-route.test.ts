@@ -8,6 +8,9 @@ import type { GetGameSessionResult } from '@/game-session/application/get-game-s
 
 const mockSession = { user: { id: 'user-1' } };
 
+/** 卓作成の scheduledAt に使う十分に未来の日付（過去日バリデーションを踏まない） */
+const FUTURE_DATE = '2999-12-31';
+
 const mockListItem: GameSessionListItem = {
   id: 'session-1',
   title: 'テスト卓',
@@ -142,7 +145,7 @@ describe('POST /api/game-sessions', () => {
     const response = await app.request('/api/game-sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '新規卓' }),
+      body: JSON.stringify({ title: '新規卓', scheduledAt: FUTURE_DATE }),
     });
     const body = await response.json();
 
@@ -161,7 +164,7 @@ describe('POST /api/game-sessions', () => {
     const response = await app.request('/api/game-sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '卓' }),
+      body: JSON.stringify({ title: '卓', scheduledAt: FUTURE_DATE }),
     });
 
     // Assert
@@ -176,7 +179,7 @@ describe('POST /api/game-sessions', () => {
     const response = await app.request('/api/game-sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '' }),
+      body: JSON.stringify({ title: '', scheduledAt: FUTURE_DATE }),
     });
 
     // Assert
@@ -198,7 +201,7 @@ describe('POST /api/game-sessions', () => {
     expect(response.status).toBe(400);
   });
 
-  it('openUntil が過去日なら 400 を返す', async () => {
+  it('scheduledAt がなければ 400 を返す（卓は日程必須）', async () => {
     // Arrange
     const app = makeApp();
 
@@ -206,7 +209,7 @@ describe('POST /api/game-sessions', () => {
     const response = await app.request('/api/game-sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '卓', openUntil: '2000-01-01' }),
+      body: JSON.stringify({ title: '卓' }),
     });
 
     // Assert
@@ -237,13 +240,21 @@ describe('POST /api/game-sessions', () => {
     await app.request('/api/game-sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '詳細卓', maxMembers: 4 }),
+      body: JSON.stringify({
+        title: '詳細卓',
+        maxMembers: 4,
+        scheduledAt: FUTURE_DATE,
+      }),
     });
 
     // Assert
     expect(createGameSession).toHaveBeenCalledWith(
       'user-1',
-      expect.objectContaining({ title: '詳細卓', maxMembers: 4 }),
+      expect.objectContaining({
+        title: '詳細卓',
+        maxMembers: 4,
+        scheduledAt: FUTURE_DATE,
+      }),
     );
   });
 });

@@ -42,6 +42,8 @@ export const GameSessionSchema = z.object({
 });
 export type GameSession = z.infer<typeof GameSessionSchema>;
 
+// 卓は日程が確定した状態でのみ存在するため scheduledAt は必須（design-v1.1 §8）。
+// 募集締め切り（openUntil）は募集枠（lobby）の関心事なので卓では受け付けない。
 export const CreateGameSessionInputSchema = z
   .object({
     title: z.string().min(1).max(100),
@@ -49,19 +51,10 @@ export const CreateGameSessionInputSchema = z
     scenarioName: z.string().max(200).optional(),
     location: z.string().max(200).optional(),
     maxMembers: z.number().int().min(2).max(20).optional(),
-    openUntil: z.iso.date().optional(),
-    scheduledAt: z.iso.date().optional(),
+    scheduledAt: z.iso.date(),
   })
   .superRefine((input, ctx) => {
-    const today = todayDateString();
-    if (input.openUntil && input.openUntil < today) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['openUntil'],
-        message: '募集締め切り日には今日以降の日付を指定してください',
-      });
-    }
-    if (input.scheduledAt && input.scheduledAt < today) {
+    if (input.scheduledAt < todayDateString()) {
       ctx.addIssue({
         code: 'custom',
         path: ['scheduledAt'],
@@ -80,7 +73,6 @@ export const UpdateGameSessionInputSchema = z
     scenarioName: z.string().max(200).nullable().optional(),
     location: z.string().max(200).nullable().optional(),
     maxMembers: z.number().int().min(2).max(20).nullable().optional(),
-    openUntil: z.iso.date().nullable().optional(),
     scheduledAt: z.iso.date().nullable().optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {

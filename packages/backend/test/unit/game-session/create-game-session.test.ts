@@ -10,10 +10,9 @@ const mockGameSession: GameSession = {
   scenarioName: null,
   description: null,
   maxMembers: null,
-  status: 'draft',
-  isPublished: false,
-  openUntil: null,
-  scheduledAt: null,
+  status: 'confirmed',
+  isPublished: true,
+  scheduledAt: '2025-09-10',
   completedAt: null,
   createdBy: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
@@ -30,29 +29,37 @@ describe('createGameSession', () => {
     // Act
     const result = await createGameSession(repo, 'user-1', {
       title: 'テスト卓',
+      scheduledAt: '2025-09-10',
     });
 
     // Assert
     expect(result).toMatchObject({
       id: 'session-1',
       title: 'テスト卓',
-      status: 'draft',
-      isPublished: false,
+      status: 'confirmed',
+      isPublished: true,
       createdBy: 'user-1',
     });
   });
 
-  it('createWithHost に hostUserId と title を渡す', async () => {
+  it('createWithHost に hostUserId と title と scheduledAt を渡す', async () => {
     // Arrange
     const createWithHost = vi.fn().mockResolvedValue(mockGameSession);
     const repo: CreateGameSessionRepository = { createWithHost };
 
     // Act
-    await createGameSession(repo, 'user-99', { title: 'マイ卓' });
+    await createGameSession(repo, 'user-99', {
+      title: 'マイ卓',
+      scheduledAt: '2025-09-10',
+    });
 
     // Assert
     expect(createWithHost).toHaveBeenCalledWith(
-      expect.objectContaining({ hostUserId: 'user-99', title: 'マイ卓' }),
+      expect.objectContaining({
+        hostUserId: 'user-99',
+        title: 'マイ卓',
+        scheduledAt: '2025-09-10',
+      }),
     );
   });
 
@@ -62,7 +69,10 @@ describe('createGameSession', () => {
     const repo: CreateGameSessionRepository = { createWithHost };
 
     // Act
-    await createGameSession(repo, 'user-1', { title: '卓' });
+    await createGameSession(repo, 'user-1', {
+      title: '卓',
+      scheduledAt: '2025-09-10',
+    });
 
     // Assert
     const { guestLinkToken } = createWithHost.mock.calls[0]![0];
@@ -81,8 +91,9 @@ describe('createGameSession', () => {
       title: '詳細卓',
       description: '説明文',
       scenarioName: 'シナリオ名',
+      location: '渋谷',
       maxMembers: 5,
-      openUntil: '2025-09-01',
+      scheduledAt: '2025-09-10',
     });
 
     // Assert
@@ -90,8 +101,9 @@ describe('createGameSession', () => {
       expect.objectContaining({
         description: '説明文',
         scenarioName: 'シナリオ名',
+        location: '渋谷',
         maxMembers: 5,
-        openUntil: '2025-09-01',
+        scheduledAt: '2025-09-10',
       }),
     );
   });

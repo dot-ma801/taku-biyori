@@ -8,7 +8,8 @@ import { listAccounts } from '@/lib/auth';
  */
 export const useAccounts = () => {
   const hasPassword = ref(false);
-  const loading = ref(false);
+  // onMounted で必ず fetch するため、初期状態は「取得前（未確定）」として true から始める
+  const loading = ref(true);
 
   async function fetch() {
     loading.value = true;

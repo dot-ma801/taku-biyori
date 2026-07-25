@@ -7,7 +7,8 @@ import { KeyRound, Check, X } from '@lucide/vue';
 import { useAccounts } from '@/features/Profile/useAccounts';
 import { usePasswordChange } from '@/features/Profile/usePasswordChange';
 
-const { hasPassword } = useAccounts();
+// 取得完了までは hasPassword が false のため、カードのチラつきを避けて描画を保留する
+const { hasPassword, loading: accountsLoading } = useAccounts();
 
 const {
   isEditing,
@@ -23,7 +24,7 @@ const {
 </script>
 
 <template>
-  <BaseCard v-if="hasPassword">
+  <BaseCard v-if="!accountsLoading && hasPassword">
     <BaseSectionHeading class="header" level="h3" :icon="KeyRound">
       パスワード
     </BaseSectionHeading>

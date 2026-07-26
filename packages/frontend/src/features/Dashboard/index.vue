@@ -16,6 +16,13 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       :statuses="[GameSessionStatus.confirmed, GameSessionStatus.today]"
       sort-by-scheduled-at
     />
+    <!-- 非公開の卓はここからしか辿れないため、下書きが残っているときだけ表示する -->
+    <GameSessionList
+      title="非公開の卓"
+      :statuses="[GameSessionStatus.draft]"
+      hide-when-empty
+      hide-create-button
+    />
   </div>
 </template>
 

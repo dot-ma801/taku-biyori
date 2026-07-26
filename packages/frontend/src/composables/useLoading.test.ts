@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { useLoading } from '@/composables/useLoading';
 
-const { isLoading, message, start, stop, reset, withLoading } = useLoading();
+const { isLoading, message, start, reset, withLoading } = useLoading();
 
 describe('useLoading', () => {
   afterEach(() => {
@@ -20,7 +20,7 @@ describe('useLoading', () => {
     });
   });
 
-  describe('start / stop', () => {
+  describe('start / 解除関数', () => {
     it('start を呼ぶとローディング中になる', () => {
       // Arrange & Act
       start();
@@ -29,9 +29,9 @@ describe('useLoading', () => {
       expect(isLoading.value).toBe(true);
     });
 
-    it('start と同じ回数だけ stop を呼ぶとローディングが終わる', () => {
+    it('解除関数を呼ぶとローディングが終わる', () => {
       // Arrange
-      start();
+      const stop = start();
 
       // Act
       stop();
@@ -40,31 +40,32 @@ describe('useLoading', () => {
       expect(isLoading.value).toBe(false);
     });
 
-    it('多重に start したとき、すべて stop するまでローディング中のままになる', () => {
+    it('多重に start したとき、すべて解除するまでローディング中のままになる', () => {
       // Arrange
-      start();
-      start();
+      const stopFirst = start();
+      const stopSecond = start();
 
       // Act
-      stop();
+      stopFirst();
 
       // Assert
       expect(isLoading.value).toBe(true);
 
       // Act
-      stop();
+      stopSecond();
 
       // Assert
       expect(isLoading.value).toBe(false);
     });
 
-    it('start より多く stop を呼んでもカウントがマイナスにならない', () => {
+    it('同じ解除関数を複数回呼んでも他の処理のカウントを減らさない', () => {
       // Arrange
-      stop();
-      stop();
+      const stopFirst = start();
+      start();
 
       // Act
-      start();
+      stopFirst();
+      stopFirst();
 
       // Assert
       expect(isLoading.value).toBe(true);
@@ -80,7 +81,7 @@ describe('useLoading', () => {
 
     it('ローディングが終わると message が null に戻る', () => {
       // Arrange
-      start('ログインしています…');
+      const stop = start('ログインしています…');
 
       // Act
       stop();
@@ -102,6 +103,20 @@ describe('useLoading', () => {
       // Assert
       expect(isLoading.value).toBe(false);
       expect(message.value).toBeNull();
+    });
+
+    it('reset 前の解除関数は、reset 後に始まったローディングを解除しない', () => {
+      // Arrange
+      const stopBeforeReset = start('古い処理…');
+      reset();
+      start('新しい処理…');
+
+      // Act
+      stopBeforeReset();
+
+      // Assert
+      expect(isLoading.value).toBe(true);
+      expect(message.value).toBe('新しい処理…');
     });
   });
 
@@ -137,6 +152,28 @@ describe('useLoading', () => {
       // Act & Assert
       await expect(withLoading(failure)).rejects.toThrow('失敗しました');
       expect(isLoading.value).toBe(false);
+    });
+
+    it('reset をまたいで完了した処理は、後続のローディングを解除しない', async () => {
+      // Arrange
+      let releasePending: (() => void) | undefined;
+      const pending = withLoading(
+        () =>
+          new Promise<void>((resolve) => {
+            releasePending = resolve;
+          }),
+        '古い処理…',
+      );
+      reset();
+      start('新しい処理…');
+
+      // Act
+      releasePending?.();
+      await pending;
+
+      // Assert
+      expect(isLoading.value).toBe(true);
+      expect(message.value).toBe('新しい処理…');
     });
   });
 });

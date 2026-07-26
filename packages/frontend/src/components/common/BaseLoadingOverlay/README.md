@@ -23,27 +23,32 @@
 ```ts
 import { useLoading } from '@/composables/useLoading';
 
-const { start, stop, reset, withLoading, isLoading } = useLoading();
+const { start, reset, withLoading, isLoading } = useLoading();
 
 // 非同期処理を囲む（例外時も自動で解除される）
 await withLoading(() => api.save(), '保存しています…');
 
 // リダイレクトを伴う処理など、明示的に制御したい場合
-start('Google に接続しています…');
+const stopLoading = start('Google に接続しています…');
 // …リダイレクトされずに失敗したときだけ解除する
-stop();
+stopLoading();
 ```
 
 ## useLoading API
 
-| Method        | Signature                                        | Description                                      |
-| ------------- | ------------------------------------------------ | ------------------------------------------------ |
-| `isLoading`   | `ComputedRef<boolean>`                           | ローディング中かどうか                           |
-| `message`     | `ComputedRef<string \| null>`                    | 表示中のメッセージ（未指定なら `null`）          |
-| `start`       | `(message?: string) => void`                     | ローディング開始（多重呼び出しはカウントアップ） |
-| `stop`        | `() => void`                                     | ローディングを 1 件終了                          |
-| `reset`       | `() => void`                                     | カウントに関係なく強制終了（bfcache 復帰時など） |
-| `withLoading` | `(fn: () => Promise<T>, message?) => Promise<T>` | 非同期処理を囲む。`finally` で必ず `stop` される |
+| Method        | Signature                                        | Description                                        |
+| ------------- | ------------------------------------------------ | -------------------------------------------------- |
+| `isLoading`   | `ComputedRef<boolean>`                           | ローディング中かどうか                             |
+| `message`     | `ComputedRef<string \| null>`                    | 表示中のメッセージ（未指定なら `null`）            |
+| `start`       | `(message?: string) => () => void`               | ローディング開始。**その処理専用の解除関数**を返す |
+| `reset`       | `() => void`                                     | カウントに関係なく強制終了（bfcache 復帰時など）   |
+| `withLoading` | `(fn: () => Promise<T>, message?) => Promise<T>` | 非同期処理を囲む。`finally` で必ず解除される       |
+
+`start()` が返す解除関数は次の性質を持つ。
+
+- 多重呼び出しはカウントアップされ、すべて解除されるまで表示が続く
+- 同じ解除関数を複数回呼んでも、2 回目以降は無視される（他の処理のカウントを減らさない）
+- `reset()` をまたいだ解除は無視される（リセット後に始まった表示を消さない）
 
 ## Design Notes
 
@@ -67,8 +72,8 @@ stop();
 
 - `start(message)` で渡したメッセージが表示されること
 - メッセージなしで `start()` したとき既定の文言（`読み込み中…`）が表示されること
-- `stop()` でオーバーレイが非表示になること
-- 多重に `start()` したとき、すべて `stop()` するまで表示され続けること
+- `start()` が返す解除関数の呼び出しでオーバーレイが非表示になること
+- 多重に `start()` したとき、すべて解除するまで表示され続けること
 
 ### アクセシビリティ
 

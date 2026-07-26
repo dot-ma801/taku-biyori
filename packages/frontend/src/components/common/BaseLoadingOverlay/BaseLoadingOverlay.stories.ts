@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
+import { onUnmounted } from 'vue';
 import BaseLoadingOverlay from '@/components/common/BaseLoadingOverlay/BaseLoadingOverlay.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { useLoading } from '@/composables/useLoading';
@@ -16,7 +17,7 @@ export const Default: Story = {
   render: () => ({
     components: { BaseLoadingOverlay, BaseButton },
     setup() {
-      const { start, stop, withLoading } = useLoading();
+      const { start, reset, withLoading } = useLoading();
 
       const showForAWhile = (message?: string) =>
         withLoading(
@@ -24,7 +25,10 @@ export const Default: Story = {
           message,
         );
 
-      return { start, stop, showForAWhile };
+      // 手動表示のままストーリーを離れても状態が残らないようにする
+      onUnmounted(reset);
+
+      return { start, reset, showForAWhile };
     },
     template: `
       <div style="padding: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
@@ -33,7 +37,7 @@ export const Default: Story = {
           メッセージ付きで 2 秒表示
         </BaseButton>
         <BaseButton variant="ghost" @click="start('手動で表示中…')">表示する</BaseButton>
-        <BaseButton variant="ghost" @click="stop()">閉じる</BaseButton>
+        <BaseButton variant="ghost" @click="reset()">閉じる</BaseButton>
         <BaseLoadingOverlay />
       </div>
     `,
@@ -44,13 +48,17 @@ export const WithMessage: Story = {
   render: () => ({
     components: { BaseLoadingOverlay, BaseButton },
     setup() {
-      const { start, stop } = useLoading();
-      start('ログインしています…');
-      return { stop };
+      const { start } = useLoading();
+
+      const stopLoading = start('ログインしています…');
+      // ストーリーを離れたときにオーバーレイが残らないよう必ず解除する
+      onUnmounted(stopLoading);
+
+      return { stopLoading };
     },
     template: `
       <div style="padding: 16px;">
-        <BaseButton variant="ghost" @click="stop()">閉じる</BaseButton>
+        <BaseButton variant="ghost" @click="stopLoading()">閉じる</BaseButton>
         <BaseLoadingOverlay />
       </div>
     `,

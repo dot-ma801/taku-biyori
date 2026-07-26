@@ -7,7 +7,7 @@ import { nextTick } from 'vue';
 import BaseLoadingOverlay from '@/components/common/BaseLoadingOverlay/BaseLoadingOverlay.vue';
 import { useLoading } from '@/composables/useLoading';
 
-const { start, stop, reset } = useLoading();
+const { start, reset } = useLoading();
 
 const teleportStub = { template: '<div><slot /></div>' };
 
@@ -82,10 +82,10 @@ describe('BaseLoadingOverlay', () => {
       );
     });
 
-    it('stop でオーバーレイが非表示になる', async () => {
+    it('解除関数の呼び出しでオーバーレイが非表示になる', async () => {
       // Arrange
       const wrapper = mountOverlay();
-      start();
+      const stop = start();
       await nextTick();
 
       // Act
@@ -96,15 +96,15 @@ describe('BaseLoadingOverlay', () => {
       expect(wrapper.find('.loading-overlay').exists()).toBe(false);
     });
 
-    it('多重に start したとき、すべて stop するまで表示され続ける', async () => {
+    it('多重に start したとき、すべて解除するまで表示され続ける', async () => {
       // Arrange
       const wrapper = mountOverlay();
-      start();
+      const stopFirst = start();
       start();
       await nextTick();
 
       // Act
-      stop();
+      stopFirst();
       await nextTick();
 
       // Assert

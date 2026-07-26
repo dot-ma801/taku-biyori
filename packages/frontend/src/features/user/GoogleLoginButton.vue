@@ -5,13 +5,13 @@ import { useLoading } from '@/composables/useLoading';
 
 const error = ref('');
 
-const { isLoading, start, stop, reset } = useLoading();
+const { isLoading, start, reset } = useLoading();
 
 const handleGoogleSignIn = async () => {
   error.value = '';
 
   // 成功時は Google へリダイレクトされるため、そのままオーバーレイを表示し続ける
-  start('Google に接続しています…');
+  const stopLoading = start('Google に接続しています…');
 
   try {
     const { error: signInError } = await authClient.signIn.social({
@@ -21,12 +21,12 @@ const handleGoogleSignIn = async () => {
 
     if (signInError) {
       error.value = signInError.message ?? 'Google ログインに失敗しました';
-      stop();
+      stopLoading();
     }
   } catch (err) {
     error.value =
       err instanceof Error ? err.message : 'Google ログインに失敗しました';
-    stop();
+    stopLoading();
   }
 };
 

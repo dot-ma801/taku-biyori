@@ -33,11 +33,10 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('@/views/Dashboard/DashboardView.vue'),
     },
-    {
-      path: '/game-sessions',
-      name: 'game-sessions-list',
-      component: () => import('@/views/GameSession/ListView.vue'),
-    },
+    // 卓・ロビーの一覧ページはダッシュボードに統合した。
+    // 404 ルートが無く未定義パスは白画面になるため、旧 URL は残してリダイレクトする。
+    { path: '/game-sessions', redirect: { name: 'dashboard' } },
+    { path: '/lobbies', redirect: { name: 'dashboard' } },
     {
       path: '/game-sessions/new',
       name: 'game-sessions-new',
@@ -64,11 +63,6 @@ const router = createRouter({
       name: 'profile-setting',
       component: () => import('@/views/ProfileView.vue'),
       meta: { requiresAuth: true },
-    },
-    {
-      path: '/lobbies',
-      name: 'lobbies-list',
-      component: () => import('@/views/Lobby/ListView.vue'),
     },
     {
       path: '/lobbies/new',

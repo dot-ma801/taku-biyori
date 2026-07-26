@@ -12,7 +12,7 @@ const onClickTitle = () => {
 
 <template>
   <header>
-    <h1 @click="onClickTitle">AppName</h1>
+    <h1 @click="onClickTitle">たく日和</h1>
     <div class="button-area">
       <ThemeSwitchButton />
       <LoginButton />

@@ -198,9 +198,13 @@ function onGuestJoined() {
 </template>
 
 <style scoped>
+/*
+ * ボタンは画面幅によって折り返る。margin で横方向だけ空けると
+ * 折り返した行同士が密着するため、flex + gap で縦横まとめて空ける。
+ */
 .button-area {
-  > * {
-    margin: 0 var(--space-1);
-  }
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 </style>

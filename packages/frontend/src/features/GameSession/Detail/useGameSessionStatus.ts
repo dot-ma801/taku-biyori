@@ -131,7 +131,7 @@ export const useGameSessionStatus = (
   }
 
   /**
-   * 卓を削除する。成功後は卓一覧ページへ遷移する。
+   * 卓を削除する。成功後はダッシュボードへ遷移する。
    * 削除可否を満たさない場合・loadingDelete 中の重複呼び出しは無視する。
    */
   async function deleteSession() {
@@ -148,7 +148,7 @@ export const useGameSessionStatus = (
       loadingDelete.value = false;
     }
     toast.success('卓を削除しました');
-    await router.push({ name: 'game-sessions-list' });
+    await router.push({ name: 'dashboard' });
   }
 
   return {

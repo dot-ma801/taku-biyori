@@ -7,7 +7,7 @@ import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { computed } from 'vue';
-import { Album, UsersRound, CalendarDays } from '@lucide/vue';
+import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -28,6 +28,7 @@ const description = computed(() => gameSession.value?.description ?? undefined);
 const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
+const location = computed(() => gameSession.value?.location ?? '未設定');
 </script>
 
 <template>
@@ -47,7 +48,9 @@ const gameSessionDateTime = computed(
           <CalendarDays :size="16" />
           <p>日時：{{ gameSessionDateTime }}</p>
           <UsersRound :size="16" />
-          <p>募集人数: {{ maxMembers }}</p>
+          <p>募集人数：{{ maxMembers }}</p>
+          <MapPin :size="16" />
+          <p>場所：{{ location }}</p>
         </div>
 
         <div class="action-bar-wrapper">
@@ -81,7 +84,7 @@ const gameSessionDateTime = computed(
   .description {
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-auto-rows: auto;
     align-items: center;
 
     gap: 0 var(--space-1);

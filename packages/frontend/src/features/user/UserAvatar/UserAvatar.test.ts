@@ -95,6 +95,21 @@ describe('UserAvatar', () => {
       expect(wrapper.findComponent(Avatar).props('name')).toBe('explicit-name');
     });
 
+    it('userId が null のときは name prop が使われる（ゲスト向けのフォールバック）', () => {
+      // Arrange
+      setActivePinia(createPinia());
+      const authStore = useAuthStore();
+      authStore.user = makeUser();
+
+      // Act
+      const wrapper = mount(UserAvatar, {
+        props: { userId: null, name: 'ゲスト太郎' },
+      });
+
+      // Assert
+      expect(wrapper.findComponent(Avatar).props('name')).toBe('ゲスト太郎');
+    });
+
     it('props が無いときは authStore.user.id が使われる（表示名が変わっても見た目を維持するため）', () => {
       // Arrange
       setActivePinia(createPinia());

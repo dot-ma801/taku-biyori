@@ -71,6 +71,19 @@ export const Disabled: Story = {
   }),
 };
 
+export const Clearable: Story = {
+  args: {
+    label: '募集締め切り日',
+    clearable: true,
+    modelValue: '2025-12-25',
+  },
+  render: (args) => ({
+    components: { BaseDatePicker },
+    setup: () => ({ args }),
+    template: '<BaseDatePicker v-bind="args" />',
+  }),
+};
+
 export const Required: Story = {
   args: {
     label: '開始日',
@@ -90,6 +103,7 @@ export const AllVariants: Story = {
       <div style="display: flex; flex-direction: column; gap: 16px; max-width: 320px;">
         <BaseDatePicker label="通常" />
         <BaseDatePicker label="選択済み" model-value="2025-06-15" />
+        <BaseDatePicker label="クリア可能" clearable model-value="2025-06-15" />
         <BaseDatePicker label="無効" disabled />
       </div>
     `,

@@ -70,6 +70,16 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
   });
 
   /**
+   * 絞り込み後に表示するセッションが1件でもあるか。
+   * セクションごと非表示にしたい呼び出し側（ダッシュボードの「非公開の卓」など）が使う。
+   */
+  const hasFilteredSessions = computed(
+    () =>
+      filteredMySessions.value.length > 0 ||
+      filteredPublicSessions.value.length > 0,
+  );
+
+  /**
    * 次の卓。
    * mySessions の中で scheduledAt が現在以降かつ最も近いセッション。
    * 該当なければ null。
@@ -111,6 +121,7 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
     mySessions,
     filteredMySessions,
     filteredPublicSessions,
+    hasFilteredSessions,
     nextSession,
     loading,
     errorMessage,

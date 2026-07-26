@@ -4,7 +4,7 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import { useConfirmedLobby } from '@/features/Lobby/Detail/composables/useConfirmedLobby';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { ExternalLink } from '@lucide/vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -12,7 +12,15 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { viewerKind, gameSessionId } = useConfirmedLobby(() => props.lobby);
+
+// token は招待リンク（?token=）由来。route から読み、getter で composable へ渡す
+const route = useRoute();
+const token = () => route.query.token?.toString() ?? null;
+
+const { viewerKind, gameSessionId } = useConfirmedLobby(
+  () => props.lobby,
+  token,
+);
 
 const canNavigate = computed(() => gameSessionId.value !== null);
 
@@ -47,6 +55,14 @@ function goToGameSession() {
       </p>
     </template>
 
+    <!-- ゲストは匿名のため卓のメンバーに紐付けられず、卓への導線を出せない -->
+    <template v-else-if="viewerKind === 'guest'">
+      <p class="notice-message">開催日が確定しました。</p>
+      <p class="notice-hint">
+        卓の詳細はゲスト用の招待リンクからのみ開けます。ホストに卓の招待リンクを発行してもらってください。
+      </p>
+    </template>
+
     <template v-else>
       <p class="notice-message">開催日が確定しました。</p>
     </template>
@@ -65,5 +81,12 @@ function goToGameSession() {
   font-size: 14px;
   line-height: 1.6;
   color: var(--color-text);
+}
+
+.notice-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
 }
 </style>

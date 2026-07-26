@@ -402,6 +402,85 @@ describe('useGameSessionList', () => {
     });
   });
 
+  describe('hasFilteredSessions（絞り込み後に表示するセッションがあるか）', () => {
+    it('セッションが1件も無い場合は false になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([]);
+
+      // Act
+      const { hasFilteredSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.draft],
+      });
+      await fetch();
+
+      // Assert
+      expect(hasFilteredSessions.value).toBe(false);
+    });
+
+    it('該当ステータスの自分のセッションがある場合は true になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([
+        makeSession({ role: 'host', status: GameSessionStatus.draft }),
+      ]);
+
+      // Act
+      const { hasFilteredSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.draft],
+      });
+      await fetch();
+
+      // Assert
+      expect(hasFilteredSessions.value).toBe(true);
+    });
+
+    it('該当ステータスの公開セッションがある場合は true になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([
+        makeSession({ role: null, status: GameSessionStatus.confirmed }),
+      ]);
+
+      // Act
+      const { hasFilteredSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.confirmed],
+      });
+      await fetch();
+
+      // Assert
+      expect(hasFilteredSessions.value).toBe(true);
+    });
+
+    it('statuses に該当するセッションが無い場合は false になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([
+        makeSession({ role: 'host', status: GameSessionStatus.confirmed }),
+        makeSession({ role: null, status: GameSessionStatus.completed }),
+      ]);
+
+      // Act
+      const { hasFilteredSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.draft],
+      });
+      await fetch();
+
+      // Assert
+      expect(hasFilteredSessions.value).toBe(false);
+    });
+
+    it('statuses 未指定の場合はセッションが1件でもあれば true になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([
+        makeSession({ role: null, status: GameSessionStatus.completed }),
+      ]);
+
+      // Act
+      const { hasFilteredSessions, fetch } = useGameSessionList();
+      await fetch();
+
+      // Assert
+      expect(hasFilteredSessions.value).toBe(true);
+    });
+  });
+
   describe('filteredMySessions（sortByScheduledAt ソート）', () => {
     it('sortByScheduledAt=true の場合 scheduledAt 昇順で返す', async () => {
       // Arrange

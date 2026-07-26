@@ -30,6 +30,11 @@ const displayMembers = computed(() => {
   return props.lobby.members.map((member) => ({
     id: member.id,
     userName: memberDisplayName(member),
+    // アバターの種。id を持つメンバーは userId を優先し、
+    // 他画面（ヘッダー・プロフィール）と絵柄を揃える
+    userId: member.userId,
+    // id を持たないゲスト向けのフォールバック。
+    // サフィックスの有無で絵柄が変わらないよう baseName を渡す
     baseName: memberBaseName(member),
   }));
 });
@@ -70,7 +75,12 @@ const onConfirmRemove = () => {
       :key="member.id"
       class="user-container"
     >
-      <UserAvatar class="avatar" :size="35" :name="member.baseName" />
+      <UserAvatar
+        class="avatar"
+        :size="35"
+        :user-id="member.userId"
+        :name="member.baseName"
+      />
 
       <p>{{ member.userName }}</p>
 

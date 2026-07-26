@@ -172,6 +172,91 @@ describe('BaseDatePicker', () => {
     });
   });
 
+  describe('clearable', () => {
+    it('clearable=true かつ値が選択済みのときクリアボタンが表示される', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { clearable: true, modelValue: '2025-06-15' },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__clear').exists()).toBe(true);
+    });
+
+    it('clearable=true でも未選択のときはクリアボタンが表示されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { clearable: true },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__clear').exists()).toBe(false);
+    });
+
+    it('clearable 未指定のときはクリアボタンが表示されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { modelValue: '2025-06-15' },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__clear').exists()).toBe(false);
+    });
+
+    it('disabled のときはクリアボタンが表示されない', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { clearable: true, disabled: true, modelValue: '2025-06-15' },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__clear').exists()).toBe(false);
+    });
+
+    it('クリアボタンを押すと空文字が emit される', async () => {
+      // Arrange
+      const wrapper = mount(BaseDatePicker, {
+        props: { clearable: true, modelValue: '2025-06-15' },
+      });
+
+      // Act
+      await wrapper.find('.datepicker__clear').trigger('click');
+
+      // Assert
+      expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['']);
+    });
+
+    it('multiple=true でクリアボタンを押すと空配列が emit される', async () => {
+      // Arrange
+      const wrapper = mount(BaseDatePicker, {
+        props: {
+          clearable: true,
+          multiple: true,
+          modelValue: ['2025-06-10', '2025-06-15'],
+        },
+      });
+
+      // Act
+      await wrapper.find('.datepicker__clear').trigger('click');
+
+      // Assert
+      expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([[]]);
+    });
+
+    it('クリアボタンはトリガーの外側に置かれる（押してもカレンダーが開かない）', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: { clearable: true, modelValue: '2025-06-15' },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__clear').exists()).toBe(true);
+      expect(
+        wrapper.find('.datepicker__trigger .datepicker__clear').exists(),
+      ).toBe(false);
+    });
+  });
+
   describe('disabled', () => {
     it('disabled のときトリガーボタンが無効化される', () => {
       // Arrange & Act
@@ -207,6 +292,22 @@ describe('BaseDatePicker', () => {
       expect(
         wrapper.find('.datepicker__trigger').attributes('aria-label'),
       ).toBeTruthy();
+    });
+
+    it('クリアボタンに aria-label が付与されている', () => {
+      // Arrange & Act
+      const wrapper = mount(BaseDatePicker, {
+        props: {
+          clearable: true,
+          label: '募集締め切り日',
+          modelValue: '2025-06-15',
+        },
+      });
+
+      // Assert
+      expect(wrapper.find('.datepicker__clear').attributes('aria-label')).toBe(
+        '募集締め切り日をクリア',
+      );
     });
   });
 });

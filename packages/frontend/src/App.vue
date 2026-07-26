@@ -2,6 +2,7 @@
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppFooter from '@/components/layout/AppFooter.vue';
 import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToastContainer.vue';
+import BaseLoadingOverlay from '@/components/common/BaseLoadingOverlay/BaseLoadingOverlay.vue';
 </script>
 
 <template>
@@ -12,6 +13,7 @@ import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToast
     </div>
     <AppFooter class="footer" />
     <BaseToastContainer />
+    <BaseLoadingOverlay />
   </div>
 </template>
 

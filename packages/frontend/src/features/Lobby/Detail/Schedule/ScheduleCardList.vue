@@ -3,6 +3,7 @@ import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
+import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useScheduleEditHint';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
@@ -30,6 +31,12 @@ const { getAnswer } = useScheduleView(
   toRef(props, 'draftAnswers'),
 );
 
+const { isEditing, isMyAnswerEditable, editHint } = useScheduleEditHint(
+  () => props.editableMemberIds,
+  () => props.myMemberId,
+  'card',
+);
+
 const hasDates = computed(() => props.availabilityDates.length > 0);
 
 // チップの見た目を回答状態で切り替えるためのクラス（未回答は 'none'）
@@ -51,22 +58,6 @@ function myAnswer(date: LobbyAvailabilityDate): Answer | null {
 function isChipEditable(memberId: string): boolean {
   return props.editableMemberIds.includes(memberId);
 }
-
-// 自分の回答行がいま編集可能か
-const isMyAnswerEditable = computed(() => {
-  if (!props.myMemberId) return false;
-  return isChipEditable(props.myMemberId);
-});
-
-// いずれかの編集モード中か（ヒント表示用）
-const isEditing = computed(() => props.editableMemberIds.length > 0);
-
-// 編集モードに応じたタップ操作のヒント文言
-const editHint = computed(() =>
-  isMyAnswerEditable.value
-    ? '「あなたの回答」をタップすると ◯ → △ → ✕ の順に切り替わります'
-    : 'ゲストのチップをタップすると ◯ → △ → ✕ の順に切り替わります',
-);
 
 // 編集可能なチップ・回答行に付与するアクセシビリティ属性
 function editableAttrs(editable: boolean) {

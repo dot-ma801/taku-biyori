@@ -48,7 +48,7 @@ const location = computed(() => gameSession.value?.location ?? '未設定');
           <CalendarDays :size="16" />
           <p>日時：{{ gameSessionDateTime }}</p>
           <UsersRound :size="16" />
-          <p>募集人数: {{ maxMembers }}</p>
+          <p>募集人数：{{ maxMembers }}</p>
           <MapPin :size="16" />
           <p>場所：{{ location }}</p>
         </div>

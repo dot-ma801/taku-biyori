@@ -12,18 +12,24 @@ import { useRouter } from 'vue-router';
 const props = defineProps<{
   title?: string;
   statuses?: LobbyStatus[];
+  /** 該当募集枠が1件も無いときにセクションごと描画しない */
+  hideWhenEmpty?: boolean;
+  /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
+  hideCreateButton?: boolean;
 }>();
 
 const router = useRouter();
-const { myLobbies, publicLobbies, filteredMyLobbies, filteredPublicLobbies } =
+const { filteredMyLobbies, filteredPublicLobbies, hasFilteredLobbies } =
   useLobbyList(props.statuses);
 
 const hasTitle = computed(() => props.title != null);
-const hasPublicLobbies = computed(() => publicLobbies.value.length > 0);
+const isVisible = computed(
+  () => !props.hideWhenEmpty || hasFilteredLobbies.value,
+);
+const showCreateButton = computed(() => !props.hideCreateButton);
 const hasFilteredPublicLobbies = computed(
   () => filteredPublicLobbies.value.length > 0,
 );
-const isFiltered = computed(() => props.statuses !== undefined);
 
 const onClickCreate = () => {
   router.push({ name: 'lobbies-new' });
@@ -31,34 +37,28 @@ const onClickCreate = () => {
 </script>
 
 <template>
-  <div class="container">
+  <div v-if="isVisible" class="container">
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
-      <BaseButton :left-icon="Plus" @click="onClickCreate"
+      <BaseButton
+        v-if="showCreateButton"
+        :left-icon="Plus"
+        @click="onClickCreate"
         >ロビーを作成</BaseButton
       >
     </div>
     <BaseButton
-      v-else
+      v-else-if="showCreateButton"
       class="create-btn"
       :left-icon="Plus"
       @click="onClickCreate"
       >ロビーを作成</BaseButton
     >
-    <template v-if="isFiltered">
-      <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
-      <PublicLobbyList
-        v-if="hasFilteredPublicLobbies"
-        :public-lobbies="filteredPublicLobbies"
-      ></PublicLobbyList>
-    </template>
-    <template v-else>
-      <MyLobbyList :my-lobbies="myLobbies"></MyLobbyList>
-      <PublicLobbyList
-        v-if="hasPublicLobbies"
-        :public-lobbies="publicLobbies"
-      ></PublicLobbyList>
-    </template>
+    <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
+    <PublicLobbyList
+      v-if="hasFilteredPublicLobbies"
+      :public-lobbies="filteredPublicLobbies"
+    ></PublicLobbyList>
   </div>
 </template>
 

@@ -17,19 +17,17 @@ const props = defineProps<{
   hideWhenEmpty?: boolean;
   /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
   hideCreateButton?: boolean;
+  /** 他人の公開セッションを描画しない（自分の履歴だけを見せるとき用） */
+  hidePublic?: boolean;
 }>();
 
 const router = useRouter();
-const {
-  mySessions,
-  publicSessions,
-  filteredMySessions,
-  filteredPublicSessions,
-  hasFilteredSessions,
-} = useGameSessionList({
-  statuses: props.statuses,
-  sortByScheduledAt: props.sortByScheduledAt,
-});
+const { filteredMySessions, filteredPublicSessions, hasFilteredSessions } =
+  useGameSessionList({
+    statuses: props.statuses,
+    sortByScheduledAt: props.sortByScheduledAt,
+    includePublic: !props.hidePublic,
+  });
 
 const hasTitle = computed(() => props.title != null);
 const isVisible = computed(
@@ -39,7 +37,6 @@ const showCreateButton = computed(() => !props.hideCreateButton);
 const hasFilteredPublicSessions = computed(
   () => filteredPublicSessions.value.length > 0,
 );
-const isFiltered = computed(() => props.statuses !== undefined);
 
 const onClickCreate = () => {
   router.push({ name: 'game-sessions-new' });
@@ -64,17 +61,11 @@ const onClickCreate = () => {
       @click="onClickCreate"
       >セッションを作成</BaseButton
     >
-    <template v-if="isFiltered">
-      <MySessionList :my-sessions="filteredMySessions"></MySessionList>
-      <PublicSessionList
-        v-if="hasFilteredPublicSessions"
-        :public-sessions="filteredPublicSessions"
-      ></PublicSessionList>
-    </template>
-    <template v-else>
-      <MySessionList :my-sessions="mySessions"></MySessionList>
-      <PublicSessionList :public-sessions="publicSessions"></PublicSessionList>
-    </template>
+    <MySessionList :my-sessions="filteredMySessions"></MySessionList>
+    <PublicSessionList
+      v-if="hasFilteredPublicSessions"
+      :public-sessions="filteredPublicSessions"
+    ></PublicSessionList>
   </div>
 </template>
 

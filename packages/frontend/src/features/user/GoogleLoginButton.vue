@@ -1,26 +1,51 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { authClient } from '@/lib/auth';
+import { useLoading } from '@/composables/useLoading';
 
 const error = ref('');
+
+const { isLoading, start, stop, reset } = useLoading();
 
 const handleGoogleSignIn = async () => {
   error.value = '';
 
+  // 成功時は Google へリダイレクトされるため、そのままオーバーレイを表示し続ける
+  start('Google に接続しています…');
+
   try {
-    await authClient.signIn.social({
+    const { error: signInError } = await authClient.signIn.social({
       provider: 'google',
       callbackURL: `${window.location.origin}/auth/callback`,
     });
+
+    if (signInError) {
+      error.value = signInError.message ?? 'Google ログインに失敗しました';
+      stop();
+    }
   } catch (err) {
     error.value =
       err instanceof Error ? err.message : 'Google ログインに失敗しました';
+    stop();
   }
 };
+
+// ブラウザバック（bfcache 復帰）で戻ってきたとき、
+// リダイレクト前に出したオーバーレイが残らないよう強制解除する
+const handlePageShow = (event: PageTransitionEvent) => {
+  if (event.persisted) reset();
+};
+
+onMounted(() => window.addEventListener('pageshow', handlePageShow));
+onUnmounted(() => window.removeEventListener('pageshow', handlePageShow));
 </script>
 
 <template>
-  <button class="gsi-material-button" @click="handleGoogleSignIn">
+  <button
+    class="gsi-material-button"
+    :disabled="isLoading"
+    @click="handleGoogleSignIn"
+  >
     <div class="gsi-material-button-state"></div>
     <div class="gsi-material-button-content-wrapper">
       <div class="gsi-material-button-icon">

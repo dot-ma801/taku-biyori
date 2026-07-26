@@ -19,7 +19,11 @@ const displayMembers = computed(() =>
     id: member.id,
     characterName: member.characterName,
     userName: memberDisplayName(member),
-    // アバターの色を変えないため、サフィックスなしの名前を渡す
+    // アバターの種。id を持つメンバーは userId を優先し、
+    // 他画面（ヘッダー・プロフィール）と絵柄を揃える
+    userId: member.userId,
+    // id を持たないゲスト向けのフォールバック。
+    // サフィックスの有無で絵柄が変わらないよう baseName を渡す
     baseName: memberBaseName(member),
   })),
 );
@@ -59,6 +63,7 @@ const {
       <UserAvatar
         class="avatar"
         :size="35"
+        :user-id="member.userId"
         :name="member.baseName"
       ></UserAvatar>
 

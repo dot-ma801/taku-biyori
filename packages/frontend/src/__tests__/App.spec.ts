@@ -17,6 +17,6 @@ describe('App', () => {
         },
       },
     });
-    expect(wrapper.text()).toContain('AppName');
+    expect(wrapper.text()).toContain('たく日和');
   });
 });

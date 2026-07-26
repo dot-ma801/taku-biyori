@@ -118,8 +118,7 @@ export const useUpdateLobby = (id: string) => {
       });
       await bulkUpdateLobbyAvailabilityDates(id, { dates: pendingDates.value });
 
-      // 詳細画面が未実装のため、当面は一覧へ遷移する
-      await router.push({ name: 'lobbies-list' });
+      await router.push({ name: 'lobbies-detail', params: { lobbyId: id } });
     } catch (err) {
       errorMessages.value = [
         err instanceof ApiError ? err.message : 'エラーが発生しました',

@@ -156,7 +156,10 @@ describe('useUpdateLobby', () => {
     expect(bulkUpdateLobbyAvailabilityDates).toHaveBeenCalledWith(LOBBY_ID, {
       dates: ['2026-07-25'],
     });
-    expect(pushMock).toHaveBeenCalledWith({ name: 'lobbies-list' });
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'lobbies-detail',
+      params: { lobbyId: LOBBY_ID },
+    });
   });
 
   it('初期取得に失敗したとき fetchError を設定し、errorMessages には入れない', async () => {

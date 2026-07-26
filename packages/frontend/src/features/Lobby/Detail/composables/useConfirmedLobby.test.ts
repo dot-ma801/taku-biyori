@@ -85,7 +85,10 @@ describe('viewerKind', () => {
     setSession(HOST_ID);
 
     // Act
-    const { viewerKind } = useConfirmedLobby(() => baseLobby);
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => null,
+    );
 
     // Assert
     expect(viewerKind.value).toBe('selected');
@@ -96,7 +99,10 @@ describe('viewerKind', () => {
     setSession(MEMBER_ID);
 
     // Act
-    const { viewerKind } = useConfirmedLobby(() => baseLobby);
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => null,
+    );
 
     // Assert
     expect(viewerKind.value).toBe('selected');
@@ -107,7 +113,10 @@ describe('viewerKind', () => {
     setSession('user-not-selected');
 
     // Act
-    const { viewerKind } = useConfirmedLobby(() => baseLobby);
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => null,
+    );
 
     // Assert
     expect(viewerKind.value).toBe('notSelected');
@@ -118,7 +127,53 @@ describe('viewerKind', () => {
     setSession(null);
 
     // Act
-    const { viewerKind } = useConfirmedLobby(() => baseLobby);
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => null,
+    );
+
+    // Assert
+    expect(viewerKind.value).toBe('neutral');
+  });
+
+  it('招待リンク経由（token あり）の未ログインユーザーは guest を返す', () => {
+    // Arrange
+    setSession(null);
+
+    // Act
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => 'invite-token',
+    );
+
+    // Assert
+    expect(viewerKind.value).toBe('guest');
+  });
+
+  it('token があってもログイン済みならユーザーとして判定する', () => {
+    // Arrange
+    setSession(HOST_ID);
+
+    // Act
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => 'invite-token',
+    );
+
+    // Assert
+    expect(viewerKind.value).toBe('selected');
+  });
+
+  it('卓が未確定なら token があっても neutral を返す', () => {
+    // Arrange
+    setSession(null);
+    const lobby: LobbyDetail = { ...baseLobby, confirmedGameSession: null };
+
+    // Act
+    const { viewerKind } = useConfirmedLobby(
+      () => lobby,
+      () => 'invite-token',
+    );
 
     // Assert
     expect(viewerKind.value).toBe('neutral');
@@ -129,7 +184,10 @@ describe('viewerKind', () => {
     setSession('completely-unrelated-user');
 
     // Act
-    const { viewerKind } = useConfirmedLobby(() => baseLobby);
+    const { viewerKind } = useConfirmedLobby(
+      () => baseLobby,
+      () => null,
+    );
 
     // Assert
     expect(viewerKind.value).toBe('neutral');
@@ -142,7 +200,10 @@ describe('gameSessionId', () => {
     setSession(HOST_ID);
 
     // Act
-    const { gameSessionId } = useConfirmedLobby(() => baseLobby);
+    const { gameSessionId } = useConfirmedLobby(
+      () => baseLobby,
+      () => null,
+    );
 
     // Assert
     expect(gameSessionId.value).toBe(GAME_SESSION_ID);
@@ -154,7 +215,10 @@ describe('gameSessionId', () => {
     const lobby: LobbyDetail = { ...baseLobby, confirmedGameSession: null };
 
     // Act
-    const { gameSessionId } = useConfirmedLobby(() => lobby);
+    const { gameSessionId } = useConfirmedLobby(
+      () => lobby,
+      () => null,
+    );
 
     // Assert
     expect(gameSessionId.value).toBeNull();

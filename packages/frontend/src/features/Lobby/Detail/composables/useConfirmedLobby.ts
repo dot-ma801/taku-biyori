@@ -3,10 +3,12 @@ import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { useSession } from '@/lib/auth';
 
-export type ViewerKind = 'selected' | 'notSelected' | 'neutral';
+export type ViewerKind = 'selected' | 'notSelected' | 'guest' | 'neutral';
 
 export const useConfirmedLobby = (
   lobby: MaybeRefOrGetter<LobbyDetail | null>,
+  // NOTE: token は招待リンク（?token=）由来。ゲストとしての閲覧かどうかの判定に使う
+  token: MaybeRefOrGetter<string | null>,
 ) => {
   const sessionData = ref(useSession.get());
   const unsub = useSession.subscribe((v) => {
@@ -23,7 +25,8 @@ export const useConfirmedLobby = (
     if (!l?.confirmedGameSession) return 'neutral';
 
     const userId = sessionData.value.data?.user?.id;
-    if (!userId) return 'neutral';
+    // ゲストは匿名なので個人を特定できない。招待リンク経由の閲覧かどうかだけで判定する
+    if (!userId) return toValue(token) ? 'guest' : 'neutral';
 
     // ホストは常に selected
     if (userId === l.hostUserId) return 'selected';

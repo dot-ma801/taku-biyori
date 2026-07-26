@@ -402,6 +402,81 @@ describe('useGameSessionList', () => {
     });
   });
 
+  describe('includePublic（公開セッションを含めるか）', () => {
+    it('includePublic=false の場合 filteredPublicSessions は空になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([
+        makeSession({ role: null, status: GameSessionStatus.completed }),
+      ]);
+
+      // Act
+      const { filteredPublicSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.completed],
+        includePublic: false,
+      });
+      await fetch();
+
+      // Assert
+      expect(filteredPublicSessions.value).toEqual([]);
+    });
+
+    it('includePublic=false でも自分のセッションは絞り込まれない', async () => {
+      // Arrange
+      const mySession = makeSession({
+        role: 'host',
+        status: GameSessionStatus.completed,
+      });
+      mockListGameSessions.mockResolvedValue([mySession]);
+
+      // Act
+      const { filteredMySessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.completed],
+        includePublic: false,
+      });
+      await fetch();
+
+      // Assert
+      expect(filteredMySessions.value).toEqual([mySession]);
+    });
+
+    // 終了した卓セクションは他人の卓を出さないため、公開セッションだけが該当する場合は
+    // セクションごと消える必要がある。
+    it('includePublic=false のとき公開セッションだけでは hasFilteredSessions が false になる', async () => {
+      // Arrange
+      mockListGameSessions.mockResolvedValue([
+        makeSession({ role: null, status: GameSessionStatus.completed }),
+      ]);
+
+      // Act
+      const { hasFilteredSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.completed],
+        includePublic: false,
+      });
+      await fetch();
+
+      // Assert
+      expect(hasFilteredSessions.value).toBe(false);
+    });
+
+    it('既定では公開セッションを含む', async () => {
+      // Arrange
+      const publicSession = makeSession({
+        role: null,
+        status: GameSessionStatus.completed,
+      });
+      mockListGameSessions.mockResolvedValue([publicSession]);
+
+      // Act
+      const { filteredPublicSessions, fetch } = useGameSessionList({
+        statuses: [GameSessionStatus.completed],
+      });
+      await fetch();
+
+      // Assert
+      expect(filteredPublicSessions.value).toEqual([publicSession]);
+    });
+  });
+
   describe('hasFilteredSessions（絞り込み後に表示するセッションがあるか）', () => {
     it('セッションが1件も無い場合は false になる', async () => {
       // Arrange

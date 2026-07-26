@@ -6,6 +6,11 @@ import { listGameSessions } from '@/api/game-session';
 interface UseGameSessionListOptions {
   statuses?: GameSessionStatus[];
   sortByScheduledAt?: boolean;
+  /**
+   * 他人の公開セッションを一覧に含めるか。
+   * 「終了した卓」のような自分の履歴を見せるセクションでは false にする。
+   */
+  includePublic?: boolean;
 }
 
 /**
@@ -28,7 +33,7 @@ const startOfToday = (): Date => {
 };
 
 export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
-  const { statuses, sortByScheduledAt = false } = options;
+  const { statuses, sortByScheduledAt = false, includePublic = true } = options;
   /** 全セッション（APIレスポンスそのまま） */
   const allSessions = ref<GameSessionListItem[]>([]);
 
@@ -65,6 +70,7 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
 
   /** 公開セッションのうち statuses に該当するもの（未指定時は publicSessions をそのまま返す） */
   const filteredPublicSessions = computed(() => {
+    if (!includePublic) return [];
     if (statuses === undefined) return publicSessions.value;
     return publicSessions.value.filter((s) => statuses.includes(s.status));
   });

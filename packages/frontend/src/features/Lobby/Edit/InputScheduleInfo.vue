@@ -48,6 +48,7 @@ function removeDate(date: string) {
           v-model="openUntil"
           label="募集締め切り日"
           disable-past
+          clearable
         ></BaseDatePicker>
 
         <BaseDatePicker

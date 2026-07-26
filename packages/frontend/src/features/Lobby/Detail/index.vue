@@ -29,8 +29,7 @@ const capacityText = computed(() => {
     : `${memberCount.value} / 定員未設定`;
 });
 
-const hasLocation = computed(() => !!lobby.value?.location);
-const location = computed(() => lobby.value?.location ?? '');
+const location = computed(() => lobby.value?.location ?? '未設定');
 const isConfirmed = computed(
   () =>
     lobby.value?.status === LobbyStatus.confirmed &&
@@ -52,10 +51,8 @@ const isConfirmed = computed(
         <p>日時：{{ gameSessionDateTime }}</p>
         <UsersRound :size="16" />
         <p>参加者：{{ capacityText }}</p>
-        <template v-if="hasLocation">
-          <MapPin :size="16" />
-          <p>場所：{{ location }}</p>
-        </template>
+        <MapPin :size="16" />
+        <p>場所：{{ location }}</p>
       </div>
 
       <div class="action-bar-wrapper">

@@ -2,6 +2,7 @@
 import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
+import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useScheduleEditHint';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName } from '@/utils/memberDisplayName';
@@ -27,6 +28,12 @@ const emit = defineEmits<{
 const { getAnswer } = useScheduleView(
   toRef(props, 'editableMemberIds'),
   toRef(props, 'draftAnswers'),
+);
+
+const { isEditing, editHint } = useScheduleEditHint(
+  () => props.editableMemberIds,
+  () => props.myMemberId,
+  'table',
 );
 
 // 空行の colspan（確定列? + 候補日列 + メンバー列）
@@ -65,6 +72,7 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
 </script>
 
 <template>
+  <p v-if="isEditing" class="edit-hint">{{ editHint }}</p>
   <div class="table-wrapper">
     <table class="table">
       <thead>
@@ -118,6 +126,12 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
 </template>
 
 <style scoped>
+.edit-hint {
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
 .table-wrapper {
   width: 100%;
   overflow-x: auto;

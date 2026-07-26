@@ -44,6 +44,10 @@
 - 今日の日付は太字+プライマリカラーでハイライト
 - クリアボタンはトリガー（`Popover.Activator` が描画する `button`）に入れ子にできないため、
   兄弟要素として重ねて配置する。押してもカレンダーは開かない
+- ⚠️ クリアボタンの `position: absolute` は `.datepicker .datepicker__field .datepicker__clear`
+  と深いセレクタで書いている。`BaseCard` が
+  `.card__body :is(a, button, [role='button'], ...) { position: relative }` を当てており、
+  詳細度で負けるとカード内でだけトリガーの外に落ちるため（このセレクタを短くしないこと）
 - 任意入力の項目では `clearable` を付けること。付けないと一度選んだ日付を未選択に戻せない
 
 ## 単体テスト項目

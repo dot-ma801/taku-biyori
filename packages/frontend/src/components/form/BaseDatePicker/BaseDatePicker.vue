@@ -358,10 +358,15 @@ function selectDate(dateStr: string | null) {
   padding-right: var(--space-5);
 }
 
-.datepicker__clear {
+/*
+ * セレクタを深くしているのは詳細度のため。
+ * BaseCard の `.card__body :is(a, button, ...)` が配下の button に position: relative を
+ * 付けており、`.datepicker__clear` 単体（詳細度 0-2-0）では負けてトリガーの外に落ちる。
+ */
+.datepicker .datepicker__field .datepicker__clear {
   position: absolute;
   top: 50%;
-  right: 32px;
+  right: 34px;
   transform: translateY(-50%);
 
   display: flex;

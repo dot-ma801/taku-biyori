@@ -11,7 +11,7 @@ const mockGameSession: GameSession = {
   location: null,
   status: 'open',
   isPublished: true,
-  scheduledAt: null,
+  scheduledAt: '2025-05-30',
   completedAt: null,
   maxMembers: null,
   createdBy: 'user-1',

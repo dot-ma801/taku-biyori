@@ -13,7 +13,8 @@ export const GameSessionListItemSchema = z.object({
   isPublished: z.boolean(),
   memberCount: z.number().int(),
   maxMembers: z.number().int().nullable().optional(),
-  scheduledAt: z.string().nullable().optional(),
+  // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+  scheduledAt: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
   role: z.enum(['host', 'member']).nullable(),
@@ -28,7 +29,8 @@ export const GameSessionSchema = z.object({
   location: z.string().nullable().optional(),
   status: GameSessionStatusSchema,
   isPublished: z.boolean(),
-  scheduledAt: z.string().nullable().optional(),
+  // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+  scheduledAt: z.string(),
   completedAt: z.string().nullable().optional(),
   cancelledAt: z.string().nullable().optional(),
   maxMembers: z.number().int().nullable().optional(),
@@ -71,7 +73,8 @@ export const UpdateGameSessionInputSchema = z
     scenarioName: z.string().max(200).nullable().optional(),
     location: z.string().max(200).nullable().optional(),
     maxMembers: z.number().int().min(2).max(20).nullable().optional(),
-    scheduledAt: z.iso.date().nullable().optional(),
+    // 卓は日程が確定した状態でのみ存在するため null への更新は受け付けない（design-v1.1 §8）
+    scheduledAt: z.iso.date().optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: '少なくとも1つのフィールドが必要です',

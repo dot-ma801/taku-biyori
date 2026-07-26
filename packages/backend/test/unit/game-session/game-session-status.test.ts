@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 
+// 卓は日程が確定した状態でのみ存在するため scheduledAt は必ず入る（design-v1.1 §8）
 const base = {
   isPublished: false,
-  scheduledAt: null,
+  scheduledAt: new Date(2025, 0, 1),
   completedAt: null,
   cancelledAt: null,
 };
@@ -20,7 +21,7 @@ describe('getGameSessionStatus', () => {
     expect(getGameSessionStatus({ ...base, isPublished: false })).toBe('draft');
   });
 
-  // 段階6b: 募集（open_until）は募集枠へ移したため、公開済みの卓は open に落ちない
+  // 段階6b/6c: 募集・日程調整は募集枠へ移したため、卓は open / scheduling に落ちない
   it('is_published=true かつ scheduled_at が当日前なら confirmed', () => {
     // Arrange
     const input = {
@@ -54,15 +55,6 @@ describe('getGameSessionStatus', () => {
 
     // Act / Assert
     expect(getGameSessionStatus(input)).toBe('completed');
-  });
-
-  // scheduled_at の NOT NULL 化は段階6c 担当のため、それまでのフォールバックとして残す
-  it('is_published=true かつ scheduled_at=null なら scheduling', () => {
-    // Arrange
-    const input = { ...base, isPublished: true, scheduledAt: null };
-
-    // Act / Assert
-    expect(getGameSessionStatus(input)).toBe('scheduling');
   });
 
   // isToday はローカル日時（getFullYear/getMonth/getDate）で比較するため、

@@ -58,7 +58,7 @@ describe('GameSessionStatusBadge', () => {
   });
 
   describe('卓では扱わないステータス', () => {
-    it.each([GameSessionStatus.open, GameSessionStatus.scheduling] as const)(
+    it.each([GameSessionStatus.open] as const)(
       'status="%s"（募集枠へ移管）のときバッジを描画しない',
       (status) => {
         // Arrange & Act

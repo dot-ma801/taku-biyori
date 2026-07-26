@@ -101,7 +101,6 @@ describe('joinAsGuest', () => {
 
   it.each([
     GameSessionStatus.draft,
-    GameSessionStatus.scheduling,
     GameSessionStatus.completed,
     GameSessionStatus.cancelled,
   ])(

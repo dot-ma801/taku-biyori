@@ -63,7 +63,7 @@ export type GameSessionRow = {
   location: string | null;
   maxPlayers: number | null;
   isPublished: boolean;
-  scheduledAt: string | null;
+  scheduledAt: string;
   completedAt: Date | null;
   cancelledAt: Date | null;
   lobbyId: string | null;
@@ -76,9 +76,6 @@ type ListRow = GameSessionRow & {
   userMemberId: string | null;
 };
 
-const toDateOrNull = (s: string | null): Date | null =>
-  s ? new Date(s) : null;
-
 export const toGameSession = (row: GameSessionRow): GameSession => ({
   id: row.id,
   title: row.title,
@@ -87,7 +84,7 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   location: row.location,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
-    scheduledAt: toDateOrNull(row.scheduledAt),
+    scheduledAt: new Date(row.scheduledAt),
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
   }),
@@ -108,7 +105,7 @@ const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
   scenarioName: row.scenarioName,
   status: getGameSessionStatus({
     isPublished: row.isPublished,
-    scheduledAt: toDateOrNull(row.scheduledAt),
+    scheduledAt: new Date(row.scheduledAt),
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
   }),
@@ -320,7 +317,7 @@ export const createGameSessionRepository = (
     const r = row[0];
     return {
       isPublished: r.isPublished,
-      scheduledAt: toDateOrNull(r.scheduledAt),
+      scheduledAt: new Date(r.scheduledAt),
       completedAt: r.completedAt,
       cancelledAt: r.cancelledAt,
     };

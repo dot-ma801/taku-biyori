@@ -11,6 +11,19 @@ import { useGameSessionList } from '@/features/GameSession/List/useGameSessionLi
 
 const mockListGameSessions = vi.mocked(listGameSessions);
 
+/**
+ * 今日から n 日後の日付を `YYYY-MM-DD` で返す。
+ * API は DB の date 型由来で日付のみを返すため、フィクスチャも同じ形式に揃える。
+ * ローカル日付で組み立て、実行環境のタイムゾーンに依存しないようにする。
+ */
+function daysFromToday(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  const month = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 function makeSession(
   overrides: Partial<GameSessionListItem> = {},
 ): GameSessionListItem {
@@ -21,7 +34,7 @@ function makeSession(
     status: GameSessionStatus.draft,
     isPublished: false,
     memberCount: 1,
-    scheduledAt: null,
+    scheduledAt: '2026-08-01',
     role: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -181,14 +194,12 @@ describe('useGameSessionList', () => {
     it('mySessions の中で最も近い未来の scheduledAt を持つセッションを返す', async () => {
       // Arrange
       const near = makeSession({
-        scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 1日後
+        scheduledAt: daysFromToday(1),
         role: 'host',
         status: GameSessionStatus.confirmed,
       });
       const far = makeSession({
-        scheduledAt: new Date(
-          Date.now() + 1000 * 60 * 60 * 24 * 7,
-        ).toISOString(), // 7日後
+        scheduledAt: daysFromToday(7),
         role: 'host',
         status: GameSessionStatus.confirmed,
       });
@@ -202,10 +213,49 @@ describe('useGameSessionList', () => {
       expect(nextSession.value?.id).toBe(near.id);
     });
 
+    // scheduledAt は日付のみ（時刻を持たない）ため、当日の卓は「これから開催される卓」として
+    // nextSession に含める。時刻付きの比較にすると当日の卓が開始時刻前でも脱落する。
+    it('当日の卓は nextSession に含まれる', async () => {
+      // Arrange
+      const todaySession = makeSession({
+        scheduledAt: daysFromToday(0),
+        role: 'host',
+        status: GameSessionStatus.today,
+      });
+      mockListGameSessions.mockResolvedValue([todaySession]);
+
+      // Act
+      const { nextSession, fetch } = useGameSessionList();
+      await fetch();
+
+      // Assert
+      expect(nextSession.value?.id).toBe(todaySession.id);
+    });
+
+    // UTC より進んだ TZ では new Date('YYYY-MM-DD')（UTC 深夜0時）が現在時刻より
+    // 前になり、当日の卓が過去と誤判定される。ローカル基準で比較していることの回帰。
+    it('UTC より進んだ TZ でも当日の卓が nextSession から脱落しない', async () => {
+      // Arrange
+      vi.stubEnv('TZ', 'Asia/Tokyo');
+      const todaySession = makeSession({
+        scheduledAt: daysFromToday(0),
+        role: 'host',
+        status: GameSessionStatus.today,
+      });
+      mockListGameSessions.mockResolvedValue([todaySession]);
+
+      // Act
+      const { nextSession, fetch } = useGameSessionList();
+      await fetch();
+
+      // Assert
+      expect(nextSession.value?.id).toBe(todaySession.id);
+    });
+
     it('scheduledAt が過去のセッションは nextSession に含まれない', async () => {
       // Arrange
       const past = makeSession({
-        scheduledAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1時間前
+        scheduledAt: daysFromToday(-1),
         role: 'host',
         status: GameSessionStatus.completed,
       });
@@ -219,27 +269,10 @@ describe('useGameSessionList', () => {
       expect(nextSession.value).toBeNull();
     });
 
-    it('scheduledAt がないセッションは nextSession に含まれない', async () => {
-      // Arrange
-      const noDate = makeSession({
-        scheduledAt: null,
-        role: 'host',
-        status: GameSessionStatus.scheduling,
-      });
-      mockListGameSessions.mockResolvedValue([noDate]);
-
-      // Act
-      const { nextSession, fetch } = useGameSessionList();
-      await fetch();
-
-      // Assert
-      expect(nextSession.value).toBeNull();
-    });
-
     it('role=null のセッションは nextSession の対象外になる', async () => {
       // Arrange
       const publicSession = makeSession({
-        scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+        scheduledAt: daysFromToday(1),
         role: null,
       });
       mockListGameSessions.mockResolvedValue([publicSession]);
@@ -373,11 +406,11 @@ describe('useGameSessionList', () => {
     it('sortByScheduledAt=true の場合 scheduledAt 昇順で返す', async () => {
       // Arrange
       const first = makeSession({
-        scheduledAt: '2026-08-01T10:00:00Z',
+        scheduledAt: '2026-08-01',
         role: 'host',
       });
       const second = makeSession({
-        scheduledAt: '2026-08-10T10:00:00Z',
+        scheduledAt: '2026-08-10',
         role: 'host',
       });
       mockListGameSessions.mockResolvedValue([second, first]);
@@ -396,11 +429,11 @@ describe('useGameSessionList', () => {
     it('sortByScheduledAt=false の場合は元の順序を保つ', async () => {
       // Arrange
       const s1 = makeSession({
-        scheduledAt: '2026-08-10T10:00:00Z',
+        scheduledAt: '2026-08-10',
         role: 'host',
       });
       const s2 = makeSession({
-        scheduledAt: '2026-08-01T10:00:00Z',
+        scheduledAt: '2026-08-01',
         role: 'host',
       });
       mockListGameSessions.mockResolvedValue([s1, s2]);
@@ -412,26 +445,6 @@ describe('useGameSessionList', () => {
       // Assert
       expect(filteredMySessions.value[0]?.id).toBe(s1.id);
       expect(filteredMySessions.value[1]?.id).toBe(s2.id);
-    });
-
-    it('scheduledAt が null のセッションはソート時に末尾に置かれる', async () => {
-      // Arrange
-      const withDate = makeSession({
-        scheduledAt: '2026-08-01T10:00:00Z',
-        role: 'host',
-      });
-      const noDate = makeSession({ scheduledAt: null, role: 'host' });
-      mockListGameSessions.mockResolvedValue([noDate, withDate]);
-
-      // Act
-      const { filteredMySessions, fetch } = useGameSessionList({
-        sortByScheduledAt: true,
-      });
-      await fetch();
-
-      // Assert
-      expect(filteredMySessions.value[0]?.id).toBe(withDate.id);
-      expect(filteredMySessions.value[1]?.id).toBe(noDate.id);
     });
   });
 });

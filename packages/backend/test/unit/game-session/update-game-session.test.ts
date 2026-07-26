@@ -10,7 +10,7 @@ const mockGameSession: GameSession = {
   scenarioName: null,
   status: 'draft',
   isPublished: false,
-  scheduledAt: null,
+  scheduledAt: '2025-05-30',
   completedAt: null,
   maxMembers: null,
   createdBy: 'user-1',

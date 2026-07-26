@@ -46,7 +46,6 @@ export interface ConfirmLobbyRepository extends LobbyHostRepository {
     location: string | null;
     maxPlayers: number | null;
     scheduledAt: string;
-    openUntil: string;
     guestLinkToken: string;
     members: LobbyMemberCore[];
   }): Promise<GameSession>;
@@ -75,15 +74,6 @@ export type ConfirmLobbyResult =
 // 手順3の条件付き UPDATE（closeLobby）が 0 行だったときに、
 // 既に作成した卓・メンバーの INSERT ごとトランザクションをロールバックするための内部シグナル。
 class ConfirmLobbyConflictError extends Error {}
-
-/**
- * 日付を UTC 基準で `YYYY-MM-DD` に整形する。
- * `getGameSessionStatus` 側は `openUntil` を `new Date('YYYY-MM-DD')`（UTC 深夜0時）で
- * パースするため、整形側もローカル TZ ではなく UTC 基準で揃える必要がある
- * （ローカル TZ で整形すると UTC より進んだ TZ で確定直後の卓が open と誤判定される）。
- * `now` を引数に取れる必要があるため shared の todayDateString とは別に持つ。
- */
-const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
 
 export const confirmLobby = async (
   repo: ConfirmLobbyRepository,
@@ -136,7 +126,6 @@ export const confirmLobby = async (
         location: lobbyCore.location,
         maxPlayers: lobbyCore.maxPlayers,
         scheduledAt: candidate.date,
-        openUntil: toDateString(now),
         guestLinkToken,
         members,
       });

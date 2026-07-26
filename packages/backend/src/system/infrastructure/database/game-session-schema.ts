@@ -6,7 +6,6 @@ import {
   pgSchema,
   text,
   timestamp,
-  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -37,8 +36,8 @@ export const gameSessions = gameSessionSchema.table(
     maxPlayers: integer('max_players'),
     guestLinkToken: text('guest_link_token').notNull(),
     isPublished: boolean('is_published').notNull().default(false),
-    openUntil: date('open_until'),
-    scheduledAt: date('scheduled_at'),
+    // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+    scheduledAt: date('scheduled_at').notNull(),
     completedAt: timestamp('completed_at'),
     cancelledAt: timestamp('cancelled_at'),
     // 出自の募集枠。直接卓立ては null（design-v1.1 §3）
@@ -93,61 +92,6 @@ export const gameSessionMembers = gameSessionSchema.table(
   }),
 );
 
-export const gameSessionCandidates = gameSessionSchema.table(
-  'game_session_candidates',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    gameSessionId: uuid('game_session_id')
-      .notNull()
-      .references(() => gameSessions.id, { onDelete: 'cascade' }),
-    date: date('date').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => ({
-    gameSessionIdIdx: index('game_session_candidates_game_session_id_idx').on(
-      table.gameSessionId,
-    ),
-  }),
-);
-
-export const availabilityDateAnswerEnum = gameSessionSchema.enum(
-  'availability_date_answer',
-  ['ok', 'maybe', 'ng'],
-);
-
-export const gameSessionAnswers = gameSessionSchema.table(
-  'game_session_answers',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    candidateId: uuid('candidate_id')
-      .notNull()
-      .references(() => gameSessionCandidates.id, { onDelete: 'cascade' }),
-    memberId: uuid('member_id')
-      .notNull()
-      .references(() => gameSessionMembers.id, { onDelete: 'cascade' }),
-    answer: availabilityDateAnswerEnum('answer').notNull(),
-    comment: text('comment'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => ({
-    candidateIdIdx: index('game_session_answers_candidate_id_idx').on(
-      table.candidateId,
-    ),
-    memberIdIdx: index('game_session_answers_member_id_idx').on(table.memberId),
-    candidateMemberUnique: unique(
-      'game_session_answers_candidate_member_unique',
-    ).on(table.candidateId, table.memberId),
-  }),
-);
-
 export const gameSessionsRelations = relations(
   gameSessions,
   ({ one, many }) => ({
@@ -160,13 +104,12 @@ export const gameSessionsRelations = relations(
       references: [lobbies.id],
     }),
     members: many(gameSessionMembers),
-    candidates: many(gameSessionCandidates),
   }),
 );
 
 export const gameSessionMembersRelations = relations(
   gameSessionMembers,
-  ({ one, many }) => ({
+  ({ one }) => ({
     gameSession: one(gameSessions, {
       fields: [gameSessionMembers.gameSessionId],
       references: [gameSessions.id],
@@ -178,32 +121,6 @@ export const gameSessionMembersRelations = relations(
     lobbyMember: one(lobbyMembers, {
       fields: [gameSessionMembers.lobbyMemberId],
       references: [lobbyMembers.id],
-    }),
-    answers: many(gameSessionAnswers),
-  }),
-);
-
-export const gameSessionCandidatesRelations = relations(
-  gameSessionCandidates,
-  ({ one, many }) => ({
-    gameSession: one(gameSessions, {
-      fields: [gameSessionCandidates.gameSessionId],
-      references: [gameSessions.id],
-    }),
-    answers: many(gameSessionAnswers),
-  }),
-);
-
-export const gameSessionAnswersRelations = relations(
-  gameSessionAnswers,
-  ({ one }) => ({
-    candidate: one(gameSessionCandidates, {
-      fields: [gameSessionAnswers.candidateId],
-      references: [gameSessionCandidates.id],
-    }),
-    member: one(gameSessionMembers, {
-      fields: [gameSessionAnswers.memberId],
-      references: [gameSessionMembers.id],
     }),
   }),
 );

@@ -1204,7 +1204,6 @@ describe('createGameSessionFromLobby', () => {
     maxPlayers: null,
     guestLinkToken: 'new-token',
     isPublished: true,
-    openUntil: '2026-07-11',
     scheduledAt: farFutureScheduledAt,
     completedAt: null,
     cancelledAt: null,
@@ -1245,7 +1244,6 @@ describe('createGameSessionFromLobby', () => {
       location: null,
       maxPlayers: null,
       scheduledAt: farFutureScheduledAt,
-      openUntil: '2026-07-11',
       guestLinkToken: 'new-token',
       members: [{ id: 'member-1', userId: 'user-2', guestName: null }],
     });
@@ -1274,7 +1272,6 @@ describe('createGameSessionFromLobby', () => {
       location: null,
       maxPlayers: null,
       scheduledAt: farFutureScheduledAt,
-      openUntil: '2026-07-11',
       guestLinkToken: 'new-token',
       members: [
         { id: 'member-1', userId: 'user-2', guestName: null },

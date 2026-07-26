@@ -586,7 +586,7 @@ describe('PATCH /api/game-sessions/:id/status', () => {
     expect(body).toMatchObject({ status: 'cancelled' });
   });
 
-  it('cancelled への不正な遷移（draft/open/scheduling/completed から）は 409 を返す', async () => {
+  it('cancelled への不正な遷移（draft/completed から）は 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateGameSessionStatus: vi

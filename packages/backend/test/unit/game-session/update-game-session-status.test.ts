@@ -13,7 +13,7 @@ const baseSession: GameSession = {
   scenarioName: null,
   status: 'draft',
   isPublished: false,
-  scheduledAt: null,
+  scheduledAt: '2025-05-30',
   completedAt: null,
   cancelledAt: null,
   lobbyId: null,
@@ -29,7 +29,7 @@ const makeRepo = (
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
   findStatusFields: vi.fn().mockResolvedValue({
     isPublished: false,
-    scheduledAt: null,
+    scheduledAt: new Date('2025-05-30'),
     completedAt: null,
     cancelledAt: null,
   }),
@@ -88,7 +88,7 @@ describe('updateGameSessionStatus', () => {
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
-          scheduledAt: null,
+          scheduledAt: new Date('2025-05-30'),
           completedAt: null,
         }),
       });
@@ -277,7 +277,7 @@ describe('updateGameSessionStatus', () => {
       expect(repo.cancel).toHaveBeenCalledWith('session-1', now);
     });
 
-    it.each(['draft', 'scheduling', 'completed'] as const)(
+    it.each(['draft', 'completed'] as const)(
       '%s から cancelled に遷移しようとすると invalidTransition を返す',
       async (currentStatus) => {
         // Arrange
@@ -285,13 +285,7 @@ describe('updateGameSessionStatus', () => {
         const fieldsByStatus = {
           draft: {
             isPublished: false,
-            scheduledAt: null,
-            completedAt: null,
-            cancelledAt: null,
-          },
-          scheduling: {
-            isPublished: true,
-            scheduledAt: null,
+            scheduledAt: new Date('2025-05-30'),
             completedAt: null,
             cancelledAt: null,
           },

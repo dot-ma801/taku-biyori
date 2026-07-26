@@ -8,6 +8,25 @@ interface UseGameSessionListOptions {
   sortByScheduledAt?: boolean;
 }
 
+/**
+ * `scheduledAt`（`YYYY-MM-DD`）をローカルタイムの深夜0時として解釈する。
+ *
+ * `new Date('2026-08-01')` は UTC の深夜0時になるため、UTC より進んだ TZ では
+ * 当日の卓が「過去」と判定されてしまう。日付の比較はローカル基準で揃える
+ * （バックエンドの getGameSessionStatus の today 判定と同じ考え方）。
+ */
+const toLocalDate = (scheduledAt: string): Date => {
+  const [year, month, day] = scheduledAt.slice(0, 10).split('-').map(Number);
+  return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+};
+
+/** 今日の深夜0時（ローカル） */
+const startOfToday = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
   const { statuses, sortByScheduledAt = false } = options;
   /** 全セッション（APIレスポンスそのまま） */
@@ -37,7 +56,8 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
       // 卓は日程が確定した状態でのみ存在するため scheduledAt は必ず入る（design-v1.1 §8）
       result = [...result].sort(
         (a, b) =>
-          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+          toLocalDate(a.scheduledAt).getTime() -
+          toLocalDate(b.scheduledAt).getTime(),
       );
     }
     return result;
@@ -55,15 +75,16 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
    * 該当なければ null。
    */
   const nextSession = computed<GameSessionListItem | null>(() => {
-    const now = Date.now();
+    // scheduledAt は日付のみなので、当日の卓も「これから開催される卓」として含める
+    const today = startOfToday().getTime();
     const upcoming = mySessions.value.filter(
-      (s) => new Date(s.scheduledAt).getTime() >= now,
+      (s) => toLocalDate(s.scheduledAt).getTime() >= today,
     );
     if (upcoming.length === 0) return null;
     return (
       upcoming.reduce((nearest, s) => {
-        const nearestTime = new Date(nearest.scheduledAt).getTime();
-        const sTime = new Date(s.scheduledAt).getTime();
+        const nearestTime = toLocalDate(nearest.scheduledAt).getTime();
+        const sTime = toLocalDate(s.scheduledAt).getTime();
         return sTime < nearestTime ? s : nearest;
       }) ?? null
     );

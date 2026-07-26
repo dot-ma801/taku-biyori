@@ -24,9 +24,10 @@ type StatusAppearance = {
 /**
  * 卓が取りうるステータスの表示定義。
  *
- * `open`（募集中）は募集枠（lobby）へ移管したため卓では表示しない。
- * enum からの削除は段階6c のため、旧経路で作られた卓が残っていてもカードを描画しないよう
- * 「キーが無いことがありうる」ルックアップとして Map で持つ。
+ * `open`（募集中）は募集枠（lobby）へ移管したため卓では導出されず、表示もしない。
+ * ただし `PATCH /:id/status` の公開遷移（`draft → open`）のリクエスト値として使うため、
+ * `GameSessionStatus` enum には残っている。導出されないステータスが渡ってもカードを
+ * 描画しないよう、「キーが無いことがありうる」ルックアップとして Map で持つ。
  */
 const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
   [

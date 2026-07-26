@@ -30,9 +30,10 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 `today` と `cancelled` に error（赤）を使う。`today` は当日開催の緊急感を、`cancelled` は開催されない事実を、それぞれ他ステータスと区別して伝える。  
 バリアントのマッピングは `features/GameSession/Detail/StatusDisplay.vue` の設計方針に準拠している。
 
-`open`（募集中）は募集枠（lobby）へ移管したため卓では表示しない
-（design-v1.1 §8）。`GameSessionStatus` enum からの削除は段階6c のため、旧経路で作られた卓が
-残っていてもバッジを描画しないようマッピングを `Partial` で持つ。募集枠のバッジは
+`open`（募集中）は募集枠（lobby）へ移管したため卓では導出されず、表示もしない
+（design-v1.1 §8）。ただし `PATCH /:id/status` の公開遷移（`draft → open`）のリクエスト値として
+使うため、`GameSessionStatus` enum には残っている。導出されないステータスが渡ってもバッジを
+描画しないよう、マッピングは「キーが無いことがありうる」ルックアップとして持つ。募集枠のバッジは
 `LobbyStatusBadge` を使うこと。
 
 ## Design Notes

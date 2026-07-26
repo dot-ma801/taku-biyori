@@ -9,7 +9,7 @@
 | `size`    | `number`                                                           | `30`     | アバターのサイズ（px）                               |
 | `variant` | `'marble' \| 'beam' \| 'pixel' \| 'sunset' \| 'ring' \| 'bauhaus'` | `'beam'` | アバターのデザインスタイル                           |
 | `name`    | `string`                                                           | -        | 種（seed）として使う文字列。id を持たない相手向け    |
-| `userId`  | `string`                                                           | -        | 種（seed）として使う不変な id。`name` より優先される |
+| `userId`  | `string \| null`                                                   | -        | 種（seed）として使う不変な id。`name` より優先される |
 
 ## Usage
 
@@ -22,6 +22,9 @@
 
 <!-- id を持たない相手（ゲスト等）は name で代用 -->
 <UserAvatar :size="35" :name="member.baseName" />
+
+<!-- メンバー一覧のようにユーザーとゲストが混在する場合は両方渡す（userId が null ならゲストとして name にフォールバック） -->
+<UserAvatar :size="35" :user-id="member.userId" :name="member.baseName" />
 ```
 
 ## Design Notes
@@ -47,5 +50,6 @@
 
 - `userId` prop が最優先で使われること
 - `userId` が無いときは `name` prop が使われること
+- `userId` が `null` のときは `name` prop が使われること（ゲスト向けのフォールバック）
 - props が無いときは `authStore.user.id` が使われること
 - props も `authStore.user` も無いときは空文字にフォールバックすること

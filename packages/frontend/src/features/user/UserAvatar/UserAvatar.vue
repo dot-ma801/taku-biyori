@@ -10,7 +10,8 @@ const props = withDefaults(
     size?: number;
     variant?: 'marble' | 'beam' | 'pixel' | 'sunset' | 'ring' | 'bauhaus';
     name?: string;
-    userId?: string;
+    /** null のときは name にフォールバックする（ゲストは id を持たないため） */
+    userId?: string | null;
   }>(),
   {
     size: 30,

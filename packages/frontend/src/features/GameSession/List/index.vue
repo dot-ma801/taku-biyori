@@ -13,6 +13,10 @@ const props = defineProps<{
   title?: string;
   statuses?: GameSessionStatus[];
   sortByScheduledAt?: boolean;
+  /** 該当セッションが1件も無いときにセクションごと描画しない */
+  hideWhenEmpty?: boolean;
+  /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
+  hideCreateButton?: boolean;
 }>();
 
 const router = useRouter();
@@ -21,12 +25,17 @@ const {
   publicSessions,
   filteredMySessions,
   filteredPublicSessions,
+  hasFilteredSessions,
 } = useGameSessionList({
   statuses: props.statuses,
   sortByScheduledAt: props.sortByScheduledAt,
 });
 
 const hasTitle = computed(() => props.title != null);
+const isVisible = computed(
+  () => !props.hideWhenEmpty || hasFilteredSessions.value,
+);
+const showCreateButton = computed(() => !props.hideCreateButton);
 const hasFilteredPublicSessions = computed(
   () => filteredPublicSessions.value.length > 0,
 );
@@ -38,15 +47,18 @@ const onClickCreate = () => {
 </script>
 
 <template>
-  <div class="container">
+  <div v-if="isVisible" class="container">
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
-      <BaseButton :left-icon="Plus" @click="onClickCreate"
+      <BaseButton
+        v-if="showCreateButton"
+        :left-icon="Plus"
+        @click="onClickCreate"
         >セッションを作成</BaseButton
       >
     </div>
     <BaseButton
-      v-else
+      v-else-if="showCreateButton"
       class="create-btn"
       :left-icon="Plus"
       @click="onClickCreate"

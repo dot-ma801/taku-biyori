@@ -3,7 +3,7 @@
 // https://0.vuetifyjs.com/components/date-picker
 import { computed, ref } from 'vue';
 import { Popover } from '@vuetify/v0';
-import { ChevronLeft, ChevronRight, CalendarDays } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, CalendarDays, X } from '@lucide/vue';
 import { todayDateString } from '@taku-biyori/shared';
 
 // multiple=false のとき string | undefined、multiple=true のとき string[] を想定
@@ -21,6 +21,8 @@ const props = withDefaults(
     multiple?: boolean;
     /** true のとき今日より前の日付を選択不可にする */
     disablePast?: boolean;
+    /** true のとき選択済みの値を消すクリアボタンを表示する（任意入力の項目向け） */
+    clearable?: boolean;
   }>(),
   {
     placeholder: '日付を選択',
@@ -139,6 +141,17 @@ function isDisabled(dateStr: string): boolean {
   return false;
 }
 
+const showClear = computed(
+  () => props.clearable && !props.disabled && selectedDates.value.length > 0,
+);
+
+const clearAriaLabel = computed(() => `${props.label ?? '日付'}をクリア`);
+
+// 選択済みの値を空に戻す。multiple かどうかで空の表現が異なる点に注意
+function clear() {
+  model.value = props.multiple ? [] : '';
+}
+
 function selectDate(dateStr: string | null) {
   if (!dateStr || isDisabled(dateStr)) {
     return;
@@ -161,97 +174,113 @@ function selectDate(dateStr: string | null) {
     <span v-if="label" class="datepicker__label">
       {{ label }}<span v-if="required" class="datepicker__required">*</span>
     </span>
-    <Popover.Root v-model="isOpen">
-      <!-- Activator 自体が button を描画するため、内側に button を置くと枠線が二重になる -->
-      <Popover.Activator
-        class="datepicker__trigger"
-        :disabled="disabled"
-        :aria-label="label ?? '日付を選択'"
-      >
-        <span
+    <div class="datepicker__field">
+      <Popover.Root v-model="isOpen">
+        <!-- Activator 自体が button を描画するため、内側に button を置くと枠線が二重になる -->
+        <Popover.Activator
           :class="[
-            'datepicker__trigger-text',
-            !displayLabel && 'datepicker__trigger-text--placeholder',
+            'datepicker__trigger',
+            showClear && 'datepicker__trigger--clearable',
           ]"
+          :disabled="disabled"
+          :aria-label="label ?? '日付を選択'"
         >
-          {{ displayLabel ?? placeholder }}
-        </span>
-        <CalendarDays
-          :size="14"
-          class="datepicker__trigger-icon"
-          aria-hidden="true"
-        />
-      </Popover.Activator>
+          <span
+            :class="[
+              'datepicker__trigger-text',
+              !displayLabel && 'datepicker__trigger-text--placeholder',
+            ]"
+          >
+            {{ displayLabel ?? placeholder }}
+          </span>
+          <CalendarDays
+            :size="14"
+            class="datepicker__trigger-icon"
+            aria-hidden="true"
+          />
+        </Popover.Activator>
 
-      <Popover.Content class="datepicker__popover">
-        <template #default>
-          <!-- ナビゲーション -->
-          <div class="datepicker__nav">
-            <button
-              type="button"
-              class="datepicker__nav-btn"
-              aria-label="前の月"
-              @click="prevMonth"
-            >
-              <ChevronLeft :size="14" aria-hidden="true" />
-            </button>
-            <span class="datepicker__nav-title">
-              {{ displayYear }}年{{ MONTHS[displayMonth] }}
-            </span>
-            <button
-              type="button"
-              class="datepicker__nav-btn"
-              aria-label="次の月"
-              @click="nextMonth"
-            >
-              <ChevronRight :size="14" aria-hidden="true" />
-            </button>
-          </div>
+        <Popover.Content class="datepicker__popover">
+          <template #default>
+            <!-- ナビゲーション -->
+            <div class="datepicker__nav">
+              <button
+                type="button"
+                class="datepicker__nav-btn"
+                aria-label="前の月"
+                @click="prevMonth"
+              >
+                <ChevronLeft :size="14" aria-hidden="true" />
+              </button>
+              <span class="datepicker__nav-title">
+                {{ displayYear }}年{{ MONTHS[displayMonth] }}
+              </span>
+              <button
+                type="button"
+                class="datepicker__nav-btn"
+                aria-label="次の月"
+                @click="nextMonth"
+              >
+                <ChevronRight :size="14" aria-hidden="true" />
+              </button>
+            </div>
 
-          <!-- 曜日ヘッダー -->
-          <div class="datepicker__weekdays" role="row">
-            <span
-              v-for="wd in WEEKDAYS"
-              :key="wd"
-              class="datepicker__weekday"
-              :class="{
-                'datepicker__weekday--sun': wd === '日',
-                'datepicker__weekday--sat': wd === '土',
-              }"
-              role="columnheader"
-              >{{ wd }}</span
-            >
-          </div>
+            <!-- 曜日ヘッダー -->
+            <div class="datepicker__weekdays" role="row">
+              <span
+                v-for="wd in WEEKDAYS"
+                :key="wd"
+                class="datepicker__weekday"
+                :class="{
+                  'datepicker__weekday--sun': wd === '日',
+                  'datepicker__weekday--sat': wd === '土',
+                }"
+                role="columnheader"
+                >{{ wd }}</span
+              >
+            </div>
 
-          <!-- 日付グリッド -->
-          <div class="datepicker__grid" role="grid">
-            <button
-              v-for="(cell, i) in calendarCells"
-              :key="i"
-              type="button"
-              class="datepicker__cell"
-              :class="{
-                'datepicker__cell--empty': !cell.date,
-                'datepicker__cell--today': cell.date === todayStr,
-                'datepicker__cell--selected':
-                  cell.date !== null && isSelected(cell.date),
-                'datepicker__cell--disabled':
-                  cell.date !== null && isDisabled(cell.date),
-              }"
-              :disabled="cell.date === null || isDisabled(cell.date)"
-              :aria-selected="
-                cell.date !== null ? isSelected(cell.date) : undefined
-              "
-              :aria-label="cell.date ?? undefined"
-              role="gridcell"
-              @click="selectDate(cell.date)"
-            >
-              {{ cell.day }}
-            </button>
-          </div>
-        </template>
-      </Popover.Content>
-    </Popover.Root>
+            <!-- 日付グリッド -->
+            <div class="datepicker__grid" role="grid">
+              <button
+                v-for="(cell, i) in calendarCells"
+                :key="i"
+                type="button"
+                class="datepicker__cell"
+                :class="{
+                  'datepicker__cell--empty': !cell.date,
+                  'datepicker__cell--today': cell.date === todayStr,
+                  'datepicker__cell--selected':
+                    cell.date !== null && isSelected(cell.date),
+                  'datepicker__cell--disabled':
+                    cell.date !== null && isDisabled(cell.date),
+                }"
+                :disabled="cell.date === null || isDisabled(cell.date)"
+                :aria-selected="
+                  cell.date !== null ? isSelected(cell.date) : undefined
+                "
+                :aria-label="cell.date ?? undefined"
+                role="gridcell"
+                @click="selectDate(cell.date)"
+              >
+                {{ cell.day }}
+              </button>
+            </div>
+          </template>
+        </Popover.Content>
+      </Popover.Root>
+
+      <!-- Activator 自体が button のため入れ子にできない。トリガーの上に重ねて配置する -->
+      <button
+        v-if="showClear"
+        type="button"
+        class="datepicker__clear"
+        :aria-label="clearAriaLabel"
+        @click="clear"
+      >
+        <X :size="14" aria-hidden="true" />
+      </button>
+    </div>
   </div>
 </template>
 
@@ -273,6 +302,11 @@ function selectDate(dateStr: string | null) {
 .datepicker__required {
   color: var(--color-error);
   margin-left: 2px;
+}
+
+/* クリアボタンをトリガーに重ねるための基準 */
+.datepicker__field {
+  position: relative;
 }
 
 .datepicker__trigger {
@@ -317,6 +351,42 @@ function selectDate(dateStr: string | null) {
 .datepicker__trigger-icon {
   flex-shrink: 0;
   color: var(--color-text-muted);
+}
+
+/* クリアボタンの分だけカレンダーアイコンの手前に余白を空ける */
+.datepicker__trigger--clearable .datepicker__trigger-text {
+  padding-right: var(--space-5);
+}
+
+.datepicker__clear {
+  position: absolute;
+  top: 50%;
+  right: 32px;
+  transform: translateY(-50%);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.1s,
+    color 0.1s;
+}
+.datepicker__clear:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+.datepicker__clear:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
 }
 
 .datepicker__popover {

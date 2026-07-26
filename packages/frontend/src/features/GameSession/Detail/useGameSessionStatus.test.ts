@@ -596,7 +596,7 @@ describe('deleteSession', () => {
 
     // Assert
     expect(mockRouterPush).toHaveBeenCalledWith({
-      name: 'game-sessions-list',
+      name: 'dashboard',
     });
   });
 

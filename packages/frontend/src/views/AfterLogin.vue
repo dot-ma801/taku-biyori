@@ -16,7 +16,7 @@ const toast = useToast();
 onMounted(async () => {
   await authStore.initSession();
   if (authStore.isAuthenticated) {
-    router.push({ name: props.nextPage ?? 'game-sessions-list' });
+    router.push({ name: props.nextPage ?? 'dashboard' });
   } else {
     toast.error('ログインに失敗しました。もう一度お試しください。');
     router.push({ name: 'login' });

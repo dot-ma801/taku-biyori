@@ -34,7 +34,7 @@ onMounted(async () => {
     await authStore.initSession();
   }
   if (authStore.isAuthenticated) {
-    await router.push({ name: nestPage.value ?? 'game-sessions-list' });
+    await router.push({ name: nestPage.value ?? 'dashboard' });
   }
 });
 </script>

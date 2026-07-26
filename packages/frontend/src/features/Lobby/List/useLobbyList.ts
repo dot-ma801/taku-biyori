@@ -33,6 +33,16 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
     return publicLobbies.value.filter((l) => statuses.includes(l.status));
   });
 
+  /**
+   * 絞り込み後に表示する募集枠が1件でもあるか。
+   * セクションごと非表示にしたい呼び出し側（ダッシュボードの「非公開のロビー」など）が使う。
+   */
+  const hasFilteredLobbies = computed(
+    () =>
+      filteredMyLobbies.value.length > 0 ||
+      filteredPublicLobbies.value.length > 0,
+  );
+
   /** 募集枠一覧を取得する */
   async function fetch() {
     loading.value = true;
@@ -54,6 +64,7 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
     myLobbies,
     filteredMyLobbies,
     filteredPublicLobbies,
+    hasFilteredLobbies,
     loading,
     errorMessage,
     fetch,

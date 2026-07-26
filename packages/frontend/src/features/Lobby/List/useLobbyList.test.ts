@@ -257,4 +257,75 @@ describe('useLobbyList', () => {
       expect(filteredPublicLobbies.value).toEqual([publicOpenLobby]);
     });
   });
+
+  describe('hasFilteredLobbies（絞り込み後に表示する募集枠があるか）', () => {
+    it('募集枠が1件も無い場合は false になる', async () => {
+      // Arrange
+      mockListLobbies.mockResolvedValue([]);
+
+      // Act
+      const { hasFilteredLobbies, fetch } = useLobbyList([LobbyStatus.draft]);
+      await fetch();
+
+      // Assert
+      expect(hasFilteredLobbies.value).toBe(false);
+    });
+
+    it('該当ステータスの自分の募集枠がある場合は true になる', async () => {
+      // Arrange
+      mockListLobbies.mockResolvedValue([
+        makeLobby({ role: 'host', status: LobbyStatus.draft }),
+      ]);
+
+      // Act
+      const { hasFilteredLobbies, fetch } = useLobbyList([LobbyStatus.draft]);
+      await fetch();
+
+      // Assert
+      expect(hasFilteredLobbies.value).toBe(true);
+    });
+
+    it('該当ステータスの公開募集枠がある場合は true になる', async () => {
+      // Arrange
+      mockListLobbies.mockResolvedValue([
+        makeLobby({ role: null, status: LobbyStatus.open }),
+      ]);
+
+      // Act
+      const { hasFilteredLobbies, fetch } = useLobbyList([LobbyStatus.open]);
+      await fetch();
+
+      // Assert
+      expect(hasFilteredLobbies.value).toBe(true);
+    });
+
+    it('statuses に該当する募集枠が無い場合は false になる', async () => {
+      // Arrange
+      mockListLobbies.mockResolvedValue([
+        makeLobby({ role: 'host', status: LobbyStatus.open }),
+        makeLobby({ role: null, status: LobbyStatus.cancelled }),
+      ]);
+
+      // Act
+      const { hasFilteredLobbies, fetch } = useLobbyList([LobbyStatus.draft]);
+      await fetch();
+
+      // Assert
+      expect(hasFilteredLobbies.value).toBe(false);
+    });
+
+    it('statuses 未指定の場合は募集枠が1件でもあれば true になる', async () => {
+      // Arrange
+      mockListLobbies.mockResolvedValue([
+        makeLobby({ role: null, status: LobbyStatus.cancelled }),
+      ]);
+
+      // Act
+      const { hasFilteredLobbies, fetch } = useLobbyList();
+      await fetch();
+
+      // Assert
+      expect(hasFilteredLobbies.value).toBe(true);
+    });
+  });
 });

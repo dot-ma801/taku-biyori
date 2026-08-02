@@ -57,7 +57,10 @@ const makeApp = (
 describe('GET /api/game-sessions/:id/play-memos/me', () => {
   it('メンバーなら 200 で自分のメモを返す', async () => {
     // Arrange
-    const app = makeApp();
+    const getMyPlayMemo = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo });
+    const app = makeApp({ getMyPlayMemo });
 
     // Act
     const response = await app.request(
@@ -68,6 +71,7 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(mockPlayMemo);
+    expect(getMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1');
   });
 
   // 未作成と取得エラーをフロントで分岐させない（design-v1.2 §8）

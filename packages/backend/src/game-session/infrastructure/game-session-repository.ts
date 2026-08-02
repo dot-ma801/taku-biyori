@@ -679,6 +679,14 @@ export const createGameSessionRepository = (
     sharedAt: Date | null,
   ): Promise<GameSessionPlayMemo | null> {
     // body は set に含めない。公開切替で本文を書き換えないため
+    //
+    // 仕様どおりの意図的な挙動（design-v1.2 §5 が shared: true を「sharedAt に現在時刻を
+    // 設定する」と定義しているため）:
+    // - 公開済みのメモに再度 shared: true を送ると sharedAt が現在時刻に上書きされる
+    //   （初回公開時刻を保持する仕様ではない。findSharedPlayMemos の orderBy(sharedAt) の
+    //   並び順もその都度更新される）
+    // - スキーマの $onUpdate により、本文が変わっていなくても updated_at は進む
+    //   （公開切替でも updated_at は進む）
     const result = await db
       .update(gameSessionPlayMemos)
       .set({ sharedAt })

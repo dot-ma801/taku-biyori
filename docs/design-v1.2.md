@@ -250,6 +250,17 @@ export const GameSessionPlayMemoSchema = z.object({
 });
 export type GameSessionPlayMemo = z.infer<typeof GameSessionPlayMemoSchema>;
 
+/**
+ * 自分のメモのレスポンス。
+ *
+ * メモを一度も書いていないメンバーにも 404 ではなく空メモを返すため（§8）、
+ * まだ行が存在しないケースを表す `updatedAt: null` を許容する。
+ */
+export const MyGameSessionPlayMemoSchema = GameSessionPlayMemoSchema.extend({
+  updatedAt: z.string().nullable(),
+});
+export type MyGameSessionPlayMemo = z.infer<typeof MyGameSessionPlayMemoSchema>;
+
 /** 公開メモ一覧の要素。公開済みのみを返すため sharedAt は non-null */
 export const SharedGameSessionPlayMemoSchema =
   GameSessionPlayMemoSchema.extend({
@@ -283,7 +294,7 @@ export type UpdateGameSessionPlayMemoVisibilityInput = z.infer<
 
 | メソッド | パス | 認証 | 概要 |
 |---|---|---|---|
-| `GET` | `/api/game-sessions/:id/play-memos/me` | 必要 | 自分のメモ取得。**未作成でも 404 にせず** `{ body: '', sharedAt: null }` を返す |
+| `GET` | `/api/game-sessions/:id/play-memos/me` | 必要 | 自分のメモ取得。**未作成でも 404 にせず** `{ memberId, body: '', sharedAt: null, updatedAt: null }` を返す（`MyGameSessionPlayMemoSchema`） |
 | `PUT` | `/api/game-sessions/:id/play-memos/me` | 必要 | 本文の作成・更新（upsert）。完了・中止は `409` |
 | `PATCH` | `/api/game-sessions/:id/play-memos/me/visibility` | 必要 | 公開・非公開の切替（`{ shared: boolean }`）。全ステータスで可 |
 | `GET` | `/api/game-sessions/:id/play-memos` | **公開済みは不要** | 公開メモ一覧。完了・中止 かつ 公開 のもののみ |
@@ -436,8 +447,8 @@ ADR 0005 は「新しいテーブル・enum は機能ごとの PostgreSQL スキ
 ### 未作成のメモは 404 ではなく空メモを返す
 
 `GET /:id/play-memos/me` は、メモを一度も書いていないメンバーに対して
-`{ body: '', sharedAt: null }` を 200 で返す。404 にするとフロントが
-「エラー」と「まだ書いていない」を区別する分岐を持つことになり、
+`{ memberId, body: '', sharedAt: null, updatedAt: null }`（`MyGameSessionPlayMemoSchema`）を
+200 で返す。404 にするとフロントが「エラー」と「まだ書いていない」を区別する分岐を持つことになり、
 編集ドラフトの初期化も 404 ハンドラ側に散る。メンバーであればメモ欄は常に存在する、と考える。
 
 ### 本文の編集と公開切替でエンドポイントを分ける

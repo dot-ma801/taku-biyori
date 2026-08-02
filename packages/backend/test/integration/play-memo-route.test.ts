@@ -262,6 +262,24 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     expect(upsertMyPlayMemo).not.toHaveBeenCalled();
   });
 
+  it('本文が 5000 文字ちょうどなら受け付ける', async () => {
+    // Arrange
+    const upsertMyPlayMemo = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo });
+    const app = makeApp({ upsertMyPlayMemo });
+    const body = 'あ'.repeat(5000);
+
+    // Act
+    const response = await put(app, { body });
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(upsertMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1', {
+      body,
+    });
+  });
+
   it('body が無いと 400 を返す', async () => {
     // Arrange
     const app = makeApp();

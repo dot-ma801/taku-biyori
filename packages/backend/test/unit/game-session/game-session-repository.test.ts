@@ -785,3 +785,135 @@ describe('findDetailById', () => {
     });
   });
 });
+
+// ----------------------------------------------------------------
+
+// select(...).from(...).where(...).limit() のチェーンをモックする。
+const makeLimitSelectDb = (rows: unknown[]) => {
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue(rows),
+  };
+  return {
+    select: vi.fn().mockReturnValue(chain),
+  } as unknown as Database;
+};
+
+// insert(...).values(...).onConflictDoUpdate(...).returning() のチェーンをモックする。
+const makeUpsertDb = (rows: unknown[]) => {
+  const onConflictDoUpdate = vi.fn().mockReturnValue({
+    returning: vi.fn().mockResolvedValue(rows),
+  });
+  const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
+  const db = {
+    insert: vi.fn().mockReturnValue({ values }),
+  } as unknown as Database;
+  return { db, values, onConflictDoUpdate };
+};
+
+const mockPlayMemoRow = {
+  memberId: 'bbbbbbbb-0000-0000-0000-000000000001',
+  body: 'メモ本文',
+  sharedAt: null,
+  updatedAt: now,
+};
+
+describe('findPlayMemoByMemberId', () => {
+  it('DB の行を GameSessionPlayMemo に変換して返す', async () => {
+    // Arrange
+    const db = makeLimitSelectDb([mockPlayMemoRow]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findPlayMemoByMemberId(mockPlayMemoRow.memberId);
+
+    // Assert
+    expect(result).toEqual({
+      memberId: mockPlayMemoRow.memberId,
+      body: 'メモ本文',
+      sharedAt: null,
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('公開済みのメモは sharedAt を ISO 文字列で返す', async () => {
+    // Arrange
+    const sharedAt = new Date('2025-02-01T00:00:00.000Z');
+    const db = makeLimitSelectDb([{ ...mockPlayMemoRow, sharedAt }]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findPlayMemoByMemberId(mockPlayMemoRow.memberId);
+
+    // Assert
+    expect(result?.sharedAt).toBe('2025-02-01T00:00:00.000Z');
+  });
+
+  it('行が無ければ null を返す', async () => {
+    // Arrange
+    const db = makeLimitSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findPlayMemoByMemberId(mockPlayMemoRow.memberId);
+
+    // Assert
+    expect(result).toBeNull();
+  });
+});
+
+// ----------------------------------------------------------------
+
+describe('upsertPlayMemo', () => {
+  it('member_id の unique 制約を衝突キーに本文を更新する', async () => {
+    // Arrange
+    const { db, values, onConflictDoUpdate } = makeUpsertDb([mockPlayMemoRow]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.upsertPlayMemo(
+      mockPlayMemoRow.memberId,
+      'メモ本文',
+    );
+
+    // Assert
+    expect(values).toHaveBeenCalledWith({
+      memberId: mockPlayMemoRow.memberId,
+      body: 'メモ本文',
+    });
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ set: { body: 'メモ本文' } }),
+    );
+    expect(result).toEqual({
+      memberId: mockPlayMemoRow.memberId,
+      body: 'メモ本文',
+      sharedAt: null,
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    });
+  });
+
+  // 本文の更新で公開状態を巻き戻さない（shared_at は set に含めない）
+  it('shared_at を更新しない', async () => {
+    // Arrange
+    const sharedAt = new Date('2025-02-01T00:00:00.000Z');
+    const { db, onConflictDoUpdate } = makeUpsertDb([
+      { ...mockPlayMemoRow, sharedAt },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.upsertPlayMemo(
+      mockPlayMemoRow.memberId,
+      'メモ本文',
+    );
+
+    // Assert
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        set: expect.not.objectContaining({ sharedAt: expect.anything() }),
+      }),
+    );
+    expect(result.sharedAt).toBe('2025-02-01T00:00:00.000Z');
+  });
+});

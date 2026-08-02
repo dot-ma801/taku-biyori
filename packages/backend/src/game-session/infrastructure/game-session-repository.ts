@@ -13,6 +13,7 @@ import type {
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
+  GameSessionPlayMemo,
   JoinAsGuestInput,
   JoinGameSessionInput,
   UpdateGameSessionInput,
@@ -23,6 +24,7 @@ import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
   gameSessionMembers,
+  gameSessionPlayMemos,
 } from '@/system/infrastructure/database/game-session-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
@@ -39,6 +41,8 @@ import type { UpdateMemberRepository } from '@/game-session/application/update-m
 import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
 import type { GetGuestLinkRepository } from '@/game-session/application/get-guest-link';
 import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
+import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
+import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -52,7 +56,9 @@ export type GameSessionRepository = ListGameSessionsRepository &
   UpdateMemberRepository &
   LeaveGameSessionRepository &
   GetGuestLinkRepository &
-  GetGuestLinkPreviewRepository;
+  GetGuestLinkPreviewRepository &
+  GetMyPlayMemoRepository &
+  UpsertMyPlayMemoRepository;
 
 export type GameSessionRow = {
   id: string;
@@ -96,6 +102,20 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   maxMembers: row.maxPlayers,
   createdBy: row.hostUserId,
   createdAt: row.createdAt.toISOString(),
+  updatedAt: row.updatedAt.toISOString(),
+});
+
+type PlayMemoRow = {
+  memberId: string;
+  body: string;
+  sharedAt: Date | null;
+  updatedAt: Date;
+};
+
+const toPlayMemo = (row: PlayMemoRow): GameSessionPlayMemo => ({
+  memberId: row.memberId,
+  body: row.body,
+  sharedAt: row.sharedAt?.toISOString() ?? null,
   updatedAt: row.updatedAt.toISOString(),
 });
 
@@ -608,6 +628,44 @@ export const createGameSessionRepository = (
       .where(eq(gameSessions.id, id))
       .limit(1);
     return row[0]?.guestLinkToken ?? null;
+  },
+
+  async findPlayMemoByMemberId(
+    memberId: string,
+  ): Promise<GameSessionPlayMemo | null> {
+    const row = await db
+      .select({
+        memberId: gameSessionPlayMemos.memberId,
+        body: gameSessionPlayMemos.body,
+        sharedAt: gameSessionPlayMemos.sharedAt,
+        updatedAt: gameSessionPlayMemos.updatedAt,
+      })
+      .from(gameSessionPlayMemos)
+      .where(eq(gameSessionPlayMemos.memberId, memberId))
+      .limit(1);
+
+    if (!row[0]) return null;
+    return toPlayMemo(row[0]);
+  },
+
+  async upsertPlayMemo(
+    memberId: string,
+    body: string,
+  ): Promise<GameSessionPlayMemo> {
+    // 衝突キーは member_id の unique 制約（1メンバー1メモ。design-v1.2 §3）。
+    // shared_at は set に含めない。本文の更新で公開状態を巻き戻さないため
+    const result = await db
+      .insert(gameSessionPlayMemos)
+      .values({ memberId, body })
+      .onConflictDoUpdate({
+        target: gameSessionPlayMemos.memberId,
+        set: { body },
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('プレイメモの保存に失敗しました');
+    return toPlayMemo(row);
   },
 
   async findByGuestLinkToken(token: string): Promise<GameSession | null> {

@@ -124,6 +124,30 @@ describe('listSharedPlayMemos', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
+  // findHostUserId が null を返し得るのは型上の話で（スキーマ上は host_user_id が
+  // notNull だが、リポジトリの戻り値の型は string | null）、未ログイン（userId === null）
+  // と重なると `null !== null` が false になり素通りしてホスト扱いになってしまう。
+  // 未ログイン同士の null 一致でホスト扱いにしないことを保証する
+  it('findHostUserId が null を返し、かつ未ログインなら forbidden を返す', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        isPublished: false,
+        scheduledAt: new Date('2026-08-01T00:00:00.000Z'),
+        completedAt: null,
+        cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
+      }),
+      findHostUserId: vi.fn().mockResolvedValue(null),
+    });
+
+    // Act
+    const result = await listSharedPlayMemos(repo, 'session-1', null, now);
+
+    // Assert
+    expect(result).toEqual({ type: 'forbidden' });
+    expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
+  });
+
   it('非公開のまま中止された卓でも、ホストは公開済みメモを取得できる', async () => {
     // Arrange
     const repo = makeRepo({

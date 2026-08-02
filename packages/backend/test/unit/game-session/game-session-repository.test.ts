@@ -4,6 +4,7 @@ import type { SQL } from 'drizzle-orm';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
 import { createDatabase } from '@/system/infrastructure/database/client';
 import type { Database } from '@/system/infrastructure/database/client';
+import { gameSessionMembers } from '@/system/infrastructure/database/game-session-schema';
 
 const now = new Date('2025-01-01T00:00:00.000Z');
 
@@ -1058,12 +1059,18 @@ describe('updatePlayMemoVisibility', () => {
 // ----------------------------------------------------------------
 
 // select(...).from(...).innerJoin(...).where(...).orderBy() のチェーンをモックし、
-// where に渡された条件式を SQL 文字列に変換して検証する。
+// innerJoin・where に渡された引数をキャプチャして SQL 文字列に変換して検証する。
 const makeInnerJoinSelectDb = (rows: unknown[]) => {
   let capturedWhere: SQL | undefined;
+  let capturedJoinTable: unknown;
+  let capturedJoinCondition: SQL | undefined;
   const chain = {
     from: vi.fn().mockReturnThis(),
-    innerJoin: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockImplementation((table: unknown, condition: SQL) => {
+      capturedJoinTable = table;
+      capturedJoinCondition = condition;
+      return chain;
+    }),
     where: vi.fn().mockImplementation((condition: SQL) => {
       capturedWhere = condition;
       return chain;
@@ -1078,6 +1085,20 @@ const makeInnerJoinSelectDb = (rows: unknown[]) => {
     whereSql: () => {
       if (!capturedWhere) throw new Error('where が呼ばれていません');
       return new PgDialect().sqlToQuery(capturedWhere).sql;
+    },
+    whereParams: () => {
+      if (!capturedWhere) throw new Error('where が呼ばれていません');
+      return new PgDialect().sqlToQuery(capturedWhere).params;
+    },
+    joinTable: () => {
+      if (!capturedJoinTable) throw new Error('innerJoin が呼ばれていません');
+      return capturedJoinTable;
+    },
+    joinConditionSql: () => {
+      if (!capturedJoinCondition) {
+        throw new Error('innerJoin が呼ばれていません');
+      }
+      return new PgDialect().sqlToQuery(capturedJoinCondition).sql;
     },
   };
 };
@@ -1118,6 +1139,38 @@ describe('findSharedPlayMemos', () => {
     expect(sql).toContain('"shared_at" is not null');
   });
 
+  // where の game_session_id が実際に引数の gameSessionId に束縛されていることを確認する。
+  // toContain のカラム名検証だけでは、束縛値が別の値でも通ってしまう
+  it('where の束縛値に引数の gameSessionId が渡っている', async () => {
+    // Arrange
+    const { db, whereParams } = makeInnerJoinSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(whereParams()).toContain(mockSessionRow.id);
+  });
+
+  // where の絞り込みは game_session_members.game_session_id を前提にしているため、
+  // JOIN 条件（memberId で play_memos と members を結ぶ）が正しいことが前提になる。
+  // innerJoin の引数を捨てるモックだと、結合条件を書き換えてもテストが緑のままになる
+  it('game_session_members を memberId で結合する', async () => {
+    // Arrange
+    const { db, joinTable, joinConditionSql } = makeInnerJoinSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(joinTable()).toBe(gameSessionMembers);
+    const sql = joinConditionSql();
+    expect(sql).toContain('"game_session_members"."id"');
+    expect(sql).toContain('"game_session_play_memos"."member_id"');
+  });
+
   it('公開済みメモが無ければ空配列を返す', async () => {
     // Arrange
     const { db } = makeInnerJoinSelectDb([]);
@@ -1128,5 +1181,24 @@ describe('findSharedPlayMemos', () => {
 
     // Assert
     expect(result).toEqual([]);
+  });
+
+  // 実装の .filter((playMemo) => playMemo.sharedAt !== null) が実際に動くことを保証する。
+  // モック行がすべて sharedAt 非 null だと、この filter を削除してもテストが緑のままになる
+  it('sharedAt が null の行は結果から除外する（DB 側の絞り込みに加えた二重の防波堤）', async () => {
+    // Arrange
+    const sharedAt = new Date('2025-02-01T00:00:00.000Z');
+    const { db } = makeInnerJoinSelectDb([
+      { ...mockPlayMemoRow, memberId: 'shared-member', sharedAt },
+      { ...mockPlayMemoRow, memberId: 'unshared-member', sharedAt: null },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(result).toHaveLength(1);
+    expect(result[0]?.memberId).toBe('shared-member');
   });
 });

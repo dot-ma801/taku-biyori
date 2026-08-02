@@ -1,7 +1,7 @@
-# RollHub（たく日和）— 設計ドキュメント v1.2: 参加者メモ（プレイメモ）
+# RollHub（たく日和）— 設計ドキュメント v1.2: プレイメモ
 
 > **最終更新**: 2026-08-02
-> **元要求**: [docs/requirements/member-notes.md](./requirements/member-notes.md)
+> **元要求**: [docs/requirements/play-memo.md](./requirements/play-memo.md)
 > **位置づけ**: [design-v1.md](./design-v1.md) / [design-v1.1.md](./design-v1.1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針、卓のステータス導出など）は design-v1 / design-v1.1 を踏襲する。
 > **マージ先**: `develop/0.2`
 
@@ -47,18 +47,22 @@ flowchart LR
 
 ## 2. 命名
 
+概念名は**英語・日本語ともに「プレイメモ」で統一**する。UI で見た言葉でそのままコードを検索できる状態を保つ。
+
 | 対象 | 名前 |
 |---|---|
-| 概念の英語名 | **note** |
-| 概念の日本語名 | **プレイメモ** |
-| DB テーブル | `game_session.game_session_member_notes` |
-| 型名 | `GameSessionMemberNote` |
+| 概念名（英語 / 日本語） | **play memo** / **プレイメモ** |
+| DB テーブル | `game_session.game_session_play_memos` |
+| 型名 | `GameSessionPlayMemo` |
+| ファイル名 | `play-memo.ts`（kebab-case） |
+| URL パス | `/api/game-sessions/:id/play-memos` |
 | バックエンドの機能ディレクトリ | `packages/backend/src/game-session/`（既存に同居） |
-| フロントエンドのディレクトリ | `packages/frontend/src/features/GameSession/Detail/Note/` |
+| フロントエンドのディレクトリ | `packages/frontend/src/features/GameSession/Detail/PlayMemo/` |
 
-> **`memo` は使わない。** 既存の `GameSession/Detail/MemoDisplay.vue` と `Lobby/Detail/MemoDisplay.vue` が
+> **`memo` 単独では使わない。** 既存の `GameSession/Detail/MemoDisplay.vue` と `Lobby/Detail/MemoDisplay.vue` が
 > 卓・募集枠の `description`（備考）の表示に「メモ」を使っており、衝突する。
-> 本機能はコード上 `note`、UI 文言は「プレイメモ」とし、既存の「備考」と区別する（[意思決定ログ](#8-意思決定ログ)参照）。
+> `play` 接頭辞を必ず付けることで `PlayMemoDisplay.vue` / `playMemos` のように区別する
+> （[意思決定ログ](#8-意思決定ログ)参照）。
 >
 > ADR 0005 に従い新テーブルは機能ごとのスキーマに置くが、メモは卓メンバーに従属する概念であり
 > 独立した機能ではないため、**新しいスキーマは切らず既存の `game_session` スキーマ配下**に置く。
@@ -74,7 +78,7 @@ flowchart LR
 - `game_session_members` へのカラム追加ではなく**別テーブル**とする（要求 §7）
 - 既存テーブルへの変更は**なし**
 
-### `game_session.game_session_member_notes` — 参加者メモ
+### `game_session.game_session_play_memos` — プレイメモ
 
 | カラム | 型 | 説明 |
 |---|---|---|
@@ -88,8 +92,8 @@ flowchart LR
 ```ts
 // src/system/infrastructure/database/game-session-schema.ts に追記
 
-export const gameSessionMemberNotes = gameSessionSchema.table(
-  'game_session_member_notes',
+export const gameSessionPlayMemos = gameSessionSchema.table(
+  'game_session_play_memos',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     memberId: uuid('member_id')
@@ -119,7 +123,7 @@ export const gameSessionMemberNotes = gameSessionSchema.table(
 ```mermaid
 erDiagram
     game_sessions ||--o{ game_session_members : ""
-    game_session_members ||--o| game_session_member_notes : "member_id（unique・0..1）"
+    game_session_members ||--o| game_session_play_memos : "member_id（unique・0..1）"
     user ||--o{ game_session_members : "user_id（ゲストは null）"
 ```
 
@@ -182,14 +186,14 @@ erDiagram
 export enum GameSessionAction {
   // ...既存
   /** プレイメモの本文編集 */
-  editNote = 'editNote',
+  editPlayMemo = 'editPlayMemo',
 }
 
 export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   // ...既存
   // ホストもプレイヤーとして自分のメモを持つため両ロールを許可する。
   // 「本人のメモであること」はロールでは表現できないため別途検証する
-  [GameSessionAction.editNote]: {
+  [GameSessionAction.editPlayMemo]: {
     roles: ['host', 'member'],
     statuses: [
       GameSessionStatus.draft,
@@ -201,7 +205,7 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
 ```
 
 ```ts
-// packages/shared/src/game-session/note.ts（新規）
+// packages/shared/src/game-session/play-memo.ts（新規）
 
 /**
  * 他メンバーの公開メモを閲覧できるステータスかどうか。
@@ -209,7 +213,7 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
  * 閲覧者のロールに依存しない（未ログイン・ゲストも含めて誰でも読める）ため、
  * roles を持つ ACTION_POLICIES ではなくステータス単独の関数として定義する。
  */
-export const canViewSharedNotes = (status: GameSessionStatus): boolean =>
+export const canViewSharedPlayMemos = (status: GameSessionStatus): boolean =>
   status === GameSessionStatus.completed ||
   status === GameSessionStatus.cancelled;
 ```
@@ -227,7 +231,7 @@ export const canViewSharedNotes = (status: GameSessionStatus): boolean =>
 ### 方針
 
 - 既存の game-sessions 系と同じ構造・権限モデルをミラーする
-- **自分のメモ**（`/notes/me`）と**公開メモ一覧**（`/notes`）でエンドポイントを分ける。
+- **自分のメモ**（`/play-memos/me`）と**公開メモ一覧**（`/play-memos`）でエンドポイントを分ける。
   メンバー一覧（`GET /:id/members`）にメモを混ぜない（[意思決定ログ](#8-意思決定ログ)参照）
 - **本文の編集**と**公開切替**もエンドポイントを分ける。ライフサイクルが異なる
   （完了後：本文 ✗ ・切替 ◯）ため、1つの PATCH にすると片方だけ 409 という歪な API になる
@@ -235,38 +239,38 @@ export const canViewSharedNotes = (status: GameSessionStatus): boolean =>
 ### shared に定義する契約型
 
 ```ts
-// packages/shared/src/game-session/note.ts
+// packages/shared/src/game-session/play-memo.ts
 
-export const GameSessionMemberNoteSchema = z.object({
+export const GameSessionPlayMemoSchema = z.object({
   memberId: z.string().uuid(),
   body: z.string(),
   /** 公開日時。null なら非公開 */
   sharedAt: z.string().nullable(),
   updatedAt: z.string(),
 });
-export type GameSessionMemberNote = z.infer<typeof GameSessionMemberNoteSchema>;
+export type GameSessionPlayMemo = z.infer<typeof GameSessionPlayMemoSchema>;
 
 /** 公開メモ一覧の要素。公開済みのみを返すため sharedAt は non-null */
-export const SharedGameSessionMemberNoteSchema =
-  GameSessionMemberNoteSchema.extend({
+export const SharedGameSessionPlayMemoSchema =
+  GameSessionPlayMemoSchema.extend({
     sharedAt: z.string(),
   });
-export type SharedGameSessionMemberNote = z.infer<
-  typeof SharedGameSessionMemberNoteSchema
+export type SharedGameSessionPlayMemo = z.infer<
+  typeof SharedGameSessionPlayMemoSchema
 >;
 
-export const UpsertGameSessionMemberNoteInputSchema = z.object({
+export const UpsertGameSessionPlayMemoInputSchema = z.object({
   body: z.string().max(5000),
 });
-export type UpsertGameSessionMemberNoteInput = z.infer<
-  typeof UpsertGameSessionMemberNoteInputSchema
+export type UpsertGameSessionPlayMemoInput = z.infer<
+  typeof UpsertGameSessionPlayMemoInputSchema
 >;
 
-export const UpdateGameSessionMemberNoteVisibilityInputSchema = z.object({
+export const UpdateGameSessionPlayMemoVisibilityInputSchema = z.object({
   shared: z.boolean(),
 });
-export type UpdateGameSessionMemberNoteVisibilityInput = z.infer<
-  typeof UpdateGameSessionMemberNoteVisibilityInputSchema
+export type UpdateGameSessionPlayMemoVisibilityInput = z.infer<
+  typeof UpdateGameSessionPlayMemoVisibilityInputSchema
 >;
 ```
 
@@ -279,22 +283,22 @@ export type UpdateGameSessionMemberNoteVisibilityInput = z.infer<
 
 | メソッド | パス | 認証 | 概要 |
 |---|---|---|---|
-| `GET` | `/api/game-sessions/:id/notes/me` | 必要 | 自分のメモ取得。**未作成でも 404 にせず** `{ body: '', sharedAt: null }` を返す |
-| `PUT` | `/api/game-sessions/:id/notes/me` | 必要 | 本文の作成・更新（upsert）。完了・中止は `409` |
-| `PATCH` | `/api/game-sessions/:id/notes/me/visibility` | 必要 | 公開・非公開の切替（`{ shared: boolean }`）。全ステータスで可 |
-| `GET` | `/api/game-sessions/:id/notes` | **公開済みは不要** | 公開メモ一覧。完了・中止 かつ 公開 のもののみ |
+| `GET` | `/api/game-sessions/:id/play-memos/me` | 必要 | 自分のメモ取得。**未作成でも 404 にせず** `{ body: '', sharedAt: null }` を返す |
+| `PUT` | `/api/game-sessions/:id/play-memos/me` | 必要 | 本文の作成・更新（upsert）。完了・中止は `409` |
+| `PATCH` | `/api/game-sessions/:id/play-memos/me/visibility` | 必要 | 公開・非公開の切替（`{ shared: boolean }`）。全ステータスで可 |
+| `GET` | `/api/game-sessions/:id/play-memos` | **公開済みは不要** | 公開メモ一覧。完了・中止 かつ 公開 のもののみ |
 
 ### バリデーション・エラー
 
 | 条件 | レスポンス |
 |---|---|
-| 未ログイン（`/notes/me` 系） | `401` |
+| 未ログイン（`/play-memos/me` 系） | `401` |
 | 卓が存在しない | `404` |
 | ログイン済みだがその卓のメンバーでない（ゲスト参加のみの場合を含む） | `403` |
 | 卓が `completed` / `cancelled` で本文を編集しようとした | `409` |
 | メモ未作成のまま公開切替しようとした | `404` |
 | 本文が 5000 文字超 | `400` |
-| 非公開の卓の `GET /notes` をホスト以外が呼んだ | `403` |
+| 非公開の卓の `GET /play-memos` をホスト以外が呼んだ | `403` |
 
 > `PATCH .../visibility` が未作成メモで `404` になるのは、本文を一度も保存していないメモを
 > 公開する意味がないため。フロントは保存後にトグルを活性化する。
@@ -329,14 +333,14 @@ CLAUDE.md の「フィーチャー内のディレクトリ構成」に従い、�
 
 ```plaintext
 features/GameSession/Detail/
-  Note/                      ← プレイメモの実装詳細
-    NoteDisplay.vue          ← 外部から import するのはここだけ
-    MyNoteEditor.vue
-    SharedNoteList.vue
-    useMyNote.ts             ← 自分のメモの取得・保存・公開切替
-    useSharedNotes.ts        ← 公開メモ一覧の取得とメンバー名の突合
-  MemoDisplay.vue            ← 既存（卓の「備考」。本機能とは無関係）
-  index.vue                  ← Note/NoteDisplay.vue だけを import する
+  PlayMemo/                      ← プレイメモの実装詳細
+    PlayMemoDisplay.vue          ← 外部から import するのはここだけ
+    MyPlayMemoEditor.vue
+    SharedPlayMemoList.vue
+    useMyPlayMemo.ts             ← 自分のメモの取得・保存・公開切替
+    useSharedPlayMemos.ts        ← 公開メモ一覧の取得とメンバー名の突合
+  MemoDisplay.vue                ← 既存（卓の「備考」。本機能とは無関係）
+  index.vue                      ← PlayMemo/PlayMemoDisplay.vue だけを import する
 ```
 
 - サーバ値（真実）と編集ドラフトは**別の状態**として持つ。`useMemberEdit.ts` の
@@ -353,10 +357,10 @@ features/GameSession/Detail/
 
 | # | 内容 | 主な成果物 |
 |---|---|---|
-| 1 | **メモの基盤と自分のメモ**: DB テーブル + マイグレーション、shared 型・`editNote` ポリシー・`canViewSharedNotes`、`GET`・`PUT /:id/notes/me` | backend、shared、マイグレーション |
-| 2 | **公開切替と公開メモ閲覧**: `PATCH /:id/notes/me/visibility`、`GET /:id/notes`（認可 + フィルタ） | backend |
-| 3 | **自分のメモの UI**: 卓詳細への `Note/` セクション追加、`useMyNote`、編集不可の案内、未ログイン・ゲストのログイン導線 | frontend |
-| 4 | **公開切替と公開メモ閲覧の UI**: 公開トグルと状態表示、確認ダイアログ、`useSharedNotes`、公開メモ一覧 | frontend |
+| 1 | **メモの基盤と自分のメモ**: DB テーブル + マイグレーション、shared 型・`editPlayMemo` ポリシー・`canViewSharedPlayMemos`、`GET`・`PUT /:id/play-memos/me` | backend、shared、マイグレーション |
+| 2 | **公開切替と公開メモ閲覧**: `PATCH /:id/play-memos/me/visibility`、`GET /:id/play-memos`（認可 + フィルタ） | backend |
+| 3 | **自分のメモの UI**: 卓詳細への `PlayMemo/` セクション追加、`useMyPlayMemo`、編集不可の案内、未ログイン・ゲストのログイン導線 | frontend |
+| 4 | **公開切替と公開メモ閲覧の UI**: 公開トグルと状態表示、確認ダイアログ、`useSharedPlayMemos`、公開メモ一覧 | frontend |
 
 ```text
 段階1 ─┬─▶ 段階2 ─┐
@@ -384,12 +388,21 @@ features/GameSession/Detail/
 
 ## 8. 意思決定ログ
 
-### 英語名は `note`。`memo` は使わない
+### 概念名は英語・日本語ともに「プレイメモ」で統一する
 
-既存の `GameSession/Detail/MemoDisplay.vue` / `Lobby/Detail/MemoDisplay.vue` が卓・募集枠の
-`description`（備考）の表示に「メモ」を使っている。同じ画面に2種類の「メモ」が並ぶとコンポーネント名も
-UI 文言も判別不能になるため、本機能はコード上 `note`、UI 文言は「プレイメモ」とする。
-既存の備考側は「備考」のままとし、本機能では触らない。
+当初は英語名を `note`、UI 文言を「プレイメモ」と分ける案だったが、**両方を play memo に揃えた**。
+概念名が言語をまたいでずれると、UI で「プレイメモ」を見た人が `memo` で grep しても見つからず、
+ドキュメント・UI・コードの間に翻訳表が必要になる。この翻訳表に見合う利益がない。
+
+`memo` を避けようとした理由は、既存の `GameSession/Detail/MemoDisplay.vue` /
+`Lobby/Detail/MemoDisplay.vue` が卓・募集枠の `description`（備考）の表示に「メモ」を
+使っており衝突することだった。これは **`play` 接頭辞を必ず付ける**ことで解決する
+（`PlayMemoDisplay.vue` / `playMemos` / `game_session_play_memos`）。
+裸の `memo` / `Memo` は本機能では使わない。
+
+既存の備考側（`MemoDisplay.vue` が `description` を表示している状態）は本機能では触らない。
+UI 文言が「備考」なのにコンポーネント名が `Memo` である点はもともとずれているが、
+本機能のスコープ外とする。
 
 ### 新しいスキーマ・機能ディレクトリを切らない
 
@@ -414,15 +427,15 @@ ADR 0005 は「新しいテーブル・enum は機能ごとの PostgreSQL スキ
 
 ### 公開メモ一覧は閲覧者に依存させない
 
-`GET /:id/notes` は「卓が完了・中止 かつ `shared_at != null`」だけでフィルタし、
+`GET /:id/play-memos` は「卓が完了・中止 かつ `shared_at != null`」だけでフィルタし、
 **閲覧者自身の公開メモも含めて**返す。「自分のメモを除く」ようにすると閲覧者による分岐が生まれ、
 分岐を持つ権限フィルタは漏洩バグの温床になる。同じ卓なら誰が呼んでも同じレスポンスになる形にして、
 「非公開メモが返らないこと」のテストを1本に収束させる。
-フロントは `/notes/me` と重複した場合に `memberId` で突合して表示を整える。
+フロントは `/play-memos/me` と重複した場合に `memberId` で突合して表示を整える。
 
 ### 未作成のメモは 404 ではなく空メモを返す
 
-`GET /:id/notes/me` は、メモを一度も書いていないメンバーに対して
+`GET /:id/play-memos/me` は、メモを一度も書いていないメンバーに対して
 `{ body: '', sharedAt: null }` を 200 で返す。404 にするとフロントが
 「エラー」と「まだ書いていない」を区別する分岐を持つことになり、
 編集ドラフトの初期化も 404 ハンドラ側に散る。メンバーであればメモ欄は常に存在する、と考える。
@@ -430,9 +443,9 @@ ADR 0005 は「新しいテーブル・enum は機能ごとの PostgreSQL スキ
 ### 本文の編集と公開切替でエンドポイントを分ける
 
 要求 §3-2 により、卓の完了・中止後は「本文は編集不可・公開切替は可能」となる。
-1つの `PATCH .../notes/me` に両方を載せると、同じエンドポイントがフィールドによって
+1つの `PATCH .../play-memos/me` に両方を載せると、同じエンドポイントがフィールドによって
 409 になったりならなかったりする。ライフサイクルが違うものは別リソースとして扱い、
-`PUT .../notes/me`（本文）と `PATCH .../notes/me/visibility`（切替）に分ける。
+`PUT .../play-memos/me`（本文）と `PATCH .../play-memos/me/visibility`（切替）に分ける。
 
 ### メンバー一覧にメモを混ぜない
 
@@ -459,7 +472,7 @@ design-v1.1 の「確定後ロックのエラーコードは 409 に統一（既
 
 ### 公開切替はステータス非依存であることを、ポリシー表に載せないことで表現する
 
-`editNote` は `ACTION_POLICIES` に追加するが、公開切替のアクションは追加しない。
+`editPlayMemo` は `ACTION_POLICIES` に追加するが、公開切替のアクションは追加しない。
 全ステータスで許可されるアクションを表に載せると「全ステータス列挙」の行ができ、
 表を読む側が「制約がある」と誤読する。制約がないものは表に載せない。
 
@@ -468,7 +481,7 @@ design-v1.1 の「確定後ロックのエラーコードは 409 に統一（既
 `ACTION_POLICIES` は `roles: ('host' | 'member')[]` を持つが、公開メモの閲覧は
 未ログイン・ゲストを含む**誰でも**可能であり、このロール体系で表現できない。
 無理に載せるとロールの意味が壊れるため、ステータス単独の
-`canViewSharedNotes(status)` として `shared/game-session/note.ts` に置く。
+`canViewSharedPlayMemos(status)` として `shared/game-session/play-memo.ts` に置く。
 
 ### 未ログイン・ゲストにも公開メモの閲覧を提供する
 

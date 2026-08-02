@@ -417,6 +417,10 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
   });
 
+  // ユースケースは「卓が無い」場合と「メモ未作成」の場合の両方で notFound を返すため、
+  // HTTP 層ではどちらも同じ 404 に落ちる（design-v1.2 §5）。両者の区別は application 層の責務で、
+  // メモ未作成 → notFound の実質的な検証はユニットテスト
+  // （update-my-play-memo-visibility.test.ts の「メモ未作成なら notFound を返す」）が担っている
   it('卓が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
@@ -427,22 +431,6 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
 
     // Act
     const response = await patch(app, { shared: true }, 'nonexistent');
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  // メモ未作成のまま公開切替を呼んだ場合も 404（design-v1.2 §5）
-  it('メモ未作成なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateMyPlayMemoVisibility: vi
-        .fn()
-        .mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await patch(app, { shared: true });
 
     // Assert
     expect(response.status).toBe(404);

@@ -1,0 +1,2235 @@
+openapi: 3.1.0
+info:
+  title: taku-biyori API
+  version: 0.2.0
+  description: |
+    taku-biyori バックエンドの API 仕様。
+
+    ## 募集枠（lobby）
+    卓（game_session）が担っていた**募集・日程調整**の責務を分離した前段の概念。
+    人を多めに集めて候補日を◯△×で調整し、ホストが「その日に来られるメンバー」を選出して卓を確定する。
+    ゲストは `Guest-Token` ヘッダーで参加・日程回答ができる（卓側と同じ仕組み）。
+    URL は `/lobbies`、ステータスは `draft/open/scheduling/confirmed/cancelled` をファクトカラムから導出する。
+
+    ## 認証
+    Better Auth（メール/パスワード・ソーシャルログイン）を利用。認証済みセッションのCookieをリクエストに含めること。
+    未認証の場合は `401 Unauthorized` を返す。
+
+    ## 命名規則
+    - URL は `/game-sessions`・`/lobbies` を使用
+    - コード内の変数・型名は `gameSession` / `GameSession` プレフィックスを使用（Better Auth の `session` と衝突回避のため）
+
+servers:
+  - url: http://localhost:3000
+    description: ローカル開発サーバー
+
+security:
+  - sessionCookie: []
+
+tags:
+  - name: Health
+    description: バックエンド稼働確認用のエンドポイント
+  - name: Auth
+    description: Better Auth が提供する認証エンドポイント
+  - name: GameSessions
+    description: 卓（ゲームセッション）管理
+  - name: GameSessionMembers
+    description: 卓のメンバー管理
+  - name: GameSessionPlayMemos
+    description: 卓のプレイメモ（参加者が自分用に残す記録）
+  - name: GuestLinks
+    description: ゲストリンク管理
+  - name: Lobbies
+    description: 募集枠（卓が立つ前の募集・日程調整の枠）管理
+  - name: LobbyMembers
+    description: 募集枠の参加者管理
+  - name: LobbySchedules
+    description: 募集枠の日程調整（◯△×方式）
+  - name: Profile
+    description: プロフィール設定
+
+paths:
+  /:
+    get:
+      tags:
+        - Health
+      summary: 稼働確認
+      description: バックエンドが起動しているかを確認するためのヘルスチェック。
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: バックエンドが正常に応答しています。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/auth/sign-in/email:
+    post:
+      tags:
+        - Auth
+      summary: メールアドレスとパスワードでログイン
+      description: Better Auth が提供するメールアドレス/パスワード認証のログイン処理。
+      operationId: signInWithEmail
+      security: []
+      requestBody:
+        required: true
+        description: ログインに必要な認証情報を送信します。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInEmailRequest'
+      responses:
+        '200':
+          description: ログインに成功しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: リクエスト形式が不正。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証情報が一致しません。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/sign-up/email:
+    post:
+      tags:
+        - Auth
+      summary: メールアドレスとパスワードで新規登録
+      description: Better Auth が提供するメールアドレス/パスワード認証の登録処理。
+      operationId: signUpWithEmail
+      security: []
+      requestBody:
+        required: true
+        description: 新規ユーザー登録に必要な情報を送信します。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpEmailRequest'
+      responses:
+        '200':
+          description: 新規登録に成功しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: リクエスト形式が不正。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: すでに同じメールアドレスのユーザーが存在します。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/sign-out:
+    post:
+      tags:
+        - Auth
+      summary: ログアウト
+      description: Better Auth が提供するセッション破棄処理。
+      operationId: signOut
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: ログアウトに成功しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/auth/session:
+    get:
+      tags:
+        - Auth
+      summary: 現在のセッションを取得
+      description: Better Auth が保持する現在のセッション情報を取得します。
+      operationId: getSession
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 現在のセッション情報を返します。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: 有効なセッションがありません。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/sign-in/social:
+    post:
+      tags:
+        - Auth
+      summary: ソーシャルログインを開始
+      description: Better Auth が提供するソーシャルログイン処理の開始点。
+      operationId: signInWithSocialProvider
+      security: []
+      requestBody:
+        required: true
+        description: 利用するソーシャルプロバイダと任意のコールバック先を指定します。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInSocialRequest'
+      responses:
+        '200':
+          description: ソーシャルログイン処理を開始しました。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: リクエスト形式が不正。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/callback/google:
+    get:
+      tags:
+        - Auth
+      summary: Google OAuth コールバック
+      description: Better Auth が処理する Google OAuth のコールバックエンドポイント。
+      operationId: googleOAuthCallback
+      security: []
+      responses:
+        '200':
+          description: コールバックを処理しました。
+        '302':
+          description: コールバック後のリダイレクト。
+
+  # ========== Game Sessions ==========
+
+  /api/game-sessions:
+    get:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）一覧取得
+      description: >-
+        ログインユーザーが参加・作成した卓（ゲームセッション）に加えて、
+        未参加でも公開済みの卓を一覧で返す（絞り込みはフロント）。
+      operationId: listGameSessions
+      responses:
+        '200':
+          description: 卓（ゲームセッション）一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameSessionListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）新規作成
+      description: |
+        新しい卓を作成する。作成者は `createdBy` に自動セットされ、
+        同時に `session_members` に作成者のレコードが自動追加される。
+        卓は日程が確定した状態でのみ存在するため `scheduledAt` は必須。
+      operationId: createGameSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameSessionInput'
+      responses:
+        '201':
+          description: 作成された卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/game-sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）詳細取得
+      description: 指定した卓の詳細情報（メンバー含む）を返す。
+      operationId: getGameSession
+      security: []
+      responses:
+        '200':
+          description: 卓（ゲームセッション）詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）情報更新
+      description: |
+        卓名・シナリオ情報などを更新する。作成者のみ操作可能。
+        ステータスに関わらず更新可能。
+      operationId: updateGameSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameSessionInput'
+      responses:
+        '200':
+          description: 更新後の卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [GameSessions]
+      summary: 卓（ゲームセッション）削除
+      description: 作成者のみ操作可能。
+      operationId: deleteGameSession
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/game-sessions/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    patch:
+      tags: [GameSessions]
+      summary: ステータス遷移
+      description: |
+        卓（ゲームセッション）のステータスを遷移させる。作成者のみ操作可能。
+
+        このエンドポイントは DB のファクトカラムを更新し、ステータスはサーバーが再導出して返す。
+
+        操作内容：
+        - `open`: `is_published = true` にセットする（`draft` 状態のときのみ有効）。
+          公開のリクエスト値として `open` を使うが、導出ステータスは `scheduledAt` から
+          `confirmed`/`today` になる（卓に募集中の状態は存在しない）。
+        - `completed`: `completed_at` に現在時刻をセットする（`today` 状態のときのみ有効）。
+        - `cancelled`: `cancelled_at` に現在時刻をセットする（`confirmed`/`today` 状態のときのみ有効）。
+          中止した卓は削除せず「中止」として残す。募集由来の卓でも募集枠は `confirmed` のまま戻らない。
+
+        逆方向への遷移は不可。
+      operationId: updateGameSessionStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [open, completed, cancelled]
+                  description: |
+                    - `open`: `is_published = true` にセット（draft 状態のときのみ有効）
+                    - `completed`: `completed_at` に現在時刻をセット（today 状態のときのみ有効）
+                    - `cancelled`: `cancelled_at` に現在時刻をセット（confirmed/today 状態のときのみ有効）
+      responses:
+        '200':
+          description: 更新後の卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== Game Session Members ==========
+
+  /api/game-sessions/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GameSessionMembers]
+      summary: メンバー一覧取得
+      operationId: listGameSessionMembers
+      security: []
+      responses:
+        '200':
+          description: メンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameSessionMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [GameSessionMembers]
+      summary: メンバー参加（通常）
+      description: |
+        ログイン済みユーザーが直接卓に参加する。
+        参加できるのは「公開済み・未完了・実施日当日まで」（`confirmed`/`today`）の卓のみ。
+        リクエストユーザーはCookieのセッション情報から自動取得する。
+      operationId: joinGameSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinSessionInput'
+      responses:
+        '201':
+          description: 作成されたメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: すでに参加済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  /api/game-sessions/{id}/guest-members:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/GuestToken'
+
+    post:
+      tags: [GameSessionMembers]
+      summary: ゲストリンク経由でメンバー参加（完全匿名）
+      description: |
+        ゲスト招待リンク経由でセッションにメンバーとして参加する。**認証不要**。
+        `user_id` は null として登録され、`guest_name` に入力した名前を使用する。
+
+        - `Guest-Token` ヘッダー必須。卓の `guest_link_token` と一致しなければ `403`。
+        - 参加できるのは `status === open` のときのみ（通常参加と同条件）。それ以外は `422`。
+        - **重複参加を許容**する（本人確認手段がないため。同名でも別レコードになる）。
+        - 満員（maxMembers）チェックは行わない（通常参加にも無いため揃える）。
+      operationId: joinGameSessionAsGuest
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinGuestSessionInput'
+      responses:
+        '201':
+          description: 作成されたメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Guest-Token が卓のトークンと一致しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: 卓が参加受付状態（open）でない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/game-sessions/{id}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+      - $ref: '#/components/parameters/MemberId'
+
+    patch:
+      tags: [GameSessionMembers]
+      summary: メンバー情報更新（キャラクター名）
+      description: |
+        キャラクター名を更新する。本人または作成者（createdBy）が操作可能。
+        ステータスが `confirmed` 以降は更新不可。
+      operationId: updateGameSessionMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameSessionMemberInput'
+      responses:
+        '200':
+          description: 更新後のメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+    delete:
+      tags: [GameSessionMembers]
+      summary: メンバー退出
+      description: |
+        卓（ゲームセッション）から退出する。本人のみ操作可能。
+        ステータスが `confirmed` 以降は退出不可。
+      operationId: leaveGameSession
+      responses:
+        '204':
+          description: 退出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '423':
+          $ref: '#/components/responses/Locked'
+
+  # ========== Play Memos ==========
+
+  /api/game-sessions/{id}/play-memos/me:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GameSessionPlayMemos]
+      summary: 自分のプレイメモ取得
+      description: |
+        自分のプレイメモを返す。その卓のメンバーであるログインユーザーのみ取得可能。
+        メモを一度も書いていない場合も 404 にせず `{ body: '', sharedAt: null, updatedAt: null }` を返す
+        （フロントに「エラー」と「まだ書いていない」の分岐を作らせないため。design-v1.2 §8）。
+        卓のステータスには依存せず、完了・中止後も取得できる。
+        ゲスト参加のみのユーザーは `user_id` が null でメンバー検索にヒットしないため 403 になる。
+      operationId: getMyGameSessionPlayMemo
+      responses:
+        '200':
+          description: 自分のプレイメモ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyGameSessionPlayMemo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [GameSessionPlayMemos]
+      summary: 自分のプレイメモの本文を保存
+      description: |
+        自分のプレイメモの本文を作成・更新する（upsert）。その卓のメンバーであるログインユーザーのみ操作可能。
+        卓が `completed` / `cancelled` のときは本文を編集できず 409 を返す（423 は使わない。design-v1.2 §8）。
+        公開状態（`sharedAt`）はこの操作では変化しない。
+        本文が空文字でも行は残す（削除すると公開状態が失われるため）。
+      operationId: upsertMyGameSessionPlayMemo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertGameSessionPlayMemoInput'
+      responses:
+        '200':
+          description: 保存後のプレイメモ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionPlayMemo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ========== Guest Links ==========
+
+  /api/game-sessions/{id}/guest-link:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GuestLinks]
+      summary: ゲストリンク取得
+      description: |
+        卓のゲスト招待リンク情報を返す。作成者のみ取得可能。
+        卓作成時に自動生成されるため、常に存在する。
+      operationId: getGuestLink
+      responses:
+        '200':
+          description: ゲストリンク情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # NOTE: 旧 GET /join/{token}（ゲストリンクプレビュー）と専用ページ /join/[token] は廃止。
+  #       ゲストはログインユーザーと同じ卓詳細画面 /game-sessions/:id（GET /api/game-sessions/:id）を使う。
+  #       閲覧はトークン不要・公開済み前提。トークンは参加/回答 API の Guest-Token ヘッダーでのみ使う。
+
+  # ========== Lobbies ==========
+
+  /api/lobbies:
+    get:
+      tags: [Lobbies]
+      summary: 募集枠一覧取得
+      description: >-
+        ログインユーザーが参加・作成した募集枠に加えて、未参加でも公開・募集中
+        （openUntil 未到来）の募集枠を一覧で返す（絞り込みはフロント）。
+      operationId: listLobbies
+      responses:
+        '200':
+          description: 募集枠一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Lobbies]
+      summary: 募集枠新規作成
+      description: |
+        新しい募集枠を作成する。ホスト（`hostUserId`）は Cookie のセッションから自動セットされる。
+        作成時にホストのメンバーレコードが自動追加される（既存卓と同じ）。
+        候補日（`candidateDates`）は1件以上必須（日程調整が募集枠の存在意義であるため）。
+        作成直後は非公開（`draft`）で、`PATCH /:id/status` の `open` で公開する。
+      operationId: createLobby
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLobbyInput'
+      responses:
+        '201':
+          description: 作成された募集枠
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lobby'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/lobbies/{id}:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+
+    get:
+      tags: [Lobbies]
+      summary: 募集枠詳細取得
+      description: |
+        指定した募集枠の詳細情報（メンバー含む）を返す。
+        `is_published = true` なら未認証でも閲覧可。閲覧可否はステータスではなく `is_published`
+        ファクトで判定する（`draft` のまま中止した募集枠はステータスが `cancelled` でも非公開のまま）。
+        非公開はホストのみ。確定済みなら `closedAt` を含む。
+      operationId: getLobby
+      security: []
+      responses:
+        '200':
+          description: 募集枠詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LobbyDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Lobbies]
+      summary: 募集枠情報更新
+      description: |
+        タイトル・シナリオ名・説明・場所・定員・締め切りを更新する。ホストのみ操作可能。
+        候補日は日程調整 API（availability-dates 系）で操作するため本エンドポイントでは変更しない。
+        ステータスが `confirmed`/`cancelled` の場合は `409`。
+      operationId: updateLobby
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLobbyInput'
+      responses:
+        '200':
+          description: 更新後の募集枠
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lobby'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Lobbies]
+      summary: 募集枠削除
+      description: |
+        ホストのみ操作可能。ホスト以外のメンバーが1人でもいる場合、および確定済み（`confirmed`）の場合は `409`
+        （ホスト自身しか参加していない募集枠は削除できる。確定済みは卓の出自リンクを保持するため削除不可）。
+      operationId: deleteLobby
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/lobbies/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+
+    patch:
+      tags: [Lobbies]
+      summary: 募集枠のステータス遷移（公開・募集中止）
+      description: |
+        募集枠のファクトカラムを更新し、ステータスはサーバーが再導出して返す。ホストのみ操作可能。
+
+        - `open`: `is_published = true` にセットする（公開）。`draft` からのみ。
+          導出ステータスは `open_until` の値により `open`/`scheduling` になる。
+        - `cancelled`: `cancelled_at` に現在時刻をセットする（募集中止）。`draft`/`open`/`scheduling` から可。
+
+        `confirmed` への直接遷移は本エンドポイントでは扱わない（卓確定は `POST /:id/confirm` が担う）。
+        確定済みへの中止は `409`（確定後の中止は卓側の `cancelled` で行う）。確定済みへの公開も `409`。
+        中止済み（`cancelled`）への公開も `409`。
+      operationId: updateLobbyStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [open, cancelled]
+                  description: |
+                    - `open`: `is_published = true` にセット（公開。draft からのみ）
+                    - `cancelled`: `cancelled_at` に現在時刻をセット（募集中止。draft/open/scheduling から可）
+      responses:
+        '200':
+          description: 更新後の募集枠
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lobby'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/lobbies/{id}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+
+    post:
+      tags: [Lobbies]
+      summary: 卓確定（選出）
+      description: |
+        候補日を1つ選び、その日に来られる選出メンバーで卓（game_session）を作成する。ホストのみ操作可能。
+        候補日確定・卓生成・メンバーコピー・確定リンクを単一トランザクションで実行する。
+
+        - `candidateId` はこの募集枠の候補日でなければならない（違う場合 `404`）。
+        - `memberIds` は1件以上必須（未指定・空配列は `422`）。この募集枠のメンバーでない ID を含むと `422`。
+        - ステータスが `draft`/`cancelled` の場合は `422`（`open`/`scheduling` からのみ確定可）。
+        - すでに確定済み（`closed_at != null`）または並行確定に敗北した場合は `409`。
+        - 定員・回答内容（◯△×・未回答）によるサーバー側ブロックはしない（定員は目安、選出はホストが確定）。
+
+        レスポンスは作成された卓（`GameSession`）を返す。
+      operationId: confirmLobby
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmLobbyInput'
+      responses:
+        '201':
+          description: 作成された卓（ゲームセッション）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 募集枠が見つからない、または `candidateId` がこの募集枠の候補日でない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: すでに確定済み、または並行確定に敗北した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: |
+            ステータスが `draft`/`cancelled`、`memberIds` が未指定・空配列、
+            または `memberIds` にこの募集枠のメンバーでない ID を含む
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ========== Lobby Members ==========
+
+  /api/lobbies/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+
+    get:
+      tags: [LobbyMembers]
+      summary: 募集枠メンバー一覧取得
+      description: |
+        参加者一覧を返す。`is_published = true` なら未認証でも取得可（閲覧可否はステータスではなく
+        `is_published` ファクトで判定する。draft のまま中止した募集枠は `cancelled` でも非公開）。
+        定員を超えた人数も含めて返す。
+      operationId: listLobbyMembers
+      security: []
+      responses:
+        '200':
+          description: メンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [LobbyMembers]
+      summary: 募集枠へ参加（通常）
+      description: |
+        ログイン済みユーザーが募集枠に参加する。参加できるのはステータスが `open` のときのみ。
+        それ以外（`draft`/`scheduling`/`confirmed`/`cancelled`）は `422`。
+        リクエストユーザーは Cookie のセッション情報から自動取得する。
+      operationId: joinLobby
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinLobbyInput'
+      responses:
+        '201':
+          description: 作成されたメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LobbyMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: すでに参加済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 募集枠が参加受付状態（open）でない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/lobbies/{id}/guest-members:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+      - $ref: '#/components/parameters/GuestToken'
+
+    post:
+      tags: [LobbyMembers]
+      summary: ゲストリンク経由で募集枠へ参加（完全匿名）
+      description: |
+        ゲスト招待リンク経由で募集枠にメンバーとして参加する。**認証不要**。
+        `user_id` は null として登録され、`guest_name` に入力した名前を使用する。
+
+        - `Guest-Token` ヘッダー必須。募集枠の `guest_link_token` と一致しなければ `403`。
+        - 参加できるのは `status === open` のときのみ（通常参加と同条件）。それ以外は `422`。
+        - **重複参加を許容**する（本人確認手段がないため。同名でも別レコードになる）。
+        - 定員（maxPlayers）チェックは行わない（通常参加にも無いため揃える）。
+      operationId: joinLobbyAsGuest
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinLobbyAsGuestInput'
+      responses:
+        '201':
+          description: 作成されたメンバー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LobbyMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Guest-Token が募集枠のトークンと一致しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: 募集枠が参加受付状態（open）でない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/lobbies/{id}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+      - $ref: '#/components/parameters/LobbyMemberId'
+
+    delete:
+      tags: [LobbyMembers]
+      summary: 募集枠から退出・参加取り消し
+      description: |
+        募集枠から退出する。**本人またはホスト**が操作可能。
+        ログインユーザーは自分の参加を取り消せる。ゲストメンバーの取り消しはホストのみ
+        （ゲストは本人確認手段がないため）。
+        退出時、そのメンバーの日程回答は cascade delete で消える。
+        ステータスが `confirmed`/`cancelled` の場合は `409`。
+      operationId: leaveLobby
+      responses:
+        '204':
+          description: 退出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ========== Lobby Schedules ==========
+
+  /api/lobbies/{id}/availability-dates:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+
+    get:
+      tags: [LobbySchedules]
+      summary: 候補日一覧取得
+      description: |
+        候補日と各メンバーの◯△×回答をまとめて返す。`is_published = true` なら未認証でも取得可
+        （閲覧可否はステータスではなく `is_published` ファクトで判定する。draft のまま中止した募集枠は
+        `cancelled` でも非公開）。
+      operationId: listLobbyAvailabilityDates
+      security: []
+      responses:
+        '200':
+          description: 候補日一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyAvailabilityDate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [LobbySchedules]
+      summary: 候補日追加
+      description: |
+        候補日を1件追加する。ホストのみ操作可能。
+        ステータスが `confirmed`/`cancelled` の場合は `409`。
+      operationId: addLobbyAvailabilityDate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAvailabilityDateInput'
+      responses:
+        '201':
+          description: 追加された候補日
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LobbyAvailabilityDate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    put:
+      tags: [LobbySchedules]
+      summary: 候補日一括更新
+      description: |
+        候補日を一括で置き換える。ホストのみ操作可能。
+        ステータスが `confirmed`/`cancelled` の場合は `409`。
+      operationId: replaceLobbyAvailabilityDates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceAvailabilityDatesInput'
+      responses:
+        '200':
+          description: 更新後の候補日一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyAvailabilityDate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/lobbies/{id}/availability-dates/{dateId}:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+      - $ref: '#/components/parameters/LobbyDateId'
+
+    delete:
+      tags: [LobbySchedules]
+      summary: 候補日削除
+      description: |
+        ホストのみ操作可能。
+        ステータスが `confirmed`/`cancelled` の場合は `409`。
+      operationId: removeLobbyAvailabilityDate
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/lobbies/{id}/availability-dates/{dateId}/responses:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+      - $ref: '#/components/parameters/LobbyDateId'
+
+    put:
+      tags: [LobbySchedules]
+      summary: 日程回答を登録・更新（◯△×・ログインユーザー）
+      description: |
+        ログインユーザーが候補日に対して回答する。既存の回答があれば上書き。
+        Cookie のセッション情報からユーザーを解決し、そのユーザーに紐づくメンバーレコードを
+        自動で特定する。**自分の回答のみ**編集可。
+        ステータスが `confirmed`/`cancelled` の場合は `409`。
+
+        ゲスト（`user_id = null`）の回答はこのエンドポイントでは行わない。
+        ゲストは `PUT .../guest-responses` を使う。
+      operationId: upsertLobbyAvailabilityResponse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertAvailabilityResponseInput'
+      responses:
+        '200':
+          description: 登録・更新後の回答
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LobbyAvailabilityDateAnswer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: 募集枠が非公開（draft）のときは回答できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/lobbies/{id}/availability-dates/{dateId}/guest-responses:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+      - $ref: '#/components/parameters/LobbyDateId'
+      - $ref: '#/components/parameters/GuestToken'
+
+    put:
+      tags: [LobbySchedules]
+      summary: ゲストの日程回答を登録・更新（◯△×・完全匿名）
+      description: |
+        ゲストが候補日に対して回答する。既存の回答があれば上書き。**認証不要**。
+
+        - `Guest-Token` ヘッダー必須。募集枠の `guest_link_token` と一致しなければ `403`。
+        - `memberId` は必須。指定した `memberId` がその募集枠の
+          **ゲストメンバー（`user_id = null`）**であることをサーバーで検証する。
+          `user_id != null`（ログイン参加者）のメンバーを指定した場合は `403`。
+        - 本人確認はしないため、トークンさえ持っていれば**どのゲストでも全ゲスト列を編集可**
+          （調整さん方式）。
+        - ステータスが `draft`（非公開）を含め `open`/`scheduling` 以外の場合は `409`。
+          ログインユーザー用エンドポイントと異なり、非公開時も `422` ではなく `409` に統一する
+          （design-v1.1 の意思決定ログ）。game-session の同等ケースにある `423 Locked` は使わない。
+      operationId: upsertLobbyGuestAvailabilityResponse
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestUpsertAvailabilityResponseInput'
+      responses:
+        '200':
+          description: 登録・更新後の回答
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LobbyAvailabilityDateAnswer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: トークン不一致、または非ゲストメンバーの回答を編集しようとした
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 募集枠が draft/confirmed/cancelled のいずれか（open/scheduling 以外）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ========== Lobby Guest Links ==========
+
+  /api/lobbies/{id}/guest-link:
+    parameters:
+      - $ref: '#/components/parameters/LobbyId'
+
+    get:
+      tags: [GuestLinks]
+      summary: 募集枠のゲストリンク取得
+      description: |
+        募集枠のゲスト招待リンク情報を返す。ホストのみ取得可能。
+        募集枠作成時に自動生成されるため、常に存在する。
+        フロントは `/lobbies/{id}?token={token}` 形式の招待リンクを組み立てて配る。
+      operationId: getLobbyGuestLink
+      responses:
+        '200':
+          description: ゲストリンク情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== Profile ==========
+
+  /api/profile:
+    get:
+      tags: [Profile]
+      summary: 自分のプロフィール取得
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: プロフィール情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Profile]
+      summary: プロフィール更新
+      operationId: updateMyProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileInput'
+      responses:
+        '200':
+          description: 更新後のプロフィール
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Cookie-based session authentication.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Optional bearer token authentication.
+
+  # ========== Parameters ==========
+  parameters:
+    GameSessionId:
+      name: id
+      in: path
+      required: true
+      description: 卓（ゲームセッション）のID
+      schema:
+        type: string
+        format: uuid
+
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      description: メンバーのID（session_members.id）
+      schema:
+        type: string
+        format: uuid
+
+    LobbyId:
+      name: id
+      in: path
+      required: true
+      description: 募集枠のID（lobbies.id）
+      schema:
+        type: string
+        format: uuid
+
+    LobbyMemberId:
+      name: memberId
+      in: path
+      required: true
+      description: 募集枠メンバーのID（lobby_members.id）
+      schema:
+        type: string
+        format: uuid
+
+    LobbyDateId:
+      name: dateId
+      in: path
+      required: true
+      description: 募集枠の候補日のID（lobby_candidates.id）
+      schema:
+        type: string
+        format: uuid
+
+    GuestToken:
+      name: Guest-Token
+      in: header
+      required: true
+      description: |
+        ゲスト招待リンクのトークン（game_sessions.guest_link_token または lobbies.guest_link_token）。
+        ゲストの参加・回答を認可する capability として扱う。
+        サーバーは対象の卓の guest_link_token と一致するか検証し、不一致なら 403 を返す。
+      schema:
+        type: string
+
+  # ========== Responses ==========
+  responses:
+    BadRequest:
+      description: リクエストが不正
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 未認証
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 権限なし
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Locked:
+      description: ステータスがconfirmed以降のため操作不可
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: 現在のステータスでは操作できない（confirmed/cancelled 等）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: 入力またはステータス条件が不正で処理できない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    HealthResponse:
+      type: object
+      description: ヘルスチェック応答。
+      additionalProperties: false
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          examples:
+            - ok
+        message:
+          type: string
+          examples:
+            - Backend is running
+
+    SuccessResponse:
+      type: object
+      description: 成功を示す汎用応答。
+      additionalProperties: true
+      properties:
+        success:
+          type: boolean
+          default: true
+
+    ErrorResponse:
+      type: object
+      description: エラー応答の汎用スキーマ。
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties: true
+
+    User:
+      type: object
+      description: Better Auth が返すユーザー情報の想定スキーマ。
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        emailVerified:
+          type: boolean
+        image:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      description: Better Auth が返すセッション情報の想定スキーマ。
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      description: 認証系エンドポイントの応答を表す汎用スキーマ。
+      additionalProperties: true
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            session:
+              $ref: '#/components/schemas/Session'
+        error:
+          $ref: '#/components/schemas/ErrorResponse'
+
+    SessionResponse:
+      type: object
+      description: セッション取得時の応答スキーマ。
+      additionalProperties: true
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            session:
+              $ref: '#/components/schemas/Session'
+        error:
+          $ref: '#/components/schemas/ErrorResponse'
+
+    SignInEmailRequest:
+      type: object
+      description: メールアドレス/パスワードのログイン要求。
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        rememberMe:
+          type: boolean
+          default: true
+        callbackURL:
+          type: string
+          format: uri
+
+    SignUpEmailRequest:
+      type: object
+      description: メールアドレス/パスワードの新規登録要求。
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        image:
+          type: string
+          format: uri
+        callbackURL:
+          type: string
+          format: uri
+
+    SignInSocialRequest:
+      type: object
+      description: ソーシャルログイン開始要求。
+      additionalProperties: false
+      required:
+        - provider
+      properties:
+        provider:
+          type: string
+          examples:
+            - google
+        callbackURL:
+          type: string
+          format: uri
+
+    # ---------- Enums ----------
+
+    GameSessionStatus:
+      type: string
+      enum:
+        - draft
+        - open
+        - scheduling
+        - confirmed
+        - today
+        - completed
+        - cancelled
+      description: |
+        - `draft`: 非公開（公開前の下書き状態）
+        - `open`: 導出されない。公開遷移（`PATCH /:id/status`）のリクエスト値としてのみ使う
+        - `scheduling`: 実施日未確定（`scheduled_at` が null の旧経路データのみ。段階6c で廃止）
+        - `confirmed`: 実施前（実施日確定・当日前）
+        - `today`: 当日（実施日が今日）
+        - `completed`: 通過済み（ホストの完了アクション後）
+        - `cancelled`: 中止（ホストの中止アクション後。`cancelled_at` から導出。最優先の終端状態）
+
+    ScheduleAnswer:
+      type: string
+      enum:
+        - ok
+        - maybe
+        - ng
+      description: |
+        - `ok`: 参加可能（◯）
+        - `maybe`: 調整可能（△）
+        - `ng`: 参加不可（×）
+
+    # ---------- GameSession ----------
+
+    GameSessionListItem:
+      type: object
+      description: 一覧表示用の軽量スキーマ
+      required: [id, title, status, isPublished, memberCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓
+        scenarioName:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/GameSessionStatus'
+        isPublished:
+          type: boolean
+          description: 公開フラグ。false の間は draft
+        memberCount:
+          type: integer
+        scheduledAt:
+          type: [string, 'null']
+          format: date
+          description: 実施日。confirmed 以降にセットされる
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GameSession:
+      type: object
+      required: [id, title, status, isPublished, createdBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓
+        description:
+          type: [string, 'null']
+        scenarioName:
+          type: [string, 'null']
+          description: nullの場合はシナリオなし扱い
+        location:
+          type: [string, 'null']
+          description: 開催場所（オンライン等の自由入力）
+        status:
+          $ref: '#/components/schemas/GameSessionStatus'
+        isPublished:
+          type: boolean
+          description: 公開フラグ。false の間は draft
+        scheduledAt:
+          type: [string, 'null']
+          format: date
+          description: 実施日。confirmed 以降にセットされる
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+          description: 完了日時。ホストの明示的な完了アクションで記録。null なら未完了
+        cancelledAt:
+          type: [string, 'null']
+          format: date-time
+          description: 中止日時。ホストの明示的な中止アクションで記録。null なら未中止
+        lobbyId:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            出自の募集枠 ID（lobbies.id）。募集枠の確定（POST /api/lobbies/{id}/confirm）で
+            生まれた卓は元の募集枠を指す。直接卓立ての場合は null。
+        maxMembers:
+          type: [integer, 'null']
+        createdBy:
+          type: string
+          description: Better Auth の userId
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GameSessionDetail:
+      allOf:
+        - $ref: '#/components/schemas/GameSession'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/GameSessionMember'
+
+    CreateGameSessionInput:
+      type: object
+      required: [title, scheduledAt]
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        scenarioName:
+          type: string
+          maxLength: 200
+        location:
+          type: string
+          maxLength: 200
+          description: 開催場所（オンライン等の自由入力）
+        maxMembers:
+          type: integer
+          minimum: 2
+          maximum: 20
+        scheduledAt:
+          type: string
+          format: date
+          description: 実施日。卓は日程が確定した状態でのみ存在するため必須（今日以降）
+
+    UpdateGameSessionInput:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        scenarioName:
+          type: string
+        location:
+          type: [string, 'null']
+          description: 開催場所（オンライン等の自由入力）
+        maxMembers:
+          type: integer
+        scheduledAt:
+          type: [string, 'null']
+          format: date
+          description: 実施日（今日以降）
+
+    # ---------- GameSessionMember ----------
+
+    GameSessionMember:
+      type: object
+      description: |
+        ログインユーザーとゲストの2種類が存在する。
+        - ログインユーザー: `userId` が非 null、`guestName` は null
+        - ゲスト: `userId` が null、`guestName` が非 null
+      required: [id, joinedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: session_members.id
+        characterName:
+          type: [string, 'null']
+          example: アルベルト
+        lobbyMemberId:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            出自の募集枠メンバー ID（lobby_members.id）。募集枠の確定で選出されてコピーされた
+            メンバーは元の募集枠メンバーを指す。直接参加の場合は null（選出突合用）。
+        joinedAt:
+          type: string
+          format: date-time
+        userId:
+          type: [string, 'null']
+          description: Better Auth の userId。ゲストメンバーは null
+        guestName:
+          type: [string, 'null']
+          description: ゲストの表示名（game_session_members.guest_name）。ログインユーザーは null
+
+    JoinSessionInput:
+      type: object
+      properties:
+        characterName:
+          type: string
+          maxLength: 50
+
+    JoinGuestSessionInput:
+      type: object
+      required: [guestName]
+      properties:
+        guestName:
+          type: string
+          maxLength: 50
+          description: ゲストの表示名（game_session_members.guest_name に保存）
+
+    UpdateGameSessionMemberInput:
+      type: object
+      properties:
+        characterName:
+          type: string
+          maxLength: 50
+
+    # ---------- PlayMemo（卓のプレイメモ） ----------
+
+    GameSessionPlayMemo:
+      type: object
+      description: |
+        参加者が自分用に残すプレイの記録（game_session.game_session_play_memos）。
+        1メンバー1メモ（member_id に unique 制約）。メンバーが退出するとメモも消える。
+      required: [memberId, body, sharedAt, updatedAt]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: メモの所有者（game_session_members.id）
+        body:
+          type: string
+          maxLength: 5000
+          description: 本文。空文字を許容する
+        sharedAt:
+          type: [string, 'null']
+          format: date-time
+          description: 公開日時。null なら非公開
+        updatedAt:
+          type: string
+          format: date-time
+
+    MyGameSessionPlayMemo:
+      allOf:
+        - $ref: '#/components/schemas/GameSessionPlayMemo'
+        - type: object
+          description: |
+            自分のメモのレスポンス。メモ未作成のメンバーにも空メモを返すため
+            （design-v1.2 §8）、まだ行が存在しないケースを表す updatedAt: null を許容する。
+          properties:
+            updatedAt:
+              type: [string, 'null']
+              format: date-time
+
+    UpsertGameSessionPlayMemoInput:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          maxLength: 5000
+          description: |
+            本文。空文字を許可する（本文を空にしても行を残し、公開状態を失わせないため）。
+            5000 文字を超えると 400。
+
+    # ---------- AvailabilityDate（募集枠の日程調整で使用） ----------
+
+    CreateAvailabilityDateInput:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+          description: 候補として追加する日付
+
+    UpsertAvailabilityResponseInput:
+      type: object
+      required: [answer]
+      description: |
+        ログインユーザー用。回答対象メンバーは Cookie のセッションから自動解決するため
+        memberId は受け取らない（自分の回答のみ編集可）。
+      properties:
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
+        comment:
+          type: string
+          maxLength: 200
+
+    GuestUpsertAvailabilityResponseInput:
+      type: object
+      required: [memberId, answer]
+      description: |
+        ゲスト用。memberId 必須。指定したメンバーはその募集枠のゲストメンバー
+        （user_id = null）でなければならない。認可は Guest-Token ヘッダーで行う。
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: 回答対象のゲストメンバー（lobby_members.id, user_id = null）
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
+        comment:
+          type: string
+          maxLength: 200
+
+    # ---------- GuestLink ----------
+
+    GuestLink:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: |
+            推測困難なゲスト招待トークン（game_sessions.guest_link_token）。
+            フロントはこれを使い `/game-sessions/{id}?token={token}` 形式の招待リンクを組み立てて配る。
+
+    # ---------- Lobby ----------
+
+    LobbyStatus:
+      type: string
+      enum:
+        - draft
+        - open
+        - scheduling
+        - confirmed
+        - cancelled
+      description: |
+        募集枠のステータス。ファクトカラム（`isPublished`/`openUntil`/`closedAt`/`cancelledAt`）から導出する。
+        - `draft`: 非公開（`is_published = false`）
+        - `open`: 募集中（公開済み・`open_until` が null または未来）
+        - `scheduling`: 日程調整中（公開済み・`open_until` 経過）
+        - `confirmed`: 卓確定済み（`closed_at != null`）
+        - `cancelled`: 中止（`cancelled_at != null`。最優先の終端状態）
+
+    LobbyListItem:
+      type: object
+      description: 一覧表示用の軽量スキーマ
+      required: [id, title, status, isPublished, memberCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓を募集
+        scenarioName:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/LobbyStatus'
+        isPublished:
+          type: boolean
+          description: 公開フラグ。false の間は draft
+        openUntil:
+          type: [string, 'null']
+          format: date
+          description: 募集締め切り日。null なら締め切りなし
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Lobby:
+      type: object
+      required: [id, title, status, isPublished, hostUserId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 蒼き月の夜卓を募集
+        scenarioName:
+          type: [string, 'null']
+          description: nullの場合はシナリオなし扱い
+        description:
+          type: [string, 'null']
+        location:
+          type: [string, 'null']
+          description: 開催場所（オンライン等の自由入力）
+        status:
+          $ref: '#/components/schemas/LobbyStatus'
+        isPublished:
+          type: boolean
+          description: 公開フラグ。false の間は draft
+        openUntil:
+          type: [string, 'null']
+          format: date
+          description: 募集締め切り日。null なら締め切りなし
+        maxPlayers:
+          type: [integer, 'null']
+          description: 定員。null なら定員の目安なし（選出画面で定員不一致の確認ダイアログを出さない）
+        closedAt:
+          type: [string, 'null']
+          format: date-time
+          description: クローズ（卓確定）日時。卓確定時にセット。null なら受付中
+        cancelledAt:
+          type: [string, 'null']
+          format: date-time
+          description: 募集中止日時。ホストの中止アクションで記録。null なら未中止
+        hostUserId:
+          type: string
+          description: 募集枠のホスト（Better Auth の userId）
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LobbyDetail:
+      allOf:
+        - $ref: '#/components/schemas/Lobby'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/LobbyMember'
+
+    LobbyMember:
+      type: object
+      description: |
+        募集枠の参加者。ログインユーザーとゲストの2種類が存在する。
+        - ログインユーザー: `userId` が非 null、`guestName` は null
+        - ゲスト: `userId` が null、`guestName` が非 null
+
+        キャラクター名は卓に着席してからの関心事のため、募集枠メンバーは `characterName` を持たない。
+      required: [id, joinedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: lobby_members.id
+        joinedAt:
+          type: string
+          format: date-time
+        userId:
+          type: [string, 'null']
+          description: Better Auth の userId。ゲストメンバーは null
+        guestName:
+          type: [string, 'null']
+          description: ゲストの表示名（lobby_members.guest_name）。ログインユーザーは null
+
+    LobbyAvailabilityDateAnswer:
+      type: object
+      description: |
+        募集枠の候補日に対する◯△×回答。`LobbyAvailabilityDate.answers` に入れ子で返すため、
+        `dateId`（親候補日への逆参照）と `createdAt` は持たない。
+      required: [id, memberId, answer]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: lobby_answers.id（回答レコード自体のID）
+        memberId:
+          type: string
+          format: uuid
+          description: lobby_members.id。ログインユーザー・ゲスト共通のメンバーID
+        answer:
+          $ref: '#/components/schemas/ScheduleAnswer'
+        comment:
+          type: [string, 'null']
+
+    LobbyAvailabilityDate:
+      type: object
+      description: |
+        募集枠の候補日。各メンバーの回答一覧を `answers` に入れ子で持ち、`createdAt` は持たない。
+      required: [id, date, answers]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: lobby_candidates.id
+        date:
+          type: string
+          format: date
+          example: '2025-08-10'
+          description: 候補日。時刻は持たない。確定日程ではなく調整中の選択肢。
+        answers:
+          type: array
+          description: この候補日に対する各メンバーの◯△×回答一覧
+          items:
+            $ref: '#/components/schemas/LobbyAvailabilityDateAnswer'
+
+    CreateLobbyInput:
+      type: object
+      required: [title, candidateDates]
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        scenarioName:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        location:
+          type: string
+          maxLength: 200
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 20
+          description: 定員。省略時は定員なし
+        openUntil:
+          type: string
+          format: date
+          description: 募集締め切り日。省略時は締め切りなし
+        candidateDates:
+          type: array
+          minItems: 1
+          description: |
+            候補日の配列（1件以上必須）。日程調整が募集枠の存在意義であるため空にできない
+            （卓側の「作成時スケジュール任意」= ADR 0006 とは意図的に方針を分ける）。
+          items:
+            type: string
+            format: date
+
+    UpdateLobbyInput:
+      type: object
+      description: |
+        候補日を除く各フィールドの partial 更新。候補日は availability-dates API で操作する。
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        scenarioName:
+          type: [string, 'null']
+          maxLength: 200
+        description:
+          type: [string, 'null']
+          maxLength: 1000
+        location:
+          type: [string, 'null']
+          maxLength: 200
+        maxPlayers:
+          type: [integer, 'null']
+          minimum: 2
+          maximum: 20
+          description: null を渡すと定員なしにリセット
+        openUntil:
+          type: [string, 'null']
+          format: date
+          description: null を渡すと締め切りなしにリセット
+
+    ConfirmLobbyInput:
+      type: object
+      required: [candidateId, memberIds]
+      description: |
+        卓確定（選出）の入力。候補日を1つ選び、選出メンバーで卓を作成する。
+      properties:
+        candidateId:
+          type: string
+          format: uuid
+          description: 確定する候補日の ID（lobby_candidates.id）。この募集枠の候補日でなければ 404
+        memberIds:
+          type: array
+          minItems: 1
+          description: |
+            選出するメンバーの ID（lobby_members.id）の配列。1件以上必須。
+            この募集枠のメンバーでない ID を含むと 422。
+          items:
+            type: string
+            format: uuid
+
+    JoinLobbyInput:
+      type: object
+      description: |
+        募集枠への通常参加。募集枠メンバーは characterName を持たないため、現状ボディは空でよい。
+      properties: {}
+
+    JoinLobbyAsGuestInput:
+      type: object
+      required: [guestName]
+      properties:
+        guestName:
+          type: string
+          maxLength: 100
+          description: ゲストの表示名（lobby_members.guest_name に保存）
+
+    ReplaceAvailabilityDatesInput:
+      type: object
+      required: [dates]
+      description: 候補日の一括更新。指定した候補日で置き換える。
+      properties:
+        dates:
+          type: array
+          minItems: 1
+          description: 更新後の候補日の配列（1件以上。候補日0件にはできない）
+          items:
+            type: string
+            format: date
+
+    # ---------- Profile ----------
+
+    UserProfile:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 50

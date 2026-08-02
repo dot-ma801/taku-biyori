@@ -86,6 +86,8 @@ const router = createRouter({
       }),
     },
   ],
+  // ページ遷移では先頭に戻し、ブラウザバック時は元の位置に復元する
+  scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
 });
 
 // main.ts で initSession() を await してから mount するため、

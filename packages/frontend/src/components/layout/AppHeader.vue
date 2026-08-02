@@ -23,6 +23,10 @@ const onClickTitle = () => {
 <style scoped>
 header {
   background-color: var(--color-primary);
+  /* 背景が primary なので前景も自分で持つ。
+     指定を欠くとページ側の --color-text を継承し、
+     color: inherit な子（テーマ切り替えアイコン）がライトテーマで黒くなる */
+  color: var(--color-on-primary);
   padding: var(--space-4);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;

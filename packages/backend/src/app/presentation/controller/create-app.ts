@@ -10,6 +10,7 @@ import { registerHealthRoute } from '@/health/presentation/controller/routes/hea
 import { registerGameSessionRoute } from '@/game-session/presentation/controller/routes/game-session-route';
 import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
+import { registerPlayMemoRoute } from '@/game-session/presentation/controller/routes/play-memo-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
 import { registerMemberRoute as registerLobbyMemberRoute } from '@/lobby/presentation/controller/routes/member-route';
@@ -61,6 +62,11 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     getGuestLink: options.gameSession.getGuestLink,
     getGuestLinkPreview: options.gameSession.getGuestLinkPreview,
+  });
+  registerPlayMemoRoute(app, {
+    getSession: options.getSession,
+    getMyPlayMemo: options.gameSession.getMyPlayMemo,
+    upsertMyPlayMemo: options.gameSession.upsertMyPlayMemo,
   });
   registerLobbyRoute(app, {
     getSession: options.getSession,

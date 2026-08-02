@@ -92,6 +92,35 @@ export const gameSessionMembers = gameSessionSchema.table(
   }),
 );
 
+/**
+ * プレイメモ（参加者が自分用に残す記録）。
+ *
+ * メモは卓メンバーに従属する概念で独立したライフサイクルを持たないため、
+ * 新しいスキーマは切らず既存の game_session スキーマに同居させる（design-v1.2 §2）。
+ * 卓の紐付けは game_session_members 経由で辿る。game_session_id を非正規化して
+ * 持つと「メモの卓」と「メンバーの卓」が二重管理になり権限判定が壊れるため持たない。
+ */
+export const gameSessionPlayMemos = gameSessionSchema.table(
+  'game_session_play_memos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // unique 制約が「1メンバー1メモ」を保証し、upsert の衝突キーにもなる。
+    // unique index がそのまま検索インデックスとして働くため追加のインデックスは不要。
+    memberId: uuid('member_id')
+      .notNull()
+      .unique()
+      .references(() => gameSessionMembers.id, { onDelete: 'cascade' }),
+    body: text('body').notNull().default(''),
+    // 公開日時。null なら非公開（design-v1.2 §4）
+    sharedAt: timestamp('shared_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+);
+
 export const gameSessionsRelations = relations(
   gameSessions,
   ({ one, many }) => ({
@@ -121,6 +150,20 @@ export const gameSessionMembersRelations = relations(
     lobbyMember: one(lobbyMembers, {
       fields: [gameSessionMembers.lobbyMemberId],
       references: [lobbyMembers.id],
+    }),
+    playMemo: one(gameSessionPlayMemos, {
+      fields: [gameSessionMembers.id],
+      references: [gameSessionPlayMemos.memberId],
+    }),
+  }),
+);
+
+export const gameSessionPlayMemosRelations = relations(
+  gameSessionPlayMemos,
+  ({ one }) => ({
+    member: one(gameSessionMembers, {
+      fields: [gameSessionPlayMemos.memberId],
+      references: [gameSessionMembers.id],
     }),
   }),
 );

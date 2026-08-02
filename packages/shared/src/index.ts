@@ -43,6 +43,17 @@ export {
 } from './game-session/permissions.js';
 export { isGuestMember } from './game-session/member.js';
 export {
+  GameSessionPlayMemoSchema,
+  type GameSessionPlayMemo,
+  MyGameSessionPlayMemoSchema,
+  type MyGameSessionPlayMemo,
+  SharedGameSessionPlayMemoSchema,
+  type SharedGameSessionPlayMemo,
+  UpsertGameSessionPlayMemoInputSchema,
+  type UpsertGameSessionPlayMemoInput,
+  canViewSharedPlayMemos,
+} from './game-session/play-memo.js';
+export {
   ProfileResponseSchema,
   type ProfileResponse,
   UpdateProfileInputSchema,

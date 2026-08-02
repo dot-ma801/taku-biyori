@@ -3,7 +3,11 @@ import { createApp } from '@/app/presentation/controller/create-app';
 import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
 import type { LobbyUseCases } from '@/lobby/application/use-cases';
-import type { GameSessionListItem, GameSession } from '@taku-biyori/shared';
+import type {
+  GameSessionListItem,
+  GameSession,
+  GameSessionPlayMemo,
+} from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -39,6 +43,13 @@ const mockGameSessionDetail = {
 const mockGetOk: GetGameSessionResult = {
   type: 'ok',
   gameSession: mockGameSessionDetail,
+};
+
+const mockPlayMemo: GameSessionPlayMemo = {
+  memberId: '00000000-0000-4000-8000-000000000001',
+  body: 'メモ',
+  sharedAt: null,
+  updatedAt: '2026-08-02T00:00:00.000Z',
 };
 
 const stubProfile = {} as unknown as ProfileUseCases;
@@ -84,6 +95,12 @@ const makeApp = (
     getGuestLinkPreview:
       overrides.getGuestLinkPreview ??
       vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
+    getMyPlayMemo:
+      overrides.getMyPlayMemo ??
+      vi.fn().mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
+    upsertMyPlayMemo:
+      overrides.upsertMyPlayMemo ??
+      vi.fn().mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
   };
 
   return createApp({

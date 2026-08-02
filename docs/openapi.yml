@@ -35,6 +35,8 @@ tags:
     description: 卓（ゲームセッション）管理
   - name: GameSessionMembers
     description: 卓のメンバー管理
+  - name: GameSessionPlayMemos
+    description: 卓のプレイメモ（参加者が自分用に残す記録）
   - name: GuestLinks
     description: ゲストリンク管理
   - name: Lobbies
@@ -548,6 +550,69 @@ paths:
           $ref: '#/components/responses/NotFound'
         '423':
           $ref: '#/components/responses/Locked'
+
+  # ========== Play Memos ==========
+
+  /api/game-sessions/{id}/play-memos/me:
+    parameters:
+      - $ref: '#/components/parameters/GameSessionId'
+
+    get:
+      tags: [GameSessionPlayMemos]
+      summary: 自分のプレイメモ取得
+      description: |
+        自分のプレイメモを返す。その卓のメンバーであるログインユーザーのみ取得可能。
+        メモを一度も書いていない場合も 404 にせず `{ body: '', sharedAt: null, updatedAt: null }` を返す
+        （フロントに「エラー」と「まだ書いていない」の分岐を作らせないため。design-v1.2 §8）。
+        卓のステータスには依存せず、完了・中止後も取得できる。
+        ゲスト参加のみのユーザーは `user_id` が null でメンバー検索にヒットしないため 403 になる。
+      operationId: getMyGameSessionPlayMemo
+      responses:
+        '200':
+          description: 自分のプレイメモ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyGameSessionPlayMemo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [GameSessionPlayMemos]
+      summary: 自分のプレイメモの本文を保存
+      description: |
+        自分のプレイメモの本文を作成・更新する（upsert）。その卓のメンバーであるログインユーザーのみ操作可能。
+        卓が `completed` / `cancelled` のときは本文を編集できず 409 を返す（423 は使わない。design-v1.2 §8）。
+        公開状態（`sharedAt`）はこの操作では変化しない。
+        本文が空文字でも行は残す（削除すると公開状態が失われるため）。
+      operationId: upsertMyGameSessionPlayMemo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertGameSessionPlayMemoInput'
+      responses:
+        '200':
+          description: 保存後のプレイメモ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSessionPlayMemo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   # ========== Guest Links ==========
 
@@ -1764,6 +1829,65 @@ components:
         characterName:
           type: string
           maxLength: 50
+
+    # ---------- PlayMemo（卓のプレイメモ） ----------
+
+    GameSessionPlayMemoBase:
+      type: object
+      description: |
+        参加者が自分用に残すプレイの記録（game_session.game_session_play_memos）の共通フィールド。
+        1メンバー1メモ（member_id に unique 制約）。メンバーが退出するとメモも消える。
+        updatedAt の型だけが用途によって異なるため、ここから除いている。
+        レスポンスの参照には GameSessionPlayMemo / MyGameSessionPlayMemo を使い、
+        このスキーマを直接参照しない。
+      required: [memberId, body, sharedAt]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: メモの所有者（game_session_members.id）
+        body:
+          type: string
+          maxLength: 5000
+          description: 本文。空文字を許容する
+        sharedAt:
+          type: [string, 'null']
+          format: date-time
+          description: 公開日時。null なら非公開
+
+    GameSessionPlayMemo:
+      allOf:
+        - $ref: '#/components/schemas/GameSessionPlayMemoBase'
+        - type: object
+          required: [updatedAt]
+          properties:
+            updatedAt:
+              type: string
+              format: date-time
+
+    MyGameSessionPlayMemo:
+      allOf:
+        - $ref: '#/components/schemas/GameSessionPlayMemoBase'
+        - type: object
+          description: |
+            自分のメモのレスポンス。メモ未作成のメンバーにも空メモを返すため
+            （design-v1.2 §8）、まだ行が存在しないケースを表す updatedAt: null を許容する。
+          required: [updatedAt]
+          properties:
+            updatedAt:
+              type: [string, 'null']
+              format: date-time
+
+    UpsertGameSessionPlayMemoInput:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          maxLength: 5000
+          description: |
+            本文。空文字を許可する（本文を空にしても行を残し、公開状態を失わせないため）。
+            5000 文字を超えると 400。
 
     # ---------- AvailabilityDate（募集枠の日程調整で使用） ----------
 

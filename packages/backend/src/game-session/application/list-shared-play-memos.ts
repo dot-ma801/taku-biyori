@@ -39,7 +39,10 @@ export const listSharedPlayMemos = async (
   // 卓の閲覧制御は既存の getGameSession と同一にする（design-v1.2 §4 手順2）
   if (!fields.isPublished) {
     const hostUserId = await repo.findHostUserId(gameSessionId);
-    if (hostUserId !== userId) return { type: 'forbidden' };
+    // 未ログイン（userId === null）は決してホストになりえない。
+    // findHostUserId の戻り値は型上 null になりうるため、userId === null を先に弾かないと
+    // 「未ログイン同士の null 一致」で `hostUserId !== userId` が false になり素通りしてしまう
+    if (userId === null || hostUserId !== userId) return { type: 'forbidden' };
   }
 
   const status = getGameSessionStatus(fields, now);

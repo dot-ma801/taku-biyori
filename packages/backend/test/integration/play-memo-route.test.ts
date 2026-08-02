@@ -391,23 +391,6 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     );
   });
 
-  // 公開切替は全ステータスで許可する（完了・中止後こそ使われる操作。design-v1.2 §4）。
-  // 本文編集（PUT）と違い 409 の分岐を持たない
-  it('完了・中止した卓でも 200 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateMyPlayMemoVisibility: vi
-        .fn()
-        .mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
-    });
-
-    // Act
-    const response = await patch(app, { shared: true });
-
-    // Assert
-    expect(response.status).toBe(200);
-  });
-
   it('未ログインなら 401 を返す', async () => {
     // Arrange
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });

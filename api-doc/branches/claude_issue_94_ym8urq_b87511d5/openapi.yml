@@ -1832,12 +1832,15 @@ components:
 
     # ---------- PlayMemo（卓のプレイメモ） ----------
 
-    GameSessionPlayMemo:
+    GameSessionPlayMemoBase:
       type: object
       description: |
-        参加者が自分用に残すプレイの記録（game_session.game_session_play_memos）。
+        参加者が自分用に残すプレイの記録（game_session.game_session_play_memos）の共通フィールド。
         1メンバー1メモ（member_id に unique 制約）。メンバーが退出するとメモも消える。
-      required: [memberId, body, sharedAt, updatedAt]
+        updatedAt の型だけが用途によって異なるため、ここから除いている。
+        レスポンスの参照には GameSessionPlayMemo / MyGameSessionPlayMemo を使い、
+        このスキーマを直接参照しない。
+      required: [memberId, body, sharedAt]
       properties:
         memberId:
           type: string
@@ -1851,17 +1854,25 @@ components:
           type: [string, 'null']
           format: date-time
           description: 公開日時。null なら非公開
-        updatedAt:
-          type: string
-          format: date-time
+
+    GameSessionPlayMemo:
+      allOf:
+        - $ref: '#/components/schemas/GameSessionPlayMemoBase'
+        - type: object
+          required: [updatedAt]
+          properties:
+            updatedAt:
+              type: string
+              format: date-time
 
     MyGameSessionPlayMemo:
       allOf:
-        - $ref: '#/components/schemas/GameSessionPlayMemo'
+        - $ref: '#/components/schemas/GameSessionPlayMemoBase'
         - type: object
           description: |
             自分のメモのレスポンス。メモ未作成のメンバーにも空メモを返すため
             （design-v1.2 §8）、まだ行が存在しないケースを表す updatedAt: null を許容する。
+          required: [updatedAt]
           properties:
             updatedAt:
               type: [string, 'null']

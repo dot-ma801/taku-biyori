@@ -3,6 +3,7 @@ import {
   count,
   eq,
   exists,
+  isNotNull,
   isNull,
   or,
   sql,
@@ -14,6 +15,7 @@ import type {
   GameSessionListItem,
   GameSessionMember,
   GameSessionPlayMemo,
+  SharedGameSessionPlayMemo,
   JoinAsGuestInput,
   JoinGameSessionInput,
   UpdateGameSessionInput,
@@ -43,6 +45,8 @@ import type { GetGuestLinkRepository } from '@/game-session/application/get-gues
 import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
 import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
+import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
+import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -58,7 +62,9 @@ export type GameSessionRepository = ListGameSessionsRepository &
   GetGuestLinkRepository &
   GetGuestLinkPreviewRepository &
   GetMyPlayMemoRepository &
-  UpsertMyPlayMemoRepository;
+  UpsertMyPlayMemoRepository &
+  UpdateMyPlayMemoVisibilityRepository &
+  ListSharedPlayMemosRepository;
 
 export type GameSessionRow = {
   id: string;
@@ -666,6 +672,58 @@ export const createGameSessionRepository = (
     const row = result[0];
     if (!row) throw new Error('プレイメモの保存に失敗しました');
     return toPlayMemo(row);
+  },
+
+  async updatePlayMemoVisibility(
+    memberId: string,
+    sharedAt: Date | null,
+  ): Promise<GameSessionPlayMemo | null> {
+    // body は set に含めない。公開切替で本文を書き換えないため
+    const result = await db
+      .update(gameSessionPlayMemos)
+      .set({ sharedAt })
+      .where(eq(gameSessionPlayMemos.memberId, memberId))
+      .returning();
+
+    // 更新対象が無い＝メモ未作成。ユースケース側で 404 にする（design-v1.2 §5）
+    const row = result[0];
+    if (!row) return null;
+    return toPlayMemo(row);
+  },
+
+  async findSharedPlayMemos(
+    gameSessionId: string,
+  ): Promise<SharedGameSessionPlayMemo[]> {
+    // 絞り込みは「その卓のメンバーのメモ」かつ「公開済み」の2条件のみ。
+    // 閲覧者を条件に入れない（閲覧者による分岐を作らない。design-v1.2 §4）。
+    // 卓の紐付けはメンバー経由で辿る（メモは game_session_id を持たない）
+    const rows = await db
+      .select({
+        memberId: gameSessionPlayMemos.memberId,
+        body: gameSessionPlayMemos.body,
+        sharedAt: gameSessionPlayMemos.sharedAt,
+        updatedAt: gameSessionPlayMemos.updatedAt,
+      })
+      .from(gameSessionPlayMemos)
+      .innerJoin(
+        gameSessionMembers,
+        eq(gameSessionMembers.id, gameSessionPlayMemos.memberId),
+      )
+      .where(
+        and(
+          eq(gameSessionMembers.gameSessionId, gameSessionId),
+          isNotNull(gameSessionPlayMemos.sharedAt),
+        ),
+      )
+      .orderBy(gameSessionPlayMemos.sharedAt);
+
+    // where で公開済みに絞っているが型には反映されないため、ここでも null を落とす
+    return rows
+      .map(toPlayMemo)
+      .filter(
+        (playMemo): playMemo is SharedGameSessionPlayMemo =>
+          playMemo.sharedAt !== null,
+      );
   },
 
   async findByGuestLinkToken(token: string): Promise<GameSession | null> {

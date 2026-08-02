@@ -90,10 +90,14 @@ const router = createRouter({
   scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
 });
 
-// main.ts で initSession() を await してから mount するため、
-// 初回ナビゲーション時点でセッションの復元は完了している。
-router.beforeEach((to) => {
+// セッション復元は mount をブロックしないため、初回ナビゲーション時点では
+// まだ完了していないことがある。認証状態で判定が変わる requiresAuth のルートだけ
+// 復元の完了を待ち、それ以外は待たずに描画して初回表示を速く保つ。
+router.beforeEach(async (to) => {
   const authStore = useAuthStore();
+  if (to.meta.requiresAuth) {
+    await authStore.ensureSessionReady();
+  }
   return resolveAuthRedirect(to, authStore.isAuthenticated) ?? true;
 });
 

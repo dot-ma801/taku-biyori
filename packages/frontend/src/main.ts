@@ -15,7 +15,9 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 
-const authStore = useAuthStore();
-await authStore.initSession();
+// セッション取得はバックエンドへの通信を伴うため、await すると
+// その分だけ mount が遅れて画面が真っ白なままになる。
+// ここでは投げるだけにして、待ちが必要なルートは router のガードに任せる。
+useAuthStore().initSession();
 
 app.mount('#app');

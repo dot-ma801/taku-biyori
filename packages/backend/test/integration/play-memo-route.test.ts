@@ -6,6 +6,7 @@ import type { LobbyUseCases } from '@/lobby/application/use-cases';
 import type {
   GameSessionPlayMemo,
   MyGameSessionPlayMemo,
+  SharedGameSessionPlayMemo,
 } from '@taku-biyori/shared';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -25,12 +26,33 @@ const emptyPlayMemo: MyGameSessionPlayMemo = {
   updatedAt: null,
 };
 
+const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
+  {
+    memberId: '00000000-0000-4000-8000-000000000001',
+    body: '一人目のメモ',
+    sharedAt: '2026-08-02T10:00:00.000Z',
+    updatedAt: '2026-08-02T10:00:00.000Z',
+  },
+  {
+    memberId: '00000000-0000-4000-8000-000000000002',
+    body: '二人目のメモ',
+    sharedAt: '2026-08-02T11:00:00.000Z',
+    updatedAt: '2026-08-02T11:00:00.000Z',
+  },
+];
+
 const stubProfile = {} as unknown as ProfileUseCases;
 const stubLobby = {} as unknown as LobbyUseCases;
 
 const makeApp = (
   overrides: Partial<
-    Pick<GameSessionUseCases, 'getMyPlayMemo' | 'upsertMyPlayMemo'>
+    Pick<
+      GameSessionUseCases,
+      | 'getMyPlayMemo'
+      | 'upsertMyPlayMemo'
+      | 'updateMyPlayMemoVisibility'
+      | 'listSharedPlayMemos'
+    >
   > & {
     getSession?: () => Promise<typeof mockSession | null>;
   } = {},
@@ -42,6 +64,12 @@ const makeApp = (
     upsertMyPlayMemo:
       overrides.upsertMyPlayMemo ??
       vi.fn().mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
+    updateMyPlayMemoVisibility:
+      overrides.updateMyPlayMemoVisibility ??
+      vi.fn().mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
+    listSharedPlayMemos:
+      overrides.listSharedPlayMemos ??
+      vi.fn().mockResolvedValue({ type: 'ok', playMemos: sharedPlayMemos }),
   } as unknown as GameSessionUseCases;
 
   return createApp({
@@ -307,5 +335,304 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
 
     // Assert
     expect(response.status).toBe(400);
+  });
+});
+
+describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
+  const patch = (
+    app: ReturnType<typeof makeApp>,
+    body: unknown,
+    id = 'session-1',
+  ) =>
+    app.request(`/api/game-sessions/${id}/play-memos/me/visibility`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+  it('メンバーなら 200 で切替後のメモを返す', async () => {
+    // Arrange
+    const updateMyPlayMemoVisibility = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo });
+    const app = makeApp({ updateMyPlayMemoVisibility });
+
+    // Act
+    const response = await patch(app, { shared: true });
+    const responseBody = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(responseBody).toEqual(mockPlayMemo);
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      'session-1',
+      'user-1',
+      { shared: true },
+    );
+  });
+
+  // 公開を取りやめて非公開に戻せる（要求 §3-2）
+  it('非公開に戻す指定を受け付ける', async () => {
+    // Arrange
+    const updateMyPlayMemoVisibility = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo });
+    const app = makeApp({ updateMyPlayMemoVisibility });
+
+    // Act
+    const response = await patch(app, { shared: false });
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      'session-1',
+      'user-1',
+      { shared: false },
+    );
+  });
+
+  // 公開切替は全ステータスで許可する（完了・中止後こそ使われる操作。design-v1.2 §4）。
+  // 本文編集（PUT）と違い 409 の分岐を持たない
+  it('完了・中止した卓でも 200 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateMyPlayMemoVisibility: vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
+    });
+
+    // Act
+    const response = await patch(app, { shared: true });
+
+    // Assert
+    expect(response.status).toBe(200);
+  });
+
+  it('未ログインなら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await patch(app, { shared: true });
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('未ログインならユースケースを呼ばない', async () => {
+    // Arrange
+    const updateMyPlayMemoVisibility = vi.fn();
+    const app = makeApp({
+      updateMyPlayMemoVisibility,
+      getSession: vi.fn().mockResolvedValue(null),
+    });
+
+    // Act
+    await patch(app, { shared: true });
+
+    // Assert
+    expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  it('卓が存在しないなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateMyPlayMemoVisibility: vi
+        .fn()
+        .mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await patch(app, { shared: true }, 'nonexistent');
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  // メモ未作成のまま公開切替を呼んだ場合も 404（design-v1.2 §5）
+  it('メモ未作成なら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateMyPlayMemoVisibility: vi
+        .fn()
+        .mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await patch(app, { shared: true });
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('その卓のメンバーでないなら 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateMyPlayMemoVisibility: vi
+        .fn()
+        .mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await patch(app, { shared: true });
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('shared が無いと 400 を返す', async () => {
+    // Arrange
+    const updateMyPlayMemoVisibility = vi.fn();
+    const app = makeApp({ updateMyPlayMemoVisibility });
+
+    // Act
+    const response = await patch(app, {});
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  // 文字列の 'true' を真として通すと、誤って公開する事故につながる
+  it('真偽値でない shared なら 400 を返す', async () => {
+    // Arrange
+    const updateMyPlayMemoVisibility = vi.fn();
+    const app = makeApp({ updateMyPlayMemoVisibility });
+
+    // Act
+    const response = await patch(app, { shared: 'true' });
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  it('不正な JSON なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/play-memos/me/visibility',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: 'not json',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('GET /api/game-sessions/:id/play-memos', () => {
+  it('完了した卓の公開メモ一覧を 200 で返す', async () => {
+    // Arrange
+    const listSharedPlayMemos = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', playMemos: sharedPlayMemos });
+    const app = makeApp({ listSharedPlayMemos });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/play-memos',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(sharedPlayMemos);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith('session-1', 'user-1');
+  });
+
+  // 未ログイン・ゲストでも公開メモは読める（要求 §3-4・design-v1.2 §4）
+  it('未ログインでも 200 で公開メモ一覧を返す', async () => {
+    // Arrange
+    const listSharedPlayMemos = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', playMemos: sharedPlayMemos });
+    const app = makeApp({
+      listSharedPlayMemos,
+      getSession: vi.fn().mockResolvedValue(null),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/play-memos',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(sharedPlayMemos);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith('session-1', null);
+  });
+
+  // 完了・中止前は他人のメモを見せない（要求 §3-3）
+  it('完了前の卓では空配列を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listSharedPlayMemos: vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', playMemos: [] }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/play-memos',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([]);
+  });
+
+  it('卓が存在しないなら 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/nonexistent/play-memos',
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  // 非公開のまま中止された卓のメモが第三者に漏れないことの要（design-v1.2 §4 手順2）
+  it('非公開の卓をホスト以外が呼ぶと 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/play-memos',
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('非公開の卓を未ログインで呼んでも 403 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+      getSession: vi.fn().mockResolvedValue(null),
+    });
+
+    // Act
+    const response = await app.request(
+      '/api/game-sessions/session-1/play-memos',
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
   });
 });

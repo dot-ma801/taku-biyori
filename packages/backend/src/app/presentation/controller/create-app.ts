@@ -67,6 +67,8 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     getMyPlayMemo: options.gameSession.getMyPlayMemo,
     upsertMyPlayMemo: options.gameSession.upsertMyPlayMemo,
+    updateMyPlayMemoVisibility: options.gameSession.updateMyPlayMemoVisibility,
+    listSharedPlayMemos: options.gameSession.listSharedPlayMemos,
   });
   registerLobbyRoute(app, {
     getSession: options.getSession,

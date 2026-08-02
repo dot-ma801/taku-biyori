@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
+import { createDatabase } from '@/system/infrastructure/database/client';
 import type { Database } from '@/system/infrastructure/database/client';
 
 const now = new Date('2025-01-01T00:00:00.000Z');
@@ -800,6 +801,35 @@ const makeLimitSelectDb = (rows: unknown[]) => {
   } as unknown as Database;
 };
 
+// 実際に Drizzle が組み立てる SQL を検証するための Database。
+// insert 以降だけ本物のクエリビルダに通し、実行の直前で toSQL() を取り出して
+// 接続せずに SQL 文字列を得る（URL はダミーで、postgres.js は実行時まで接続しない）。
+const makeSqlCapturingUpsertDb = (rows: unknown[]) => {
+  const real = createDatabase('postgres://dummy@127.0.0.1:1/dummy');
+  let capturedSql = '';
+  const db = {
+    insert: (table: Parameters<Database['insert']>[0]) => ({
+      values: (values: never) => ({
+        onConflictDoUpdate: (config: never) => {
+          const query = real
+            .insert(table)
+            .values(values)
+            .onConflictDoUpdate(config);
+          capturedSql = query.toSQL().sql;
+          return { returning: () => Promise.resolve(rows) };
+        },
+      }),
+    }),
+  } as unknown as Database;
+  return {
+    db,
+    sql: () => {
+      if (!capturedSql) throw new Error('insert が呼ばれていません');
+      return capturedSql;
+    },
+  };
+};
+
 // insert(...).values(...).onConflictDoUpdate(...).returning() のチェーンをモックする。
 const makeUpsertDb = (rows: unknown[]) => {
   const onConflictDoUpdate = vi.fn().mockReturnValue({
@@ -891,6 +921,24 @@ describe('upsertPlayMemo', () => {
       sharedAt: null,
       updatedAt: '2025-01-01T00:00:00.000Z',
     });
+  });
+
+  // updated_at はスキーマの $onUpdate によって衝突更新の SET にも入る。
+  // Drizzle が $onUpdate を onConflictDoUpdate へ適用しなくなると本文だけ新しく
+  // updated_at が作成時刻のまま取り残されるため、生成 SQL で固定しておく。
+  it('衝突更新で updated_at を更新し、shared_at は更新しない', async () => {
+    // Arrange
+    const { db, sql } = makeSqlCapturingUpsertDb([mockPlayMemoRow]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.upsertPlayMemo(mockPlayMemoRow.memberId, 'メモ本文');
+
+    // Assert
+    const updateClause = sql().split('do update set')[1]!;
+    expect(updateClause).toContain('"body"');
+    expect(updateClause).toContain('"updated_at"');
+    expect(updateClause).not.toContain('"shared_at"');
   });
 
   // 本文の更新で公開状態を巻き戻さない（shared_at は set に含めない）

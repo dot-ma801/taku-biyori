@@ -6,10 +6,12 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import PlayMemoEditor from '@/features/GameSession/PlayMemo/PlayMemoEditor.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{ gameSessionId: string }>();
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const {
   gameSession,
@@ -45,13 +47,30 @@ const loadFailed = computed(
 // メモを持てない相手がこの URL を直接開いたケース（退出後・他人の卓など）。
 // 履歴を汚さないよう replace で卓詳細へ戻す。未ログインはルートガードが
 // ログインへ流すため、ここでは扱わない。
-watch([loadingDetail, gameSession], ([isLoading, session]) => {
-  if (isLoading || !session || isMyMemo.value) return;
-  void router.replace({
-    name: 'game-sessions-detail',
-    params: { gameSessionId: props.gameSessionId },
-  });
-});
+//
+// 現状は meta.requiresAuth: true によりルートガードがセッション復元を
+// 待ってから入るため偶然成立しているが、design-v1.2 §6 は公開メモの閲覧を
+// 載せる段階4 で requiresAuth を外すと明記している。外れた瞬間に
+// 「復元前 → currentUser が null → isMyMemo false」でメンバーが弾かれない
+// よう、ここでも useMyPlayMemo.fetch() と同様に復元の完了を待つ。
+// isMyMemo も watch のソースに含め、members が後から差し替わっても
+// 再評価されるようにする。
+watch(
+  () => ({
+    loading: loadingDetail.value,
+    session: gameSession.value,
+    isMine: isMyMemo.value,
+  }),
+  async ({ loading, session }) => {
+    if (loading || !session) return;
+    await authStore.ensureSessionReady();
+    if (isMyMemo.value) return;
+    void router.replace({
+      name: 'game-sessions-detail',
+      params: { gameSessionId: props.gameSessionId },
+    });
+  },
+);
 </script>
 
 <template>

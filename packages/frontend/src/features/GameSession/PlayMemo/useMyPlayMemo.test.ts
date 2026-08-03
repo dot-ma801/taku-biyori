@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ref } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
@@ -79,6 +80,18 @@ function mockCurrentUser(userId: string | null) {
 
 function setup(gameSession: GameSessionDetail | null = makeGameSession()) {
   return useMyPlayMemo(SESSION_ID, () => gameSession);
+}
+
+/**
+ * 卓詳細（マウント時にはすでに卓が届いている）と違い、メモ画面では
+ * gameSession が後から届く・参加によって後から members が更新される、
+ * という経路がある。`() => gameSession` の静的な渡し方では
+ * useMyPlayMemo 内部の watch が発火しないため、この経路を検証するには
+ * ref で渡し、テスト側で途中から値を差し替えられるようにする必要がある。
+ */
+function setupWithGameSessionRef(initial: GameSessionDetail | null = null) {
+  const gameSession = ref<GameSessionDetail | null>(initial);
+  return { ...useMyPlayMemo(SESSION_ID, gameSession), gameSession };
 }
 
 /**
@@ -261,6 +274,56 @@ describe('自動取得', () => {
     // Assert
     expect(getMyPlayMemo).not.toHaveBeenCalled();
   });
+
+  it('卓が後から届いても、その時点でメンバーなら取得する（メモ画面の経路）', async () => {
+    // Arrange
+    const { gameSession, playMemo } = setupWithGameSessionRef(null);
+    await flushPromises();
+    expect(getMyPlayMemo).not.toHaveBeenCalled();
+
+    // Act
+    gameSession.value = makeGameSession();
+    await flushPromises();
+
+    // Assert
+    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(playMemo.value).not.toBeNull();
+  });
+
+  it('メンバーのまま卓が2回差し替わっても、取得は1回で済む', async () => {
+    // Arrange
+    const { gameSession } = setupWithGameSessionRef(makeGameSession());
+    await flushPromises();
+    vi.mocked(getMyPlayMemo).mockClear();
+
+    // Act: 本文とは無関係な差し替え（isMyMemo は true のまま変化しない）
+    gameSession.value = makeGameSession({ status: GameSessionStatus.today });
+    await flushPromises();
+    gameSession.value = makeGameSession({
+      status: GameSessionStatus.confirmed,
+    });
+    await flushPromises();
+
+    // Assert: watch(isMyMemo) は値が実際に変化したときだけ発火するため、
+    // true のままの再代入では再取得が起きない
+    expect(getMyPlayMemo).not.toHaveBeenCalled();
+  });
+
+  it('参加して members に自分が加わったら取得する', async () => {
+    // Arrange: 自分がまだメンバーに含まれていない卓
+    const strangerSession = makeGameSession({ members: [] });
+    const { gameSession, playMemo } = setupWithGameSessionRef(strangerSession);
+    await flushPromises();
+    expect(getMyPlayMemo).not.toHaveBeenCalled();
+    expect(playMemo.value).toBeNull();
+
+    // Act: 参加して members に自分が加わる
+    gameSession.value = makeGameSession({ members: [makeMember()] });
+    await flushPromises();
+
+    // Assert
+    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+  });
 });
 
 describe('fetch', () => {
@@ -346,7 +409,7 @@ describe('fetch', () => {
     expect(playMemo.value).toBeNull();
   });
 
-  it('取得中は loading が true になる', async () => {
+  it('取得中は loading が true になる（通信開始前・ensureSessionReady 待ちの間も true）', async () => {
     // Arrange
     const { loading, fetch } = await setupSettled();
     let resolveFetch!: () => void;
@@ -358,8 +421,7 @@ describe('fetch', () => {
 
     // Act
     const promise = fetch();
-    // ensureSessionReady の await を挟むため、マイクロタスクを進めてから確認する
-    await flushPromises();
+    // await を挟まず、fetch() 呼び出し直後（ensureSessionReady の解決前）から true
     expect(loading.value).toBe(true);
 
     resolveFetch();

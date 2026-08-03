@@ -104,7 +104,7 @@ onBeforeRouteLeave(async () => {
       </RouterLink>
       <NotebookPen :size="18" class="head__icon" aria-hidden="true" />
       <div class="head__titles">
-        <p class="head__title">マイメモ</p>
+        <p class="head__title">プレイメモ</p>
         <p class="head__subtitle">{{ props.gameSessionTitle }}</p>
       </div>
       <span v-if="statusLabel" class="status" :class="statusVariant">

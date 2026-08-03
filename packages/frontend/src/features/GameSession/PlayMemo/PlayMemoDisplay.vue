@@ -28,7 +28,7 @@ const { playMemo, isMyMemo, showLoginPrompt, canEditBody } = useMyPlayMemo(
   <!-- 未ログイン・ゲスト。ログイン済みの非メンバーには何も出さない -->
   <BaseCard v-else-if="showLoginPrompt">
     <BaseSectionHeading level="h3" :icon="NotebookPen">
-      マイメモ
+      プレイメモ
     </BaseSectionHeading>
     <div class="prompt">
       <p class="prompt__text">メモ機能はログインユーザー限定です</p>

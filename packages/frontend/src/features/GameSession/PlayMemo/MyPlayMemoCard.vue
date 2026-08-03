@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import { NotebookPen, Lock, Eye, ChevronDown, SquarePen } from '@lucide/vue';
+import { NotebookPen, Lock, Eye, ArrowRight } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
 import { formatDateTimeShort } from '@/utils/date';
-
-/** この文字数を超えたら折りたたむ。長文でも卓詳細の縦丈を一定に保つため */
-const COLLAPSE_THRESHOLD = 140;
 
 const props = defineProps<{
   gameSessionId: string;
@@ -17,23 +13,23 @@ const props = defineProps<{
   canEditBody: boolean;
 }>();
 
-/** 折りたたみの開閉。UI の状態なのでこのコンポーネントが持つ */
-const expanded = ref(false);
-
 // 公開状態はサーバ値（shared_at の有無）から導く。
-// 切り替えの UI は段階4（#97）だが、API は既に公開状態を返すため表示は今から実値に従う。
+// 切り替えの UI はメモ画面側に置き、ここでは状態だけを見せる。
 const isShared = computed(() => !!props.playMemo?.sharedAt);
 const visibilityLabel = computed(() => (isShared.value ? '公開中' : '非公開'));
 const visibilityIcon = computed(() => (isShared.value ? Eye : Lock));
 
 const body = computed(() => props.playMemo?.body ?? '');
 const hasBody = computed(() => body.value.length > 0);
-const isCollapsible = computed(() => body.value.length > COLLAPSE_THRESHOLD);
-const isClipped = computed(() => isCollapsible.value && !expanded.value);
 
-const expandLabel = computed(() =>
-  expanded.value ? '折りたたむ' : `すべて表示（${body.value.length} 字）`,
-);
+/**
+ * 本文の要約行。全文はメモ画面で読むので、ここは固定行数で切るだけにする
+ * （長文でも卓詳細の縦丈が一定に保たれる）。
+ */
+const summary = computed(() => {
+  if (!hasBody.value) return '';
+  return `${body.value.length.toLocaleString()} 字`;
+});
 
 const updatedLabel = computed(() => {
   const updatedAt = props.playMemo?.updatedAt;
@@ -41,25 +37,38 @@ const updatedLabel = computed(() => {
   return `${formatDateTimeShort(updatedAt)} に保存`;
 });
 
-const editorRoute = computed(() => ({
+const metaLabel = computed(() =>
+  [summary.value, updatedLabel.value].filter(Boolean).join('・'),
+);
+
+const memoRoute = computed(() => ({
   name: 'game-sessions-play-memo',
   params: { gameSessionId: props.gameSessionId },
 }));
 
-const editLinkLabel = computed(() =>
-  hasBody.value ? '書く' : '最初のメモを書く',
-);
+/**
+ * 遷移先は読み書き兼用の画面なので、完了・中止後もリンクは残す
+ * （本文は編集できないが、読み返しと公開の切り替えはできる）。
+ */
+const openLabel = computed(() => {
+  if (!props.canEditBody) return '開く';
+  return hasBody.value ? '書く' : '最初のメモを書く';
+});
 
-// 完了・中止で本文が閉じることを、閉じる前から伝える（要求 §4）
-const lockNotice =
-  '卓が完了・中止すると、本文は編集できなくなります（公開・非公開の切り替えは引き続き行えます）。';
+// 完了・中止で本文が閉じることを、閉じる前から伝える（要求 §4）。
+// カードは入口なので案内は控えめに置き、強い警告はメモ画面側で出す。
+const notice = computed(() =>
+  props.canEditBody
+    ? '卓が完了・中止すると、本文は編集できなくなります（公開・非公開の切り替えは引き続き行えます）。'
+    : '卓が完了したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。',
+);
 </script>
 
 <template>
   <BaseCard>
     <div class="heading-row">
       <BaseSectionHeading level="h3" :icon="NotebookPen">
-        マイメモ
+        プレイメモ
       </BaseSectionHeading>
       <span class="visibility" :class="{ 'visibility--shared': isShared }">
         <component :is="visibilityIcon" :size="12" aria-hidden="true" />
@@ -67,39 +76,18 @@ const lockNotice =
       </span>
     </div>
 
-    <BaseAlert v-if="!canEditBody" variant="warning">
-      卓が完了したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
-    </BaseAlert>
-
-    <template v-if="hasBody">
-      <p class="body" :class="{ 'body--clipped': isClipped }">{{ body }}</p>
-      <button
-        v-if="isCollapsible"
-        type="button"
-        class="expand"
-        @click="expanded = !expanded"
-      >
-        <ChevronDown
-          :size="15"
-          class="expand__icon"
-          :class="{ 'expand__icon--open': expanded }"
-          aria-hidden="true"
-        />
-        {{ expandLabel }}
-      </button>
-    </template>
-
+    <p v-if="hasBody" class="body">{{ body }}</p>
     <p v-else class="empty">プレイ中の気づきを、自分だけのメモに残せます。</p>
 
     <div class="foot">
-      <span class="meta">{{ updatedLabel }}</span>
-      <RouterLink v-if="canEditBody" :to="editorRoute" class="edit-link">
-        <SquarePen :size="15" aria-hidden="true" />
-        {{ editLinkLabel }}
+      <span class="meta">{{ metaLabel }}</span>
+      <RouterLink :to="memoRoute" class="open-link">
+        {{ openLabel }}
+        <ArrowRight :size="15" aria-hidden="true" />
       </RouterLink>
     </div>
 
-    <p v-if="canEditBody" class="notice">{{ lockNotice }}</p>
+    <p class="notice">{{ notice }}</p>
   </BaseCard>
 </template>
 
@@ -133,44 +121,17 @@ const lockNotice =
 }
 
 .body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: var(--line-height-relaxed);
   color: var(--color-text-secondary);
-}
-
-.body--clipped {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  overflow: hidden;
-}
-
-.expand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-  padding: 0;
-
-  background: none;
-  border: none;
-  cursor: pointer;
-
-  color: var(--color-primary-text);
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-}
-
-.expand__icon {
-  transition: transform 0.2s;
-}
-
-.expand__icon--open {
-  transform: rotate(180deg);
 }
 
 .empty {
@@ -192,7 +153,7 @@ const lockNotice =
   font-size: 12px;
 }
 
-.edit-link {
+.open-link {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -209,7 +170,7 @@ const lockNotice =
   white-space: nowrap;
 }
 
-.edit-link:hover {
+.open-link:hover {
   background: var(--color-primary-strong);
   color: var(--color-on-primary);
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { NotebookPen, Lock, ChevronDown, SquarePen } from '@lucide/vue';
+import { NotebookPen, Lock, Eye, ChevronDown, SquarePen } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
@@ -19,6 +19,12 @@ const props = defineProps<{
 
 /** 折りたたみの開閉。UI の状態なのでこのコンポーネントが持つ */
 const expanded = ref(false);
+
+// 公開状態はサーバ値（shared_at の有無）から導く。
+// 切り替えの UI は段階4（#97）だが、API は既に公開状態を返すため表示は今から実値に従う。
+const isShared = computed(() => !!props.playMemo?.sharedAt);
+const visibilityLabel = computed(() => (isShared.value ? '公開中' : '非公開'));
+const visibilityIcon = computed(() => (isShared.value ? Eye : Lock));
 
 const body = computed(() => props.playMemo?.body ?? '');
 const hasBody = computed(() => body.value.length > 0);
@@ -55,9 +61,9 @@ const lockNotice =
       <BaseSectionHeading level="h3" :icon="NotebookPen">
         マイメモ
       </BaseSectionHeading>
-      <span class="visibility">
-        <Lock :size="12" aria-hidden="true" />
-        非公開
+      <span class="visibility" :class="{ 'visibility--shared': isShared }">
+        <component :is="visibilityIcon" :size="12" aria-hidden="true" />
+        {{ visibilityLabel }}
       </span>
     </div>
 
@@ -118,6 +124,12 @@ const lockNotice =
   color: var(--color-text-muted);
   font-size: 12px;
   white-space: nowrap;
+}
+
+.visibility--shared {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 
 .body {

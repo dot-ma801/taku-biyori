@@ -1,0 +1,385 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
+import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
+import { GameSessionStatus } from '@taku-biyori/shared';
+import type {
+  GameSessionDetail,
+  GameSessionMember,
+  MyGameSessionPlayMemo,
+} from '@taku-biyori/shared';
+
+vi.mock('@/api/game-session', () => ({
+  getMyPlayMemo: vi.fn(),
+}));
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: vi.fn(),
+}));
+
+import { getMyPlayMemo } from '@/api/game-session';
+import { useAuthStore } from '@/stores/auth';
+
+const SESSION_ID = 'session-1';
+const HOST_USER_ID = 'user-host';
+const MEMBER_USER_ID = 'user-member';
+const MY_MEMBER_ID = 'member-1';
+
+function makeMember(
+  overrides: Partial<GameSessionMember> = {},
+): GameSessionMember {
+  return {
+    id: MY_MEMBER_ID,
+    userId: MEMBER_USER_ID,
+    userName: 'テストユーザー',
+    guestName: null,
+    characterName: null,
+    joinedAt: '2024-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function makeGameSession(
+  overrides: Partial<GameSessionDetail> = {},
+): GameSessionDetail {
+  return {
+    id: SESSION_ID,
+    title: 'テストセッション',
+    status: GameSessionStatus.confirmed,
+    isPublished: true,
+    scheduledAt: '2026-08-01',
+    createdBy: HOST_USER_ID,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    members: [makeMember()],
+    ...overrides,
+  };
+}
+
+function makePlayMemo(
+  overrides: Partial<MyGameSessionPlayMemo> = {},
+): MyGameSessionPlayMemo {
+  return {
+    memberId: MY_MEMBER_ID,
+    body: '書斎の鍵は青木さんが持っていた',
+    sharedAt: null,
+    updatedAt: '2026-08-03T12:04:00Z',
+    ...overrides,
+  };
+}
+
+// ログインユーザーを差し替える。userId が null なら未ログイン扱い
+function mockCurrentUser(userId: string | null) {
+  vi.mocked(useAuthStore).mockReturnValue({
+    currentUser: userId === null ? null : { id: userId },
+    isAuthenticated: userId !== null,
+    ensureSessionReady: vi.fn().mockResolvedValue(undefined),
+  } as unknown as ReturnType<typeof useAuthStore>);
+}
+
+function setup(gameSession: GameSessionDetail | null = makeGameSession()) {
+  return useMyPlayMemo(SESSION_ID, () => gameSession);
+}
+
+/**
+ * 生成時の自動取得を完了させ、API モックの呼び出し履歴を消した状態で返す。
+ * fetch を明示的に呼ぶテストが、自動取得の分と混ざらないようにするためのヘルパー。
+ */
+async function setupSettled(
+  gameSession: GameSessionDetail | null = makeGameSession(),
+) {
+  const result = setup(gameSession);
+  await flushPromises();
+  vi.mocked(getMyPlayMemo).mockClear();
+  return result;
+}
+
+beforeEach(() => {
+  setActivePinia(createPinia());
+  vi.clearAllMocks();
+  mockCurrentUser(MEMBER_USER_ID);
+  vi.mocked(getMyPlayMemo).mockResolvedValue(makePlayMemo());
+});
+
+describe('isMyMemo', () => {
+  it('ログインユーザーのメンバー行があれば true', () => {
+    // Arrange & Act
+    const { isMyMemo } = setup();
+
+    // Assert
+    expect(isMyMemo.value).toBe(true);
+  });
+
+  it('ログインしていなければ false', () => {
+    // Arrange
+    mockCurrentUser(null);
+
+    // Act
+    const { isMyMemo } = setup();
+
+    // Assert
+    expect(isMyMemo.value).toBe(false);
+  });
+
+  it('ゲストしかいない卓では false（ゲストは userId = null で引き当てられない）', () => {
+    // Arrange
+    const gameSession = makeGameSession({
+      members: [
+        makeMember({ userId: null, userName: null, guestName: 'ゲスト' }),
+      ],
+    });
+
+    // Act
+    const { isMyMemo } = setup(gameSession);
+
+    // Assert
+    expect(isMyMemo.value).toBe(false);
+  });
+
+  it('ログイン済みでもメンバーでなければ false', () => {
+    // Arrange
+    mockCurrentUser('user-stranger');
+
+    // Act
+    const { isMyMemo } = setup();
+
+    // Assert
+    expect(isMyMemo.value).toBe(false);
+  });
+
+  it('卓がまだ読み込まれていなければ false', () => {
+    // Arrange & Act
+    const { isMyMemo } = setup(null);
+
+    // Assert
+    expect(isMyMemo.value).toBe(false);
+  });
+});
+
+describe('showLoginPrompt', () => {
+  it('未ログインなら true', () => {
+    // Arrange
+    mockCurrentUser(null);
+
+    // Act
+    const { showLoginPrompt } = setup();
+
+    // Assert
+    expect(showLoginPrompt.value).toBe(true);
+  });
+
+  it('ログイン済みなら（非メンバーでも）false', () => {
+    // Arrange
+    mockCurrentUser('user-stranger');
+
+    // Act
+    const { showLoginPrompt } = setup();
+
+    // Assert
+    expect(showLoginPrompt.value).toBe(false);
+  });
+});
+
+describe('canEditBody', () => {
+  it.each([
+    GameSessionStatus.draft,
+    GameSessionStatus.confirmed,
+    GameSessionStatus.today,
+  ])('メンバーかつ %s ステータスのとき true', (status) => {
+    // Arrange & Act
+    const { canEditBody } = setup(makeGameSession({ status }));
+
+    // Assert
+    expect(canEditBody.value).toBe(true);
+  });
+
+  it.each([GameSessionStatus.completed, GameSessionStatus.cancelled])(
+    '%s ステータスでは false（本文編集は閉じる）',
+    (status) => {
+      // Arrange & Act
+      const { canEditBody } = setup(makeGameSession({ status }));
+
+      // Assert
+      expect(canEditBody.value).toBe(false);
+    },
+  );
+
+  it('ホストもプレイヤーとして自分のメモを編集できる', () => {
+    // Arrange
+    mockCurrentUser(HOST_USER_ID);
+    const gameSession = makeGameSession({
+      members: [makeMember({ userId: HOST_USER_ID })],
+    });
+
+    // Act
+    const { canEditBody } = setup(gameSession);
+
+    // Assert
+    expect(canEditBody.value).toBe(true);
+  });
+
+  it('メンバーでなければ false', () => {
+    // Arrange
+    mockCurrentUser('user-stranger');
+
+    // Act
+    const { canEditBody } = setup();
+
+    // Assert
+    expect(canEditBody.value).toBe(false);
+  });
+
+  it('卓がまだ読み込まれていなければ false', () => {
+    // Arrange & Act
+    const { canEditBody } = setup(null);
+
+    // Assert
+    expect(canEditBody.value).toBe(false);
+  });
+});
+
+describe('自動取得', () => {
+  it('卓が読み込まれていれば生成時に取得する', async () => {
+    // Arrange
+    const playMemo = makePlayMemo();
+    vi.mocked(getMyPlayMemo).mockResolvedValue(playMemo);
+
+    // Act
+    const { playMemo: state } = setup();
+    await flushPromises();
+
+    // Assert
+    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(state.value).toEqual(playMemo);
+  });
+
+  it('卓がまだ読み込まれていなければ取得しない', async () => {
+    // Arrange & Act
+    setup(null);
+    await flushPromises();
+
+    // Assert
+    expect(getMyPlayMemo).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetch', () => {
+  it('メンバーなら API を呼び、取得したメモを保持する', async () => {
+    // Arrange
+    const playMemo = makePlayMemo({ body: '書き直した本文' });
+    const { playMemo: state, fetch } = await setupSettled();
+    vi.mocked(getMyPlayMemo).mockResolvedValue(playMemo);
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(state.value).toEqual(playMemo);
+  });
+
+  it('未ログインなら API を呼ばない', async () => {
+    // Arrange
+    mockCurrentUser(null);
+    const { playMemo, fetch } = await setupSettled();
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(getMyPlayMemo).not.toHaveBeenCalled();
+    expect(playMemo.value).toBeNull();
+  });
+
+  it('ログイン済みでもメンバーでなければ API を呼ばない（403 を出し続けない）', async () => {
+    // Arrange
+    mockCurrentUser('user-stranger');
+    const { fetch } = await setupSettled();
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(getMyPlayMemo).not.toHaveBeenCalled();
+  });
+
+  it('判定の前にセッション復元の完了を待つ', async () => {
+    // Arrange
+    const ensureSessionReady = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useAuthStore).mockReturnValue({
+      currentUser: { id: MEMBER_USER_ID },
+      isAuthenticated: true,
+      ensureSessionReady,
+    } as unknown as ReturnType<typeof useAuthStore>);
+    const { fetch } = await setupSettled();
+    ensureSessionReady.mockClear();
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(ensureSessionReady).toHaveBeenCalled();
+  });
+
+  it('メモが未作成でも空メモを保持する（未作成の分岐を持たない）', async () => {
+    // Arrange
+    const emptyMemo = makePlayMemo({ body: '', updatedAt: null });
+    const { playMemo, fetch } = await setupSettled();
+    vi.mocked(getMyPlayMemo).mockResolvedValue(emptyMemo);
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(playMemo.value).toEqual(emptyMemo);
+  });
+
+  it('API が失敗したら playMemo を null に戻す（セクションを閉じる）', async () => {
+    // Arrange
+    const { playMemo, fetch } = await setupSettled();
+    vi.mocked(getMyPlayMemo).mockRejectedValue(new Error('API error'));
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(playMemo.value).toBeNull();
+  });
+
+  it('取得中は loading が true になる', async () => {
+    // Arrange
+    const { loading, fetch } = await setupSettled();
+    let resolveFetch!: () => void;
+    vi.mocked(getMyPlayMemo).mockReturnValue(
+      new Promise((resolve) => {
+        resolveFetch = () => resolve(makePlayMemo());
+      }),
+    );
+
+    // Act
+    const promise = fetch();
+    // ensureSessionReady の await を挟むため、マイクロタスクを進めてから確認する
+    await flushPromises();
+    expect(loading.value).toBe(true);
+
+    resolveFetch();
+    await promise;
+
+    // Assert
+    expect(loading.value).toBe(false);
+  });
+});
+
+describe('applySaved', () => {
+  it('保存後のサーバ値で playMemo を差し替える', async () => {
+    // Arrange
+    const { playMemo, applySaved } = await setupSettled();
+    const saved = makePlayMemo({ body: '書き足した本文' });
+
+    // Act
+    applySaved(saved);
+
+    // Assert
+    expect(playMemo.value).toEqual(saved);
+  });
+});

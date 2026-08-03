@@ -72,15 +72,19 @@ export const useMyPlayMemo = (
    * 非メンバーには通信しない（403 を出し続けないため）。
    */
   async function fetch() {
-    await authStore.ensureSessionReady();
-
-    if (!isMyMemo.value) {
-      playMemo.value = null;
-      return;
-    }
-
+    // 通信を始める前から loading を立てる。ensureSessionReady() の後に立てると、
+    // 「卓が届いた直後・まだ通信を始めていない」区間で loading === false かつ
+    // playMemo === null になる窓ができ、PlayMemoView の loadFailed（読み込み
+    // 失敗 UI）が通信前から誤表示され得る。
     loading.value = true;
     try {
+      await authStore.ensureSessionReady();
+
+      if (!isMyMemo.value) {
+        playMemo.value = null;
+        return;
+      }
+
       playMemo.value = await getMyPlayMemo(gameSessionId);
     } catch {
       // 退出直後の 403 や通信エラー。トーストは出さずセクションを閉じる

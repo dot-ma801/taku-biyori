@@ -100,14 +100,21 @@ export const useMyPlayMemo = (
     playMemo.value = saved;
   }
 
-  // 卓が読み込まれた時点で取得する。卓詳細（マウント時には取得済み）と
-  // メモ画面（後から届く）のどちらの順序でも動くよう、値の到着を watch で待つ。
-  let autoFetched = false;
+  // 「自分がメモを持てる相手になったか（isMyMemo）」を監視して取得する。
+  // 卓詳細（マウント時には取得済み）とメモ画面（後から届く）のどちらの
+  // 順序でも動くよう、値の到着を watch で待つ。
+  //
+  // 「卓が届いたか」ではなく isMyMemo を監視するのがポイント。卓詳細で
+  // 「参加する」を実行した直後は gameSession はすでに届いているため、
+  // gameSession の到着だけを監視すると再取得のトリガーがない。isMyMemo は
+  // 参加で members が更新されて非メンバー→メンバーに変わったときに
+  // true になるので、そのタイミングで再取得できる。
+  // watch は値が実際に変化したときだけ発火するため、isMyMemo が true の
+  // まま卓が再取得されても余計な二重取得は起きない（明示的な抑制フラグは不要）。
   watch(
-    () => toValue(gameSession),
-    (session) => {
-      if (autoFetched || !session) return;
-      autoFetched = true;
+    isMyMemo,
+    (isMine) => {
+      if (!isMine) return;
       void fetch();
     },
     { immediate: true },

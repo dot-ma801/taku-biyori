@@ -80,6 +80,24 @@ const canSaveNow = computed(
 );
 const isSaving = computed(() => status.value === 'saving');
 
+/**
+ * 本文を読み取り専用で表示するときの内容。
+ *
+ * `draftBody` ではなくサーバ値（`props.playMemo`）を表示する。
+ * locked（409）は「保存しようとして拒否された」ケースなので、`draftBody` には
+ * サーバに保存されていない本文が残り得る。上の案内文が「最後に保存された
+ * 内容を表示しています」と言っている以上、表示もサーバ値に揃えないと
+ * ユーザーが保存済みだと誤解したまま未保存の内容を失う。
+ */
+const readonlyBody = computed(() => props.playMemo?.body ?? '');
+
+const overLimitLeaveMessage = computed(
+  () =>
+    `本文が上限（${maxLength.toLocaleString()}文字）を超えています。文字数を減らしてから離れてください。`,
+);
+const dirtyLeaveMessage =
+  '保存できていない変更があります。このページを離れると失われます。よろしいですか？';
+
 // 自動保存がある画面で毎回離脱確認を出すのは筋が悪いため、まず保存を試み、
 // 失敗したときだけ確認する。
 // NOTE: 確認 UI はプロジェクトのダイアログに寄せる余地があるが、
@@ -90,8 +108,10 @@ onBeforeRouteLeave(async () => {
   const saved = await flush();
   if (saved) return true;
 
+  // 上限超過は自動保存も止まっている状態なので、なぜ保存できないのかが
+  // 伝わるよう文言を出し分ける。
   return window.confirm(
-    '保存できていない変更があります。このページを離れると失われます。よろしいですか？',
+    isOverLimit.value ? overLimitLeaveMessage.value : dirtyLeaveMessage,
   );
 });
 </script>
@@ -125,7 +145,7 @@ onBeforeRouteLeave(async () => {
       保存できませんでした。通信を確認して、もう一度保存してください。書いた内容はこのページに残っています。
     </BaseAlert>
 
-    <p v-if="isReadOnly" class="readonly">{{ draftBody }}</p>
+    <p v-if="isReadOnly" class="readonly">{{ readonlyBody }}</p>
 
     <BaseTextArea
       v-else

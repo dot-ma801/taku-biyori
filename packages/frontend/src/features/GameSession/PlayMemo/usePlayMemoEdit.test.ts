@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ref } from 'vue';
 import {
   usePlayMemoEdit,
   AUTOSAVE_DELAY_MS,
@@ -35,6 +36,12 @@ function makePlayMemo(
   };
 }
 
+/**
+ * 本番と同じ環（save() 成功 → onSaved → 親が playMemo を差し替え → watch が
+ * 発火）を再現するため、playMemo は ref で渡し、onSaved の既定実装はその
+ * ref を更新する。静的な getter だと内部の watch が一度も発火せず、
+ * 「保存成功のたびに reset() が走って入力が消える」バグをすり抜けてしまう。
+ */
 function setup(
   opts: {
     playMemo?: MyGameSessionPlayMemo | null;
@@ -42,15 +49,30 @@ function setup(
   } = {},
 ) {
   // playMemo は null を明示的に渡すケースがあるため、?? ではなくキー有無で判定する
-  const playMemo: MyGameSessionPlayMemo | null =
+  const initial: MyGameSessionPlayMemo | null =
     'playMemo' in opts ? (opts.playMemo ?? null) : makePlayMemo();
-  return usePlayMemoEdit(SESSION_ID, () => playMemo, opts.onSaved ?? vi.fn());
+  const serverMemo = ref(initial);
+  const onSaved =
+    opts.onSaved ??
+    ((saved: MyGameSessionPlayMemo) => {
+      serverMemo.value = saved;
+    });
+
+  return {
+    ...usePlayMemoEdit(SESSION_ID, serverMemo, onSaved),
+    serverMemo,
+  };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
-  vi.mocked(upsertMyPlayMemo).mockResolvedValue(makePlayMemo());
+  // 実際の upsert は送った本文をそのまま返す（サーバは受理した内容を返す）。
+  // 送信内容と無関係な固定値を返すと、テスト側で「保存成功のエコー」と
+  // 「別内容の再取得」を区別できず、echo スキップの検証にならない。
+  vi.mocked(upsertMyPlayMemo).mockImplementation(
+    async (_gameSessionId, input) => makePlayMemo({ body: input.body }),
+  );
 });
 
 afterEach(() => {
@@ -237,7 +259,7 @@ describe('save', () => {
     let resolveSave!: () => void;
     vi.mocked(upsertMyPlayMemo).mockReturnValue(
       new Promise((resolve) => {
-        resolveSave = () => resolve(makePlayMemo());
+        resolveSave = () => resolve(makePlayMemo({ body: '書き足した本文' }));
       }),
     );
     const { status, setDraft, save } = setup();
@@ -303,6 +325,58 @@ describe('save', () => {
 
     // Assert
     expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
+  });
+
+  it('送信中に書き足した本文は、保存応答の反映（サーバ値のエコー）後も保持される', async () => {
+    // Arrange
+    let resolveSave!: () => void;
+    vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSave = () => resolve(makePlayMemo({ body: '1回目' }));
+      }),
+    );
+    const { draftBody, setDraft, save } = setup();
+    setDraft('1回目');
+
+    // Act
+    const promise = save();
+    setDraft('1回目と2回目'); // 送信中に書き足す
+    resolveSave();
+    await promise;
+
+    // Assert: onSaved → playMemo 差し替え → watch が発火しても、
+    // 自分の保存のエコーでは reset() が走らないので書き足し分が残る
+    expect(draftBody.value).toBe('1回目と2回目');
+  });
+
+  it('応答が AUTOSAVE_DELAY_MS より遅い場合、送信中の自動保存タイマー発火では PUT が2本飛ばない', async () => {
+    // Arrange
+    let resolveSave!: () => void;
+    vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSave = () => resolve(makePlayMemo({ body: '1回目' }));
+      }),
+    );
+    const { setDraft } = setup();
+    setDraft('1回目');
+
+    // Act: 自動保存タイマーで1本目が送信される（応答はまだ返らない）
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
+
+    // 送信中にユーザーが書き足す。setDraft は status を saving から dirty に
+    // 戻し、新しい自動保存タイマーを引き直す
+    setDraft('1回目と2回目');
+
+    // 1本目の応答が返るより先に、2本目のタイマーが満了する
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+
+    // Assert: status だけを見るガードなら「dirty」を見て素通りしてしまうが、
+    // inFlight を見るガードなら送信中の二重発火を防げる
+    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
+
+    // 後片付け: 1本目の応答を返し、pending な Promise を残さない
+    resolveSave();
   });
 
   it('409 なら status を locked にする（卓が完了・中止した）', async () => {
@@ -376,6 +450,29 @@ describe('flush', () => {
     expect(upsertMyPlayMemo).toHaveBeenCalledWith(SESSION_ID, {
       body: '書き足した本文',
     });
+    expect(canLeave).toBe(true);
+  });
+
+  it('自動保存が送信中でも、その完了を待ってから判定する（保存成功見込みなら true）', async () => {
+    // Arrange
+    let resolveSave!: () => void;
+    vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSave = () => resolve(makePlayMemo({ body: '書き足した本文' }));
+      }),
+    );
+    const { setDraft, save, flush } = setup();
+    setDraft('書き足した本文');
+
+    // Act: 自動保存が送信中の状態で flush する
+    const savePromise = save();
+    const flushPromise = flush();
+    resolveSave();
+    const [, canLeave] = await Promise.all([savePromise, flushPromise]);
+
+    // Assert: inFlight を待たずに isDirty だけを見ると、送信中は baseline が
+    // まだ古いままなので必ず false になってしまう。inFlight を待てば
+    // 保存の成功を反映してから正しく true と判定できる
     expect(canLeave).toBe(true);
   });
 

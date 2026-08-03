@@ -58,6 +58,18 @@ const router = createRouter({
         gameSessionId: to.params.gameSessionId,
       }),
     },
+    // プレイ中に何度も開き直すため、卓詳細を経由せず直接開ける URL を持たせる。
+    // メモは本質的にログインユーザー限定なので requiresAuth を付け、
+    // 未ログインの直アクセスはガードでログインへ流す（画面側に導線を持たせない）。
+    {
+      path: '/game-sessions/:gameSessionId/play-memo',
+      name: 'game-sessions-play-memo',
+      component: () => import('@/views/GameSession/PlayMemoView.vue'),
+      props: (to) => ({
+        gameSessionId: to.params.gameSessionId,
+      }),
+      meta: { requiresAuth: true },
+    },
     {
       path: '/profile/setting',
       name: 'profile-setting',

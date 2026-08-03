@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { formatDateShort, formatDateWithWeekday } from '@/utils/date';
+import {
+  formatDateShort,
+  formatDateTimeShort,
+  formatDateWithWeekday,
+} from '@/utils/date';
 
 describe('formatDateShort', () => {
   it('月と日を "M/D" 形式で返す', () => {
@@ -79,5 +83,43 @@ describe('formatDateWithWeekday', () => {
   it('存在しない日付（うるう年でない 2/29）は JS Date がオーバーフローして 3/1 の曜日になる', () => {
     // new Date(2026, 1, 29) → 2026-03-01（日曜）
     expect(formatDateWithWeekday('2026-02-29')).toBe('2/29（日）');
+  });
+});
+
+describe('formatDateTimeShort', () => {
+  // 実行環境のタイムゾーンに依存しないよう、ローカル時刻から ISO 文字列を作って往復させる
+  function localIso(
+    year: number,
+    month: number,
+    day: number,
+    hours: number,
+    minutes: number,
+  ): string {
+    return new Date(year, month - 1, day, hours, minutes).toISOString();
+  }
+
+  it('月日と時刻を "M/D HH:mm" 形式で返す', () => {
+    // Arrange & Act & Assert
+    expect(formatDateTimeShort(localIso(2026, 6, 10, 21, 4))).toBe(
+      '6/10 21:04',
+    );
+  });
+
+  it('月日はゼロ埋めせず、時刻はゼロ埋めする', () => {
+    // Arrange & Act & Assert
+    expect(formatDateTimeShort(localIso(2026, 1, 1, 9, 5))).toBe('1/1 09:05');
+  });
+
+  it('深夜0時をまたぐ時刻も正しく表示する', () => {
+    // Arrange & Act & Assert
+    expect(formatDateTimeShort(localIso(2026, 12, 31, 0, 0))).toBe(
+      '12/31 00:00',
+    );
+  });
+
+  it('パースできない文字列の場合は空文字を返す', () => {
+    // Arrange & Act & Assert
+    expect(formatDateTimeShort('invalid')).toBe('');
+    expect(formatDateTimeShort('')).toBe('');
   });
 });

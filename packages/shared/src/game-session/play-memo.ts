@@ -32,9 +32,12 @@ export type SharedGameSessionPlayMemo = z.infer<
 >;
 
 // 本文の上限は 5000 文字（卓の description の 1000 文字より広い。プレイ中の記録は長文になるため）。
+// UI の文字数カウンタと API のバリデーションで同じ値を使うため定数として公開する。
+export const GAME_SESSION_PLAY_MEMO_MAX_LENGTH = 5000;
+
 // 空文字の保存を許可する（本文を空にしても行を残し、公開状態を失わせない。design-v1.2 §8）
 export const UpsertGameSessionPlayMemoInputSchema = z.object({
-  body: z.string().max(5000),
+  body: z.string().max(GAME_SESSION_PLAY_MEMO_MAX_LENGTH),
 });
 export type UpsertGameSessionPlayMemoInput = z.infer<
   typeof UpsertGameSessionPlayMemoInputSchema

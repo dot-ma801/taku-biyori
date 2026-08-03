@@ -85,7 +85,7 @@ flowchart LR
 | `id` | `uuid` | PK |
 | `member_id` | `uuid` | FK → `game_session_members.id`（cascade delete）。**unique**（1メンバー1メモ） |
 | `body` | `text` | 本文。`not null default ''` |
-| `shared_at` | `timestamp?` | 公開日時。`null` なら非公開 |
+| `shared_at` | `timestamp?` | 公開日時。`null` なら非公開。**「最後に公開した時刻」**であり、再公開のたびに更新される（[§8](#8-意思決定ログ)） |
 | `created_at` | `timestamp` | |
 | `updated_at` | `timestamp` | |
 
@@ -296,7 +296,7 @@ export type UpdateGameSessionPlayMemoVisibilityInput = z.infer<
 |---|---|---|---|
 | `GET` | `/api/game-sessions/:id/play-memos/me` | 必要 | 自分のメモ取得。**未作成でも 404 にせず** `{ memberId, body: '', sharedAt: null, updatedAt: null }` を返す（`MyGameSessionPlayMemoSchema`） |
 | `PUT` | `/api/game-sessions/:id/play-memos/me` | 必要 | 本文の作成・更新（upsert）。完了・中止は `409` |
-| `PATCH` | `/api/game-sessions/:id/play-memos/me/visibility` | 必要 | 公開・非公開の切替（`{ shared: boolean }`）。全ステータスで可 |
+| `PATCH` | `/api/game-sessions/:id/play-memos/me/visibility` | 必要 | 公開・非公開の切替（`{ shared: boolean }`）。全ステータスで可。`true` は `shared_at` を**常に現在時刻で上書き**、`false` は `null` にする |
 | `GET` | `/api/game-sessions/:id/play-memos` | **公開済みは不要** | 公開メモ一覧。完了・中止 かつ 公開 のもののみ |
 
 ### バリデーション・エラー
@@ -469,6 +469,22 @@ ADR 0005 は「新しいテーブル・enum は機能ごとの PostgreSQL スキ
 要求 §7 の判断を踏襲。「公開したかどうか」だけでなく「いつ公開したか」を表現でき、
 卓の `completed_at` / `cancelled_at` と対称になる。
 「過去に一度でも公開したか」の履歴は使う予定がないため YAGNI として持たない（要求 §6）。
+
+### `shared_at` は「最後に公開した時刻」とし、再公開で上書きする
+
+`PATCH .../visibility` に `shared: true` を送ると、すでに公開済みのメモでも `shared_at` を
+現在時刻で上書きする。「初回公開時刻を保持する」案（すでに非 `null` なら更新しない）は採らない。
+
+- `shared_at` は**公開状態を表すファクト**であって、公開の履歴ではない。
+  「一度でも公開したか」の履歴を持たない方針（前項・要求 §6）と揃える
+- 「非公開に戻して書き直し、また公開した」ときに、最後に公開した時刻が出る方が読み手にとって自然。
+  初回時刻を保持すると、非公開だった期間を挟んでも古い日時が表示され続ける
+- 実装が「`shared` の値から `shared_at` を決める」だけの純粋な写像で済む。
+  現在値を読んでから分岐する実装にすると、公開切替に閲覧・判断のステップが増える
+
+副作用として、公開メモ一覧の並び順（`shared_at` 昇順）も再公開のたびに変わる。これは許容する。
+また `updated_at` は Drizzle の `$onUpdate` により、本文を変えない公開切替でも進む。
+「本文の最終更新時刻」が必要になった時点で別カラムを検討する（現時点では YAGNI）。
 
 ### 空文字のメモを許可する
 

@@ -4,6 +4,7 @@ import type { SQL } from 'drizzle-orm';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
 import { createDatabase } from '@/system/infrastructure/database/client';
 import type { Database } from '@/system/infrastructure/database/client';
+import { gameSessionMembers } from '@/system/infrastructure/database/game-session-schema';
 
 const now = new Date('2025-01-01T00:00:00.000Z');
 
@@ -963,5 +964,241 @@ describe('upsertPlayMemo', () => {
       }),
     );
     expect(result.sharedAt).toBe('2025-02-01T00:00:00.000Z');
+  });
+});
+
+// ----------------------------------------------------------------
+
+// update(...).set(...).where(...).returning() のチェーンをモックし、
+// set に渡された値をキャプチャする。
+const makeVisibilityUpdateDb = (rows: unknown[]) => {
+  const chain = {
+    set: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue(rows),
+  };
+  const db = {
+    update: vi.fn().mockReturnValue(chain),
+  } as unknown as Database;
+  return { db, set: chain.set };
+};
+
+describe('updatePlayMemoVisibility', () => {
+  it('公開日時を設定して更新後のメモを返す', async () => {
+    // Arrange
+    const sharedAt = new Date('2025-02-01T00:00:00.000Z');
+    const { db, set } = makeVisibilityUpdateDb([
+      { ...mockPlayMemoRow, sharedAt },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.updatePlayMemoVisibility(
+      mockPlayMemoRow.memberId,
+      sharedAt,
+    );
+
+    // Assert
+    expect(set).toHaveBeenCalledWith({ sharedAt });
+    expect(result).toEqual({
+      memberId: mockPlayMemoRow.memberId,
+      body: 'メモ本文',
+      sharedAt: '2025-02-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('null を渡すと非公開に戻す', async () => {
+    // Arrange
+    const { db, set } = makeVisibilityUpdateDb([mockPlayMemoRow]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.updatePlayMemoVisibility(
+      mockPlayMemoRow.memberId,
+      null,
+    );
+
+    // Assert
+    expect(set).toHaveBeenCalledWith({ sharedAt: null });
+    expect(result?.sharedAt).toBeNull();
+  });
+
+  // 公開切替で本文を書き換えない（本文は PUT .../play-memos/me の責務）
+  it('本文を更新しない', async () => {
+    // Arrange
+    const { db, set } = makeVisibilityUpdateDb([mockPlayMemoRow]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.updatePlayMemoVisibility(mockPlayMemoRow.memberId, null);
+
+    // Assert
+    expect(set).toHaveBeenCalledWith(
+      expect.not.objectContaining({ body: expect.anything() }),
+    );
+  });
+
+  // メモ未作成のまま公開切替を呼ぶと更新対象が無い（ユースケース側で 404 になる）
+  it('更新対象が無ければ null を返す', async () => {
+    // Arrange
+    const { db } = makeVisibilityUpdateDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.updatePlayMemoVisibility(
+      mockPlayMemoRow.memberId,
+      new Date(),
+    );
+
+    // Assert
+    expect(result).toBeNull();
+  });
+});
+
+// ----------------------------------------------------------------
+
+// select(...).from(...).innerJoin(...).where(...).orderBy() のチェーンをモックし、
+// innerJoin・where に渡された引数をキャプチャして SQL 文字列に変換して検証する。
+const makeInnerJoinSelectDb = (rows: unknown[]) => {
+  let capturedWhere: SQL | undefined;
+  let capturedJoinTable: unknown;
+  let capturedJoinCondition: SQL | undefined;
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockImplementation((table: unknown, condition: SQL) => {
+      capturedJoinTable = table;
+      capturedJoinCondition = condition;
+      return chain;
+    }),
+    where: vi.fn().mockImplementation((condition: SQL) => {
+      capturedWhere = condition;
+      return chain;
+    }),
+    orderBy: vi.fn().mockResolvedValue(rows),
+  };
+  const db = {
+    select: vi.fn().mockReturnValue(chain),
+  } as unknown as Database;
+  return {
+    db,
+    whereSql: () => {
+      if (!capturedWhere) throw new Error('where が呼ばれていません');
+      return new PgDialect().sqlToQuery(capturedWhere).sql;
+    },
+    whereParams: () => {
+      if (!capturedWhere) throw new Error('where が呼ばれていません');
+      return new PgDialect().sqlToQuery(capturedWhere).params;
+    },
+    joinTable: () => {
+      if (!capturedJoinTable) throw new Error('innerJoin が呼ばれていません');
+      return capturedJoinTable;
+    },
+    joinConditionSql: () => {
+      if (!capturedJoinCondition) {
+        throw new Error('innerJoin が呼ばれていません');
+      }
+      return new PgDialect().sqlToQuery(capturedJoinCondition).sql;
+    },
+  };
+};
+
+describe('findSharedPlayMemos', () => {
+  it('公開済みメモを SharedGameSessionPlayMemo に変換して返す', async () => {
+    // Arrange
+    const sharedAt = new Date('2025-02-01T00:00:00.000Z');
+    const { db } = makeInnerJoinSelectDb([{ ...mockPlayMemoRow, sharedAt }]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(result).toEqual([
+      {
+        memberId: mockPlayMemoRow.memberId,
+        body: 'メモ本文',
+        sharedAt: '2025-02-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    ]);
+  });
+
+  // 非公開メモの漏洩を防ぐ要（shared_at is not null を DB 側で絞る）
+  it('卓の絞り込みと shared_at の非 null を where に含める', async () => {
+    // Arrange
+    const { db, whereSql } = makeInnerJoinSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    const sql = whereSql();
+    expect(sql).toContain('"game_session_id"');
+    expect(sql).toContain('"shared_at" is not null');
+  });
+
+  // where の game_session_id が実際に引数の gameSessionId に束縛されていることを確認する。
+  // toContain のカラム名検証だけでは、束縛値が別の値でも通ってしまう
+  it('where の束縛値に引数の gameSessionId が渡っている', async () => {
+    // Arrange
+    const { db, whereParams } = makeInnerJoinSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(whereParams()).toContain(mockSessionRow.id);
+  });
+
+  // where の絞り込みは game_session_members.game_session_id を前提にしているため、
+  // JOIN 条件（memberId で play_memos と members を結ぶ）が正しいことが前提になる。
+  // innerJoin の引数を捨てるモックだと、結合条件を書き換えてもテストが緑のままになる
+  it('game_session_members を memberId で結合する', async () => {
+    // Arrange
+    const { db, joinTable, joinConditionSql } = makeInnerJoinSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(joinTable()).toBe(gameSessionMembers);
+    const sql = joinConditionSql();
+    expect(sql).toContain('"game_session_members"."id"');
+    expect(sql).toContain('"game_session_play_memos"."member_id"');
+  });
+
+  it('公開済みメモが無ければ空配列を返す', async () => {
+    // Arrange
+    const { db } = makeInnerJoinSelectDb([]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(result).toEqual([]);
+  });
+
+  // 実装の .filter((playMemo) => playMemo.sharedAt !== null) が実際に動くことを保証する。
+  // モック行がすべて sharedAt 非 null だと、この filter を削除してもテストが緑のままになる
+  it('sharedAt が null の行は結果から除外する（DB 側の絞り込みに加えた二重の防波堤）', async () => {
+    // Arrange
+    const sharedAt = new Date('2025-02-01T00:00:00.000Z');
+    const { db } = makeInnerJoinSelectDb([
+      { ...mockPlayMemoRow, memberId: 'shared-member', sharedAt },
+      { ...mockPlayMemoRow, memberId: 'unshared-member', sharedAt: null },
+    ]);
+    const repo = createGameSessionRepository(db);
+
+    // Act
+    const result = await repo.findSharedPlayMemos(mockSessionRow.id);
+
+    // Assert
+    expect(result).toHaveLength(1);
+    expect(result[0]?.memberId).toBe('shared-member');
   });
 });

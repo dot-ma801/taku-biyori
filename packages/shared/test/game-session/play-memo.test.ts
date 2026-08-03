@@ -4,6 +4,7 @@ import {
   GameSessionPlayMemoSchema,
   MyGameSessionPlayMemoSchema,
   SharedGameSessionPlayMemoSchema,
+  UpdateGameSessionPlayMemoVisibilityInputSchema,
   UpsertGameSessionPlayMemoInputSchema,
 } from '@/game-session/play-memo';
 import { GameSessionStatus } from '@/game-session';
@@ -139,5 +140,57 @@ describe('MyGameSessionPlayMemoSchema', () => {
 
     // Assert
     expect(result.success).toBe(true);
+  });
+});
+
+describe('UpdateGameSessionPlayMemoVisibilityInputSchema', () => {
+  it('公開する指定（shared: true）を受け付ける', () => {
+    // Arrange
+    const input = { shared: true };
+
+    // Act
+    const result =
+      UpdateGameSessionPlayMemoVisibilityInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  // 公開を取りやめて非公開に戻せる（要求 §3-2）
+  it('非公開に戻す指定（shared: false）を受け付ける', () => {
+    // Arrange
+    const input = { shared: false };
+
+    // Act
+    const result =
+      UpdateGameSessionPlayMemoVisibilityInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('shared が無いと拒否する', () => {
+    // Arrange
+    const input = {};
+
+    // Act
+    const result =
+      UpdateGameSessionPlayMemoVisibilityInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  // 文字列の 'true' を真として通すと、誤って公開する事故につながる
+  it('真偽値でない shared を拒否する', () => {
+    // Arrange
+    const input = { shared: 'true' };
+
+    // Act
+    const result =
+      UpdateGameSessionPlayMemoVisibilityInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
   });
 });

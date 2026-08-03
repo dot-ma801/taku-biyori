@@ -51,6 +51,8 @@ export {
   type SharedGameSessionPlayMemo,
   UpsertGameSessionPlayMemoInputSchema,
   type UpsertGameSessionPlayMemoInput,
+  UpdateGameSessionPlayMemoVisibilityInputSchema,
+  type UpdateGameSessionPlayMemoVisibilityInput,
   canViewSharedPlayMemos,
 } from './game-session/play-memo.js';
 export {

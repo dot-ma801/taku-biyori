@@ -40,6 +40,16 @@ export type UpsertGameSessionPlayMemoInput = z.infer<
   typeof UpsertGameSessionPlayMemoInputSchema
 >;
 
+// 公開・非公開の切替は全ステータスで許可するため、ステータスに関する入力は持たない
+// （切替がステータス非依存であることを、入力に持たせないことで表現する。design-v1.2 §4）
+export const UpdateGameSessionPlayMemoVisibilityInputSchema = z.object({
+  /** true で公開（shared_at を現在時刻に）、false で非公開（shared_at を null に） */
+  shared: z.boolean(),
+});
+export type UpdateGameSessionPlayMemoVisibilityInput = z.infer<
+  typeof UpdateGameSessionPlayMemoVisibilityInputSchema
+>;
+
 /**
  * 他メンバーの公開メモを閲覧できるステータスかどうか。
  *

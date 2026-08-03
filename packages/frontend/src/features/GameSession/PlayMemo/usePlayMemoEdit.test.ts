@@ -1,21 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
-import {
-  usePlayMemoEdit,
-  AUTOSAVE_DELAY_MS,
-} from '@/features/GameSession/PlayMemo/usePlayMemoEdit';
+import { usePlayMemoEdit } from '@/features/GameSession/PlayMemo/usePlayMemoEdit';
 import { GAME_SESSION_PLAY_MEMO_MAX_LENGTH } from '@taku-biyori/shared';
 import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   upsertMyPlayMemo: vi.fn(),
 }));
-
-// composable を component 外で呼ぶため onUnmounted は no-op にする
-vi.mock('vue', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('vue')>();
-  return { ...actual, onUnmounted: vi.fn() };
-});
 
 import { upsertMyPlayMemo } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
@@ -66,17 +57,12 @@ function setup(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.useFakeTimers();
   // 実際の upsert は送った本文をそのまま返す（サーバは受理した内容を返す）。
   // 送信内容と無関係な固定値を返すと、テスト側で「保存成功のエコー」と
   // 「別内容の再取得」を区別できず、echo スキップの検証にならない。
   vi.mocked(upsertMyPlayMemo).mockImplementation(
     async (_gameSessionId, input) => makePlayMemo({ body: input.body }),
   );
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 describe('ドラフトの初期化', () => {
@@ -159,57 +145,28 @@ describe('setDraft', () => {
   });
 });
 
-describe('自動保存', () => {
-  it('入力が止まってから AUTOSAVE_DELAY_MS 後に保存する', async () => {
+describe('入力しただけでは保存しない', () => {
+  it('setDraft を呼んでも API を呼ばない（自動保存はしない）', () => {
     // Arrange
     const { setDraft } = setup();
 
     // Act
     setDraft('書き足した本文');
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
 
     // Assert
-    expect(upsertMyPlayMemo).toHaveBeenCalledWith(SESSION_ID, {
-      body: '書き足した本文',
-    });
+    expect(upsertMyPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('入力が続いている間は保存しない（タイマーを引き直す）', async () => {
+  it('入力を繰り返しても API を呼ばない', () => {
     // Arrange
     const { setDraft } = setup();
 
     // Act
     setDraft('あ');
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS - 500);
     setDraft('あい');
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS - 500);
+    setDraft('あいう');
 
     // Assert
-    expect(upsertMyPlayMemo).not.toHaveBeenCalled();
-  });
-
-  it('変更が無ければ保存しない', async () => {
-    // Arrange
-    const { setDraft } = setup();
-
-    // Act
-    setDraft(SERVER_BODY);
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
-
-    // Assert
-    expect(upsertMyPlayMemo).not.toHaveBeenCalled();
-  });
-
-  it('上限を超えている間は保存しない', async () => {
-    // Arrange
-    const { setDraft, isOverLimit } = setup();
-
-    // Act
-    setDraft('あ'.repeat(GAME_SESSION_PLAY_MEMO_MAX_LENGTH + 1));
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
-
-    // Assert
-    expect(isOverLimit.value).toBe(true);
     expect(upsertMyPlayMemo).not.toHaveBeenCalled();
   });
 });
@@ -276,7 +233,7 @@ describe('save', () => {
     expect(status.value).toBe('saved');
   });
 
-  it('送信中に書き足された分は、保存後にもう一度予約する', async () => {
+  it('送信中に書き足された分は未保存のまま残る（勝手に送らない）', async () => {
     // Arrange
     let resolveSave!: () => void;
     vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
@@ -284,7 +241,7 @@ describe('save', () => {
         resolveSave = () => resolve(makePlayMemo({ body: '1回目' }));
       }),
     );
-    const { status, setDraft, save } = setup();
+    const { status, isDirty, setDraft, save } = setup();
     setDraft('1回目');
 
     // Act
@@ -293,17 +250,10 @@ describe('save', () => {
     resolveSave();
     await promise;
 
-    // Assert
+    // Assert: 書き足した分は未保存。ユーザーがもう一度保存するまで送らない
     expect(status.value).toBe('dirty');
-
-    // 予約された2回目の保存が走る
-    vi.mocked(upsertMyPlayMemo).mockResolvedValue(
-      makePlayMemo({ body: '1回目と2回目' }),
-    );
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
-    expect(upsertMyPlayMemo).toHaveBeenLastCalledWith(SESSION_ID, {
-      body: '1回目と2回目',
-    });
+    expect(isDirty.value).toBe(true);
+    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
   });
 
   it('二重送信を防ぐ（saving 中の再呼び出しは無視する）', async () => {
@@ -349,7 +299,7 @@ describe('save', () => {
     expect(draftBody.value).toBe('1回目と2回目');
   });
 
-  it('応答が AUTOSAVE_DELAY_MS より遅い場合、送信中の自動保存タイマー発火では PUT が2本飛ばない', async () => {
+  it('送信中に書き足してから再度保存しても PUT は2本飛ばない', async () => {
     // Arrange
     let resolveSave!: () => void;
     vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
@@ -357,26 +307,20 @@ describe('save', () => {
         resolveSave = () => resolve(makePlayMemo({ body: '1回目' }));
       }),
     );
-    const { setDraft } = setup();
+    const { setDraft, save } = setup();
     setDraft('1回目');
 
-    // Act: 自動保存タイマーで1本目が送信される（応答はまだ返らない）
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
-    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
-
-    // 送信中にユーザーが書き足す。setDraft は status を saving から dirty に
-    // 戻し、新しい自動保存タイマーを引き直す
+    // Act: 1本目が送信中のまま書き足し、保存ボタンをもう一度押す
+    const first = save();
     setDraft('1回目と2回目');
+    const second = save();
 
-    // 1本目の応答が返るより先に、2本目のタイマーが満了する
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
-
-    // Assert: status だけを見るガードなら「dirty」を見て素通りしてしまうが、
-    // inFlight を見るガードなら送信中の二重発火を防げる
-    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
-
-    // 後片付け: 1本目の応答を返し、pending な Promise を残さない
     resolveSave();
+    await Promise.all([first, second]);
+
+    // Assert: status だけを見るガードなら、setDraft が saving を dirty に
+    // 戻すため素通りしてしまう。inFlight を見るガードなら防げる
+    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
   });
 
   it('409 なら status を locked にする（卓が完了・中止した）', async () => {
@@ -407,111 +351,70 @@ describe('save', () => {
     expect(isDirty.value).toBe(true);
   });
 
-  it('失敗後に入力を再開すると自動保存をやり直す', async () => {
+  it('失敗後にもう一度 save を呼べば再送する', async () => {
     // Arrange
     vi.mocked(upsertMyPlayMemo).mockRejectedValueOnce(new Error('network'));
-    const { setDraft, save } = setup();
-    setDraft('1回目');
+    const { status, setDraft, save } = setup();
+    setDraft('書き足した本文');
+    await save();
+    expect(status.value).toBe('failed');
+
+    // Act
     await save();
 
-    // Act
-    setDraft('1回目と2回目');
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
-
     // Assert
-    expect(upsertMyPlayMemo).toHaveBeenLastCalledWith(SESSION_ID, {
-      body: '1回目と2回目',
-    });
-  });
-});
-
-describe('flush', () => {
-  it('未保存が無ければ通信せず true を返す', async () => {
-    // Arrange
-    const { flush } = setup();
-
-    // Act
-    const canLeave = await flush();
-
-    // Assert
-    expect(canLeave).toBe(true);
-    expect(upsertMyPlayMemo).not.toHaveBeenCalled();
+    expect(upsertMyPlayMemo).toHaveBeenCalledTimes(2);
+    expect(status.value).toBe('saved');
   });
 
-  it('未保存があれば保存してから true を返す', async () => {
+  it('上限を超えていれば保存しない', async () => {
     // Arrange
-    const { setDraft, flush } = setup();
-    setDraft('書き足した本文');
-
-    // Act
-    const canLeave = await flush();
-
-    // Assert
-    expect(upsertMyPlayMemo).toHaveBeenCalledWith(SESSION_ID, {
-      body: '書き足した本文',
-    });
-    expect(canLeave).toBe(true);
-  });
-
-  it('自動保存が送信中でも、その完了を待ってから判定する（保存成功見込みなら true）', async () => {
-    // Arrange
-    let resolveSave!: () => void;
-    vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveSave = () => resolve(makePlayMemo({ body: '書き足した本文' }));
-      }),
-    );
-    const { setDraft, save, flush } = setup();
-    setDraft('書き足した本文');
-
-    // Act: 自動保存が送信中の状態で flush する
-    const savePromise = save();
-    const flushPromise = flush();
-    resolveSave();
-    const [, canLeave] = await Promise.all([savePromise, flushPromise]);
-
-    // Assert: inFlight を待たずに isDirty だけを見ると、送信中は baseline が
-    // まだ古いままなので必ず false になってしまう。inFlight を待てば
-    // 保存の成功を反映してから正しく true と判定できる
-    expect(canLeave).toBe(true);
-  });
-
-  it('保存に失敗したら false を返す（離脱の確認は呼び出し側に委ねる）', async () => {
-    // Arrange
-    vi.mocked(upsertMyPlayMemo).mockRejectedValue(new Error('network'));
-    const { setDraft, flush } = setup();
-    setDraft('書き足した本文');
-
-    // Act
-    const canLeave = await flush();
-
-    // Assert
-    expect(canLeave).toBe(false);
-  });
-
-  it('409 で本文が閉じた場合は true を返す（再試行しても通らないため）', async () => {
-    // Arrange
-    vi.mocked(upsertMyPlayMemo).mockRejectedValue(new ApiError(409, 'locked'));
-    const { setDraft, flush } = setup();
-    setDraft('書き足した本文');
-
-    // Act
-    const canLeave = await flush();
-
-    // Assert
-    expect(canLeave).toBe(true);
-  });
-
-  it('上限超過なら保存せず false を返す', async () => {
-    // Arrange
-    const { setDraft, flush } = setup();
+    const { setDraft, isOverLimit, save } = setup();
     setDraft('あ'.repeat(GAME_SESSION_PLAY_MEMO_MAX_LENGTH + 1));
 
     // Act
-    const canLeave = await flush();
+    await save();
 
     // Assert
-    expect(canLeave).toBe(false);
+    expect(isOverLimit.value).toBe(true);
     expect(upsertMyPlayMemo).not.toHaveBeenCalled();
+  });
+});
+
+describe('未保存の検知（離脱警告の判定材料）', () => {
+  it('保存前は isDirty が true のまま', () => {
+    // Arrange
+    const { isDirty, setDraft } = setup();
+
+    // Act
+    setDraft('書き足した本文');
+
+    // Assert
+    expect(isDirty.value).toBe(true);
+  });
+
+  it('保存に成功すると isDirty が false になる', async () => {
+    // Arrange
+    const { isDirty, setDraft, save } = setup();
+    setDraft('書き足した本文');
+
+    // Act
+    await save();
+
+    // Assert
+    expect(isDirty.value).toBe(false);
+  });
+
+  it('保存に失敗したら isDirty は true のまま（離脱時に警告できる）', async () => {
+    // Arrange
+    vi.mocked(upsertMyPlayMemo).mockRejectedValue(new Error('network'));
+    const { isDirty, setDraft, save } = setup();
+    setDraft('書き足した本文');
+
+    // Act
+    await save();
+
+    // Assert
+    expect(isDirty.value).toBe(true);
   });
 });

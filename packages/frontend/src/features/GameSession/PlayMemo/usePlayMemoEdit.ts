@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, toValue, watch } from 'vue';
+import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
   type MyGameSessionPlayMemo,
@@ -7,17 +7,14 @@ import {
 import { upsertMyPlayMemo } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 
-/** 自動保存までの待ち時間（ミリ秒）。手が止まってから送る */
-export const AUTOSAVE_DELAY_MS = 3000;
-
 /**
  * 保存状態。エディタのヘッダーに常時表示する。
  *
  * - `idle`: 未編集（ドラフトがサーバ値と一致）
- * - `dirty`: 未保存の変更あり（デバウンス待ち）
+ * - `dirty`: 未保存の変更あり
  * - `saving`: 送信中
  * - `saved`: 保存済み
- * - `failed`: 保存に失敗（ドラフトは保持。入力の再開か「もう一度保存」で再試行する）
+ * - `failed`: 保存に失敗（ドラフトは保持。「もう一度保存」で再試行する）
  * - `locked`: 卓が完了・中止して本文編集が閉じた（409）
  */
 export type PlayMemoSaveStatus =
@@ -29,9 +26,11 @@ export type PlayMemoSaveStatus =
   | 'locked';
 
 /**
- * プレイメモの編集ドラフトと自動保存を受け持つ composable。
+ * プレイメモの編集ドラフトを受け持つ composable。
  *
- * 3〜4時間書き続ける前提のため、保存の主役はボタンではなくデバウンス自動保存。
+ * 保存は明示的な操作のみ（自動保存はしない）。未保存のまま離脱しようとしたときの
+ * 警告は呼び出し側が `isDirty` を見て出す。
+ *
  * ドラフト（draftBody / baseline）はこの composable が `ref()` で宣言する所有者なので、
  * 内部で `.value =` してよい（CLAUDE.md の例外）。サーバ値は所有せず getter で読む。
  */
@@ -48,7 +47,6 @@ export const usePlayMemoEdit = (
   const baseline = ref('');
   const status = ref<PlayMemoSaveStatus>('idle');
 
-  let timer: ReturnType<typeof setTimeout> | null = null;
   // 送信中かどうかは status ではなく専用のフラグで持つ。
   // status は setDraft が dirty/idle に上書きするため、二重送信ガードに使えない
   let inFlight: Promise<void> | null = null;
@@ -59,18 +57,11 @@ export const usePlayMemoEdit = (
     () => length.value > GAME_SESSION_PLAY_MEMO_MAX_LENGTH,
   );
 
-  function cancelTimer() {
-    if (timer === null) return;
-    clearTimeout(timer);
-    timer = null;
-  }
-
   /**
    * サーバ値からドラフトを作り直す。
    * 本文は文字列なので代入がそのままコピーになる（deepcopy は不要）。
    */
   function reset() {
-    cancelTimer();
     const body = toValue(playMemo)?.body ?? '';
     baseline.value = body;
     draftBody.value = body;
@@ -83,7 +74,7 @@ export const usePlayMemoEdit = (
   // ただし自分が save() した結果が onSaved 経由で反映される「エコー」では
   // 作り直してはいけない。save() 成功 → onSaved → 親が playMemo を差し替え →
   // この watch が発火、という環になっているため、無条件に reset() すると
-  // 送信中に書き足した本文とタイマーが破棄されてしまう（入力が消える）。
+  // 送信中に書き足した本文が破棄されてしまう（入力が消える）。
   // 届いたサーバ値の body が baseline と一致する＝自分の保存の反映なので、
   // その場合だけ reset をスキップする。
   watch(
@@ -95,22 +86,13 @@ export const usePlayMemoEdit = (
     { immediate: true },
   );
 
-  function scheduleAutoSave() {
-    cancelTimer();
-    if (!isDirty.value || isOverLimit.value) return;
-    timer = setTimeout(() => {
-      void save();
-    }, AUTOSAVE_DELAY_MS);
-  }
-
-  /** ドラフトを更新し、自動保存のタイマーを引き直す */
+  /** ドラフトを更新する */
   function setDraft(value: string) {
     // 本文が閉じたあとの入力は受け付けない（409 を繰り返さない）
     if (status.value === 'locked') return;
 
     draftBody.value = value;
     status.value = isDirty.value ? 'dirty' : 'idle';
-    scheduleAutoSave();
   }
 
   /**
@@ -121,14 +103,13 @@ export const usePlayMemoEdit = (
    *
    * 二重送信ガードは `status` ではなく `inFlight` を見る。`setDraft` が
    * `status` を dirty/idle に上書きするため、`status === 'saving'` は
-   * 送信中に1文字でも打たれると素通りしてしまう（応答が遅いと PUT が2本飛ぶ）。
+   * 送信中に1文字でも打たれると素通りしてしまう。
    */
   async function save(): Promise<void> {
     if (inFlight) return inFlight;
     if (status.value === 'locked') return;
     if (!isDirty.value || isOverLimit.value) return;
 
-    cancelTimer();
     // 送信中に書き足された分と取り違えないよう、送った本文を控えておく
     const sending = draftBody.value;
     status.value = 'saving';
@@ -139,13 +120,9 @@ export const usePlayMemoEdit = (
         baseline.value = sending;
         onSaved(saved);
 
-        if (isDirty.value) {
-          // 送信中に書き足されていた。続きをもう一度予約する
-          status.value = 'dirty';
-          scheduleAutoSave();
-        } else {
-          status.value = 'saved';
-        }
+        // 送信中に書き足されていれば未保存のまま残る。自動保存はしないので、
+        // ユーザーがもう一度保存するまで dirty のままにしておく
+        status.value = isDirty.value ? 'dirty' : 'saved';
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
           // 書いている最中にホストが卓を完了・中止した。仕様どおりのエラーなので
@@ -153,8 +130,7 @@ export const usePlayMemoEdit = (
           status.value = 'locked';
           return;
         }
-        // 通信エラー。ドラフトは残し、予約中の自動保存だけ落とす。
-        // 入力が再開されれば scheduleAutoSave がやり直すので、復帰は自然に起きる
+        // 通信エラー。ドラフトは残し、明示的な再保存に委ねる
         status.value = 'failed';
       } finally {
         inFlight = null;
@@ -165,28 +141,6 @@ export const usePlayMemoEdit = (
     return request;
   }
 
-  /**
-   * 離脱前に未保存を送り切る。離脱してよいかを返す。
-   *
-   * 自動保存がある画面で毎回確認ダイアログを出すのは筋が悪いため、
-   * まず保存を試み、失敗したときだけ呼び出し側に確認を委ねる。
-   */
-  async function flush(): Promise<boolean> {
-    cancelTimer();
-    // 進行中の自動保存を待ってから判定する。待たないと、送信中は baseline が
-    // まだ更新されておらず isDirty が true のままなので、成功見込みでも
-    // 必ず離脱確認が出てしまう（design-v1.2 §8「まず保存を試み、失敗した
-    // ときだけ確認する」に反する）。
-    if (inFlight) await inFlight;
-    if (!isDirty.value) return true;
-    if (isOverLimit.value) return false;
-
-    await save();
-    return !isDirty.value || status.value === 'locked';
-  }
-
-  onUnmounted(cancelTimer);
-
   return {
     draftBody,
     status,
@@ -196,6 +150,5 @@ export const usePlayMemoEdit = (
     maxLength: GAME_SESSION_PLAY_MEMO_MAX_LENGTH,
     setDraft,
     save,
-    flush,
   };
 };

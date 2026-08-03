@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { RouterLink, onBeforeRouteLeave } from 'vue-router';
 import { ArrowLeft, Check, NotebookPen } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
@@ -29,7 +29,6 @@ const {
   maxLength,
   setDraft,
   save,
-  flush,
 } = usePlayMemoEdit(
   props.gameSessionId,
   () => props.playMemo,
@@ -49,7 +48,7 @@ const statusLabel = computed(() => {
   if (isReadOnly.value) return '';
   const labels: Record<typeof status.value, string> = {
     idle: '',
-    dirty: '編集中…',
+    dirty: '未保存の変更があります',
     saving: '保存しています…',
     saved: '保存しました',
     failed: '保存できませんでした',
@@ -93,26 +92,41 @@ const readonlyBody = computed(() => props.playMemo?.body ?? '');
 
 const overLimitLeaveMessage = computed(
   () =>
-    `本文が上限（${maxLength.toLocaleString()}文字）を超えています。文字数を減らしてから離れてください。`,
+    `本文が上限（${maxLength.toLocaleString()}文字）を超えているため保存できません。このページを離れると変更は失われます。よろしいですか？`,
 );
 const dirtyLeaveMessage =
-  '保存できていない変更があります。このページを離れると失われます。よろしいですか？';
+  '保存していない変更があります。このページを離れると失われます。よろしいですか？';
 
-// 自動保存がある画面で毎回離脱確認を出すのは筋が悪いため、まず保存を試み、
-// 失敗したときだけ確認する。
+/** 未保存の変更を抱えたまま離れようとしているか */
+const hasUnsavedChanges = computed(() => !isReadOnly.value && isDirty.value);
+
+// 保存は明示的な操作のみなので、未保存のまま離れようとしたら必ず確認する。
 // NOTE: 確認 UI はプロジェクトのダイアログに寄せる余地があるが、
 //       ナビゲーションガードの中で解決を待つ必要があるため今は confirm を使う。
-onBeforeRouteLeave(async () => {
-  if (isReadOnly.value) return true;
+onBeforeRouteLeave(() => {
+  if (!hasUnsavedChanges.value) return true;
 
-  const saved = await flush();
-  if (saved) return true;
-
-  // 上限超過は自動保存も止まっている状態なので、なぜ保存できないのかが
+  // 上限超過は保存ボタンも押せない状態なので、なぜ保存できないのかが
   // 伝わるよう文言を出し分ける。
   return window.confirm(
     isOverLimit.value ? overLimitLeaveMessage.value : dirtyLeaveMessage,
   );
+});
+
+// アプリ内の遷移は onBeforeRouteLeave が拾うが、リロード・タブを閉じる・
+// 外部サイトへ移動する経路は拾えないため、ブラウザ側の確認も併せて出す。
+// 文言はブラウザが固定のものを使うため、preventDefault だけ行う。
+function warnOnUnload(event: BeforeUnloadEvent) {
+  if (!hasUnsavedChanges.value) return;
+  event.preventDefault();
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', warnOnUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', warnOnUnload);
 });
 </script>
 

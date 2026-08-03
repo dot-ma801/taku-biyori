@@ -49,6 +49,9 @@ export const usePlayMemoEdit = (
   const status = ref<PlayMemoSaveStatus>('idle');
 
   let timer: ReturnType<typeof setTimeout> | null = null;
+  // 送信中かどうかは status ではなく専用のフラグで持つ。
+  // status は setDraft が dirty/idle に上書きするため、二重送信ガードに使えない
+  let inFlight: Promise<void> | null = null;
 
   const isDirty = computed(() => draftBody.value !== baseline.value);
   const length = computed(() => draftBody.value.length);
@@ -76,7 +79,21 @@ export const usePlayMemoEdit = (
 
   // 再取得でサーバ値が差し替わるとドラフトが古いまま取り残されるため作り直す
   // （CLAUDE.md「罠」）。初回のサーバ値到着もこの watch が拾う。
-  watch(() => toValue(playMemo), reset, { immediate: true });
+  //
+  // ただし自分が save() した結果が onSaved 経由で反映される「エコー」では
+  // 作り直してはいけない。save() 成功 → onSaved → 親が playMemo を差し替え →
+  // この watch が発火、という環になっているため、無条件に reset() すると
+  // 送信中に書き足した本文とタイマーが破棄されてしまう（入力が消える）。
+  // 届いたサーバ値の body が baseline と一致する＝自分の保存の反映なので、
+  // その場合だけ reset をスキップする。
+  watch(
+    () => toValue(playMemo),
+    (memo) => {
+      if ((memo?.body ?? '') === baseline.value) return;
+      reset();
+    },
+    { immediate: true },
+  );
 
   function scheduleAutoSave() {
     cancelTimer();
@@ -101,9 +118,14 @@ export const usePlayMemoEdit = (
    *
    * 送信中・変更なし・上限超過のときは何もしない。
    * 409（卓が完了・中止した）を受けたら locked に落として編集を閉じる。
+   *
+   * 二重送信ガードは `status` ではなく `inFlight` を見る。`setDraft` が
+   * `status` を dirty/idle に上書きするため、`status === 'saving'` は
+   * 送信中に1文字でも打たれると素通りしてしまう（応答が遅いと PUT が2本飛ぶ）。
    */
-  async function save() {
-    if (status.value === 'saving' || status.value === 'locked') return;
+  async function save(): Promise<void> {
+    if (inFlight) return inFlight;
+    if (status.value === 'locked') return;
     if (!isDirty.value || isOverLimit.value) return;
 
     cancelTimer();
@@ -111,29 +133,36 @@ export const usePlayMemoEdit = (
     const sending = draftBody.value;
     status.value = 'saving';
 
-    try {
-      const saved = await upsertMyPlayMemo(gameSessionId, { body: sending });
-      baseline.value = sending;
-      onSaved(saved);
+    const request = (async () => {
+      try {
+        const saved = await upsertMyPlayMemo(gameSessionId, { body: sending });
+        baseline.value = sending;
+        onSaved(saved);
 
-      if (isDirty.value) {
-        // 送信中に書き足されていた。続きをもう一度予約する
-        status.value = 'dirty';
-        scheduleAutoSave();
-      } else {
-        status.value = 'saved';
+        if (isDirty.value) {
+          // 送信中に書き足されていた。続きをもう一度予約する
+          status.value = 'dirty';
+          scheduleAutoSave();
+        } else {
+          status.value = 'saved';
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          // 書いている最中にホストが卓を完了・中止した。仕様どおりのエラーなので
+          // リトライせず読み取りへ落とす（design-v1.2 §4）
+          status.value = 'locked';
+          return;
+        }
+        // 通信エラー。ドラフトは残し、予約中の自動保存だけ落とす。
+        // 入力が再開されれば scheduleAutoSave がやり直すので、復帰は自然に起きる
+        status.value = 'failed';
+      } finally {
+        inFlight = null;
       }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // 書いている最中にホストが卓を完了・中止した。仕様どおりのエラーなので
-        // リトライせず読み取りへ落とす（design-v1.2 §4）
-        status.value = 'locked';
-        return;
-      }
-      // 通信エラー。ドラフトは残し、予約中の自動保存だけ落とす。
-      // 入力が再開されれば scheduleAutoSave がやり直すので、復帰は自然に起きる
-      status.value = 'failed';
-    }
+    })();
+
+    inFlight = request;
+    return request;
   }
 
   /**
@@ -144,6 +173,11 @@ export const usePlayMemoEdit = (
    */
   async function flush(): Promise<boolean> {
     cancelTimer();
+    // 進行中の自動保存を待ってから判定する。待たないと、送信中は baseline が
+    // まだ更新されておらず isDirty が true のままなので、成功見込みでも
+    // 必ず離脱確認が出てしまう（design-v1.2 §8「まず保存を試み、失敗した
+    // ときだけ確認する」に反する）。
+    if (inFlight) await inFlight;
     if (!isDirty.value) return true;
     if (isOverLimit.value) return false;
 

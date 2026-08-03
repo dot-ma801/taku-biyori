@@ -3,6 +3,7 @@ defineOptions({ name: 'GameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
+import PlayMemoDisplay from '@/features/GameSession/PlayMemo/PlayMemoDisplay.vue';
 import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
@@ -67,6 +68,7 @@ const location = computed(() => gameSession.value?.location ?? '未設定');
     <StatusDisplay :game-session-status="gameSession.status" />
     <MemoDisplay :text="description" />
     <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
+    <PlayMemoDisplay :game-session="gameSession" />
   </div>
 </template>
 

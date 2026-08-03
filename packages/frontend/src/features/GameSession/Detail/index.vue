@@ -67,8 +67,8 @@ const location = computed(() => gameSession.value?.location ?? '未設定');
     <!-- TODO: シナリオ詳細文が実装されたら表示する -->
     <StatusDisplay :game-session-status="gameSession.status" />
     <MemoDisplay :text="description" />
-    <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
     <PlayMemoDisplay :game-session="gameSession" />
+    <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
   </div>
 </template>
 

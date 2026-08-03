@@ -49,6 +49,7 @@ export {
   type MyGameSessionPlayMemo,
   SharedGameSessionPlayMemoSchema,
   type SharedGameSessionPlayMemo,
+  GAME_SESSION_PLAY_MEMO_MAX_LENGTH,
   UpsertGameSessionPlayMemoInputSchema,
   type UpsertGameSessionPlayMemoInput,
   UpdateGameSessionPlayMemoVisibilityInputSchema,

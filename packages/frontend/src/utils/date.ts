@@ -27,3 +27,20 @@ export function formatDateWithWeekday(dateStr: string): string {
   const weekday = WEEKDAYS[new Date(year, month - 1, day).getDay()] ?? '';
   return `${month}/${day}（${weekday}）`;
 }
+
+/**
+ * "6/10 21:04"
+ *
+ * 日付文字列ではなく ISO 8601 のタイムスタンプ（瞬間）を受け取り、
+ * 実行環境のローカル時刻で表示する。パースできない場合は空文字を返す。
+ */
+export function formatDateTimeShort(isoString: string): string {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${month}/${day} ${hours}:${minutes}`;
+}

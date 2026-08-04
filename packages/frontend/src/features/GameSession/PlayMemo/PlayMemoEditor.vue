@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink, onBeforeRouteLeave } from 'vue-router';
-import { ArrowLeft, Check, NotebookPen } from '@lucide/vue';
+import { ArrowLeft, Check, Eye, Lock, NotebookPen } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
+import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
 import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
+import SharePlayMemoDialog from '@/features/GameSession/PlayMemo/SharePlayMemoDialog.vue';
 import { usePlayMemoEdit } from '@/features/GameSession/PlayMemo/usePlayMemoEdit';
+import type { PlayMemoVisibilityStatus } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
 
 const props = defineProps<{
@@ -14,10 +17,15 @@ const props = defineProps<{
   gameSessionTitle: string;
   playMemo: MyGameSessionPlayMemo | null;
   canEditBody: boolean;
+  isShared: boolean;
+  canToggleVisibility: boolean;
+  visibilityStatus: PlayMemoVisibilityStatus;
 }>();
 
 const emit = defineEmits<{
   saved: [saved: MyGameSessionPlayMemo];
+  // 公開状態の所有者は useMyPlayMemo なので、ここでは切替を依頼するだけ
+  'visibility-change': [shared: boolean];
 }>();
 
 const {
@@ -90,6 +98,46 @@ const isSaving = computed(() => status.value === 'saving');
  */
 const readonlyBody = computed(() => props.playMemo?.body ?? '');
 
+// ---------- 公開・非公開の切替 ----------
+
+const shareDialogOpen = ref(false);
+
+const visibilityIcon = computed(() => (props.isShared ? Eye : Lock));
+const visibilityLabel = computed(() => (props.isShared ? '公開中' : '非公開'));
+
+const isVisibilitySaving = computed(() => props.visibilityStatus === 'saving');
+const showVisibilityFailedNotice = computed(
+  () => props.visibilityStatus === 'failed',
+);
+
+/**
+ * 公開トグルの説明。既定が非公開であることと、公開したときに誰が読めるのかを示す
+ * （要求 §4「公開・非公開の状態がひと目で分かる」）。
+ */
+const visibilityDescription = computed(() => {
+  if (!props.canToggleVisibility) {
+    return '本文を保存すると、このメモを公開できるようになります。';
+  }
+  return props.isShared
+    ? '卓が完了・中止したあと、ほかの人がこのメモを読めます。'
+    : 'このメモはあなただけが読めます。公開すると、卓が完了・中止したあとにほかの人も読めるようになります。';
+});
+
+// 本文の保存とは独立した操作なので、本文が編集不可でもトグルは活性のまま。
+// 公開へ倒すときだけ確認を挟み、非公開に戻すのは即時に反映する
+function onToggleVisibility(next: boolean) {
+  if (next) {
+    shareDialogOpen.value = true;
+    return;
+  }
+  emit('visibility-change', false);
+}
+
+function onConfirmShare() {
+  shareDialogOpen.value = false;
+  emit('visibility-change', true);
+}
+
 const overLimitLeaveMessage = computed(
   () =>
     `本文が上限（${maxLength.toLocaleString()}文字）を超えているため保存できません。このページを離れると変更は失われます。よろしいですか？`,
@@ -159,6 +207,26 @@ onBeforeUnmount(() => {
       保存できませんでした。通信を確認して、もう一度保存してください。書いた内容はこのページに残っています。
     </BaseAlert>
 
+    <BaseAlert v-if="showVisibilityFailedNotice" variant="error">
+      公開状態を切り替えられませんでした。通信を確認して、もう一度お試しください。
+    </BaseAlert>
+
+    <div class="visibility">
+      <div class="visibility__state">
+        <span class="badge" :class="{ 'badge--shared': props.isShared }">
+          <component :is="visibilityIcon" :size="12" aria-hidden="true" />
+          {{ visibilityLabel }}
+        </span>
+        <p class="visibility__description">{{ visibilityDescription }}</p>
+      </div>
+      <BaseSwitch
+        label="メモを公開する"
+        :model-value="props.isShared"
+        :disabled="!props.canToggleVisibility || isVisibilitySaving"
+        @update:model-value="onToggleVisibility"
+      />
+    </div>
+
     <p v-if="isReadOnly" class="readonly">{{ readonlyBody }}</p>
 
     <BaseTextArea
@@ -187,6 +255,8 @@ onBeforeUnmount(() => {
         </BaseButton>
       </div>
     </div>
+
+    <SharePlayMemoDialog v-model="shareDialogOpen" @share="onConfirmShare" />
   </BaseCard>
 </template>
 
@@ -256,6 +326,62 @@ onBeforeUnmount(() => {
 
 .status--muted {
   color: var(--color-text-muted);
+}
+
+.visibility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.visibility__state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.visibility__description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: var(--line-height-standard);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge--shared {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+@media (max-width: 600px) {
+  .visibility {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .editor :deep(.textarea-wrap__control) {

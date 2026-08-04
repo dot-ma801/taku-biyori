@@ -21,20 +21,30 @@ export const usePlayMemoSelection = (
     return typeof raw === 'string' && raw.length > 0 ? raw : null;
   });
 
-  /** 指定が無いときの選択。メンバーは自分、それ以外は先頭の公開メモ（design-v1.2 §6） */
+  /**
+   * 指定が無いときの選択。メンバーは自分、それ以外は先頭の公開メモ（design-v1.2 §6）。
+   *
+   * 既定では読めない相手を開かない。読めない行は「押されたときだけ」開いて理由を出す。
+   */
   const defaultEntry = computed(() => {
     const list = toValue(entries);
     return (
-      list.find((entry) => entry.isMe && entry.selectable) ??
-      list.find((entry) => entry.selectable) ??
+      list.find((entry) => entry.isMe && entry.readable) ??
+      list.find((entry) => entry.readable) ??
       null
     );
   });
 
-  /** 選択中のメンバー行。読めない相手を指定されていれば既定の選択に落ちる */
+  /**
+   * 選択中のメンバー行。
+   *
+   * 読めない相手（非公開・ゲスト）も選べる。本文の代わりに読めない理由を出すため、
+   * ここで既定へ落としてはいけない（落とすと押しても何も起きないように見える）。
+   * 落とすのは卓に居ないメンバー ID を指定されたときだけ。
+   */
   const selectedEntry = computed(() => {
     const requested = toValue(entries).find(
-      (entry) => entry.memberId === requestedMemberId.value && entry.selectable,
+      (entry) => entry.memberId === requestedMemberId.value,
     );
     return requested ?? defaultEntry.value;
   });
@@ -51,7 +61,7 @@ export const usePlayMemoSelection = (
     void router.push({ query: { ...route.query, member: memberId } });
   }
 
-  // 読めないメンバーを直接指定された場合は、実際の選択に URL を合わせる。
+  // 卓に居ないメンバー ID を指定された場合は、実際の選択に URL を合わせる。
   // 履歴を汚さないよう replace で落とす（design-v1.2 §6）。
   watch(
     [requestedMemberId, selectedMemberId, () => toValue(entries).length],

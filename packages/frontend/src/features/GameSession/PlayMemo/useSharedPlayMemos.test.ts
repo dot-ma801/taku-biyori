@@ -236,7 +236,7 @@ describe('entries', () => {
     ]);
   });
 
-  it('公開している他メンバーは選択でき、公開メモを持つ', async () => {
+  it('公開している他メンバーは読めて、公開メモを持つ', async () => {
     // Arrange & Act
     const { entries } = setup();
     await flushPromises();
@@ -245,13 +245,13 @@ describe('entries', () => {
     const entry = findEntry(entries, OTHER_MEMBER_ID);
     expect(entry).toMatchObject({
       tag: 'shared',
-      selectable: true,
+      readable: true,
       isMe: false,
     });
     expect(entry?.sharedPlayMemo?.body).toBe('書斎の鍵は青木さんが持っていた');
   });
 
-  it('非公開の他メンバーは選択できない', async () => {
+  it('非公開の他メンバーは読めない', async () => {
     // Arrange & Act
     const { entries } = setup();
     await flushPromises();
@@ -259,12 +259,12 @@ describe('entries', () => {
     // Assert
     expect(findEntry(entries, PRIVATE_MEMBER_ID)).toMatchObject({
       tag: 'private',
-      selectable: false,
+      readable: false,
       sharedPlayMemo: null,
     });
   });
 
-  it('ゲストは選択できず、タグで理由を示す', async () => {
+  it('ゲストは読めず、タグで理由を示す', async () => {
     // Arrange & Act
     const { entries } = setup();
     await flushPromises();
@@ -272,11 +272,11 @@ describe('entries', () => {
     // Assert
     expect(findEntry(entries, GUEST_MEMBER_ID)).toMatchObject({
       tag: 'guest',
-      selectable: false,
+      readable: false,
     });
   });
 
-  it('自分は非公開でも選択できる（本人はいつでも読める）', async () => {
+  it('自分は非公開でも読める（本人はいつでも読める）', async () => {
     // Arrange: 自分の公開メモは返さない
     vi.mocked(listSharedPlayMemos).mockResolvedValue([
       makeSharedMemo(OTHER_MEMBER_ID),
@@ -289,7 +289,7 @@ describe('entries', () => {
     // Assert
     expect(findEntry(entries, MY_MEMBER_ID)).toMatchObject({
       tag: 'private',
-      selectable: true,
+      readable: true,
       isMe: true,
     });
   });

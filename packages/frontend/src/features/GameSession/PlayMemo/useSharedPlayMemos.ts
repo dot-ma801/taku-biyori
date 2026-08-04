@@ -26,8 +26,13 @@ export interface PlayMemoMemberEntry {
   /** 副ラベル。ユーザー名を主ラベルへ繰り上げた行では null */
   secondaryLabel: string | null;
   tag: PlayMemoMemberTag;
-  /** 本文を開けるか。非公開の他メンバーとゲストは開けない */
-  selectable: boolean;
+  /**
+   * 本文を読めるか。非公開の他メンバーとゲストは読めない。
+   *
+   * 「選べるか」ではない点に注意。読めない相手も選べて、本文の代わりに
+   * 読めない理由を出す（黙って選択が戻ると、押しても何も起きないように見えるため）。
+   */
+  readable: boolean;
   isMe: boolean;
   /** その人の公開メモ。非公開・ゲストは null（自分の非公開メモもここには載らない） */
   sharedPlayMemo: SharedGameSessionPlayMemo | null;
@@ -113,7 +118,7 @@ export const useSharedPlayMemos = (
       primaryLabel: member.characterName ?? userLabel,
       secondaryLabel: member.characterName ? userLabel : null,
       tag: isGuest ? 'guest' : sharedPlayMemo ? 'shared' : 'private',
-      selectable: !isGuest && (!!sharedPlayMemo || isMe),
+      readable: !isGuest && (!!sharedPlayMemo || isMe),
       isMe,
       sharedPlayMemo,
     };

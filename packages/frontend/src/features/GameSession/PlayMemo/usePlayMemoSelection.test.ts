@@ -14,6 +14,7 @@ import { useRoute, useRouter } from 'vue-router';
 const MY_MEMBER_ID = 'member-me';
 const SHARED_MEMBER_ID = 'member-shared';
 const PRIVATE_MEMBER_ID = 'member-private';
+const GUEST_MEMBER_ID = 'member-guest';
 
 function makeEntry(
   memberId: string,
@@ -24,19 +25,20 @@ function makeEntry(
     primaryLabel: memberId,
     secondaryLabel: null,
     tag: 'shared',
-    selectable: true,
+    readable: true,
     isMe: false,
     sharedPlayMemo: null,
     ...overrides,
   };
 }
 
-/** 自分・公開している他メンバー・非公開の他メンバーが並ぶサイドバー */
+/** 自分・公開している他メンバー・非公開の他メンバー・ゲストが並ぶサイドバー */
 function makeEntries(): PlayMemoMemberEntry[] {
   return [
     makeEntry(SHARED_MEMBER_ID),
     makeEntry(MY_MEMBER_ID, { isMe: true, tag: 'private' }),
-    makeEntry(PRIVATE_MEMBER_ID, { tag: 'private', selectable: false }),
+    makeEntry(PRIVATE_MEMBER_ID, { tag: 'private', readable: false }),
+    makeEntry(GUEST_MEMBER_ID, { tag: 'guest', readable: false }),
   ];
 }
 
@@ -91,10 +93,10 @@ describe('既定の選択', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('選択できるメンバーが1人も居なければ null', () => {
+  it('読めるメンバーが1人も居なければ null（既定では読めない相手を開かない）', () => {
     // Arrange
     const entries = [
-      makeEntry(PRIVATE_MEMBER_ID, { tag: 'private', selectable: false }),
+      makeEntry(PRIVATE_MEMBER_ID, { tag: 'private', readable: false }),
     ];
 
     // Act
@@ -120,20 +122,36 @@ describe('?member= の指定', () => {
     expect(selectedMemberId.value).toBe(SHARED_MEMBER_ID);
   });
 
-  it('読めない相手を指定されたら既定の選択へ replace で落とす', async () => {
+  it('読めない相手を指定されてもその人を選ぶ（本文の代わりに理由を出すため）', async () => {
     // Arrange
     mockRoute({ member: PRIVATE_MEMBER_ID });
+
+    // Act
+    const { selectedMemberId, selectedEntry } = usePlayMemoSelection(() =>
+      makeEntries(),
+    );
+    await flushPromises();
+
+    // Assert
+    expect(selectedMemberId.value).toBe(PRIVATE_MEMBER_ID);
+    expect(selectedEntry.value?.readable).toBe(false);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('ゲストを指定されてもその人を選ぶ', async () => {
+    // Arrange
+    mockRoute({ member: GUEST_MEMBER_ID });
 
     // Act
     const { selectedMemberId } = usePlayMemoSelection(() => makeEntries());
     await flushPromises();
 
     // Assert
-    expect(selectedMemberId.value).toBe(MY_MEMBER_ID);
-    expect(replace).toHaveBeenCalledWith({ query: { member: MY_MEMBER_ID } });
+    expect(selectedMemberId.value).toBe(GUEST_MEMBER_ID);
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it('存在しないメンバー ID も既定の選択へ落とす', async () => {
+  it('存在しないメンバー ID は既定の選択へ落とす', async () => {
     // Arrange
     mockRoute({ member: 'member-unknown' });
 
@@ -146,11 +164,11 @@ describe('?member= の指定', () => {
     expect(replace).toHaveBeenCalled();
   });
 
-  it('選択できるメンバーが居なければ member クエリを外す', async () => {
+  it('存在しないメンバー ID で、落とせる既定も無ければ member クエリを外す', async () => {
     // Arrange
-    mockRoute({ member: PRIVATE_MEMBER_ID });
+    mockRoute({ member: 'member-unknown' });
     const entries = [
-      makeEntry(PRIVATE_MEMBER_ID, { tag: 'private', selectable: false }),
+      makeEntry(PRIVATE_MEMBER_ID, { tag: 'private', readable: false }),
     ];
 
     // Act

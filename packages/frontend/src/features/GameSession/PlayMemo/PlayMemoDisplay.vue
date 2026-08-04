@@ -5,15 +5,22 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MyPlayMemoCard from '@/features/GameSession/PlayMemo/MyPlayMemoCard.vue';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
+import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 
 const props = defineProps<{
   gameSession: GameSessionDetail;
 }>();
 
-const { playMemo, isMyMemo, showLoginPrompt, canEditBody } = useMyPlayMemo(
+const { playMemo, myMember, isMyMemo, showLoginPrompt, canEditBody } =
+  useMyPlayMemo(props.gameSession.id, () => props.gameSession);
+
+// 公開件数はカード（メンバー限定）にしか出さないため、メンバーでない間は
+// 卓を渡さずに通信させない。メンバーになった時点で取得が走る
+const { canViewShared, othersSharedCount } = useSharedPlayMemos(
   props.gameSession.id,
-  () => props.gameSession,
+  () => (isMyMemo.value ? props.gameSession : null),
+  () => myMember.value?.id ?? null,
 );
 </script>
 
@@ -23,6 +30,8 @@ const { playMemo, isMyMemo, showLoginPrompt, canEditBody } = useMyPlayMemo(
     :game-session-id="props.gameSession.id"
     :play-memo="playMemo"
     :can-edit-body="canEditBody"
+    :can-view-shared="canViewShared"
+    :others-shared-count="othersSharedCount"
   />
 
   <!-- 未ログイン・ゲスト。ログイン済みの非メンバーには何も出さない -->

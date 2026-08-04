@@ -11,6 +11,10 @@ const props = defineProps<{
   gameSessionId: string;
   playMemo: MyGameSessionPlayMemo | null;
   canEditBody: boolean;
+  /** 他メンバーの公開メモを読めるステータスか（完了・中止） */
+  canViewShared: boolean;
+  /** 自分を除いた公開メモの件数 */
+  othersSharedCount: number;
 }>();
 
 // 公開状態はサーバ値（shared_at の有無）から導く。
@@ -55,6 +59,20 @@ const openLabel = computed(() => {
   return hasBody.value ? '書く' : '最初のメモを書く';
 });
 
+/**
+ * 他メンバーの公開メモの件数を伝える一行。
+ *
+ * 一覧はここに置かず、読む場所はメモ画面に集約する（design-v1.2 §8）。
+ * 読めない時期（完了・中止の前）は件数そのものを出さない。
+ */
+const sharedCountLabel = computed(() => {
+  if (!props.canViewShared) return '';
+  if (props.othersSharedCount === 0) {
+    return 'ほかのメンバーの公開メモはまだありません。';
+  }
+  return `ほかのメンバーの公開メモが ${props.othersSharedCount} 件あります。`;
+});
+
 // 完了・中止で本文が閉じることを、閉じる前から伝える（要求 §4）。
 // カードは入口なので案内は控えめに置き、強い警告はメモ画面側で出す。
 const notice = computed(() =>
@@ -78,6 +96,8 @@ const notice = computed(() =>
 
     <p v-if="hasBody" class="body">{{ body }}</p>
     <p v-else class="empty">プレイ中の気づきを、自分だけのメモに残せます。</p>
+
+    <p v-if="sharedCountLabel" class="shared-count">{{ sharedCountLabel }}</p>
 
     <div class="foot">
       <span class="meta">{{ metaLabel }}</span>
@@ -137,6 +157,12 @@ const notice = computed(() =>
 .empty {
   margin: 0;
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.shared-count {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
 }
 

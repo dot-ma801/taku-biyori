@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import { ArrowLeft, Eye, Lock } from '@lucide/vue';
+import { ArrowLeft, Lock } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
+import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import type {
   PlayMemoMemberEntry,
   PlayMemoMemberTag,
@@ -16,7 +17,6 @@ const props = defineProps<{
 }>();
 
 const isReadable = computed(() => props.entry.readable);
-const headIcon = computed(() => (isReadable.value ? Eye : Lock));
 
 const body = computed(() => props.entry.sharedPlayMemo?.body ?? '');
 const hasBody = computed(() => body.value.length > 0);
@@ -62,11 +62,12 @@ const detailRoute = computed(() => ({
       <RouterLink :to="detailRoute" class="back" aria-label="卓の詳細へ戻る">
         <ArrowLeft :size="18" aria-hidden="true" />
       </RouterLink>
-      <component
-        :is="headIcon"
-        :size="18"
-        class="head__icon"
-        aria-hidden="true"
+      <!-- 誰のメモかはアイコンでも分かるようにする。種は他画面と揃える -->
+      <UserAvatar
+        class="head__avatar"
+        :size="28"
+        :user-id="props.entry.userId"
+        :name="props.entry.avatarName"
       />
       <div class="head__titles">
         <p class="head__title">{{ props.entry.primaryLabel }}</p>
@@ -115,9 +116,8 @@ const detailRoute = computed(() => ({
   color: var(--color-text);
 }
 
-.head__icon {
+.head__avatar {
   flex-shrink: 0;
-  color: var(--color-primary-text);
 }
 
 .head__titles {

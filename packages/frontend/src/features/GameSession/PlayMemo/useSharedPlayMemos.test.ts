@@ -341,6 +341,22 @@ describe('entries', () => {
     );
   });
 
+  it('アバターの種はユーザー ID、ゲストは null で名前にフォールバックする', async () => {
+    // Arrange & Act
+    const { entries } = setup();
+    await flushPromises();
+
+    // Assert
+    expect(findEntry(entries, OTHER_MEMBER_ID)).toMatchObject({
+      userId: `user-${OTHER_MEMBER_ID}`,
+      avatarName: '青木',
+    });
+    expect(findEntry(entries, GUEST_MEMBER_ID)).toMatchObject({
+      userId: null,
+      avatarName: '通りすがり',
+    });
+  });
+
   it('卓がまだ読み込まれていなければ空', () => {
     // Arrange & Act
     const { entries } = setup(null);

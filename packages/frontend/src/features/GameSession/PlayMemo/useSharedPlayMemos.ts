@@ -25,6 +25,10 @@ export interface PlayMemoMemberEntry {
   primaryLabel: string;
   /** 副ラベル。ユーザー名を主ラベルへ繰り上げた行では null */
   secondaryLabel: string | null;
+  /** アバターの種。他画面と絵柄を揃えるため id を優先する。ゲストは持たないので null */
+  userId: string | null;
+  /** アバターのフォールバック名。サフィックスで絵柄が変わらないよう素の名前を使う */
+  avatarName: string;
   tag: PlayMemoMemberTag;
   /**
    * 本文を読めるか。非公開の他メンバーとゲストは読めない。
@@ -117,6 +121,8 @@ export const useSharedPlayMemos = (
       memberId: member.id,
       primaryLabel: member.characterName ?? userLabel,
       secondaryLabel: member.characterName ? userLabel : null,
+      userId: member.userId,
+      avatarName: userLabel,
       tag: isGuest ? 'guest' : sharedPlayMemo ? 'shared' : 'private',
       readable: !isGuest && (!!sharedPlayMemo || isMe),
       isMe,

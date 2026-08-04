@@ -24,6 +24,8 @@ function makeEntry(
     memberId,
     primaryLabel: memberId,
     secondaryLabel: null,
+    userId: `user-${memberId}`,
+    avatarName: memberId,
     tag: 'shared',
     readable: true,
     isMe: false,

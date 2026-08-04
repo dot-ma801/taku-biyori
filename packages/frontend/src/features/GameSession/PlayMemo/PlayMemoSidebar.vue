@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Users } from '@lucide/vue';
+import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import type {
   PlayMemoMemberEntry,
   PlayMemoMemberTag,
@@ -56,6 +57,11 @@ function tagLabel(tag: PlayMemoMemberTag): string {
           :aria-current="entry.memberId === props.selectedMemberId"
           @click="emit('select', entry.memberId)"
         >
+          <UserAvatar
+            :size="24"
+            :user-id="entry.userId"
+            :name="entry.avatarName"
+          />
           <span class="member__labels">
             <span class="member__primary">{{ entry.primaryLabel }}</span>
             <span v-if="entry.secondaryLabel" class="member__secondary">
@@ -136,6 +142,8 @@ function tagLabel(tag: PlayMemoMemberTag): string {
 .member__labels {
   display: flex;
   flex-direction: column;
+  /* 名前より先にタグ・アバターを削らないよう、縮むのはこの箱だけにする */
+  flex: 1;
   min-width: 0;
 }
 

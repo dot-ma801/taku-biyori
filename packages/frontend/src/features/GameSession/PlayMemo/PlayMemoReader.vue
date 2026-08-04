@@ -41,10 +41,8 @@ const UNREADABLE_TITLES: Record<PlayMemoMemberTag, string> = {
 
 const UNREADABLE_DESCRIPTIONS: Record<PlayMemoMemberTag, string> = {
   shared: '',
-  private:
-    '公開するかどうかは書いた本人だけが決められます。公開されると、ここで読めるようになります。',
-  guest:
-    'プレイメモはログインユーザー限定の機能です。ゲストは本人確認の手段がないため、メモの作成・公開を行えません。',
+  private: '公開されると、ここで読めるようになります。',
+  guest: 'プレイメモはログインユーザー限定の機能です。',
 };
 
 const unreadableTitle = computed(() => UNREADABLE_TITLES[props.entry.tag]);

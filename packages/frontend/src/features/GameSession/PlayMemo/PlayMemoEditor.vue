@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { RouterLink, onBeforeRouteLeave } from 'vue-router';
+import {
+  RouterLink,
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+} from 'vue-router';
 import { ArrowLeft, Check, Eye, Lock, NotebookPen } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
@@ -148,18 +152,29 @@ const dirtyLeaveMessage =
 /** 未保存の変更を抱えたまま離れようとしているか */
 const hasUnsavedChanges = computed(() => !isReadOnly.value && isDirty.value);
 
-// 保存は明示的な操作のみなので、未保存のまま離れようとしたら必ず確認する。
-// NOTE: 確認 UI はプロジェクトのダイアログに寄せる余地があるが、
-//       ナビゲーションガードの中で解決を待つ必要があるため今は confirm を使う。
-onBeforeRouteLeave(() => {
+/**
+ * 未保存の変更があれば確認する。破棄してよければ true。
+ *
+ * 上限超過は保存ボタンも押せない状態なので、なぜ保存できないのかが
+ * 伝わるよう文言を出し分ける。
+ * NOTE: 確認 UI はプロジェクトのダイアログに寄せる余地があるが、
+ *       ナビゲーションガードの中で解決を待つ必要があるため今は confirm を使う。
+ */
+function confirmDiscardChanges(): boolean {
   if (!hasUnsavedChanges.value) return true;
 
-  // 上限超過は保存ボタンも押せない状態なので、なぜ保存できないのかが
-  // 伝わるよう文言を出し分ける。
   return window.confirm(
     isOverLimit.value ? overLimitLeaveMessage.value : dirtyLeaveMessage,
   );
-});
+}
+
+// 保存は明示的な操作のみなので、未保存のまま離れようとしたら必ず確認する
+onBeforeRouteLeave(() => confirmDiscardChanges());
+
+// サイドバーでのメンバー切り替えは同じルートのクエリ変更なので
+// onBeforeRouteLeave が発火しない。切り替えでも変更が黙って失われないよう、
+// onBeforeRouteUpdate でも同じ確認を出す（design-v1.2 §6）
+onBeforeRouteUpdate(() => confirmDiscardChanges());
 
 // アプリ内の遷移は onBeforeRouteLeave が拾うが、リロード・タブを閉じる・
 // 外部サイトへ移動する経路は拾えないため、ブラウザ側の確認も併せて出す。

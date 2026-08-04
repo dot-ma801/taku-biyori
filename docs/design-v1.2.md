@@ -341,8 +341,10 @@ export type UpdateGameSessionPlayMemoVisibilityInput = z.infer<
 > 集約する以上、ルートガードで弾いてはならない。書く操作の可否はメンバー判定と
 > `canPerform` が決める。
 >
-> ただし**段階3 の時点では書く専用のため `requiresAuth: true` を付けている**。
-> 公開メモの閲覧を載せる段階4 で外す。
+> 段階3 の時点では書く専用だったため `requiresAuth: true` を付けていたが、
+> 公開メモの閲覧を載せた段階4 で外した。代わりにメモ画面側で「メモも持てず
+> 公開メモも読めない」相手（実施前の卓を開いた非メンバーなど）だけを
+> 卓詳細へ `replace` で戻す。
 
 ### 卓詳細の「プレイメモ」カード
 
@@ -410,11 +412,14 @@ CLAUDE.md の「フィーチャー内のディレクトリ構成」に従い、�
 features/GameSession/PlayMemo/
   PlayMemoDisplay.vue            ← 卓詳細から import するのはここだけ
   MyPlayMemoCard.vue             ← 卓詳細のカード（読み取り + 導線）
-  PlayMemoEditor.vue             ← メモ画面の本体
-  PlayMemoSidebar.vue            ← 段階4
-  useMyPlayMemo.ts               ← サーバ値の所有者。取得・メンバー判定・編集可否
+  PlayMemoEditor.vue             ← メモ画面の本体（自分のメモ。公開トグルもここ）
+  PlayMemoReader.vue             ← 他メンバーの公開メモの閲覧面（読み取りのみ）
+  PlayMemoSidebar.vue            ← メンバー切り替え
+  SharePlayMemoDialog.vue        ← 公開に切り替えるときの確認
+  useMyPlayMemo.ts               ← サーバ値の所有者。取得・メンバー判定・編集可否・公開切替
   usePlayMemoEdit.ts             ← ドラフトの所有者。保存と未保存の検知
-  useSharedPlayMemos.ts          ← 段階4。公開メモ一覧の取得とメンバー名の突合
+  useSharedPlayMemos.ts          ← 公開メモ一覧の取得とメンバー名の突合
+  usePlayMemoSelection.ts        ← `?member=` による選択と既定選択へのフォールバック
 views/GameSession/
   PlayMemoView.vue               ← メモ画面。単独で開ける（ブックマーク直行）
 features/GameSession/Detail/
@@ -422,6 +427,10 @@ features/GameSession/Detail/
   index.vue                      ← PlayMemo/PlayMemoDisplay.vue だけを import する
 ```
 
+- 自分のメモ（`PlayMemoEditor`）と他メンバーの公開メモ（`PlayMemoReader`）はコンポーネントを分ける。
+  編集面はドラフト・保存・離脱警告のライフサイクルを持つが、読み取りにはそのどれも無い
+- 選択（`usePlayMemoSelection`）は一覧の取得（`useSharedPlayMemos`）と別の関心事として分ける。
+  卓詳細のカードは公開件数しか要らず、選択やルーターを持ち込まずに一覧だけを使いたいため
 - サーバ値（真実）と編集ドラフトは**別の状態**として持つ。`useMemberEdit.ts` の
   `baseline` / `draft` / `isDirty` パターンを踏襲する（CLAUDE.md）
 - composable の引数に `Ref` を要求しない。読みは `MaybeRefOrGetter` + `toValue()`、

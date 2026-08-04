@@ -191,11 +191,10 @@ describe('自動取得', () => {
     vi.mocked(listSharedPlayMemos).mockRejectedValue(new Error('Forbidden'));
 
     // Act
-    const { entries, hasSharedMemos } = setup();
+    const { entries } = setup();
     await flushPromises();
 
     // Assert
-    expect(hasSharedMemos.value).toBe(false);
     expect(entries.value.every((entry) => entry.sharedPlayMemo === null)).toBe(
       true,
     );
@@ -392,24 +391,23 @@ describe('公開件数', () => {
     ]);
 
     // Act
-    const { othersSharedCount, hasSharedMemos } = setup();
+    const { othersSharedCount } = setup();
     await flushPromises();
 
     // Assert
     expect(othersSharedCount.value).toBe(0);
-    expect(hasSharedMemos.value).toBe(true);
   });
 
-  it('1件も公開されていなければ hasSharedMemos は false', async () => {
+  it('1件も公開されていなければ othersSharedCount は 0', async () => {
     // Arrange
     vi.mocked(listSharedPlayMemos).mockResolvedValue([]);
 
     // Act
-    const { hasSharedMemos } = setup();
+    const { othersSharedCount } = setup();
     await flushPromises();
 
     // Assert
-    expect(hasSharedMemos.value).toBe(false);
+    expect(othersSharedCount.value).toBe(0);
   });
 });
 

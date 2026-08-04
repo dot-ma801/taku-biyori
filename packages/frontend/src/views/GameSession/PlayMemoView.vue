@@ -41,7 +41,6 @@ const {
 const {
   canViewShared,
   entries,
-  hasSharedMemos,
   loading: loadingSharedPlayMemos,
   fetch: fetchSharedPlayMemos,
 } = useSharedPlayMemos(
@@ -62,11 +61,11 @@ const gameSessionTitle = computed(() => gameSession.value?.title ?? '');
 /**
  * サイドバーを出すか。
  *
- * 完了・中止の前は他メンバーのメモが1件も返らないため、開けない項目だけが
- * 並ぶことになる。公開しているメンバーが1人も居ない場合も同じなので、
- * どちらのケースも全幅の1枚に倒す（design-v1.2 §6）。
+ * 完了・中止していれば、公開しているメンバーが1人も居なくても出す。
+ * 「誰も公開していない」ことが分かるのも情報であり、行を押せば理由も読める。
+ * 完了・中止の前は公開状態によらず誰のメモも読めないため、全幅の1枚に倒す。
  */
-const showSidebar = computed(() => canViewShared.value && hasSharedMemos.value);
+const showSidebar = computed(() => canViewShared.value);
 
 /** 自分のメモを開いているか。サイドバーを出さない時期は常に自分のメモ */
 const showEditor = computed(

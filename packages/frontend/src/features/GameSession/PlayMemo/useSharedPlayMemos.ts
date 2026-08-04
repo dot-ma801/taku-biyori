@@ -135,9 +135,6 @@ export const useSharedPlayMemos = (
     () => toValue(gameSession)?.members.map(toEntry) ?? [],
   );
 
-  /** 公開しているメンバーが1人でも居るか。居なければサイドバーを出さず全幅に倒す */
-  const hasSharedMemos = computed(() => sharedPlayMemos.value.length > 0);
-
   /**
    * 自分を除いた公開メモの件数。
    *
@@ -156,7 +153,6 @@ export const useSharedPlayMemos = (
     loading,
     canViewShared,
     entries,
-    hasSharedMemos,
     othersSharedCount,
     fetch,
   };

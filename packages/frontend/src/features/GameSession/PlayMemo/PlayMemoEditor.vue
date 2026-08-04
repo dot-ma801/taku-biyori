@@ -309,6 +309,9 @@ onBeforeUnmount(() => {
 
 .head__title {
   margin: 0;
+  /* 幅が狭いときは卓名（副題）側を削る。見出しは折り返させない */
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 18px;
   font-weight: 500;
 }

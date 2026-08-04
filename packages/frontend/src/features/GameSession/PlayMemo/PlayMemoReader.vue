@@ -82,28 +82,42 @@ const detailRoute = computed(() => ({
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
+  /* メンバー名は長さが読めないので、はみ出す前にこの箱の中で削る */
+  flex: 1;
   min-width: 0;
 }
 
 .head__title {
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 18px;
   font-weight: 500;
 }
 
 .head__subtitle {
   margin: 0;
+  flex-shrink: 0;
   color: var(--color-text-muted);
   font-size: 12px;
 }
 
 .head__session {
   margin-left: auto;
+  max-width: 40%;
   color: var(--color-text-muted);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 狭い画面では卓名を落とす。メンバー名の方が今どこを読んでいるかを示す */
+@media (max-width: 600px) {
+  .head__session {
+    display: none;
+  }
 }
 
 .body {

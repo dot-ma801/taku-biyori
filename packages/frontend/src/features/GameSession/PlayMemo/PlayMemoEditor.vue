@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import {
   RouterLink,
   onBeforeRouteLeave,
@@ -11,7 +11,6 @@ import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
 import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
-import SharePlayMemoDialog from '@/features/GameSession/PlayMemo/SharePlayMemoDialog.vue';
 import { usePlayMemoEdit } from '@/features/GameSession/PlayMemo/usePlayMemoEdit';
 import type { PlayMemoVisibilityStatus } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
@@ -104,8 +103,6 @@ const readonlyBody = computed(() => props.playMemo?.body ?? '');
 
 // ---------- 公開・非公開の切替 ----------
 
-const shareDialogOpen = ref(false);
-
 const visibilityIcon = computed(() => (props.isShared ? Eye : Lock));
 const visibilityLabel = computed(() => (props.isShared ? '公開中' : '非公開'));
 
@@ -128,18 +125,9 @@ const visibilityDescription = computed(() => {
 });
 
 // 本文の保存とは独立した操作なので、本文が編集不可でもトグルは活性のまま。
-// 公開へ倒すときだけ確認を挟み、非公開に戻すのは即時に反映する
+// 切替はその場で反映する（元に戻すのもトグル1回で済むため確認は挟まない）
 function onToggleVisibility(next: boolean) {
-  if (next) {
-    shareDialogOpen.value = true;
-    return;
-  }
-  emit('visibility-change', false);
-}
-
-function onConfirmShare() {
-  shareDialogOpen.value = false;
-  emit('visibility-change', true);
+  emit('visibility-change', next);
 }
 
 const overLimitLeaveMessage = computed(
@@ -270,8 +258,6 @@ onBeforeUnmount(() => {
         </BaseButton>
       </div>
     </div>
-
-    <SharePlayMemoDialog v-model="shareDialogOpen" @share="onConfirmShare" />
   </BaseCard>
 </template>
 

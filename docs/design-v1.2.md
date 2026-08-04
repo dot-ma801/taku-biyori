@@ -428,7 +428,6 @@ features/GameSession/PlayMemo/
   PlayMemoEditor.vue             ← メモ画面の本体（自分のメモ。公開トグルもここ）
   PlayMemoReader.vue             ← 他メンバーの公開メモの閲覧面（読み取りのみ）
   PlayMemoSidebar.vue            ← メンバー切り替え
-  SharePlayMemoDialog.vue        ← 公開に切り替えるときの確認
   useMyPlayMemo.ts               ← サーバ値の所有者。取得・メンバー判定・編集可否・公開切替
   usePlayMemoEdit.ts             ← ドラフトの所有者。保存と未保存の検知
   useSharedPlayMemos.ts          ← 公開メモ一覧の取得とメンバー名の突合
@@ -463,7 +462,7 @@ features/GameSession/Detail/
 | 1 | **メモの基盤と自分のメモ**: DB テーブル + マイグレーション、shared 型・`editPlayMemo` ポリシー・`canViewSharedPlayMemos`、`GET`・`PUT /:id/play-memos/me` | backend、shared、マイグレーション |
 | 2 | **公開切替と公開メモ閲覧**: `PATCH /:id/play-memos/me/visibility`、`GET /:id/play-memos`（認可 + フィルタ） | backend |
 | 3 | **自分のメモの UI**: 卓詳細への `PlayMemo/` セクション追加、`/play-memo` ルートとメモ画面、`useMyPlayMemo`・`usePlayMemoEdit`、未保存のまま離脱するときの警告、編集不可の案内、未ログイン・ゲストのログイン導線 | frontend |
-| 4 | **公開切替と公開メモ閲覧の UI**: メンバー切り替えサイドバー、公開トグルと状態表示、確認ダイアログ、`useSharedPlayMemos`、`/play-memo` から `requiresAuth` を外す | frontend |
+| 4 | **公開切替と公開メモ閲覧の UI**: メンバー切り替えサイドバー、公開トグルと状態表示、`useSharedPlayMemos`、`/play-memo` から `requiresAuth` を外す | frontend |
 
 ```text
 段階1 ─┬─▶ 段階2 ─┐

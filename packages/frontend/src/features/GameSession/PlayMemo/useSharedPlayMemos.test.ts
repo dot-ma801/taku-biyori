@@ -85,7 +85,11 @@ function setup(
   gameSession: GameSessionDetail | null = makeGameSession(),
   myMemberId: string | null = MY_MEMBER_ID,
 ) {
-  return useSharedPlayMemos(SESSION_ID, () => gameSession, () => myMemberId);
+  return useSharedPlayMemos(
+    SESSION_ID,
+    () => gameSession,
+    () => myMemberId,
+  );
 }
 
 /** ステータスの変化（完了・中止への遷移）を再現するため ref で渡す */
@@ -192,9 +196,9 @@ describe('自動取得', () => {
 
     // Assert
     expect(hasSharedMemos.value).toBe(false);
-    expect(
-      entries.value.every((entry) => entry.sharedPlayMemo === null),
-    ).toBe(true);
+    expect(entries.value.every((entry) => entry.sharedPlayMemo === null)).toBe(
+      true,
+    );
   });
 
   it('取得中は loading が true になる', async () => {

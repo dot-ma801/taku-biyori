@@ -59,8 +59,8 @@ beforeEach(() => {
 describe('既定の選択', () => {
   it('?member= が無ければ自分が選ばれる', () => {
     // Arrange & Act
-    const { selectedMemberId, isMineSelected } = usePlayMemoSelection(
-      () => makeEntries(),
+    const { selectedMemberId, isMineSelected } = usePlayMemoSelection(() =>
+      makeEntries(),
     );
 
     // Assert

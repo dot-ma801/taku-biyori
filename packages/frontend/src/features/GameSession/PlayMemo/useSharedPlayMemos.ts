@@ -101,7 +101,8 @@ export const useSharedPlayMemos = (
    */
   function toEntry(member: GameSessionMember): PlayMemoMemberEntry {
     const isMe = member.id === toValue(myMemberId);
-    const sharedPlayMemo = sharedPlayMemoByMemberId.value.get(member.id) ?? null;
+    const sharedPlayMemo =
+      sharedPlayMemoByMemberId.value.get(member.id) ?? null;
     const isGuest = isGuestMember(member);
 
     // タグが「ゲスト」を示すので、名前には「（ゲスト）」を付けない（重複するため）

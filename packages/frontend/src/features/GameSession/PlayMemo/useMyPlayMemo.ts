@@ -6,10 +6,7 @@ import {
   GameSessionAction,
   canPerform,
 } from '@taku-biyori/shared';
-import {
-  getMyPlayMemo,
-  updateMyPlayMemoVisibility,
-} from '@/api/game-session';
+import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 /**

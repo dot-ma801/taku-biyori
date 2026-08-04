@@ -39,7 +39,9 @@ export const usePlayMemoSelection = (
     return requested ?? defaultEntry.value;
   });
 
-  const selectedMemberId = computed(() => selectedEntry.value?.memberId ?? null);
+  const selectedMemberId = computed(
+    () => selectedEntry.value?.memberId ?? null,
+  );
 
   /** 自分のメモを開いているか。編集面と公開トグルを出すかの判断に使う */
   const isMineSelected = computed(() => !!selectedEntry.value?.isMe);

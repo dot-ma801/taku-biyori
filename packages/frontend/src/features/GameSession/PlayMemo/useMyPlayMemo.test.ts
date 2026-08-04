@@ -19,10 +19,7 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }));
 
-import {
-  getMyPlayMemo,
-  updateMyPlayMemoVisibility,
-} from '@/api/game-session';
+import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 const SESSION_ID = 'session-1';

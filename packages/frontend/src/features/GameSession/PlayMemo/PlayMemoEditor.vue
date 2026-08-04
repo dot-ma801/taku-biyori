@@ -286,6 +286,7 @@ onBeforeUnmount(() => {
 .back {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   padding: var(--space-1);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
@@ -297,6 +298,7 @@ onBeforeUnmount(() => {
 }
 
 .head__icon {
+  flex-shrink: 0;
   color: var(--color-primary-text);
 }
 
@@ -311,6 +313,9 @@ onBeforeUnmount(() => {
   margin: 0;
   /* 幅が狭いときは卓名（副題）側を削る。見出しは折り返させない */
   flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 18px;
   font-weight: 500;
@@ -318,11 +323,25 @@ onBeforeUnmount(() => {
 
 .head__subtitle {
   margin: 0;
+  max-width: 100%;
   color: var(--color-text-muted);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 狭い画面では横に並べきれないので縦に積み、それぞれ1行で省略する */
+@media (max-width: 600px) {
+  .head__titles {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .head__title {
+    flex-shrink: 1;
+  }
 }
 
 .status {

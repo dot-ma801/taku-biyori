@@ -42,13 +42,17 @@ function tagLabel(tag: PlayMemoMemberTag): string {
         :key="entry.memberId"
         class="list__item"
       >
+        <!--
+          読めない相手も押せる。押すと本文の代わりに読めない理由が出る
+          （disabled にすると、なぜ開かないのかを伝える場所が無くなる）。
+        -->
         <button
           type="button"
           class="member"
           :class="{
             'member--selected': entry.memberId === props.selectedMemberId,
+            'member--unreadable': !entry.readable,
           }"
-          :disabled="!entry.selectable"
           :aria-current="entry.memberId === props.selectedMemberId"
           @click="emit('select', entry.memberId)"
         >
@@ -115,13 +119,13 @@ function tagLabel(tag: PlayMemoMemberTag): string {
   cursor: pointer;
 }
 
-.member:hover:not(:disabled) {
+.member:hover {
   background: var(--color-surface-muted);
 }
 
-.member:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+/* 読めない相手。押せるが本文は出ないので、読める行より控えめに見せる */
+.member--unreadable {
+  color: var(--color-text-muted);
 }
 
 .member--selected {

@@ -76,10 +76,15 @@ const showEditor = computed(
     (!showSidebar.value || isMineSelected.value),
 );
 
-/** 他メンバーの公開メモを開いているか */
-const sharedEntry = computed(() => {
+/**
+ * 他メンバーの行を開いているか。
+ *
+ * 読めない相手（非公開・ゲスト）もここに来る。閲覧面が本文の代わりに
+ * 読めない理由を出すため、読めるかどうかでは絞らない。
+ */
+const readerEntry = computed(() => {
   if (showEditor.value) return null;
-  return selectedEntry.value?.sharedPlayMemo ? selectedEntry.value : null;
+  return selectedEntry.value;
 });
 
 /**
@@ -99,7 +104,7 @@ const loadFailed = computed(
  * これが false になっても開くものが無ければ「公開メモがまだ無い」状態。
  */
 const showLoading = computed(
-  () => loading.value && !showEditor.value && sharedEntry.value === null,
+  () => loading.value && !showEditor.value && readerEntry.value === null,
 );
 
 // メモを持てず、公開メモも読めない相手がこの URL を直接開いたケース
@@ -179,10 +184,10 @@ async function onVisibilityChange(shared: boolean) {
       />
 
       <PlayMemoReader
-        v-else-if="sharedEntry"
+        v-else-if="readerEntry"
         :game-session-id="props.gameSessionId"
         :game-session-title="gameSessionTitle"
-        :entry="sharedEntry"
+        :entry="readerEntry"
       />
 
       <p v-else-if="showLoading" class="empty">読み込み中...</p>

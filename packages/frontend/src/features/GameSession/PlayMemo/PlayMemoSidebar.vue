@@ -180,10 +180,15 @@ function tagLabel(tag: PlayMemoMemberTag): string {
 
   .list__item {
     flex-shrink: 0;
+    /*
+      長いキャラ名でも1件で幅を埋めきらないよう上限を置く。
+      2件目が半端に見える幅にして、横に続きがあることを見せる
+    */
+    max-width: 60%;
   }
 
   .member {
-    width: auto;
+    width: 100%;
   }
 }
 </style>

@@ -124,6 +124,14 @@ const visibilityDescription = computed(() => {
     : 'このメモはあなただけが読めます。公開すると、卓が完了・中止したあとにほかの人も読めるようになります。';
 });
 
+/**
+ * 本文がいずれ編集できなくなることを、閉じる前から伝える（要求 §4）。
+ *
+ * 卓詳細のカードではなく書く画面に置く。実際に書いている場所で伝わればよく、
+ * 入口のカードに常時出すと読まれない注意書きだけが場所を取るため。
+ */
+const showEditWindowNotice = computed(() => props.canEditBody);
+
 // 本文の保存とは独立した操作なので、本文が編集不可でもトグルは活性のまま。
 // 切替はその場で反映する（元に戻すのもトグル1回で済むため確認は挟まない）
 function onToggleVisibility(next: boolean) {
@@ -242,6 +250,10 @@ onBeforeUnmount(() => {
       placeholder="プレイ中の気づきを書き留めましょう"
       @update:model-value="setDraft"
     />
+
+    <p v-if="showEditWindowNotice" class="notice">
+      本文を書けるのは卓が完了・中止するまでです（そのあとも公開・非公開の切り替えは行えます）。
+    </p>
 
     <div class="foot">
       <span class="counter" :class="{ 'counter--over': isOverLimit }">
@@ -434,6 +446,13 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
   line-height: var(--line-height-relaxed);
   color: var(--color-text-secondary);
+}
+
+.notice {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: var(--line-height-standard);
 }
 
 .foot {

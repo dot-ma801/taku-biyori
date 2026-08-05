@@ -136,6 +136,14 @@ export const useSharedPlayMemos = (
   );
 
   /**
+   * 公開しているメンバーだけの行。卓詳細のカードに「誰が公開しているか」を並べ、
+   * そこからその人のメモへ直接飛ばすために使う（自分も含む）。
+   */
+  const sharedEntries = computed(() =>
+    entries.value.filter((entry) => entry.tag === 'shared'),
+  );
+
+  /**
    * 自分を除いた公開メモの件数。
    *
    * 一覧は閲覧者で分岐せず自分の公開メモも含めて返るため、「ほかのメンバー」を
@@ -153,6 +161,7 @@ export const useSharedPlayMemos = (
     loading,
     canViewShared,
     entries,
+    sharedEntries,
     othersSharedCount,
     fetch,
   };

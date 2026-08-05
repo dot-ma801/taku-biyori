@@ -356,6 +356,30 @@ describe('entries', () => {
     });
   });
 
+  it('sharedEntries は公開しているメンバーだけを卓の並び順で返す', async () => {
+    // Arrange & Act
+    const { sharedEntries } = setup();
+    await flushPromises();
+
+    // Assert
+    expect(sharedEntries.value.map((entry) => entry.memberId)).toEqual([
+      MY_MEMBER_ID,
+      OTHER_MEMBER_ID,
+    ]);
+  });
+
+  it('1件も公開されていなければ sharedEntries は空', async () => {
+    // Arrange
+    vi.mocked(listSharedPlayMemos).mockResolvedValue([]);
+
+    // Act
+    const { sharedEntries } = setup();
+    await flushPromises();
+
+    // Assert
+    expect(sharedEntries.value).toEqual([]);
+  });
+
   it('卓がまだ読み込まれていなければ空', () => {
     // Arrange & Act
     const { entries } = setup(null);

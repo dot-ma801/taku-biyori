@@ -223,6 +223,7 @@ onBeforeUnmount(() => {
         <p class="visibility__description">{{ visibilityDescription }}</p>
       </div>
       <BaseSwitch
+        class="visibility__switch"
         label="メモを公開する"
         :model-value="props.isShared"
         :disabled="!props.canToggleVisibility || isVisibilitySaving"
@@ -370,6 +371,15 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+}
+
+/* 操作そのものなので、幅が足りないときは説明文の側を折り返す */
+.visibility__switch {
+  flex-shrink: 0;
+}
+
+.visibility__switch :deep(.switch__label) {
+  white-space: nowrap;
 }
 
 .visibility__description {

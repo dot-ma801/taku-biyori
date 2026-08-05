@@ -16,7 +16,7 @@ const props = defineProps<{
 const { playMemo, myMember, isMyMemo, showLoginPrompt, canEditBody } =
   useMyPlayMemo(props.gameSession.id, () => props.gameSession);
 
-const { canViewShared, othersSharedCount } = useSharedPlayMemos(
+const { canViewShared, sharedEntries, othersSharedCount } = useSharedPlayMemos(
   props.gameSession.id,
   () => props.gameSession,
   () => myMember.value?.id ?? null,
@@ -49,7 +49,7 @@ const memoRoute = computed(() => ({
     :play-memo="playMemo"
     :can-edit-body="canEditBody"
     :can-view-shared="canViewShared"
-    :others-shared-count="othersSharedCount"
+    :shared-entries="sharedEntries"
   />
 
   <!--

@@ -9,6 +9,7 @@ import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { computed } from 'vue';
 import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const props = defineProps<{ gameSessionId: string }>();
 
@@ -30,6 +31,12 @@ const gameSessionDateTime = computed(
   () => gameSession.value?.scheduledAt ?? '未設定',
 );
 const location = computed(() => gameSession.value?.location ?? '未設定');
+
+// 当日はプレイ中に何度もメモを開き直すため、備考より上（ステータスの直下）に置く。
+// それ以外の日は書く頻度が低いので、卓の情報を先に読ませる並びに戻す。
+const isToday = computed(
+  () => gameSession.value?.status === GameSessionStatus.today,
+);
 </script>
 
 <template>
@@ -66,8 +73,9 @@ const location = computed(() => gameSession.value?.location ?? '未設定');
 
     <!-- TODO: シナリオ詳細文が実装されたら表示する -->
     <StatusDisplay :game-session-status="gameSession.status" />
+    <PlayMemoDisplay v-if="isToday" :game-session="gameSession" />
     <MemoDisplay :text="description" />
-    <PlayMemoDisplay :game-session="gameSession" />
+    <PlayMemoDisplay v-if="!isToday" :game-session="gameSession" />
     <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
   </div>
 </template>

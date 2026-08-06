@@ -135,10 +135,15 @@ export const useMyPlayMemo = (
    *
    * 楽観的更新はしない。誤公開の事故を避けるため、表示はサーバが返した
    * `shared_at` に従わせる（要求 §4）。
+   *
+   * 戻り値は「実際に PATCH を送ったか」。二重送信ガード・切替不可での
+   * 早期 return は `false` を返す。呼び出し側（メモ画面）はこれを見て、
+   * 実際に送った時だけ公開一覧を取り直す（送っていないのに取り直すと
+   * 無駄な通信になるだけでなく、まだ処理中の前の PATCH と競合し得る）。
    */
-  async function setShared(shared: boolean): Promise<void> {
-    if (visibilityInFlight) return;
-    if (!canToggleVisibility.value) return;
+  async function setShared(shared: boolean): Promise<boolean> {
+    if (visibilityInFlight) return false;
+    if (!canToggleVisibility.value) return false;
 
     visibilityInFlight = true;
     visibilityStatus.value = 'saving';
@@ -154,6 +159,7 @@ export const useMyPlayMemo = (
     } finally {
       visibilityInFlight = false;
     }
+    return true;
   }
 
   // 「自分がメモを持てる相手になったか（isMyMemo）」を監視して取得する。

@@ -593,6 +593,71 @@ describe('setShared', () => {
     expect(isShared.value).toBe(false);
   });
 
+  it('実際に PATCH を送ったときは true を返す', async () => {
+    // Arrange
+    vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(
+      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    const sent = await setShared(true);
+
+    // Assert
+    expect(sent).toBe(true);
+  });
+
+  it('切替不可（メモ未作成）で早期 return したときは false を返す（送っていない）', async () => {
+    // Arrange
+    vi.mocked(getMyPlayMemo).mockResolvedValue(
+      makePlayMemo({ body: '', updatedAt: null }),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    const sent = await setShared(true);
+
+    // Assert
+    expect(sent).toBe(false);
+    expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  it('送信中の二重呼び出しで早期 return したときは false を返す（送っていない）', async () => {
+    // Arrange
+    const { setShared } = await setupSettled();
+    let resolveUpdate!: () => void;
+    vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = () =>
+          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+      }),
+    );
+
+    // Act
+    const first = setShared(true);
+    const second = setShared(true);
+    resolveUpdate();
+    const [firstSent, secondSent] = await Promise.all([first, second]);
+
+    // Assert
+    expect(firstSent).toBe(true);
+    expect(secondSent).toBe(false);
+  });
+
+  it('失敗しても実際に送ってはいるので true を返す', async () => {
+    // Arrange
+    vi.mocked(updateMyPlayMemoVisibility).mockRejectedValue(
+      new Error('API error'),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    const sent = await setShared(true);
+
+    // Assert
+    expect(sent).toBe(true);
+  });
+
   it('送信中は visibilityStatus が saving になり、二重送信しない', async () => {
     // Arrange
     const { visibilityStatus, setShared } = await setupSettled();

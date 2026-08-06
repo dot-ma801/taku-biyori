@@ -465,4 +465,65 @@ describe('fetch', () => {
     // Assert
     expect(listSharedPlayMemos).not.toHaveBeenCalled();
   });
+
+  it('世代ガード: 後から呼んだ fetch が先に解決すれば、先に呼んだ分（後着）は一覧を巻き戻さない', async () => {
+    // Arrange: 生成時の自動取得を先に済ませておく（immediate watch の分）
+    const { entries, fetch } = setup();
+    await flushPromises();
+    vi.mocked(listSharedPlayMemos).mockClear();
+
+    // 公開切替の連打を想定。fetch#1 を呼んだあと、応答が届く前に fetch#2 を呼ぶ
+    let resolveFirst!: (memos: ReturnType<typeof makeSharedMemo>[]) => void;
+    let resolveSecond!: (memos: ReturnType<typeof makeSharedMemo>[]) => void;
+    vi.mocked(listSharedPlayMemos)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveFirst = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveSecond = resolve)),
+      );
+
+    // Act: fetch#1 → fetch#2 の順に呼ぶが、fetch#2（最新）を先に解決させ、
+    // そのあとで fetch#1（後着・古い）を解決させる
+    const first = fetch();
+    const second = fetch();
+    resolveSecond([makeSharedMemo(MY_MEMBER_ID)]); // 最新の一覧
+    await flushPromises();
+    resolveFirst([]); // 古い（空の）一覧が後から届く
+    await Promise.all([first, second]);
+
+    // Assert: 後着の古い応答（空配列）で一覧が巻き戻っていない
+    expect(findEntry(entries, MY_MEMBER_ID)?.tag).toBe('shared');
+  });
+
+  it('世代ガード: 後着の fetch は loading も誤って false → true に戻さない', async () => {
+    // Arrange
+    const { loading, fetch } = setup();
+    await flushPromises();
+    vi.mocked(listSharedPlayMemos).mockClear();
+
+    let resolveFirst!: (memos: ReturnType<typeof makeSharedMemo>[]) => void;
+    let resolveSecond!: (memos: ReturnType<typeof makeSharedMemo>[]) => void;
+    vi.mocked(listSharedPlayMemos)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveFirst = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveSecond = resolve)),
+      );
+
+    // Act
+    const first = fetch();
+    const second = fetch();
+    resolveSecond([]);
+    await second;
+    // この時点で最新（fetch#2）は解決済みなので loading は false のはず
+    expect(loading.value).toBe(false);
+
+    resolveFirst([]); // 後着の古い応答
+    await first;
+
+    // Assert: 後着の解決で loading が意味もなく変化しない
+    expect(loading.value).toBe(false);
+  });
 });

@@ -57,6 +57,11 @@ export const useSharedPlayMemos = (
   const sharedPlayMemos = ref<SharedGameSessionPlayMemo[]>([]);
   const loading = ref(false);
 
+  // 世代カウンタ。公開切替の連打などで fetch が重複起動したとき、後から
+  // 呼ばれた分だけを「最新」として扱い、先に呼ばれた分が後で解決しても
+  // 一覧を巻き戻さないようにする。
+  let requestSeq = 0;
+
   /**
    * 他メンバーの公開メモを読めるステータスか。
    *
@@ -77,13 +82,21 @@ export const useSharedPlayMemos = (
   async function fetch(): Promise<void> {
     if (!canViewShared.value) return;
 
+    const seq = ++requestSeq;
     loading.value = true;
     try {
-      sharedPlayMemos.value = await listSharedPlayMemos(gameSessionId);
+      const result = await listSharedPlayMemos(gameSessionId);
+      // 自分より後に呼ばれた fetch がすでに解決していれば、この応答は
+      // 後着（古い）なので一覧・loading のどちらも書き換えない
+      if (seq !== requestSeq) return;
+      sharedPlayMemos.value = result;
     } catch {
+      if (seq !== requestSeq) return;
       sharedPlayMemos.value = [];
     } finally {
-      loading.value = false;
+      if (seq === requestSeq) {
+        loading.value = false;
+      }
     }
   }
 

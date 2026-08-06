@@ -7,19 +7,38 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import MyPlayMemoCard from '@/features/GameSession/PlayMemo/MyPlayMemoCard.vue';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
+import { useAuthStore } from '@/stores/auth';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 
 const props = defineProps<{
   gameSession: GameSessionDetail;
 }>();
 
-const { playMemo, myMember, isMyMemo, showLoginPrompt, canEditBody } =
-  useMyPlayMemo(props.gameSession.id, () => props.gameSession);
+const authStore = useAuthStore();
+
+const {
+  playMemo,
+  loading: loadingMyPlayMemo,
+  myMember,
+  isMyMemo,
+  showLoginPrompt,
+  canEditBody,
+} = useMyPlayMemo(props.gameSession.id, () => props.gameSession);
 
 const { canViewShared, sharedEntries, othersSharedCount } = useSharedPlayMemos(
   props.gameSession.id,
   () => props.gameSession,
   () => myMember.value?.id ?? null,
+);
+
+/**
+ * メンバーかどうかがまだ確定していない間、このカードを出すか。
+ *
+ * `playMemo` 取得中（`loadingMyPlayMemo`）はまだ確定していないので出す。
+ * 取得が終わって `playMemo` が null（取得失敗）なら閉じる。
+ */
+const showMyMemoCard = computed(
+  () => isMyMemo.value && (loadingMyPlayMemo.value || playMemo.value !== null),
 );
 
 /**
@@ -30,6 +49,20 @@ const { canViewShared, sharedEntries, othersSharedCount } = useSharedPlayMemos(
  */
 const showReadEntry = computed(
   () => canViewShared.value && othersSharedCount.value > 0,
+);
+
+/**
+ * 非メンバー枠（ログイン導線・読む導線）を出すか。
+ *
+ * セッション復元前は `authStore.isAuthenticated` / `currentUser` が未ログイン
+ * 相当になる（ルートガードが復元を待たないため）。復元が終わるまで待たずに
+ * 判定すると、ログイン済みのメンバーにも一瞬「ログインしているメンバーだけ
+ * です」が出たり、`myMember` 未解決で `othersSharedCount` が自分の分まで
+ * 数えて件数が一瞬多く出たりする。`authStore.initialized` を見て、
+ * 復元が終わるまではこの枠自体を出さない。
+ */
+const showNonMemberSection = computed(
+  () => authStore.initialized && (showReadEntry.value || showLoginPrompt.value),
 );
 
 const readEntryLabel = computed(
@@ -44,9 +77,10 @@ const memoRoute = computed(() => ({
 
 <template>
   <MyPlayMemoCard
-    v-if="isMyMemo"
+    v-if="showMyMemoCard"
     :game-session-id="props.gameSession.id"
     :play-memo="playMemo"
+    :loading="loadingMyPlayMemo"
     :can-edit-body="canEditBody"
     :can-view-shared="canViewShared"
     :shared-entries="sharedEntries"
@@ -56,8 +90,9 @@ const memoRoute = computed(() => ({
     メンバー以外の枠。読む導線（公開メモがある完了・中止の卓）と、
     書くためのログイン導線（未ログイン・ゲスト）のどちらかがあれば出す。
     ログイン済みの非メンバーで読むものも無ければセクションごと出さない。
+    セッション復元前はどちらの枠も出さない（showNonMemberSection）。
   -->
-  <BaseCard v-else-if="showReadEntry || showLoginPrompt">
+  <BaseCard v-else-if="showNonMemberSection">
     <BaseSectionHeading level="h3" :icon="NotebookPen">
       プレイメモ
     </BaseSectionHeading>

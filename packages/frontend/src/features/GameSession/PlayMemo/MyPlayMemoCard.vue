@@ -12,12 +12,24 @@ import { formatDateTimeShort } from '@/utils/date';
 const props = defineProps<{
   gameSessionId: string;
   playMemo: MyGameSessionPlayMemo | null;
+  /** playMemo の取得中か。true の間はまだ内容が確定していない */
+  loading: boolean;
   canEditBody: boolean;
   /** 他メンバーの公開メモを読める時期か（完了・中止） */
   canViewShared: boolean;
   /** 公開しているメンバー（自分を含む）。読める時期でなければ空 */
   sharedEntries: PlayMemoMemberEntry[];
 }>();
+
+/**
+ * 公開状態やプレビューを確定した情報として出せるか。
+ *
+ * `playMemo` の到着前は `sharedAt` も本文も分かっていないので、ここが
+ * false の間は「非公開」「本文なし」のような断定表示を出さない
+ * （取得に失敗した場合はこのカード自体を親側で閉じる。この composable の
+ * `loading` はあくまで「まだ取得中」を表す）。
+ */
+const isResolved = computed(() => !props.loading);
 
 // 公開状態はサーバ値（shared_at の有無）から導く。
 // 切り替えの UI はメモ画面側に置き、ここでは状態だけを見せる。
@@ -58,24 +70,35 @@ const writingEmptyMessage = computed(
   () => 'プレイ中の気づきを、自分だけのメモに残せます。',
 );
 
-const writingActionLabel = computed(() =>
-  hasBody.value ? '続きを書く' : '最初のメモを書く',
-);
+/** 取得中は本文の有無が分からないため、断定しない中立なラベルにする */
+const writingActionLabel = computed(() => {
+  if (!isResolved.value) return 'メモを開く';
+  return hasBody.value ? '続きを書く' : '最初のメモを書く';
+});
 
 // ---------- 完了・中止（読む面） ----------
 
 const hasSharedEntries = computed(() => props.sharedEntries.length > 0);
 
-/** 公開が1件も無いときは、読む導線の代わりに公開への導線を出す */
+/**
+ * 公開が1件も無いときの導線ラベル。
+ *
+ * 本文が無い（保存したことがない）メモは公開しようがないため、
+ * 「メモを開いて公開する」という手の無い CTA を出さない。
+ * 取得中で本文の有無が確定していない間も同様に中立な文言にする。
+ */
 const readingActionLabel = computed(() =>
-  hasSharedEntries.value ? 'メモを開く' : 'メモを開いて公開する',
+  !hasSharedEntries.value && isResolved.value && hasBody.value
+    ? 'メモを開いて公開する'
+    : 'メモを開く',
 );
 
-const readingEmptyMessage = computed(() =>
-  hasBody.value
+const readingEmptyMessage = computed(() => {
+  if (!isResolved.value) return '読み込み中...';
+  return hasBody.value
     ? 'メモを公開すると、ほかのメンバーが読めるようになります。'
-    : 'この卓のメモはまだ誰も公開していません。',
-);
+    : 'この卓のメモはまだ誰も公開していません。';
+});
 </script>
 
 <template>
@@ -88,7 +111,11 @@ const readingEmptyMessage = computed(() =>
       <BaseSectionHeading level="h3" :icon="NotebookPen">
         プレイメモ
       </BaseSectionHeading>
-      <span class="visibility" :class="{ 'visibility--shared': isShared }">
+      <span
+        v-if="isResolved"
+        class="visibility"
+        :class="{ 'visibility--shared': isShared }"
+      >
         <component :is="visibilityIcon" :size="12" aria-hidden="true" />
         {{ visibilityLabel }}
       </span>
@@ -135,13 +162,18 @@ const readingEmptyMessage = computed(() =>
       <BaseSectionHeading level="h3" :icon="NotebookPen">
         プレイメモ
       </BaseSectionHeading>
-      <span class="visibility" :class="{ 'visibility--shared': isShared }">
+      <span
+        v-if="isResolved"
+        class="visibility"
+        :class="{ 'visibility--shared': isShared }"
+      >
         <component :is="visibilityIcon" :size="12" aria-hidden="true" />
         {{ visibilityLabel }}
       </span>
     </div>
 
-    <p v-if="hasBody" class="body">{{ body }}</p>
+    <p v-if="!isResolved" class="empty">読み込み中...</p>
+    <p v-else-if="hasBody" class="body">{{ body }}</p>
     <p v-else class="empty">{{ writingEmptyMessage }}</p>
 
     <div class="foot">

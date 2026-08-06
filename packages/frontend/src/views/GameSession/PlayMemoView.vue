@@ -9,6 +9,7 @@ import PlayMemoReader from '@/features/GameSession/PlayMemo/PlayMemoReader.vue';
 import PlayMemoSidebar from '@/features/GameSession/PlayMemo/PlayMemoSidebar.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
+import { usePlayMemoPane } from '@/features/GameSession/PlayMemo/usePlayMemoPane';
 import { usePlayMemoSelection } from '@/features/GameSession/PlayMemo/usePlayMemoSelection';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { useAuthStore } from '@/stores/auth';
@@ -52,59 +53,23 @@ const {
 const { selectedEntry, selectedMemberId, isMineSelected, select } =
   usePlayMemoSelection(entries);
 
-const loading = computed(
-  () =>
-    loadingDetail.value || loadingMemo.value || loadingSharedPlayMemos.value,
-);
 const gameSessionTitle = computed(() => gameSession.value?.title ?? '');
 
 /**
- * サイドバーを出すか。
- *
- * 完了・中止していれば、公開しているメンバーが1人も居なくても出す。
- * 「誰も公開していない」ことが分かるのも情報であり、行を押せば理由も読める。
- * 完了・中止の前は公開状態によらず誰のメモも読めないため、全幅の1枚に倒す。
+ * 「何を出すか」の導出は usePlayMemoPane に集約する（CLAUDE.md「データの
+ * 導出は composable に寄せる」）。ローディング境界・失敗時の表示範囲は
+ * この composable のユニットテストで固定している。
  */
-const showSidebar = computed(() => canViewShared.value);
-
-/** 自分のメモを開いているか。サイドバーを出さない時期は常に自分のメモ */
-const showEditor = computed(
-  () =>
-    isMyMemo.value &&
-    playMemo.value !== null &&
-    (!showSidebar.value || isMineSelected.value),
-);
-
-/**
- * 他メンバーの行を開いているか。
- *
- * 読めない相手（非公開・ゲスト）もここに来る。閲覧面が本文の代わりに
- * 読めない理由を出すため、読めるかどうかでは絞らない。
- */
-const readerEntry = computed(() => {
-  if (showEditor.value) return null;
-  return selectedEntry.value;
-});
-
-/**
- * メンバーなのにメモを取得できなかった状態。
- * この画面はメモが主役なので、卓詳細と違って黙って閉じずに再試行を出す。
- */
-const loadFailed = computed(
-  () =>
-    !loading.value &&
-    !!gameSession.value &&
-    isMyMemo.value &&
-    playMemo.value === null,
-);
-
-/**
- * 開くものがまだ決まらない間。
- * これが false になっても開くものが無ければ「公開メモがまだ無い」状態。
- */
-const showLoading = computed(
-  () => loading.value && !showEditor.value && readerEntry.value === null,
-);
+const { showSidebar, showEditor, showFailedNotice, readerEntry, showLoading } =
+  usePlayMemoPane({
+    loadingMemo,
+    loadingSharedPlayMemos,
+    isMyMemo,
+    playMemo,
+    canViewShared,
+    selectedEntry,
+    isMineSelected,
+  });
 
 // メモを持てず、公開メモも読めない相手がこの URL を直接開いたケース
 // （実施前の卓を非メンバーが開いた・退出後など）。履歴を汚さないよう
@@ -139,9 +104,15 @@ watch(
 /**
  * 公開状態を切り替える。
  * 一覧（サイドバーのタグ・公開件数）も変わるため、続けて取り直す。
+ *
+ * `setShared` が返すのは「実際に PATCH を送ったか」。二重送信ガードや
+ * 切替不可で早期 return したときは false が返るため、その場合は
+ * 一覧を取り直さない（送っていないのに取り直すと、まだ処理中の前の
+ * PATCH と競合して一覧が巻き戻り得るため）。
  */
 async function onVisibilityChange(shared: boolean) {
-  await setShared(shared);
+  const sent = await setShared(shared);
+  if (!sent) return;
   await fetchSharedPlayMemos();
 }
 </script>
@@ -150,18 +121,17 @@ async function onVisibilityChange(shared: boolean) {
   <PageContainer>
     <div v-if="errorMessage">{{ errorMessage }}</div>
 
-    <div v-else-if="loadFailed" class="failed">
-      <p class="failed__text">メモを読み込めませんでした。</p>
-      <BaseButton variant="secondary" @click="fetchPlayMemo">
-        再読み込み
-      </BaseButton>
-    </div>
-
     <div
       v-else-if="gameSession"
       class="layout"
       :class="{ 'layout--with-sidebar': showSidebar }"
     >
+      <!--
+        自分のメモの取得失敗は、この枠（本来エディタが出る場所）の中だけに
+        閉じ込める。完了・中止した卓では他メンバーの公開メモを読むことが
+        この画面のもう1つの主目的で、それは自分のメモの取得可否とは独立
+        （要求 §3-3・§3-4）なので、サイドバーや閲覧面まで道連れにしない。
+      -->
       <PlayMemoSidebar
         v-if="showSidebar"
         :entries="entries"
@@ -181,6 +151,13 @@ async function onVisibilityChange(shared: boolean) {
         @saved="applySaved"
         @visibility-change="onVisibilityChange"
       />
+
+      <div v-else-if="showFailedNotice" class="failed">
+        <p class="failed__text">メモを読み込めませんでした。</p>
+        <BaseButton variant="secondary" @click="fetchPlayMemo">
+          再読み込み
+        </BaseButton>
+      </div>
 
       <PlayMemoReader
         v-else-if="readerEntry"

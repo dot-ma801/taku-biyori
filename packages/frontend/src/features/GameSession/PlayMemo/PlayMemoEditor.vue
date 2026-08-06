@@ -207,11 +207,11 @@ onBeforeUnmount(() => {
     </div>
 
     <BaseAlert v-if="showLockedNotice" variant="warning">
-      この卓は完了しました。本文の編集はここまでです。最後に保存された内容を表示しています。
+      この卓は完了・中止しました。本文の編集はここまでです。最後に保存された内容を表示しています。
     </BaseAlert>
 
     <BaseAlert v-else-if="!props.canEditBody" variant="warning">
-      卓が完了したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
+      卓が完了・中止したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
     </BaseAlert>
 
     <BaseAlert v-if="showFailedNotice" variant="error">

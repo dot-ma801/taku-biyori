@@ -114,9 +114,17 @@ const showVisibilityFailedNotice = computed(
 /**
  * 公開トグルの説明。既定が非公開であることと、公開したときに誰が読めるのかを示す
  * （要求 §4「公開・非公開の状態がひと目で分かる」）。
+ *
+ * 完了・中止していて本文を一度も保存していない場合（`canToggleVisibility
+ * === false`）、本文はもう編集できない（`canEditBody === false`）ため
+ * 「本文を保存すると公開できる」という案内は実行不可能な指示になり、
+ * 袋小路になってしまう。この組み合わせではもう手が無いことを伝える。
  */
 const visibilityDescription = computed(() => {
   if (!props.canToggleVisibility) {
+    if (!props.canEditBody) {
+      return '本文が保存されていないため、このメモは公開できません。';
+    }
     return '本文を保存すると、このメモを公開できるようになります。';
   }
   return props.isShared

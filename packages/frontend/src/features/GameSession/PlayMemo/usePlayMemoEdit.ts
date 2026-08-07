@@ -117,7 +117,12 @@ export const usePlayMemoEdit = (
     const request = (async () => {
       try {
         const saved = await upsertMyPlayMemo(gameSessionId, { body: sending });
-        baseline.value = sending;
+        // 基準値は「送った本文」ではなく「サーバが保存した本文」に合わせる。
+        // 上の watch はこの baseline との一致でエコーを判定するため、サーバが
+        // 本文を正規化して返すと（前後の空白除去など）送信内容とはズレる。
+        // 送信内容を基準にすると自分の保存をエコーと見なせず reset() が走り、
+        // 送信中に書き足した本文が消える。
+        baseline.value = saved.body;
         onSaved(saved);
 
         // 送信中に書き足されていれば未保存のまま残る。自動保存はしないので、

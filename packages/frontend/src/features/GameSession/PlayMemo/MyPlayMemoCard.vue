@@ -4,14 +4,32 @@ import { RouterLink } from 'vue-router';
 import { NotebookPen, Lock, Eye, ArrowRight } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { PlayMemoMemberEntry } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { formatDateTimeShort } from '@/utils/date';
 
 const props = defineProps<{
   gameSessionId: string;
   playMemo: MyGameSessionPlayMemo | null;
+  /** playMemo の取得中か。true の間はまだ内容が確定していない */
+  loading: boolean;
   canEditBody: boolean;
+  /** 他メンバーの公開メモを読める時期か（完了・中止） */
+  canViewShared: boolean;
+  /** 公開しているメンバー（自分を含む）。読める時期でなければ空 */
+  sharedEntries: PlayMemoMemberEntry[];
 }>();
+
+/**
+ * 公開状態やプレビューを確定した情報として出せるか。
+ *
+ * `playMemo` の到着前は `sharedAt` も本文も分かっていないので、ここが
+ * false の間は「非公開」「本文なし」のような断定表示を出さない
+ * （取得に失敗した場合はこのカード自体を親側で閉じる。この composable の
+ * `loading` はあくまで「まだ取得中」を表す）。
+ */
+const isResolved = computed(() => !props.loading);
 
 // 公開状態はサーバ値（shared_at の有無）から導く。
 // 切り替えの UI はメモ画面側に置き、ここでは状態だけを見せる。
@@ -22,72 +40,149 @@ const visibilityIcon = computed(() => (isShared.value ? Eye : Lock));
 const body = computed(() => props.playMemo?.body ?? '');
 const hasBody = computed(() => body.value.length > 0);
 
-/**
- * 本文の要約行。全文はメモ画面で読むので、ここは固定行数で切るだけにする
- * （長文でも卓詳細の縦丈が一定に保たれる）。
- */
-const summary = computed(() => {
-  if (!hasBody.value) return '';
-  return `${body.value.length.toLocaleString()} 字`;
-});
-
 const updatedLabel = computed(() => {
   const updatedAt = props.playMemo?.updatedAt;
   if (!updatedAt) return '';
   return `${formatDateTimeShort(updatedAt)} に保存`;
 });
 
-const metaLabel = computed(() =>
-  [summary.value, updatedLabel.value].filter(Boolean).join('・'),
-);
+const metaLabel = computed(() => {
+  if (!hasBody.value) return updatedLabel.value;
+  return [`${body.value.length.toLocaleString()} 字`, updatedLabel.value]
+    .filter(Boolean)
+    .join('・');
+});
 
 const memoRoute = computed(() => ({
   name: 'game-sessions-play-memo',
   params: { gameSessionId: props.gameSessionId },
 }));
 
-/**
- * 遷移先は読み書き兼用の画面なので、完了・中止後もリンクは残す
- * （本文は編集できないが、読み返しと公開の切り替えはできる）。
- */
-const openLabel = computed(() => {
-  if (!props.canEditBody) return '開く';
-  return hasBody.value ? '書く' : '最初のメモを書く';
+/** そのメンバーのメモを開いた状態でメモ画面へ入る */
+function memberRoute(memberId: string) {
+  return { ...memoRoute.value, query: { member: memberId } };
+}
+
+// ---------- 実施前・当日（書く面） ----------
+
+/** 書きかけを思い出す手がかり。全文はメモ画面で読む */
+const writingEmptyMessage = computed(
+  () => 'プレイ中の気づきを、自分だけのメモに残せます。',
+);
+
+/** 取得中は本文の有無が分からないため、断定しない中立なラベルにする */
+const writingActionLabel = computed(() => {
+  if (!isResolved.value) return 'メモを開く';
+  return hasBody.value ? '続きを書く' : '最初のメモを書く';
 });
 
-// 完了・中止で本文が閉じることを、閉じる前から伝える（要求 §4）。
-// カードは入口なので案内は控えめに置き、強い警告はメモ画面側で出す。
-const notice = computed(() =>
-  props.canEditBody
-    ? '卓が完了・中止すると、本文は編集できなくなります（公開・非公開の切り替えは引き続き行えます）。'
-    : '卓が完了したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。',
+// ---------- 完了・中止（読む面） ----------
+
+const hasSharedEntries = computed(() => props.sharedEntries.length > 0);
+
+/**
+ * 公開が1件も無いときの導線ラベル。
+ *
+ * 本文が無い（保存したことがない）メモは公開しようがないため、
+ * 「メモを開いて公開する」という手の無い CTA を出さない。
+ * 取得中で本文の有無が確定していない間も同様に中立な文言にする。
+ */
+const readingActionLabel = computed(() =>
+  !hasSharedEntries.value && isResolved.value && hasBody.value
+    ? 'メモを開いて公開する'
+    : 'メモを開く',
 );
+
+const readingEmptyMessage = computed(() => {
+  if (!isResolved.value) return '読み込み中...';
+  return hasBody.value
+    ? 'メモを公開すると、ほかのメンバーが読めるようになります。'
+    : 'この卓のメモはまだ誰も公開していません。';
+});
 </script>
 
 <template>
-  <BaseCard>
+  <!--
+    完了・中止。読む面なので「誰のメモが読めるか」を主役にする。
+    メンバーごとにリンクを持たせるため、カード全体はリンクにしない。
+  -->
+  <BaseCard v-if="props.canViewShared">
     <div class="heading-row">
       <BaseSectionHeading level="h3" :icon="NotebookPen">
         プレイメモ
       </BaseSectionHeading>
-      <span class="visibility" :class="{ 'visibility--shared': isShared }">
+      <span
+        v-if="isResolved"
+        class="visibility"
+        :class="{ 'visibility--shared': isShared }"
+      >
         <component :is="visibilityIcon" :size="12" aria-hidden="true" />
         {{ visibilityLabel }}
       </span>
     </div>
 
-    <p v-if="hasBody" class="body">{{ body }}</p>
-    <p v-else class="empty">プレイ中の気づきを、自分だけのメモに残せます。</p>
+    <template v-if="hasSharedEntries">
+      <p class="shared-label">公開しているメンバー</p>
+      <ul class="chips">
+        <li v-for="entry in props.sharedEntries" :key="entry.memberId">
+          <RouterLink :to="memberRoute(entry.memberId)" class="chip">
+            <UserAvatar
+              :size="24"
+              :user-id="entry.userId"
+              :name="entry.avatarName"
+            />
+            {{ entry.primaryLabel }}
+            <span v-if="entry.isMe" class="chip__me">（自分）</span>
+          </RouterLink>
+        </li>
+      </ul>
+    </template>
+
+    <p v-else class="empty">{{ readingEmptyMessage }}</p>
 
     <div class="foot">
       <span class="meta">{{ metaLabel }}</span>
       <RouterLink :to="memoRoute" class="open-link">
-        {{ openLabel }}
+        {{ readingActionLabel }}
         <ArrowRight :size="15" aria-hidden="true" />
       </RouterLink>
     </div>
+  </BaseCard>
 
-    <p class="notice">{{ notice }}</p>
+  <!--
+    実施前・当日。書く面なのでカード全体をメモ画面への導線にし、
+    押す場所を1つに固定する（プレイ中に何度も開くため）。
+  -->
+  <BaseCard
+    v-else
+    :link="{ to: memoRoute, label: 'プレイメモを開く' }"
+    class="writing"
+  >
+    <div class="heading-row">
+      <BaseSectionHeading level="h3" :icon="NotebookPen">
+        プレイメモ
+      </BaseSectionHeading>
+      <span
+        v-if="isResolved"
+        class="visibility"
+        :class="{ 'visibility--shared': isShared }"
+      >
+        <component :is="visibilityIcon" :size="12" aria-hidden="true" />
+        {{ visibilityLabel }}
+      </span>
+    </div>
+
+    <p v-if="!isResolved" class="empty">読み込み中...</p>
+    <p v-else-if="hasBody" class="body">{{ body }}</p>
+    <p v-else class="empty">{{ writingEmptyMessage }}</p>
+
+    <div class="foot">
+      <span class="meta">{{ metaLabel }}</span>
+      <span class="open-link">
+        {{ writingActionLabel }}
+        <ArrowRight :size="15" aria-hidden="true" />
+      </span>
+    </div>
   </BaseCard>
 </template>
 
@@ -123,8 +218,8 @@ const notice = computed(() =>
 .body {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
 
   margin: 0;
@@ -140,12 +235,58 @@ const notice = computed(() =>
   font-size: var(--font-size-sm);
 }
 
+.shared-label {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.chip__me {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+
   margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
 }
 
 .meta {
@@ -170,15 +311,13 @@ const notice = computed(() =>
   white-space: nowrap;
 }
 
-.open-link:hover {
+a.open-link:hover {
   background: var(--color-primary-strong);
   color: var(--color-on-primary);
 }
 
-.notice {
-  margin: var(--space-3) 0 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: var(--line-height-standard);
+/* カード全体がリンクなので、ホバーはカード側の見た目に任せて色だけ追従させる */
+.writing:hover .open-link {
+  background: var(--color-primary-strong);
 }
 </style>

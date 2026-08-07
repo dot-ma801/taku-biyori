@@ -12,13 +12,14 @@ import type {
 
 vi.mock('@/api/game-session', () => ({
   getMyPlayMemo: vi.fn(),
+  updateMyPlayMemoVisibility: vi.fn(),
 }));
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }));
 
-import { getMyPlayMemo } from '@/api/game-session';
+import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 const SESSION_ID = 'session-1';
@@ -443,5 +444,240 @@ describe('applySaved', () => {
 
     // Assert
     expect(playMemo.value).toEqual(saved);
+  });
+});
+
+describe('isShared', () => {
+  it('sharedAt があれば true', async () => {
+    // Arrange
+    vi.mocked(getMyPlayMemo).mockResolvedValue(
+      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+    );
+
+    // Act
+    const { isShared } = await setupSettled();
+
+    // Assert
+    expect(isShared.value).toBe(true);
+  });
+
+  it('sharedAt が null なら false（既定は非公開）', async () => {
+    // Arrange & Act
+    const { isShared } = await setupSettled();
+
+    // Assert
+    expect(isShared.value).toBe(false);
+  });
+});
+
+describe('canToggleVisibility', () => {
+  it.each([GameSessionStatus.completed, GameSessionStatus.cancelled])(
+    '%s で本文が編集できなくなっても、保存済みメモなら切り替えられる',
+    async (status) => {
+      // Arrange & Act
+      const { canToggleVisibility, canEditBody } = await setupSettled(
+        makeGameSession({ status }),
+      );
+
+      // Assert
+      expect(canEditBody.value).toBe(false);
+      expect(canToggleVisibility.value).toBe(true);
+    },
+  );
+
+  it('メモが未作成（updatedAt が null）なら false（API が 404 を返すため）', async () => {
+    // Arrange
+    vi.mocked(getMyPlayMemo).mockResolvedValue(
+      makePlayMemo({ body: '', updatedAt: null }),
+    );
+
+    // Act
+    const { canToggleVisibility } = await setupSettled();
+
+    // Assert
+    expect(canToggleVisibility.value).toBe(false);
+  });
+
+  it('メモを取得できていなければ false', async () => {
+    // Arrange
+    mockCurrentUser('user-stranger');
+
+    // Act
+    const { canToggleVisibility } = await setupSettled();
+
+    // Assert
+    expect(canToggleVisibility.value).toBe(false);
+  });
+});
+
+describe('setShared', () => {
+  it('公開に切り替えると API を呼び、サーバ値で playMemo を差し替える', async () => {
+    // Arrange
+    const shared = makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' });
+    vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);
+    const { playMemo, isShared, setShared } = await setupSettled();
+
+    // Act
+    await setShared(true);
+
+    // Assert
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
+      shared: true,
+    });
+    expect(playMemo.value).toEqual(shared);
+    expect(isShared.value).toBe(true);
+  });
+
+  it('非公開に戻せる', async () => {
+    // Arrange
+    vi.mocked(getMyPlayMemo).mockResolvedValue(
+      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+    );
+    vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(makePlayMemo());
+    const { isShared, setShared } = await setupSettled();
+    expect(isShared.value).toBe(true);
+
+    // Act
+    await setShared(false);
+
+    // Assert
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
+      shared: false,
+    });
+    expect(isShared.value).toBe(false);
+  });
+
+  it('完了した卓でも切り替えられる（本文編集と独立）', async () => {
+    // Arrange
+    const shared = makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' });
+    vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);
+    const { setShared } = await setupSettled(
+      makeGameSession({ status: GameSessionStatus.completed }),
+    );
+
+    // Act
+    await setShared(true);
+
+    // Assert
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
+      shared: true,
+    });
+  });
+
+  it('メモが未作成なら API を呼ばない（404 を出さない）', async () => {
+    // Arrange
+    vi.mocked(getMyPlayMemo).mockResolvedValue(
+      makePlayMemo({ body: '', updatedAt: null }),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    await setShared(true);
+
+    // Assert
+    expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  it('失敗したら visibilityStatus を failed にし、公開状態は変えない', async () => {
+    // Arrange
+    vi.mocked(updateMyPlayMemoVisibility).mockRejectedValue(
+      new Error('API error'),
+    );
+    const { isShared, visibilityStatus, setShared } = await setupSettled();
+
+    // Act
+    await setShared(true);
+
+    // Assert
+    expect(visibilityStatus.value).toBe('failed');
+    expect(isShared.value).toBe(false);
+  });
+
+  it('実際に PATCH を送ったときは true を返す', async () => {
+    // Arrange
+    vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(
+      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    const sent = await setShared(true);
+
+    // Assert
+    expect(sent).toBe(true);
+  });
+
+  it('切替不可（メモ未作成）で早期 return したときは false を返す（送っていない）', async () => {
+    // Arrange
+    vi.mocked(getMyPlayMemo).mockResolvedValue(
+      makePlayMemo({ body: '', updatedAt: null }),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    const sent = await setShared(true);
+
+    // Assert
+    expect(sent).toBe(false);
+    expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  it('送信中の二重呼び出しで早期 return したときは false を返す（送っていない）', async () => {
+    // Arrange
+    const { setShared } = await setupSettled();
+    let resolveUpdate!: () => void;
+    vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = () =>
+          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+      }),
+    );
+
+    // Act
+    const first = setShared(true);
+    const second = setShared(true);
+    resolveUpdate();
+    const [firstSent, secondSent] = await Promise.all([first, second]);
+
+    // Assert
+    expect(firstSent).toBe(true);
+    expect(secondSent).toBe(false);
+  });
+
+  it('失敗しても実際に送ってはいるので true を返す', async () => {
+    // Arrange
+    vi.mocked(updateMyPlayMemoVisibility).mockRejectedValue(
+      new Error('API error'),
+    );
+    const { setShared } = await setupSettled();
+
+    // Act
+    const sent = await setShared(true);
+
+    // Assert
+    expect(sent).toBe(true);
+  });
+
+  it('送信中は visibilityStatus が saving になり、二重送信しない', async () => {
+    // Arrange
+    const { visibilityStatus, setShared } = await setupSettled();
+    let resolveUpdate!: () => void;
+    vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = () =>
+          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+      }),
+    );
+
+    // Act
+    const first = setShared(true);
+    expect(visibilityStatus.value).toBe('saving');
+    const second = setShared(true);
+    resolveUpdate();
+    await Promise.all([first, second]);
+
+    // Assert
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledTimes(1);
+    expect(visibilityStatus.value).toBe('idle');
   });
 });

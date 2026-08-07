@@ -8,7 +8,9 @@ import type {
   JoinAsGuestInput,
   JoinGameSessionInput,
   MyGameSessionPlayMemo,
+  SharedGameSessionPlayMemo,
   UpdateGameSessionInput,
+  UpdateGameSessionPlayMemoVisibilityInput,
   UpdateGameSessionStatusInput,
   UpdateMemberInput,
   UpsertGameSessionPlayMemoInput,
@@ -112,6 +114,37 @@ export async function upsertMyPlayMemo(
   return (await apiRequest<MyGameSessionPlayMemo>(
     `/api/game-sessions/${gameSessionId}/play-memos/me`,
     { method: 'PUT', body: input },
+  ))!;
+}
+
+/**
+ * 自分のプレイメモの公開・非公開を切り替える。
+ *
+ * 本文の保存と違い、完了・中止した卓でも呼べる（切替はステータス非依存。design-v1.2 §4）。
+ * 本文を一度も保存していないメモには 404 が返るため、呼び出し側は保存済みのときだけ叩く。
+ */
+export async function updateMyPlayMemoVisibility(
+  gameSessionId: string,
+  input: UpdateGameSessionPlayMemoVisibilityInput,
+): Promise<MyGameSessionPlayMemo> {
+  return (await apiRequest<MyGameSessionPlayMemo>(
+    `/api/game-sessions/${gameSessionId}/play-memos/me/visibility`,
+    { method: 'PATCH', body: input },
+  ))!;
+}
+
+/**
+ * 卓の公開プレイメモを一覧する。
+ *
+ * 認証は不要（未ログイン・ゲストでも読める。要求 §3-4）。レスポンスは閲覧者で分岐せず、
+ * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは memberId だけが返るため、
+ * 表示名は卓のメンバー一覧と突き合わせて解決する。
+ */
+export async function listSharedPlayMemos(
+  gameSessionId: string,
+): Promise<SharedGameSessionPlayMemo[]> {
+  return (await apiRequest<SharedGameSessionPlayMemo[]>(
+    `/api/game-sessions/${gameSessionId}/play-memos`,
   ))!;
 }
 

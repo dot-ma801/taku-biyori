@@ -299,6 +299,28 @@ describe('save', () => {
     expect(draftBody.value).toBe('1回目と2回目');
   });
 
+  it('サーバが本文を正規化して返しても、書き足した分が消えない', async () => {
+    // Arrange: サーバが前後の空白を除去して返すケース（送った本文と一致しない）
+    let resolveSave!: () => void;
+    vi.mocked(upsertMyPlayMemo).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSave = () => resolve(makePlayMemo({ body: '1回目' }));
+      }),
+    );
+    const { draftBody, setDraft, save } = setup();
+    setDraft('  1回目  ');
+
+    // Act
+    const promise = save();
+    setDraft('  1回目  と2回目'); // 送信中に書き足す
+    resolveSave();
+    await promise;
+
+    // Assert: エコー判定の基準を「送った本文」ではなく「サーバが保存した本文」に
+    // 置いていれば、正規化されても自分の保存だと分かり reset() が走らない
+    expect(draftBody.value).toBe('  1回目  と2回目');
+  });
+
   it('送信中に書き足してから再度保存しても PUT は2本飛ばない', async () => {
     // Arrange
     let resolveSave!: () => void;

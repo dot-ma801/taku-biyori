@@ -6,8 +6,17 @@ import {
   GameSessionAction,
   canPerform,
 } from '@taku-biyori/shared';
-import { getMyPlayMemo } from '@/api/game-session';
+import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
+
+/**
+ * 公開切替の通信状態。
+ *
+ * - `idle`: 待機中
+ * - `saving`: 送信中
+ * - `failed`: 切替に失敗（公開状態はサーバ値のまま変わらない）
+ */
+export type PlayMemoVisibilityStatus = 'idle' | 'saving' | 'failed';
 
 /**
  * 自分のプレイメモを取得し、書ける相手かどうかを判定する composable。
@@ -100,6 +109,59 @@ export const useMyPlayMemo = (
     playMemo.value = saved;
   }
 
+  // ---------- 公開・非公開の切替 ----------
+
+  /** 公開中か。サーバ値（shared_at の有無）から導く */
+  const isShared = computed(() => !!playMemo.value?.sharedAt);
+
+  /**
+   * 公開・非公開を切り替えられるか。
+   *
+   * 本文の編集可否（canEditBody）とは独立で、完了・中止した卓でも切り替えられる
+   * （design-v1.2 §4）。ただし本文を一度も保存していないメモは API が 404 を
+   * 返すため、`updatedAt` が null の間は切り替えさせない。
+   */
+  const canToggleVisibility = computed(
+    () => !!playMemo.value && playMemo.value.updatedAt !== null,
+  );
+
+  const visibilityStatus = ref<PlayMemoVisibilityStatus>('idle');
+
+  // 二重送信のガード。連打で公開・非公開が競合しないよう、送信中は後続を捨てる
+  let visibilityInFlight = false;
+
+  /**
+   * 公開・非公開を切り替える。
+   *
+   * 楽観的更新はしない。誤公開の事故を避けるため、表示はサーバが返した
+   * `shared_at` に従わせる（要求 §4）。
+   *
+   * 戻り値は「実際に PATCH を送ったか」。二重送信ガード・切替不可での
+   * 早期 return は `false` を返す。呼び出し側（メモ画面）はこれを見て、
+   * 実際に送った時だけ公開一覧を取り直す（送っていないのに取り直すと
+   * 無駄な通信になるだけでなく、まだ処理中の前の PATCH と競合し得る）。
+   */
+  async function setShared(shared: boolean): Promise<boolean> {
+    if (visibilityInFlight) return false;
+    if (!canToggleVisibility.value) return false;
+
+    visibilityInFlight = true;
+    visibilityStatus.value = 'saving';
+
+    try {
+      playMemo.value = await updateMyPlayMemoVisibility(gameSessionId, {
+        shared,
+      });
+      visibilityStatus.value = 'idle';
+    } catch {
+      // 通信エラー・退出直後の 403 など。状態は変えずに失敗だけを伝える
+      visibilityStatus.value = 'failed';
+    } finally {
+      visibilityInFlight = false;
+    }
+    return true;
+  }
+
   // 「自分がメモを持てる相手になったか（isMyMemo）」を監視して取得する。
   // 卓詳細（マウント時には取得済み）とメモ画面（後から届く）のどちらの
   // 順序でも動くよう、値の到着を watch で待つ。
@@ -127,6 +189,10 @@ export const useMyPlayMemo = (
     isMyMemo,
     showLoginPrompt,
     canEditBody,
+    isShared,
+    canToggleVisibility,
+    visibilityStatus,
+    setShared,
     fetch,
     applySaved,
   };

@@ -59,8 +59,8 @@ const router = createRouter({
       }),
     },
     // プレイ中に何度も開き直すため、卓詳細を経由せず直接開ける URL を持たせる。
-    // メモは本質的にログインユーザー限定なので requiresAuth を付け、
-    // 未ログインの直アクセスはガードでログインへ流す（画面側に導線を持たせない）。
+    // 完了・中止した卓の公開メモは未ログイン・ゲストにも開く（要求 §3-4）ため
+    // requiresAuth は付けない。書く操作の可否は画面側のメンバー判定が決める。
     {
       path: '/game-sessions/:gameSessionId/play-memo',
       name: 'game-sessions-play-memo',
@@ -68,7 +68,6 @@ const router = createRouter({
       props: (to) => ({
         gameSessionId: to.params.gameSessionId,
       }),
-      meta: { requiresAuth: true },
     },
     {
       path: '/profile/setting',

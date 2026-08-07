@@ -43,6 +43,20 @@ export {
 } from './game-session/permissions.js';
 export { isGuestMember } from './game-session/member.js';
 export {
+  GameSessionPlayMemoSchema,
+  type GameSessionPlayMemo,
+  MyGameSessionPlayMemoSchema,
+  type MyGameSessionPlayMemo,
+  SharedGameSessionPlayMemoSchema,
+  type SharedGameSessionPlayMemo,
+  GAME_SESSION_PLAY_MEMO_MAX_LENGTH,
+  UpsertGameSessionPlayMemoInputSchema,
+  type UpsertGameSessionPlayMemoInput,
+  UpdateGameSessionPlayMemoVisibilityInputSchema,
+  type UpdateGameSessionPlayMemoVisibilityInput,
+  canViewSharedPlayMemos,
+} from './game-session/play-memo.js';
+export {
   ProfileResponseSchema,
   type ProfileResponse,
   UpdateProfileInputSchema,

@@ -3,6 +3,7 @@ import {
   count,
   eq,
   exists,
+  isNotNull,
   isNull,
   or,
   sql,
@@ -13,6 +14,8 @@ import type {
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
+  GameSessionPlayMemo,
+  SharedGameSessionPlayMemo,
   JoinAsGuestInput,
   JoinGameSessionInput,
   UpdateGameSessionInput,
@@ -23,6 +26,7 @@ import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
   gameSessionMembers,
+  gameSessionPlayMemos,
 } from '@/system/infrastructure/database/game-session-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
@@ -39,6 +43,10 @@ import type { UpdateMemberRepository } from '@/game-session/application/update-m
 import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
 import type { GetGuestLinkRepository } from '@/game-session/application/get-guest-link';
 import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
+import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
+import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
+import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
+import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -52,7 +60,11 @@ export type GameSessionRepository = ListGameSessionsRepository &
   UpdateMemberRepository &
   LeaveGameSessionRepository &
   GetGuestLinkRepository &
-  GetGuestLinkPreviewRepository;
+  GetGuestLinkPreviewRepository &
+  GetMyPlayMemoRepository &
+  UpsertMyPlayMemoRepository &
+  UpdateMyPlayMemoVisibilityRepository &
+  ListSharedPlayMemosRepository;
 
 export type GameSessionRow = {
   id: string;
@@ -96,6 +108,20 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   maxMembers: row.maxPlayers,
   createdBy: row.hostUserId,
   createdAt: row.createdAt.toISOString(),
+  updatedAt: row.updatedAt.toISOString(),
+});
+
+type PlayMemoRow = {
+  memberId: string;
+  body: string;
+  sharedAt: Date | null;
+  updatedAt: Date;
+};
+
+const toPlayMemo = (row: PlayMemoRow): GameSessionPlayMemo => ({
+  memberId: row.memberId,
+  body: row.body,
+  sharedAt: row.sharedAt?.toISOString() ?? null,
   updatedAt: row.updatedAt.toISOString(),
 });
 
@@ -608,6 +634,104 @@ export const createGameSessionRepository = (
       .where(eq(gameSessions.id, id))
       .limit(1);
     return row[0]?.guestLinkToken ?? null;
+  },
+
+  async findPlayMemoByMemberId(
+    memberId: string,
+  ): Promise<GameSessionPlayMemo | null> {
+    const row = await db
+      .select({
+        memberId: gameSessionPlayMemos.memberId,
+        body: gameSessionPlayMemos.body,
+        sharedAt: gameSessionPlayMemos.sharedAt,
+        updatedAt: gameSessionPlayMemos.updatedAt,
+      })
+      .from(gameSessionPlayMemos)
+      .where(eq(gameSessionPlayMemos.memberId, memberId))
+      .limit(1);
+
+    if (!row[0]) return null;
+    return toPlayMemo(row[0]);
+  },
+
+  async upsertPlayMemo(
+    memberId: string,
+    body: string,
+  ): Promise<GameSessionPlayMemo> {
+    // 衝突キーは member_id の unique 制約（1メンバー1メモ。design-v1.2 §3）。
+    // shared_at は set に含めない。本文の更新で公開状態を巻き戻さないため
+    const result = await db
+      .insert(gameSessionPlayMemos)
+      .values({ memberId, body })
+      .onConflictDoUpdate({
+        target: gameSessionPlayMemos.memberId,
+        set: { body },
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('プレイメモの保存に失敗しました');
+    return toPlayMemo(row);
+  },
+
+  async updatePlayMemoVisibility(
+    memberId: string,
+    sharedAt: Date | null,
+  ): Promise<GameSessionPlayMemo | null> {
+    // body は set に含めない。公開切替で本文を書き換えないため
+    //
+    // 仕様どおりの意図的な挙動（design-v1.2 §3・§5・§8「shared_at は『最後に公開した時刻』
+    // とし、再公開で上書きする」）:
+    // - 公開済みのメモに再度 shared: true を送ると sharedAt が現在時刻に上書きされる
+    //   （初回公開時刻を保持する仕様ではない。findSharedPlayMemos の orderBy(sharedAt) の
+    //   並び順もその都度更新される）
+    // - スキーマの $onUpdate により、本文が変わっていなくても updated_at は進む
+    //   （公開切替でも updated_at は進む）
+    const result = await db
+      .update(gameSessionPlayMemos)
+      .set({ sharedAt })
+      .where(eq(gameSessionPlayMemos.memberId, memberId))
+      .returning();
+
+    // 更新対象が無い＝メモ未作成。ユースケース側で 404 にする（design-v1.2 §5）
+    const row = result[0];
+    if (!row) return null;
+    return toPlayMemo(row);
+  },
+
+  async findSharedPlayMemos(
+    gameSessionId: string,
+  ): Promise<SharedGameSessionPlayMemo[]> {
+    // 絞り込みは「その卓のメンバーのメモ」かつ「公開済み」の2条件のみ。
+    // 閲覧者を条件に入れない（閲覧者による分岐を作らない。design-v1.2 §4）。
+    // 卓の紐付けはメンバー経由で辿る（メモは game_session_id を持たない）
+    const rows = await db
+      .select({
+        memberId: gameSessionPlayMemos.memberId,
+        body: gameSessionPlayMemos.body,
+        sharedAt: gameSessionPlayMemos.sharedAt,
+        updatedAt: gameSessionPlayMemos.updatedAt,
+      })
+      .from(gameSessionPlayMemos)
+      .innerJoin(
+        gameSessionMembers,
+        eq(gameSessionMembers.id, gameSessionPlayMemos.memberId),
+      )
+      .where(
+        and(
+          eq(gameSessionMembers.gameSessionId, gameSessionId),
+          isNotNull(gameSessionPlayMemos.sharedAt),
+        ),
+      )
+      .orderBy(gameSessionPlayMemos.sharedAt);
+
+    // where で公開済みに絞っているが型には反映されないため、ここでも null を落とす
+    return rows
+      .map(toPlayMemo)
+      .filter(
+        (playMemo): playMemo is SharedGameSessionPlayMemo =>
+          playMemo.sharedAt !== null,
+      );
   },
 
   async findByGuestLinkToken(token: string): Promise<GameSession | null> {

@@ -40,6 +40,16 @@ const ALLOWED: Record<
     { role: 'host', status: GameSessionStatus.draft },
     { role: 'host', status: GameSessionStatus.scheduling },
   ],
+  // プレイメモの本文編集。ホストもプレイヤーとして自分のメモを持つため両ロールを許可し、
+  // 終端状態（完了・中止）では編集できない（design-v1.2 §4）
+  [GameSessionAction.editPlayMemo]: [
+    { role: 'host', status: GameSessionStatus.draft },
+    { role: 'host', status: GameSessionStatus.confirmed },
+    { role: 'host', status: GameSessionStatus.today },
+    { role: 'member', status: GameSessionStatus.draft },
+    { role: 'member', status: GameSessionStatus.confirmed },
+    { role: 'member', status: GameSessionStatus.today },
+  ],
 };
 
 describe('canPerform', () => {

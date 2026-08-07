@@ -15,6 +15,8 @@ export enum GameSessionAction {
   completeSession = 'completeSession',
   /** 削除 */
   deleteSession = 'deleteSession',
+  /** プレイメモの本文編集 */
+  editPlayMemo = 'editPlayMemo',
 }
 
 type ActionPolicy = {
@@ -60,6 +62,16 @@ export const ACTION_POLICIES: Record<GameSessionAction, ActionPolicy> = {
   [GameSessionAction.deleteSession]: {
     roles: ['host'],
     statuses: [GameSessionStatus.draft],
+  },
+  // ホストもプレイヤーとして自分のメモを持つため両ロールを許可する。
+  // 「本人のメモであること」はロールでは表現できないため別途検証する（design-v1.2 §4）
+  [GameSessionAction.editPlayMemo]: {
+    roles: ['host', 'member'],
+    statuses: [
+      GameSessionStatus.draft,
+      GameSessionStatus.confirmed,
+      GameSessionStatus.today,
+    ],
   },
 };
 

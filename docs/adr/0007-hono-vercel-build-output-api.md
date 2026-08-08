@@ -85,6 +85,44 @@ export default defineConfig({
 
 `@better-auth/core` が optional peer dependency として `@opentelemetry/api` を import しており、未インストールだと Rollup が「throw するスタブモジュール」に置換してバンドルがロード時に落ちる。backend の dependencies に明示的に追加してバンドルに内包させる。
 
+### 5. 実行リージョンは Vercel ダッシュボードで設定する
+
+**⚠️ この設定はリポジトリ内に存在しない。** 実行リージョンは Vercel プロジェクトの
+**Settings → Functions → Function Region** で `Asia Pacific / Sydney (syd1)` に設定している。
+
+`DATABASE_URL` が指す Neon は `ap-southeast-2`（シドニー）にあり、Vercel 既定の `iad1`（米国東部）で
+動かすと DB クエリのたびに片道 200ms 程度を往復する。1 リクエストで DB を 5〜6 往復する経路があるため、
+これだけで 1 秒以上の遅延になっていた（#106）。関数を DB と同じリージョンへ寄せることで解消する。
+
+**なぜコードで指定しないか。** Build Output API でリージョンを指定する正規の場所は関数ごとの
+`.vc-config.json` の `regions` だが、`@hono/vite-build/vercel` はこのフィールドを出力しない。
+
+```json
+// .vercel/output/functions/__hono.func/.vc-config.json（アダプタの出力そのまま）
+{"runtime":"nodejs22.x","launcherType":"Nodejs","handler":"index.js", ...}
+```
+
+`vercel.json` の `regions`（プロジェクトレベル設定）が適用されるはずだが、この構成で確実に読まれるかの
+確証が取れなかったため、確実に効くダッシュボード設定を採用した。`vercel.json` にも
+`"regions": ["syd1"]` を残しているが、**実際に効いているのはダッシュボード側**である。
+
+> ビルド成果物の `.vc-config.json` を後処理で書き換える案も検討したが、他プラグインの出力に依存する
+> 非標準の回避策であり、未検証の失敗を先回りして対策する形になるため採用しなかった。
+
+**変更する場合。** ダッシュボードで変更したあと、反映には**新規デプロイが必要**。確認は本番の
+レスポンスヘッダー `x-vercel-id` を見る。
+
+```
+x-vercel-id: hnd1:hnd1:hnd1::syd1::rv6jx-1786193718078-fed5b953688f
+             ^^^^                   ^^^^
+             受けたエッジ PoP        関数の実行リージョン
+```
+
+先頭はリクエストを受けたエッジ PoP（日本からなら `hnd1` 等）であり、**関数の実行リージョンは後方の
+セグメント**。先頭だけ見ても判定にならない。
+
+Hobby プランでは 1 リージョンのみ選択可能（複数リージョンは Pro 以上）。
+
 ### 採用理由
 
 - `src/index.ts` を一切変更せず（`export default app` + 直接実行ガードの現構成がアダプタの要件を満たす）、ローカル開発・CI に影響を与えない
@@ -105,11 +143,19 @@ export default defineConfig({
   - → alias 等の共通部分が増える場合は共通 config の切り出しを検討する
 - `build:vercel` の失敗は CI では検知されず、Vercel のデプロイ結果でしか分からない
   - → 必要になったら CI の Build ジョブに `build:vercel` を 1 ステップ追加する（現状はスコープ外）
+- **実行リージョンの設定がリポジトリ外（Vercel ダッシュボード）にあり、コードを読んでも気づけない**
+  - → 本 ADR の「5. 実行リージョンは Vercel ダッシュボードで設定する」を唯一の記録とする
+  - → プロジェクトを作り直した場合や別環境を立てる場合、設定漏れに気づかないまま遅くなる。
+    新環境を用意したら `x-vercel-id` でリージョンを確認すること
 
 ### Risks
 
 - `@hono/vite-build` のバージョンアップでアダプタの出力形式（`__hono` 関数名や routes）が変わる可能性がある
   - → アップデート時は `pnpm --filter @taku-biyori/backend build:vercel` で `.vercel/output/config.json` の内容を確認する
+- アダプタが将来 `.vc-config.json` に `regions` を出力するようになると、ダッシュボード設定より
+  関数ごとの指定が優先されるため、意図しないリージョンで動く可能性がある
+  - → アップデート時は `.vercel/output/functions/__hono.func/.vc-config.json` に `regions` が
+    含まれていないかもあわせて確認する
 - 全パスが単一関数のため、将来エンドポイント単位でランタイムを分けたくなった場合は構成の見直しが必要
   - → その時点で `api/` ディレクトリ方式への移行を再検討する
 
@@ -126,4 +172,7 @@ export default defineConfig({
 
 - [Hono — Vercel deployment](https://hono.dev/docs/getting-started/vercel)
 - [Vercel Build Output API v3](https://vercel.com/docs/build-output-api/v3)
+- [Configuring regions for Vercel Functions](https://vercel.com/docs/functions/configuring-functions/region)
+- [Vercel — Global network and regions](https://vercel.com/docs/regions)
+- 関連 issue: #106（実行リージョンを `syd1` に設定した経緯）
 - 関連 ADR: なし（Vercel デプロイに関する初の ADR）

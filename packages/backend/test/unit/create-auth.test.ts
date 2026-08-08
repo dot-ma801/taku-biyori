@@ -56,4 +56,17 @@ describe('createAuth', () => {
       },
     });
   });
+
+  // cookieCache がないと全ルートの getSession が毎回 DB を引く。
+  // 関数と DB が離れているほど、この 1 往復がそのまま体感遅延になる。
+  it('セッションの cookie キャッシュを有効にする', () => {
+    // Arrange & Act
+    const auth = createAuth(baseOptions);
+
+    // Assert
+    expect(auth.session?.cookieCache).toEqual({
+      enabled: true,
+      maxAge: 300,
+    });
+  });
 });

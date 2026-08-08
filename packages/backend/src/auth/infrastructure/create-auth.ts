@@ -46,6 +46,14 @@ export const createAuth = (options: CreateAuthOptions) => {
     emailAndPassword: {
       enabled: true,
     },
+    session: {
+      // 全ルートの getSession が毎リクエスト DB を引くのを避ける。
+      // 署名付き cookie に載せるため、失効の反映は maxAge 分だけ遅れる。
+      cookieCache: {
+        enabled: true,
+        maxAge: 300,
+      },
+    },
     secret: options.secret,
     baseURL: options.baseURL,
     basePath: '/api/auth',

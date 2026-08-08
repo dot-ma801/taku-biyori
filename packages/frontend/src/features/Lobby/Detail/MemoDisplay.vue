@@ -14,8 +14,14 @@ const props = defineProps<{
       詳細
     </BaseSectionHeading>
 
-    <p>{{ props.text }}</p>
+    <p class="memo">{{ props.text }}</p>
   </BaseCard>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* 入力時の改行をそのまま見せる。連続スペースも保つため pre-wrap を使う */
+.memo {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+</style>

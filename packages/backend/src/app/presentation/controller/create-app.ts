@@ -36,6 +36,9 @@ export const createApp = (options: CreateAppOptions) => {
     cors({
       origin: options.frontendOrigin,
       credentials: true,
+      // 未指定だとブラウザ既定（Chrome は 5 秒）でしかキャッシュされず、
+      // API 1 本ごとにプリフライトが先行して往復が倍になる。
+      maxAge: 86400,
     }),
   );
 

@@ -72,4 +72,30 @@ describe('createApp', () => {
     });
     expect(response.status).toBe(201);
   });
+
+  // プリフライトの結果をブラウザにキャッシュさせないと、API 1 本ごとに OPTIONS が
+  // 先行して往復が倍になる。Chrome の既定キャッシュは 5 秒しかないため明示する。
+  it('プリフライトに Access-Control-Max-Age を返す', async () => {
+    // Arrange
+    const app = createApp({
+      frontendOrigin: 'http://localhost:5173',
+      authHandler: vi.fn(async () => new Response('ok')),
+      getSession: vi.fn().mockResolvedValue(null),
+      gameSession: stubGameSession,
+      profile: stubProfile,
+      lobby: stubLobby,
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:5173',
+        'Access-Control-Request-Method': 'PATCH',
+      },
+    });
+
+    // Assert
+    expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
+  });
 });

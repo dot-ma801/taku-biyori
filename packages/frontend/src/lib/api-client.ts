@@ -28,14 +28,18 @@ export async function apiRequest<T>(
   options: RequestOptions = {},
 ): Promise<T | undefined> {
   const { body, headers, ...rest } = options;
+  const hasBody = body != null;
 
   const res = await fetch(`${apiUrl}${path}`, {
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
+      // Content-Type: application/json は CORS の単純リクエスト許容値ではないため、
+      // ボディのない GET/DELETE に付けるとプリフライト(OPTIONS)が先行して往復が倍になる。
+      // 実際に JSON を送るときだけ付ける。
+      ...(hasBody && { 'Content-Type': 'application/json' }),
       ...headers,
     },
-    body: body != null ? JSON.stringify(body) : undefined,
+    body: hasBody ? JSON.stringify(body) : undefined,
     ...rest,
   });
 

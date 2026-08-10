@@ -76,14 +76,16 @@ describe('useUpdateLobby', () => {
     expect(description.value).toBe('Description');
     expect(openUntil.value).toBe('2026-07-20');
     expect(location.value).toBe('Tokyo');
-    expect(pendingDates.value).toEqual(['2026-07-25']);
+    expect(pendingDates.value).toEqual([
+      { date: '2026-07-25', timeNote: null },
+    ]);
   });
 
   it('does not update when max members is outside the allowed range', async () => {
     const { title, pendingDates, maxMembers, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', timeNote: null }];
     maxMembers.value = '21';
 
     await submit();
@@ -99,7 +101,7 @@ describe('useUpdateLobby', () => {
     const { title, pendingDates, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = '   ';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', timeNote: null }];
 
     // Act
     await submit();
@@ -141,7 +143,7 @@ describe('useUpdateLobby', () => {
     description.value = '';
     openUntil.value = '';
     location.value = '';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', timeNote: null }];
 
     await submit();
 
@@ -154,7 +156,7 @@ describe('useUpdateLobby', () => {
       location: null,
     });
     expect(bulkUpdateLobbyAvailabilityDates).toHaveBeenCalledWith(LOBBY_ID, {
-      dates: ['2026-07-25'],
+      dates: [{ date: '2026-07-25', timeNote: null }],
     });
     expect(pushMock).toHaveBeenCalledWith({
       name: 'lobbies-detail',
@@ -203,7 +205,7 @@ describe('useUpdateLobby', () => {
     const { submit, errorMessages, fetchError, title, pendingDates } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', timeNote: null }];
 
     // Act
     await submit();

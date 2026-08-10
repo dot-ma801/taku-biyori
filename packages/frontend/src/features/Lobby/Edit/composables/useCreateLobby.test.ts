@@ -58,7 +58,10 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = ['2025-05-01', '2025-05-02'];
+      pendingDates.value = [
+        { date: '2025-05-01', timeNote: null },
+        { date: '2025-05-02', timeNote: null },
+      ];
 
       // Act
       await submit();
@@ -66,7 +69,10 @@ describe('useCreateLobby', () => {
       // Assert
       expect(createLobby).toHaveBeenCalledWith(
         expect.objectContaining({
-          candidateDates: ['2025-05-01', '2025-05-02'],
+          candidateDates: [
+            { date: '2025-05-01', timeNote: null },
+            { date: '2025-05-02', timeNote: null },
+          ],
         }),
       );
     });
@@ -77,7 +83,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -114,7 +120,7 @@ describe('useCreateLobby', () => {
         useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '1';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -132,7 +138,7 @@ describe('useCreateLobby', () => {
         useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '21';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -149,7 +155,7 @@ describe('useCreateLobby', () => {
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '2';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -165,7 +171,7 @@ describe('useCreateLobby', () => {
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -182,7 +188,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -190,7 +196,7 @@ describe('useCreateLobby', () => {
       // Assert
       expect(createLobby).toHaveBeenCalledWith({
         title: '募集枠',
-        candidateDates: ['2025-05-01'],
+        candidateDates: [{ date: '2025-05-01', timeNote: null }],
       });
     });
 
@@ -210,7 +216,7 @@ describe('useCreateLobby', () => {
       description.value = '説明文';
       location.value = 'ココフォリア';
       openUntil.value = '2025-04-30';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -253,7 +259,7 @@ describe('useCreateLobby', () => {
       expect(errorMessages.value).not.toEqual([]);
 
       // Act
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
       await nextTick();
 
       // Assert
@@ -267,7 +273,7 @@ describe('useCreateLobby', () => {
       vi.mocked(createLobby).mockRejectedValue(new Error('network error'));
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();
@@ -282,7 +288,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = ['2025-05-01'];
+      pendingDates.value = [{ date: '2025-05-01', timeNote: null }];
 
       // Act
       await submit();

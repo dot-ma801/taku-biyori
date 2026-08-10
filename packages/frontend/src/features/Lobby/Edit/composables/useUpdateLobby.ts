@@ -6,6 +6,7 @@ import {
   listLobbyAvailabilityDates,
   updateLobby,
 } from '@/api/lobby';
+import type { LobbyCandidateDateInput } from '@taku-biyori/shared';
 import { ApiError } from '@/lib/api-client';
 import {
   getMaxMembersError,
@@ -21,7 +22,7 @@ export const useUpdateLobby = (id: string) => {
   const description = ref('');
   const openUntil = ref('');
   const location = ref('');
-  const pendingDates = ref<string[]>([]);
+  const pendingDates = ref<LobbyCandidateDateInput[]>([]);
   const loading = ref(false);
   /** submit（更新）失敗時のエラーメッセージ一覧。1件ずつアラート表示する */
   const errorMessages = ref<string[]>([]);
@@ -66,7 +67,10 @@ export const useUpdateLobby = (id: string) => {
       description.value = lobby.description ?? '';
       openUntil.value = lobby.openUntil ?? '';
       location.value = lobby.location ?? '';
-      pendingDates.value = availabilityDates.map((date) => date.date);
+      pendingDates.value = availabilityDates.map((date) => ({
+        date: date.date,
+        timeNote: date.timeNote ?? null,
+      }));
     } catch (err) {
       fetchError.value =
         err instanceof ApiError ? err.message : 'エラーが発生しました';

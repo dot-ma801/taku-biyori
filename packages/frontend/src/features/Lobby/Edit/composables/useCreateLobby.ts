@@ -2,6 +2,7 @@ import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { createLobby } from '@/api/lobby';
+import type { LobbyCandidateDateInput } from '@taku-biyori/shared';
 import { ApiError } from '@/lib/api-client';
 import {
   parseMaxMembers,
@@ -17,7 +18,7 @@ export const useCreateLobby = () => {
   const description = ref('');
   const openUntil = ref('');
   const location = ref('');
-  const pendingDates = ref<string[]>([]);
+  const pendingDates = ref<LobbyCandidateDateInput[]>([]);
 
   const loading = ref(false);
   /** バリデーション・API エラーのメッセージ一覧。1件ずつアラート表示する */

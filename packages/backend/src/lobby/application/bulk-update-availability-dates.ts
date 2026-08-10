@@ -14,7 +14,10 @@ import {
 export interface BulkUpdateAvailabilityDatesRepository extends LobbyHostRepository {
   findStatusFields(id: string): Promise<LobbyStatusInput | null>;
   findByLobbyId(lobbyId: string): Promise<LobbyAvailabilityDate[]>;
-  /** 差分を1トランザクションで適用する（追加と削除のみ。残る行は触らない） */
+  /**
+   * 差分を1トランザクションで適用する。
+   * 残る行は削除せず、時刻メモの変更は UPDATE で当てる（回答を消さないため）。
+   */
   applyDateChanges(lobbyId: string, diff: CandidateDateDiff): Promise<void>;
 }
 
@@ -29,6 +32,7 @@ export type BulkUpdateAvailabilityDatesResult =
  *
  * 既存とリクエストの両方にある日付は行を保持するため、
  * その候補日に付いたメンバーの回答（◯△×）は消えない。
+ * 時刻メモだけが変わった候補日も、行を作り直さず UPDATE で更新する。
  * リクエストから外れた候補日は削除され、紐づく回答もカスケード削除される（意図どおり）。
  */
 export const bulkUpdateAvailabilityDates = async (
@@ -49,7 +53,11 @@ export const bulkUpdateAvailabilityDates = async (
   const existing = await repo.findByLobbyId(lobbyId);
   const diff = diffCandidateDates(existing, input.dates);
 
-  if (diff.datesToAdd.length === 0 && diff.dateIdsToRemove.length === 0) {
+  if (
+    diff.datesToAdd.length === 0 &&
+    diff.dateIdsToRemove.length === 0 &&
+    diff.notesToUpdate.length === 0
+  ) {
     return { type: 'ok', dates: existing };
   }
 

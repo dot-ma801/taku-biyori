@@ -11,7 +11,11 @@ import {
 
 export interface AddAvailabilityDateRepository extends LobbyHostRepository {
   findStatusFields(id: string): Promise<LobbyStatusInput | null>;
-  addDate(lobbyId: string, date: string): Promise<LobbyAvailabilityDate>;
+  addDate(
+    lobbyId: string,
+    date: string,
+    timeNote: string | null,
+  ): Promise<LobbyAvailabilityDate>;
 }
 
 export type AddAvailabilityDateResult =
@@ -35,6 +39,6 @@ export const addAvailabilityDate = async (
   if (!EDITABLE_CANDIDATE_STATUSES.has(getLobbyStatus(fields)))
     return { type: 'invalidStatus' };
 
-  const date = await repo.addDate(lobbyId, input.date);
+  const date = await repo.addDate(lobbyId, input.date, input.timeNote ?? null);
   return { type: 'ok', date };
 };

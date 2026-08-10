@@ -1,5 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import type { Lobby, CreateLobbyInput } from '@taku-biyori/shared';
+import type {
+  Lobby,
+  CreateLobbyInput,
+  LobbyCandidateDateInput,
+} from '@taku-biyori/shared';
 
 export interface CreateLobbyRepository {
   createWithHostAndCandidates(params: {
@@ -10,7 +14,7 @@ export interface CreateLobbyRepository {
     location?: string;
     maxPlayers?: number;
     openUntil?: string;
-    candidateDates: string[];
+    candidateDates: LobbyCandidateDateInput[];
     guestLinkToken: string;
   }): Promise<Lobby>;
 }

@@ -708,9 +708,15 @@ describe('applyDateChanges', () => {
     const insertChain = {
       values: vi.fn().mockResolvedValue(undefined),
     };
+    const updateSetChain = {
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
     const tx = {
       delete: vi.fn().mockReturnValue(deleteChain),
       insert: vi.fn().mockReturnValue(insertChain),
+      update: vi.fn().mockReturnValue(updateSetChain),
     };
     const db = {
       transaction: vi
@@ -721,6 +727,7 @@ describe('applyDateChanges', () => {
       db,
       tx,
       insertChain,
+      updateSetChain,
       whereSql: () => {
         if (!capturedWhere) throw new Error('where が呼ばれていません');
         return new PgDialect().sqlToQuery(capturedWhere).sql;
@@ -735,15 +742,16 @@ describe('applyDateChanges', () => {
 
     // Act
     await repo.applyDateChanges(mockLobbyRow.id, {
-      datesToAdd: ['2025-10-05'],
+      datesToAdd: [{ date: '2025-10-05', timeNote: '午後から' }],
       dateIdsToRemove: ['date-2'],
+      notesToUpdate: [],
     });
 
     // Assert
     expect(tx.delete).toHaveBeenCalledTimes(1);
     expect(tx.insert).toHaveBeenCalledTimes(1);
     expect(insertChain.values).toHaveBeenCalledWith([
-      { lobbyId: mockLobbyRow.id, date: '2025-10-05' },
+      { lobbyId: mockLobbyRow.id, date: '2025-10-05', timeNote: '午後から' },
     ]);
     // 削除は対象募集枠の行に限定される（他の募集枠の候補日を誤って消さない）
     const sql = whereSql();
@@ -760,6 +768,7 @@ describe('applyDateChanges', () => {
     await repo.applyDateChanges(mockLobbyRow.id, {
       datesToAdd: [],
       dateIdsToRemove: ['date-1'],
+      notesToUpdate: [],
     });
 
     // Assert
@@ -774,13 +783,53 @@ describe('applyDateChanges', () => {
 
     // Act
     await repo.applyDateChanges(mockLobbyRow.id, {
-      datesToAdd: ['2025-10-05'],
+      datesToAdd: [{ date: '2025-10-05', timeNote: null }],
       dateIdsToRemove: [],
+      notesToUpdate: [],
     });
 
     // Assert
     expect(tx.delete).not.toHaveBeenCalled();
     expect(tx.insert).toHaveBeenCalledTimes(1);
+  });
+
+  // 時刻メモだけを直したときに行を作り直すと、その候補日に紐づく回答が
+  // lobby_answers の ON DELETE CASCADE で消える。必ず UPDATE で当てること。
+  it('時刻メモの更新は UPDATE で当て、delete・insert を呼ばない（回答を消さない）', async () => {
+    // Arrange
+    const { db, tx, updateSetChain } = makeApplyTransactionDb();
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.applyDateChanges(mockLobbyRow.id, {
+      datesToAdd: [],
+      dateIdsToRemove: [],
+      notesToUpdate: [{ id: 'date-1', timeNote: '夕方から' }],
+    });
+
+    // Assert
+    expect(tx.delete).not.toHaveBeenCalled();
+    expect(tx.insert).not.toHaveBeenCalled();
+    expect(tx.update).toHaveBeenCalledTimes(1);
+    expect(updateSetChain.set).toHaveBeenCalledWith({ timeNote: '夕方から' });
+  });
+
+  it('時刻メモのクリアも UPDATE で null を当てる', async () => {
+    // Arrange
+    const { db, tx, updateSetChain } = makeApplyTransactionDb();
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.applyDateChanges(mockLobbyRow.id, {
+      datesToAdd: [],
+      dateIdsToRemove: [],
+      notesToUpdate: [{ id: 'date-1', timeNote: null }],
+    });
+
+    // Assert
+    expect(tx.delete).not.toHaveBeenCalled();
+    expect(tx.insert).not.toHaveBeenCalled();
+    expect(updateSetChain.set).toHaveBeenCalledWith({ timeNote: null });
   });
 });
 

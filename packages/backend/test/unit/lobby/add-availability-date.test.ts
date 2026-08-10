@@ -105,7 +105,7 @@ describe('addAvailabilityDate', () => {
     expect(result).toEqual({ type: 'invalidStatus' });
   });
 
-  it('addDate に lobbyId と date を渡す', async () => {
+  it('addDate に lobbyId・date・timeNote を渡す', async () => {
     // Arrange
     const addDate = vi.fn().mockResolvedValue(mockDate);
     const repo = makeRepo({ addDate });
@@ -116,6 +116,6 @@ describe('addAvailabilityDate', () => {
     });
 
     // Assert
-    expect(addDate).toHaveBeenCalledWith('lobby-1', '2025-10-15');
+    expect(addDate).toHaveBeenCalledWith('lobby-1', '2025-10-15', null);
   });
 });

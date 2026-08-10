@@ -47,7 +47,13 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01', '2025-10-02', '2025-10-03'] },
+      {
+        dates: [
+          { date: '2025-10-01' },
+          { date: '2025-10-02' },
+          { date: '2025-10-03' },
+        ],
+      },
     );
 
     // Assert
@@ -62,13 +68,14 @@ describe('bulkUpdateAvailabilityDates', () => {
     // Act
     // date-1 (2025-10-01) は残し、date-2 (2025-10-02) を消して 2025-10-05 を足す
     await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2025-10-01', '2025-10-05'],
+      dates: [{ date: '2025-10-01' }, { date: '2025-10-05' }],
     });
 
     // Assert
     expect(applyDateChanges).toHaveBeenCalledWith('lobby-1', {
-      datesToAdd: ['2025-10-05'],
+      datesToAdd: [{ date: '2025-10-05', timeNote: null }],
       dateIdsToRemove: ['date-2'],
+      notesToUpdate: [],
     });
   });
 
@@ -82,7 +89,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01', '2025-10-02'] },
+      { dates: [{ date: '2025-10-01' }, { date: '2025-10-02' }] },
     );
 
     // Assert
@@ -107,7 +114,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01', '2025-10-03'] },
+      { dates: [{ date: '2025-10-01' }, { date: '2025-10-03' }] },
     );
 
     // Assert
@@ -126,7 +133,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'nonexistent',
       'user-1',
-      { dates: ['2025-10-01'] },
+      { dates: [{ date: '2025-10-01' }] },
     );
 
     // Assert
@@ -146,7 +153,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01'] },
+      { dates: [{ date: '2025-10-01' }] },
     );
 
     // Assert
@@ -170,7 +177,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2026-07-01'] },
+      { dates: [{ date: '2026-07-01' }] },
     );
 
     // Assert
@@ -193,7 +200,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2026-07-01'] },
+      { dates: [{ date: '2026-07-01' }] },
     );
 
     // Assert

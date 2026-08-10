@@ -388,9 +388,10 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
 
       if (params.candidateDates.length > 0) {
         await tx.insert(lobbyCandidates).values(
-          params.candidateDates.map((date) => ({
+          params.candidateDates.map((candidate) => ({
             lobbyId: row.id,
-            date,
+            date: candidate.date,
+            timeNote: candidate.timeNote ?? null,
           })),
         );
       }
@@ -532,6 +533,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .select({
         candidateId: lobbyCandidates.id,
         date: lobbyCandidates.date,
+        timeNote: lobbyCandidates.timeNote,
         answerId: lobbyAnswers.id,
         memberId: lobbyAnswers.memberId,
         answer: lobbyAnswers.answer,
@@ -548,6 +550,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         map.set(row.candidateId, {
           id: row.candidateId,
           date: row.date,
+          timeNote: row.timeNote,
           answers: [],
         });
       }
@@ -566,24 +569,36 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return [...map.values()];
   },
 
-  async addDate(lobbyId: string, date: string): Promise<LobbyAvailabilityDate> {
+  async addDate(
+    lobbyId: string,
+    date: string,
+    timeNote: string | null,
+  ): Promise<LobbyAvailabilityDate> {
     const result = await db
       .insert(lobbyCandidates)
-      .values({ lobbyId, date })
+      .values({ lobbyId, date, timeNote })
       .returning();
 
     const row = result[0];
     if (!row) throw new Error('候補日の追加に失敗しました');
-    return { id: row.id, date: row.date, answers: [] };
+    return {
+      id: row.id,
+      date: row.date,
+      timeNote: row.timeNote,
+      answers: [],
+    };
   },
 
-  async findCandidateOwner(
-    dateId: string,
-  ): Promise<{ lobbyId: string; date: string } | null> {
+  async findCandidateOwner(dateId: string): Promise<{
+    lobbyId: string;
+    date: string;
+    timeNote: string | null;
+  } | null> {
     const row = await db
       .select({
         lobbyId: lobbyCandidates.lobbyId,
         date: lobbyCandidates.date,
+        timeNote: lobbyCandidates.timeNote,
       })
       .from(lobbyCandidates)
       .where(eq(lobbyCandidates.id, dateId))
@@ -614,9 +629,27 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       }
 
       if (diff.datesToAdd.length > 0) {
+        await tx.insert(lobbyCandidates).values(
+          diff.datesToAdd.map((candidate) => ({
+            lobbyId,
+            date: candidate.date,
+            timeNote: candidate.timeNote,
+          })),
+        );
+      }
+
+      // 時刻メモだけの変更は行を作り直さず UPDATE で当てる
+      // （DELETE→INSERT にすると lobby_answers がカスケード削除される）
+      for (const note of diff.notesToUpdate) {
         await tx
-          .insert(lobbyCandidates)
-          .values(diff.datesToAdd.map((date) => ({ lobbyId, date })));
+          .update(lobbyCandidates)
+          .set({ timeNote: note.timeNote })
+          .where(
+            and(
+              eq(lobbyCandidates.lobbyId, lobbyId),
+              eq(lobbyCandidates.id, note.id),
+            ),
+          );
       }
     });
   },

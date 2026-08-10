@@ -76,6 +76,7 @@ export type GameSessionRow = {
   maxPlayers: number | null;
   isPublished: boolean;
   scheduledAt: string;
+  timeNote: string | null;
   completedAt: Date | null;
   cancelledAt: Date | null;
   lobbyId: string | null;
@@ -102,6 +103,7 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   }),
   isPublished: row.isPublished,
   scheduledAt: row.scheduledAt,
+  timeNote: row.timeNote,
   completedAt: row.completedAt?.toISOString() ?? null,
   cancelledAt: row.cancelledAt?.toISOString() ?? null,
   lobbyId: row.lobbyId,
@@ -273,6 +275,7 @@ export const createGameSessionRepository = (
         }),
         ...(input.location !== undefined && { location: input.location }),
         ...(input.maxMembers !== undefined && { maxPlayers: input.maxMembers }),
+        ...(input.timeNote !== undefined && { timeNote: input.timeNote }),
         ...(input.scheduledAt !== undefined && {
           scheduledAt: input.scheduledAt,
         }),
@@ -420,6 +423,7 @@ export const createGameSessionRepository = (
           maxPlayers: params.maxMembers ?? null,
           // 卓は日程が確定した状態でのみ作られるため scheduledAt は必須（フォールバック不要）
           scheduledAt: params.scheduledAt,
+          timeNote: params.timeNote ?? null,
           guestLinkToken: params.guestLinkToken,
           isPublished: false,
         })

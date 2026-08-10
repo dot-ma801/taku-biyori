@@ -11,6 +11,7 @@ export interface CreateGameSessionRepository {
     maxMembers?: number;
     // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
     scheduledAt: string;
+    timeNote?: string | null;
     guestLinkToken: string;
   }): Promise<GameSession>;
 }
@@ -29,6 +30,7 @@ export const createGameSession = async (
     location: input.location,
     maxMembers: input.maxMembers,
     scheduledAt: input.scheduledAt,
+    timeNote: input.timeNote,
     guestLinkToken,
   });
 };

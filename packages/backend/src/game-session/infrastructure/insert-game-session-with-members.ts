@@ -27,6 +27,8 @@ export type InsertGameSessionWithMembersParams = {
   location: string | null;
   maxPlayers: number | null;
   scheduledAt: string;
+  /** 募集枠で選ばれた候補日の時刻メモ。未入力なら null */
+  timeNote: string | null;
   guestLinkToken: string;
   members: GameSessionMemberSeed[];
 };
@@ -54,6 +56,7 @@ export const insertGameSessionWithMembers = async (
       guestLinkToken: params.guestLinkToken,
       isPublished: true,
       scheduledAt: params.scheduledAt,
+      timeNote: params.timeNote,
       lobbyId: params.lobbyId,
     })
     .returning();

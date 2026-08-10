@@ -23,9 +23,11 @@ export type LobbyMemberCore = {
 export interface ConfirmLobbyRepository extends LobbyHostRepository {
   findStatusFields(id: string): Promise<LobbyStatusInput | null>;
   findLobbyCore(id: string): Promise<LobbyCore | null>;
-  findCandidateOwner(
-    dateId: string,
-  ): Promise<{ lobbyId: string; date: string } | null>;
+  findCandidateOwner(dateId: string): Promise<{
+    lobbyId: string;
+    date: string;
+    timeNote: string | null;
+  } | null>;
   /**
    * 指定 ID のメンバーを取得すると同時に `FOR KEY SHARE` で行をロックする。
    * これにより、この呼び出しからトランザクションのコミット（卓生成・
@@ -46,6 +48,7 @@ export interface ConfirmLobbyRepository extends LobbyHostRepository {
     location: string | null;
     maxPlayers: number | null;
     scheduledAt: string;
+    timeNote: string | null;
     guestLinkToken: string;
     members: LobbyMemberCore[];
   }): Promise<GameSession>;
@@ -125,7 +128,9 @@ export const confirmLobby = async (
         description: lobbyCore.description,
         location: lobbyCore.location,
         maxPlayers: lobbyCore.maxPlayers,
+        // 選ばれた候補日の時刻メモを卓へ引き継ぐ（確定した瞬間に時刻が消えないようにする）
         scheduledAt: candidate.date,
+        timeNote: candidate.timeNote,
         guestLinkToken,
         members,
       });

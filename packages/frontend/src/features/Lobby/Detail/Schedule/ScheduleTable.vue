@@ -6,6 +6,7 @@ import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useSchedul
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName } from '@/utils/memberDisplayName';
+import { Clock } from '@lucide/vue';
 import { computed, toRef } from 'vue';
 
 const props = defineProps<{
@@ -102,7 +103,15 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
               @change="emit('dateSelect', date.id)"
             />
           </td>
-          <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
+          <td class="td td--date">
+            <span class="date-cell">
+              <span>{{ formatDateWithWeekday(date.date) }}</span>
+              <span v-if="date.timeNote" class="time-note">
+                <Clock :size="11" />
+                {{ date.timeNote }}
+              </span>
+            </span>
+          </td>
           <td
             v-for="member in members"
             :key="member.id"
@@ -126,6 +135,21 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
 </template>
 
 <style scoped>
+.date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.time-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .edit-hint {
   margin: 0 0 var(--space-2);
   font-size: 12px;

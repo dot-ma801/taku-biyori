@@ -7,6 +7,7 @@ import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useSchedul
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
+import { Clock } from '@lucide/vue';
 import { computed, toRef } from 'vue';
 
 const props = defineProps<{
@@ -108,6 +109,10 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
           @change="emit('dateSelect', date.id)"
         />
         <span class="card-date">{{ formatDateWithWeekday(date.date) }}</span>
+        <span v-if="date.timeNote" class="time-note">
+          <Clock :size="11" />
+          {{ date.timeNote }}
+        </span>
       </div>
 
       <div class="chips">
@@ -174,7 +179,20 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 .card-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.time-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .card-date {

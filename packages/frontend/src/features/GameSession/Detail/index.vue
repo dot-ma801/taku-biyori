@@ -27,9 +27,14 @@ const scenarioName = computed(
 );
 const maxMembers = computed(() => gameSession.value?.maxMembers ?? '未設定');
 const description = computed(() => gameSession.value?.description ?? undefined);
-const gameSessionDateTime = computed(
-  () => gameSession.value?.scheduledAt ?? '未設定',
-);
+// 募集枠から確定した卓では、選ばれた候補日の時刻メモを日付に添えて見せる
+const gameSessionDateTime = computed(() => {
+  const session = gameSession.value;
+  if (!session) return '未設定';
+  return session.timeNote
+    ? `${session.scheduledAt}（${session.timeNote}）`
+    : session.scheduledAt;
+});
 const location = computed(() => gameSession.value?.location ?? '未設定');
 
 // 当日はプレイ中に何度もメモを開き直すため、備考より上（ステータスの直下）に置く。

@@ -72,6 +72,12 @@ export const lobbyCandidates = lobbySchema.table(
       .notNull()
       .references(() => lobbies.id, { onDelete: 'cascade' }),
     date: date('date').notNull(),
+    /**
+     * 開催時刻の自由記述メモ（「午後から」「19:00〜」「終日OK」など）。
+     * 時刻型にせず text なのは、粒度の異なる書き方を 1 フィールドで受けるため。
+     * 未入力は NULL（表示側では項目ごと出さない）。
+     */
+    timeNote: text('time_note'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()

@@ -38,6 +38,11 @@ export const gameSessions = gameSessionSchema.table(
     isPublished: boolean('is_published').notNull().default(false),
     // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
     scheduledAt: date('scheduled_at').notNull(),
+    /**
+     * 開催時刻の自由記述メモ。募集枠から確定した卓では、
+     * 選ばれた候補日の time_note を引き継ぐ（確定した瞬間に時刻が消えないようにする）。
+     */
+    timeNote: text('time_note'),
     completedAt: timestamp('completed_at'),
     cancelledAt: timestamp('cancelled_at'),
     // 出自の募集枠。直接卓立ては null（design-v1.1 §3）

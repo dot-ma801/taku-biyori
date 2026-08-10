@@ -7,6 +7,7 @@ import {
   CreateLobbyAvailabilityDateInputSchema,
   BulkUpdateLobbyAvailabilityDatesInputSchema,
 } from '@/lobby';
+import { TIME_NOTE_MAX_LENGTH } from '@/time-note';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -15,7 +16,7 @@ afterEach(() => {
 describe('CreateLobbyInputSchema', () => {
   it('title と candidateDates があれば成功する', () => {
     // Arrange
-    const input = { title: '募集', candidateDates: ['2099-09-01'] };
+    const input = { title: '募集', candidateDates: [{ date: '2099-09-01' }] };
 
     // Act
     const result = CreateLobbyInputSchema.safeParse(input);
@@ -40,7 +41,11 @@ describe('CreateLobbyInputSchema', () => {
       // Arrange
       const input = {
         title: '募集',
-        candidateDates: ['2099-09-01', '2099-09-02', '2099-09-01'],
+        candidateDates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-01' },
+        ],
       };
 
       // Act
@@ -54,7 +59,11 @@ describe('CreateLobbyInputSchema', () => {
       // Arrange
       const input = {
         title: '募集',
-        candidateDates: ['2099-09-01', '2099-09-02', '2099-09-03'],
+        candidateDates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-03' },
+        ],
       };
 
       // Act
@@ -72,7 +81,7 @@ describe('CreateLobbyInputSchema', () => {
       const input = {
         title: '募集',
         openUntil: '2025-06-14',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       };
 
       // Act
@@ -88,7 +97,7 @@ describe('CreateLobbyInputSchema', () => {
       const input = {
         title: '募集',
         openUntil: '2025-06-15',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       };
 
       // Act
@@ -244,6 +253,149 @@ describe('JoinLobbyAsGuestInputSchema', () => {
   });
 });
 
+describe('候補日の timeNote（時刻メモ）', () => {
+  it('timeNote を指定できる', () => {
+    // Arrange
+    const input = {
+      title: '募集',
+      candidateDates: [{ date: '2099-09-01', timeNote: '午後から' }],
+    };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.candidateDates[0]?.timeNote).toBe('午後から');
+  });
+
+  it('timeNote を省略できる（任意項目）', () => {
+    // Arrange
+    const input = { title: '募集', candidateDates: [{ date: '2099-09-01' }] };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.candidateDates[0]?.timeNote).toBeUndefined();
+  });
+
+  it('timeNote に null を指定できる（クリア）', () => {
+    // Arrange
+    const input = {
+      title: '募集',
+      candidateDates: [{ date: '2099-09-01', timeNote: null }],
+    };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.candidateDates[0]?.timeNote).toBeNull();
+  });
+
+  it('空文字の timeNote は null に正規化される（DB に空文字を残さない）', () => {
+    // Arrange
+    const input = {
+      title: '募集',
+      candidateDates: [{ date: '2099-09-01', timeNote: '' }],
+    };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.candidateDates[0]?.timeNote).toBeNull();
+  });
+
+  it('前後の空白は trim され、空白のみなら null になる', () => {
+    // Arrange
+    const input = {
+      title: '募集',
+      candidateDates: [
+        { date: '2099-09-01', timeNote: '  夕方から  ' },
+        { date: '2099-09-02', timeNote: '   ' },
+      ],
+    };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.candidateDates[0]?.timeNote).toBe('夕方から');
+    expect(result.data?.candidateDates[1]?.timeNote).toBeNull();
+  });
+
+  it(`timeNote が ${TIME_NOTE_MAX_LENGTH} 文字なら成功する`, () => {
+    // Arrange
+    const input = {
+      title: '募集',
+      candidateDates: [
+        { date: '2099-09-01', timeNote: 'あ'.repeat(TIME_NOTE_MAX_LENGTH) },
+      ],
+    };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it(`timeNote が ${TIME_NOTE_MAX_LENGTH + 1} 文字なら失敗する`, () => {
+    // Arrange
+    const input = {
+      title: '募集',
+      candidateDates: [
+        {
+          date: '2099-09-01',
+          timeNote: 'あ'.repeat(TIME_NOTE_MAX_LENGTH + 1),
+        },
+      ],
+    };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  it('一括更新でも timeNote を指定できる', () => {
+    // Arrange
+    const input = {
+      dates: [
+        { date: '2099-09-01', timeNote: '午後から' },
+        { date: '2099-09-02' },
+      ],
+    };
+
+    // Act
+    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.dates[0]?.timeNote).toBe('午後から');
+  });
+
+  it('候補日の個別追加でも timeNote を指定できる', () => {
+    // Arrange
+    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+    const input = { date: '2025-06-20', timeNote: '19:00〜' };
+
+    // Act
+    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.timeNote).toBe('19:00〜');
+  });
+});
+
 describe('CreateLobbyAvailabilityDateInputSchema', () => {
   it('今日以降の日付なら成功する', () => {
     // Arrange
@@ -273,7 +425,9 @@ describe('CreateLobbyAvailabilityDateInputSchema', () => {
 describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
   it('1 件以上の日付があれば成功する', () => {
     // Arrange
-    const input = { dates: ['2099-09-01', '2099-09-02'] };
+    const input = {
+      dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
+    };
 
     // Act
     const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
@@ -307,7 +461,13 @@ describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
   describe('dates の重複禁止', () => {
     it('重複する日付を含むと失敗する', () => {
       // Arrange
-      const input = { dates: ['2099-09-01', '2099-09-02', '2099-09-01'] };
+      const input = {
+        dates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-01' },
+        ],
+      };
 
       // Act
       const result =
@@ -319,7 +479,13 @@ describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
 
     it('すべて異なる日付なら成功する', () => {
       // Arrange
-      const input = { dates: ['2099-09-01', '2099-09-02', '2099-09-03'] };
+      const input = {
+        dates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-03' },
+        ],
+      };
 
       // Act
       const result =

@@ -1,9 +1,22 @@
 import { z } from 'zod';
 import { LobbyStatus } from '@/lobby/status';
 import { todayDateString } from '@/date';
+import { TimeNoteSchema } from '@/time-note';
 
 export { LobbyStatus };
 export const LobbyStatusSchema = z.nativeEnum(LobbyStatus);
+
+/**
+ * 候補日の入力単位。日付と時刻メモをひとまとめにして受け取る。
+ * 作成・一括更新の双方で使う。
+ */
+export const LobbyCandidateDateInputSchema = z.object({
+  date: z.iso.date(),
+  timeNote: TimeNoteSchema,
+});
+export type LobbyCandidateDateInput = z.infer<
+  typeof LobbyCandidateDateInputSchema
+>;
 
 export const LobbyListItemSchema = z.object({
   id: z.string().uuid(),
@@ -46,7 +59,7 @@ export const CreateLobbyInputSchema = z
     location: z.string().max(200).optional(),
     maxPlayers: z.number().int().min(2).max(20).optional(),
     openUntil: z.iso.date().optional(),
-    candidateDates: z.array(z.iso.date()).min(1),
+    candidateDates: z.array(LobbyCandidateDateInputSchema).min(1),
   })
   .superRefine((input, ctx) => {
     const today = todayDateString();
@@ -57,7 +70,8 @@ export const CreateLobbyInputSchema = z
         message: '募集締め切り日には今日以降の日付を指定してください',
       });
     }
-    if (new Set(input.candidateDates).size !== input.candidateDates.length) {
+    const candidateDateValues = input.candidateDates.map((entry) => entry.date);
+    if (new Set(candidateDateValues).size !== candidateDateValues.length) {
       ctx.addIssue({
         code: 'custom',
         path: ['candidateDates'],
@@ -159,6 +173,8 @@ export type LobbyAvailabilityDateAnswer = z.infer<
 export const LobbyAvailabilityDateSchema = z.object({
   id: z.string().uuid(),
   date: z.iso.date(),
+  /** ホストが書いた時刻メモ。未入力なら null（表示側では項目ごと出さない） */
+  timeNote: z.string().nullable().optional(),
   answers: z.array(LobbyAvailabilityDateAnswerSchema),
 });
 export type LobbyAvailabilityDate = z.infer<typeof LobbyAvailabilityDateSchema>;
@@ -166,6 +182,7 @@ export type LobbyAvailabilityDate = z.infer<typeof LobbyAvailabilityDateSchema>;
 export const CreateLobbyAvailabilityDateInputSchema = z
   .object({
     date: z.iso.date(),
+    timeNote: TimeNoteSchema,
   })
   .refine((input) => input.date >= todayDateString(), {
     message: '候補日には今日以降の日付を指定してください',
@@ -178,10 +195,11 @@ export type CreateLobbyAvailabilityDateInput = z.infer<
 // game-session と異なり、置き換え後の候補日が 0 件になる更新は許可しない（design-v1.1 §Lobby Schedules）。
 export const BulkUpdateLobbyAvailabilityDatesInputSchema = z
   .object({
-    dates: z.array(z.iso.date()).min(1),
+    dates: z.array(LobbyCandidateDateInputSchema).min(1),
   })
   .superRefine((input, ctx) => {
-    if (new Set(input.dates).size !== input.dates.length) {
+    const dateValues = input.dates.map((entry) => entry.date);
+    if (new Set(dateValues).size !== dateValues.length) {
       ctx.addIssue({
         code: 'custom',
         path: ['dates'],

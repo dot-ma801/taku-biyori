@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { GameSessionStatus } from '@/game-session/status';
 import { todayDateString } from '@/date';
+import { TimeNoteSchema } from '@/time-note';
 
 export { GameSessionStatus };
 export const GameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
@@ -31,6 +32,8 @@ export const GameSessionSchema = z.object({
   isPublished: z.boolean(),
   // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
   scheduledAt: z.string(),
+  /** 開催時刻の自由記述メモ。募集枠から確定した卓では選ばれた候補日のメモを引き継ぐ */
+  timeNote: z.string().nullable().optional(),
   completedAt: z.string().nullable().optional(),
   cancelledAt: z.string().nullable().optional(),
   maxMembers: z.number().int().nullable().optional(),
@@ -52,6 +55,7 @@ export const CreateGameSessionInputSchema = z
     location: z.string().max(200).optional(),
     maxMembers: z.number().int().min(2).max(20).optional(),
     scheduledAt: z.iso.date(),
+    timeNote: TimeNoteSchema,
   })
   .superRefine((input, ctx) => {
     if (input.scheduledAt < todayDateString()) {
@@ -75,6 +79,7 @@ export const UpdateGameSessionInputSchema = z
     maxMembers: z.number().int().min(2).max(20).nullable().optional(),
     // 卓は日程が確定した状態でのみ存在するため null への更新は受け付けない（design-v1.1 §8）
     scheduledAt: z.iso.date().optional(),
+    timeNote: TimeNoteSchema,
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: '少なくとも1つのフィールドが必要です',

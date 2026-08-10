@@ -8,6 +8,7 @@ export {
 } from './auth.js';
 export { HealthResponseSchema, type HealthResponse } from './health.js';
 export { todayDateString } from './date.js';
+export { TIME_NOTE_MAX_LENGTH, TimeNoteSchema } from './time-note.js';
 export {
   GameSessionStatusSchema,
   GameSessionStatus,
@@ -65,6 +66,8 @@ export {
 export {
   LobbyStatusSchema,
   LobbyStatus,
+  LobbyCandidateDateInputSchema,
+  type LobbyCandidateDateInput,
   LobbyListItemSchema,
   type LobbyListItem,
   LobbySchema,

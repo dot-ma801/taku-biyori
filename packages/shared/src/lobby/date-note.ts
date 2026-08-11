@@ -23,10 +23,15 @@ export const normalizeDateNote = (
 
 // 保存されるのは正規化後の値なので、生の文字列長ではなく正規化後の長さで検証する
 // （末尾の空白だけで上限を超えて弾かれることがないようにする）。
+//
+// parse 境界で normalizeDateNote() まで済ませておく（.transform）ことで、
+// 書き込み経路が増えても正規化の呼び忘れが起きないようにする
+// （呼び出し側で重ねて normalizeDateNote() を呼んでも冪等なので副作用はない）。
 export const DateNoteSchema = z
   .string()
   .nullable()
   .refine(
     (value) => (normalizeDateNote(value) ?? '').length <= DATE_NOTE_MAX_LENGTH,
     { message: `ひとことは${DATE_NOTE_MAX_LENGTH}文字以内で入力してください` },
-  );
+  )
+  .transform((value) => normalizeDateNote(value));

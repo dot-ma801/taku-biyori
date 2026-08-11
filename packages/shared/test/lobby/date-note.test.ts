@@ -118,4 +118,41 @@ describe('DateNoteSchema', () => {
     // Assert
     expect(result.success).toBe(false);
   });
+
+  // parse 境界で正規化まで済ませる（呼び出し側で normalizeDateNote() を呼び忘れても
+  // 空白のみの文字列が漏れないようにする）。
+  describe('parse すると正規化済みの値になる', () => {
+    it('前後の空白を落とした文字列になる', () => {
+      // Arrange
+      const input = '  13:00〜17:00  ';
+
+      // Act
+      const result = DateNoteSchema.parse(input);
+
+      // Assert
+      expect(result).toBe('13:00〜17:00');
+    });
+
+    it('空白のみの文字列は null になる', () => {
+      // Arrange
+      const input = '   ';
+
+      // Act
+      const result = DateNoteSchema.parse(input);
+
+      // Assert
+      expect(result).toBeNull();
+    });
+
+    it('null は null のまま', () => {
+      // Arrange
+      const input = null;
+
+      // Act
+      const result = DateNoteSchema.parse(input);
+
+      // Assert
+      expect(result).toBeNull();
+    });
+  });
 });

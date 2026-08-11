@@ -110,6 +110,12 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
         <span class="card-date">{{ formatDateWithWeekday(date.date) }}</span>
       </div>
 
+      <!--
+        ひとことはヘッダーの外に独立した行として置く。ヘッダーは
+        [ラジオ][日付] の横並びなので、ここに足すと折り返して縦位置がずれる。
+      -->
+      <p v-if="date.dateNote" class="card-note">{{ date.dateNote }}</p>
+
       <div class="chips">
         <span
           v-for="member in members"
@@ -181,6 +187,12 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text);
+}
+
+.card-note {
+  margin: var(--space-1) 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .chips {

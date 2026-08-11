@@ -8,6 +8,7 @@ const props = defineProps<{
   selectedDate: {
     id: string;
     date: string;
+    dateNote: string | null;
     counts: { ok: number; maybe: number; ng: number };
   } | null;
   selectedMembers: LobbyMember[];
@@ -16,6 +17,8 @@ const props = defineProps<{
 const dateLabel = computed(() =>
   props.selectedDate ? formatDateWithWeekday(props.selectedDate.date) : '-',
 );
+
+const dateNote = computed(() => props.selectedDate?.dateNote ?? null);
 </script>
 
 <template>
@@ -23,6 +26,7 @@ const dateLabel = computed(() =>
     <div class="review-row">
       <span class="review-label">開催日</span>
       <span class="review-value">{{ dateLabel }}</span>
+      <span v-if="dateNote" class="review-note-text">{{ dateNote }}</span>
     </div>
     <div class="review-row">
       <span class="review-label"
@@ -67,6 +71,11 @@ const dateLabel = computed(() =>
 .review-value {
   font-size: 16px;
   font-weight: 500;
+}
+
+.review-note-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .review-members {

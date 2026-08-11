@@ -25,9 +25,10 @@ const emit = defineEmits<{
   dateSelect: [dateId: string];
 }>();
 
-const { getAnswer } = useScheduleView(
+const { getAnswer, hasAnyDateNote } = useScheduleView(
   toRef(props, 'editableMemberIds'),
   toRef(props, 'draftAnswers'),
+  toRef(props, 'availabilityDates'),
 );
 
 const { isEditing, editHint } = useScheduleEditHint(
@@ -36,9 +37,13 @@ const { isEditing, editHint } = useScheduleEditHint(
   'table',
 );
 
-// 空行の colspan（確定列? + 候補日列 + メンバー列）
+// 空行の colspan（確定列? + 候補日列 + ひとこと列? + メンバー列）
 const emptyRowColspan = computed(
-  () => props.members.length + 1 + (props.canConfirm ? 1 : 0),
+  () =>
+    props.members.length +
+    1 +
+    (props.canConfirm ? 1 : 0) +
+    (hasAnyDateNote.value ? 1 : 0),
 );
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
@@ -79,6 +84,9 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
         <tr>
           <th v-if="canConfirm" scope="col" class="th th--confirm">確定</th>
           <th scope="col" class="th th--date">候補日程</th>
+          <th v-if="hasAnyDateNote" scope="col" class="th th--note">
+            ひとこと
+          </th>
           <th
             v-for="member in members"
             :key="member.id"
@@ -103,6 +111,9 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
             />
           </td>
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
+          <td v-if="hasAnyDateNote" class="td td--note">
+            {{ date.dateNote }}
+          </td>
           <td
             v-for="member in members"
             :key="member.id"
@@ -174,6 +185,21 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
   width: 1%;
   left: 0;
   z-index: 2;
+}
+
+/*
+ * ひとこと列は sticky にしない。左端に固定するのは候補日程列だけに保ち、
+ * 横スクロール時にメンバー列へ使える幅を狭めないため（本文が長くても
+ * max-width 内で折り返すので、列幅がひとことの長さに引きずられない）。
+ */
+.th--note {
+  text-align: left;
+}
+
+.td--note {
+  max-width: 10em;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .th--member {

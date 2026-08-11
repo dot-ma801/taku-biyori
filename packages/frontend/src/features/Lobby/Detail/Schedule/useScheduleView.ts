@@ -1,4 +1,4 @@
-import { toValue } from 'vue';
+import { computed, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
@@ -8,6 +8,8 @@ export const useScheduleView = (
   editableMemberIds: MaybeRefOrGetter<string[]>,
   // 編集中ドラフト。`${memberId}::${dateId}` → 回答
   draftAnswers: MaybeRefOrGetter<Map<string, Answer>>,
+  // ひとこと列の要否を判定するための候補日一覧（回答の集計だけに使う呼び出し元は省略できる）
+  availabilityDates: MaybeRefOrGetter<LobbyAvailabilityDate[]> = () => [],
 ) => {
   /** 編集可能な列は draft を優先、それ以外（または draft がなければ）API データを返す */
   function getAnswer(
@@ -45,5 +47,14 @@ export const useScheduleView = (
     return counts;
   }
 
-  return { getAnswer, okCount, answerCounts };
+  /**
+   * ホストがひとことを1件でも書いているか。
+   * 表のひとこと列は、書かれていなければ列ごと出さない（メンバーが増えたときに
+   * 使われていない列で横スクロールを早めないため）。
+   */
+  const hasAnyDateNote = computed(() =>
+    toValue(availabilityDates).some((date) => Boolean(date.dateNote)),
+  );
+
+  return { getAnswer, okCount, answerCounts, hasAnyDateNote };
 };

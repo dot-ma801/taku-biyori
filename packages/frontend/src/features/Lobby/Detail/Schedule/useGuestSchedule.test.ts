@@ -28,6 +28,7 @@ function makeDates(): LobbyAvailabilityDate[] {
     {
       id: DATE_ID,
       date: '2026-07-01',
+      dateNote: null,
       answers: [
         { id: 'ans-1', memberId: GUEST_MEMBER_ID, answer: 'ok', comment: null },
       ],

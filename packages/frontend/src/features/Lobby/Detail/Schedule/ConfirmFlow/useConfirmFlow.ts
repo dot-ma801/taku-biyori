@@ -33,6 +33,8 @@ export const useConfirmFlow = (
     toValue(availabilityDates).map((d) => ({
       id: d.id,
       date: d.date,
+      // どの日を確定するかの判断材料になるので、ひとことも一緒に出す
+      dateNote: d.dateNote,
       counts: answerCounts(d, toValue(members)),
     })),
   );

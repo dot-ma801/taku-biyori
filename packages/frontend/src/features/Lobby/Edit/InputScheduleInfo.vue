@@ -3,7 +3,6 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
-import BaseButton from '@/components/button/BaseButton.vue';
 import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
@@ -79,30 +78,36 @@ function updateDateNote(date: string, dateNote: string) {
         ></BaseDatePicker>
       </div>
 
-      <template v-if="hasDates">
-        <p class="dates-heading">候補日ごとのひとこと（任意）</p>
-        <ul class="dates">
-          <li v-for="item in pendingDates" :key="item.date" class="date-row">
-            <!-- 入力欄のラベルは日付そのものにする。行ごとに「ひとこと」と
-                 繰り返すより、どの日への入力かが直接わかる -->
+      <ul v-if="hasDates" class="dates">
+        <li v-for="item in pendingDates" :key="item.date" class="date-row">
+          <!--
+            日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
+            関連付けられるので、BaseTextBox に label を渡さなくても
+            アクセシブルネームが付く（日付をクリックで入力欄にフォーカスも入る）。
+            削除ボタンは label の外に置く（中に入れると押下で入力欄にフォーカスが移る）。
+          -->
+          <label class="date-field">
+            <span class="date-text">{{
+              formatDateWithWeekday(item.date)
+            }}</span>
             <BaseTextBox
+              class="note-input"
               :model-value="item.dateNote"
-              :label="formatDateWithWeekday(item.date)"
-              placeholder="例: 13:00〜 / 午後から"
+              placeholder="例）19:00〜 / 午後から / 終日OK"
               :rules="dateNoteRules"
               @update:model-value="updateDateNote(item.date, $event)"
             />
-            <BaseButton
-              variant="ghost"
-              size="sm"
-              :left-icon="X"
-              @click="removeDate(item.date)"
-            >
-              削除
-            </BaseButton>
-          </li>
-        </ul>
-      </template>
+          </label>
+          <button
+            type="button"
+            class="remove"
+            :aria-label="`${formatDateWithWeekday(item.date)} を候補日から外す`"
+            @click="removeDate(item.date)"
+          >
+            <X :size="14" />
+          </button>
+        </li>
+      </ul>
 
       <p class="info">
         ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
@@ -132,44 +137,103 @@ function updateDateNote(date: string, dateNote: string) {
   margin-top: var(--space-2);
 }
 
-.dates-heading {
-  margin: var(--space-4) 0 var(--space-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
+/*
+ * 「日付・入力欄・削除」を1行に並べる。グリッドは行ごとではなく ul 側に持たせ、
+ * 行と label を display: contents にして全行を同じ列に載せる
+ * （行ごとに grid を作ると、日付の文字数が違う行で入力欄の開始位置がずれる）。
+ * 上限20字の入力に幅いっぱいを与えても読みやすくならないので 24em で止め、
+ * 余った幅は使わずに左寄せする。
+ */
 .dates {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-3);
+  display: grid;
+  grid-template-columns: max-content minmax(0, 24em) max-content;
+  justify-content: start;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
 }
 
-/*
- * 「入力欄（ラベル＝日付）・削除」を1行に収める。
- * 上限20字の入力に幅いっぱいを与えても読みやすくならないので 24em で止める。
- * align-items: end で、入力欄の上に載るラベルぶんを無視して削除ボタンを
- * 入力欄と同じ高さに揃える。
- */
-.date-row {
-  display: grid;
-  grid-template-columns: minmax(0, 24em) max-content;
-  align-items: end;
-  gap: var(--space-3);
+.date-row,
+.date-field {
+  display: contents;
 }
 
-/* 狭い画面では入力欄と削除ボタンを縦に積む */
+.date-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.remove:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/*
+ * 狭い画面では候補日ごとに枠付きカードにする。上段に日付と削除、下段に入力欄。
+ * 背景を一段濃くして、カードの境目が枠線だけに頼らないようにする。
+ */
 @media (max-width: 600px) {
-  .date-row {
-    grid-template-columns: 1fr;
-    row-gap: var(--space-2);
+  .dates {
+    display: flex;
+    flex-direction: column;
+    /* グリッド用に指定した align-items: center が flex にも効くと、
+       カードが内容幅に縮んで中央寄せになるため明示的に戻す */
+    align-items: stretch;
+    gap: var(--space-3);
   }
 
-  /* 入力欄は幅いっぱい、削除ボタンだけ左寄せで下に置く */
-  .date-row > :last-child {
-    justify-self: start;
+  .date-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-areas:
+      'head close'
+      'input input';
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .date-text {
+    grid-area: head;
+    color: var(--color-text);
+  }
+
+  .note-input {
+    grid-area: input;
+  }
+
+  .remove {
+    grid-area: close;
   }
 }
 </style>

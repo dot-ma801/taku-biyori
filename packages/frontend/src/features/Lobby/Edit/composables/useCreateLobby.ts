@@ -7,6 +7,8 @@ import {
   parseMaxMembers,
   getMaxMembersError,
 } from '@/features/Lobby/Edit/composables/maxMembersValidation';
+import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import { toCandidateDateInputs } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 
 export const useCreateLobby = () => {
   const router = useRouter();
@@ -17,7 +19,7 @@ export const useCreateLobby = () => {
   const description = ref('');
   const openUntil = ref('');
   const location = ref('');
-  const pendingDates = ref<string[]>([]);
+  const pendingDates = ref<PendingCandidateDate[]>([]);
 
   const loading = ref(false);
   /** バリデーション・API エラーのメッセージ一覧。1件ずつアラート表示する */
@@ -81,7 +83,7 @@ export const useCreateLobby = () => {
         ...(description.value && { description: description.value }),
         ...(openUntil.value && { openUntil: openUntil.value }),
         ...(location.value && { location: location.value }),
-        candidateDates: pendingDates.value,
+        candidateDates: toCandidateDateInputs(pendingDates.value),
       });
 
       router.push({ name: 'lobbies-detail', params: { lobbyId: lobby.id } });

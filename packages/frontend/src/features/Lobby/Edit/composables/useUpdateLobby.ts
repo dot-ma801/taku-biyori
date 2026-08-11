@@ -11,6 +11,8 @@ import {
   getMaxMembersError,
   parseMaxMembers,
 } from '@/features/Lobby/Edit/composables/maxMembersValidation';
+import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import { toCandidateDateInputs } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 
 export const useUpdateLobby = (id: string) => {
   const router = useRouter();
@@ -21,7 +23,7 @@ export const useUpdateLobby = (id: string) => {
   const description = ref('');
   const openUntil = ref('');
   const location = ref('');
-  const pendingDates = ref<string[]>([]);
+  const pendingDates = ref<PendingCandidateDate[]>([]);
   const loading = ref(false);
   /** submit（更新）失敗時のエラーメッセージ一覧。1件ずつアラート表示する */
   const errorMessages = ref<string[]>([]);
@@ -66,7 +68,10 @@ export const useUpdateLobby = (id: string) => {
       description.value = lobby.description ?? '';
       openUntil.value = lobby.openUntil ?? '';
       location.value = lobby.location ?? '';
-      pendingDates.value = availabilityDates.map((date) => date.date);
+      pendingDates.value = availabilityDates.map((date) => ({
+        date: date.date,
+        dateNote: date.dateNote ?? '',
+      }));
     } catch (err) {
       fetchError.value =
         err instanceof ApiError ? err.message : 'エラーが発生しました';
@@ -116,7 +121,9 @@ export const useUpdateLobby = (id: string) => {
         openUntil: openUntil.value || null,
         location: location.value || null,
       });
-      await bulkUpdateLobbyAvailabilityDates(id, { dates: pendingDates.value });
+      await bulkUpdateLobbyAvailabilityDates(id, {
+        dates: toCandidateDateInputs(pendingDates.value),
+      });
 
       await router.push({ name: 'lobbies-detail', params: { lobbyId: id } });
     } catch (err) {

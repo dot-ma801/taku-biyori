@@ -112,7 +112,7 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
           </td>
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
           <td v-if="hasAnyDateNote" class="td td--note">
-            {{ date.dateNote }}
+            <span class="note-text">{{ date.dateNote }}</span>
           </td>
           <td
             v-for="member in members"
@@ -189,15 +189,27 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
 
 /*
  * ひとこと列は sticky にしない。左端に固定するのは候補日程列だけに保ち、
- * 横スクロール時にメンバー列へ使える幅を狭めないため（本文が長くても
- * max-width 内で折り返すので、列幅がひとことの長さに引きずられない）。
+ * 横スクロール時にメンバー列へ使える幅を狭めないため。
+ *
+ * width: 1% は「内容ぶんまで縮める」指定（候補日程列と同じ手）。これが無いと
+ * table-layout: auto が余った幅を最大幅の列＝ひとこと列に寄せてしまい、
+ * メンバーが少ないときにこの列だけが極端に広がる。折り返し幅の上限は
+ * td ではなく内側の span に持たせる（td の max-width は幅配分に効かないため）。
  */
-.th--note {
+.th--note,
+.td--note {
+  width: 1%;
   text-align: left;
 }
 
-.td--note {
-  max-width: 10em;
+/*
+ * 幅は max-width ではなく width で決め打ちする。td の width: 1%（内容ぶんまで縮める）
+ * と組み合わせると、この span の幅がそのまま列の min-content になるため、
+ * 列幅がひとことの文字数に左右されなくなる（短くても長くても 12em）。
+ */
+.note-text {
+  display: inline-block;
+  width: 12em;
   font-size: 12px;
   color: var(--color-text-secondary);
 }

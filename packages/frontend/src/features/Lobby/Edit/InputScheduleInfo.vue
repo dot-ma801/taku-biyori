@@ -5,6 +5,7 @@ import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue'
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { CalendarDays, X } from '@lucide/vue';
+import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import {
   getDateNoteError,
@@ -78,26 +79,30 @@ function updateDateNote(date: string, dateNote: string) {
         ></BaseDatePicker>
       </div>
 
-      <ul v-if="hasDates" class="dates">
-        <li v-for="item in pendingDates" :key="item.date" class="date-row">
-          <span class="date-label">{{ item.date }}</span>
-          <BaseTextBox
-            :model-value="item.dateNote"
-            label="ひとこと"
-            placeholder="例: 13:00〜 / 午後から"
-            :rules="dateNoteRules"
-            @update:model-value="updateDateNote(item.date, $event)"
-          />
-          <BaseButton
-            variant="ghost"
-            size="sm"
-            :left-icon="X"
-            @click="removeDate(item.date)"
-          >
-            削除
-          </BaseButton>
-        </li>
-      </ul>
+      <template v-if="hasDates">
+        <p class="dates-heading">候補日ごとのひとこと（任意）</p>
+        <ul class="dates">
+          <li v-for="item in pendingDates" :key="item.date" class="date-row">
+            <!-- 入力欄のラベルは日付そのものにする。行ごとに「ひとこと」と
+                 繰り返すより、どの日への入力かが直接わかる -->
+            <BaseTextBox
+              :model-value="item.dateNote"
+              :label="formatDateWithWeekday(item.date)"
+              placeholder="例: 13:00〜 / 午後から"
+              :rules="dateNoteRules"
+              @update:model-value="updateDateNote(item.date, $event)"
+            />
+            <BaseButton
+              variant="ghost"
+              size="sm"
+              :left-icon="X"
+              @click="removeDate(item.date)"
+            >
+              削除
+            </BaseButton>
+          </li>
+        </ul>
+      </template>
 
       <p class="info">
         ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
@@ -127,43 +132,44 @@ function updateDateNote(date: string, dateNote: string) {
   margin-top: var(--space-2);
 }
 
+.dates-heading {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 .dates {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin: var(--space-3) 0;
+  margin: 0 0 var(--space-3);
   padding: 0;
   list-style: none;
 }
 
-/* PC は「日付・ひとこと・削除」を1行に収める */
+/*
+ * 「入力欄（ラベル＝日付）・削除」を1行に収める。
+ * 上限20字の入力に幅いっぱいを与えても読みやすくならないので 24em で止める。
+ * align-items: end で、入力欄の上に載るラベルぶんを無視して削除ボタンを
+ * 入力欄と同じ高さに揃える。
+ */
 .date-row {
   display: grid;
-  grid-template-columns: max-content 1fr max-content;
-  align-items: center;
+  grid-template-columns: minmax(0, 24em) max-content;
+  align-items: end;
   gap: var(--space-3);
 }
 
-.date-label {
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-  color: var(--color-text);
-}
-
-/* 狭い画面では1行に収まらないので縦積みにする */
+/* 狭い画面では入力欄と削除ボタンを縦に積む */
 @media (max-width: 600px) {
   .date-row {
-    grid-template-columns: 1fr max-content;
+    grid-template-columns: 1fr;
     row-gap: var(--space-2);
   }
 
-  .date-label {
-    grid-column: 1;
-  }
-
-  .date-row > :nth-child(2) {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  /* 入力欄は幅いっぱい、削除ボタンだけ左寄せで下に置く */
+  .date-row > :last-child {
+    justify-self: start;
   }
 }
 </style>

@@ -3,6 +3,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import BaseButton from '@/components/button/BaseButton.vue';
 import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
@@ -107,14 +108,16 @@ function updateDateNote(date: string, dateNote: string) {
           >
             {{ getDateNoteCounter(item.dateNote).label }}
           </span>
-          <button
-            type="button"
+          <!-- アイコンのみのボタン。ラベル文字列は aria-label で補う
+               （親が渡した aria-label は BaseButton 側の指定より優先される） -->
+          <BaseButton
             class="remove"
+            variant="ghost"
+            size="sm"
+            :left-icon="X"
             :aria-label="`${formatDateWithWeekday(item.date)} を候補日から外す`"
             @click="removeDate(item.date)"
-          >
-            <X :size="14" />
-          </button>
+          />
         </li>
       </ul>
 
@@ -164,6 +167,11 @@ function updateDateNote(date: string, dateNote: string) {
 /*
  * 1件ぶんの内訳。日付と削除ボタンは入力欄と同じ行に置き、
  * カウンターだけ入力欄の下（左寄せ）に回す。
+ *
+ * 2列に並べると隣の候補日と横に接するため、1件ずつを枠付きの面にして
+ * どこまでが1件かを明示する（余白だけで分けると、左の削除ボタンと
+ * 右の日付が地続きに見えてしまう）。狭い画面のカードと同じ扱いなので、
+ * PC とモバイルで見え方の理屈も揃う。
  */
 .date-row {
   display: grid;
@@ -174,6 +182,10 @@ function updateDateNote(date: string, dateNote: string) {
   align-items: center;
   column-gap: var(--space-2);
   row-gap: 2px;
+  padding: var(--space-3);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .date-field {
@@ -209,36 +221,9 @@ function updateDateNote(date: string, dateNote: string) {
 
 .remove {
   grid-area: close;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s;
 }
 
-.remove:hover {
-  border-color: var(--color-error);
-  color: var(--color-error);
-}
-
-.remove:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-/*
- * 狭い画面では候補日ごとに枠付きカードにする。上段に日付と削除、下段に入力欄。
- * 背景を一段濃くして、カードの境目が枠線だけに頼らないようにする。
- */
+/* 狭い画面では1列に落とし、日付と削除を上段、入力欄を全幅で下段に置く */
 @media (max-width: 600px) {
   .dates {
     display: flex;
@@ -254,10 +239,6 @@ function updateDateNote(date: string, dateNote: string) {
       'input input'
       'counter counter';
     gap: var(--space-2);
-    padding: var(--space-3);
-    background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
   }
 
   .date-text {

@@ -7,6 +7,7 @@ import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import {
+  getDateNoteCounter,
   getDateNoteError,
   syncPendingDates,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
@@ -98,6 +99,14 @@ function updateDateNote(date: string, dateNote: string) {
               @update:model-value="updateDateNote(item.date, $event)"
             />
           </label>
+          <span
+            class="counter"
+            :class="{
+              'counter--over': getDateNoteCounter(item.dateNote).isOver,
+            }"
+          >
+            {{ getDateNoteCounter(item.dateNote).label }}
+          </span>
           <button
             type="button"
             class="remove"
@@ -146,7 +155,7 @@ function updateDateNote(date: string, dateNote: string) {
  */
 .dates {
   display: grid;
-  grid-template-columns: max-content minmax(0, 24em) max-content;
+  grid-template-columns: max-content minmax(0, 24em) max-content max-content;
   justify-content: start;
   align-items: center;
   gap: var(--space-2) var(--space-3);
@@ -166,6 +175,19 @@ function updateDateNote(date: string, dateNote: string) {
   color: var(--color-text-secondary);
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* 文字数カウンター。プレイメモ（PlayMemoEditor）と同じ `N / MAX` 形式に揃える */
+.counter {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.counter--over {
+  color: var(--color-error);
+  font-weight: 500;
 }
 
 .remove {
@@ -214,7 +236,8 @@ function updateDateNote(date: string, dateNote: string) {
     grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-areas:
       'head close'
-      'input input';
+      'input input'
+      'counter counter';
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-3);
@@ -230,6 +253,12 @@ function updateDateNote(date: string, dateNote: string) {
 
   .note-input {
     grid-area: input;
+  }
+
+  /* 横に置く余裕がないので入力欄の下・右寄せに回す */
+  .counter {
+    grid-area: counter;
+    justify-self: end;
   }
 
   .remove {

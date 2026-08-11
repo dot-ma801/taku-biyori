@@ -13,6 +13,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// 件数上限のテスト用に、重複しない未来日を n 件生成する
+const makeUniqueDates = (n: number): { date: string }[] =>
+  Array.from({ length: n }, (_, i) => {
+    const d = new Date(Date.UTC(2099, 0, 1) + i * 86_400_000);
+    return { date: d.toISOString().slice(0, 10) };
+  });
+
 describe('CreateLobbyInputSchema', () => {
   it('title と candidateDates があれば成功する', () => {
     // Arrange
@@ -83,6 +90,36 @@ describe('CreateLobbyInputSchema', () => {
 
     // Assert
     expect(result.success).toBe(false);
+  });
+
+  describe('candidateDates の件数上限', () => {
+    it('上限ちょうどの件数は成功する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: makeUniqueDates(100),
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('上限を超える件数は失敗する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: makeUniqueDates(101),
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
   });
 
   describe('candidateDates の重複禁止', () => {
@@ -407,6 +444,32 @@ describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
 
     // Assert
     expect(result.success).toBe(false);
+  });
+
+  describe('dates の件数上限', () => {
+    it('上限ちょうどの件数は成功する', () => {
+      // Arrange
+      const input = { dates: makeUniqueDates(100) };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('上限を超える件数は失敗する', () => {
+      // Arrange
+      const input = { dates: makeUniqueDates(101) };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
   });
 
   describe('dates の重複禁止', () => {

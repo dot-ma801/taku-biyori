@@ -51,6 +51,11 @@ export type LobbyCandidateDateInput = z.infer<
   typeof LobbyCandidateDateInputSchema
 >;
 
+// 候補日の件数上限。無制限だと1リクエストで大量行の INSERT/UPDATE を招けてしまうため
+// （lobby-repository の bulkUpdate は1件ずつ UPDATE するので特に影響が大きい）、
+// 実用上ありえない件数を弾く目的で緩めに設定する。
+export const LOBBY_CANDIDATE_DATES_MAX_COUNT = 100;
+
 export const CreateLobbyInputSchema = z
   .object({
     title: z.string().min(1).max(100),
@@ -59,7 +64,10 @@ export const CreateLobbyInputSchema = z
     location: z.string().max(200).optional(),
     maxPlayers: z.number().int().min(2).max(20).optional(),
     openUntil: z.iso.date().optional(),
-    candidateDates: z.array(LobbyCandidateDateInputSchema).min(1),
+    candidateDates: z
+      .array(LobbyCandidateDateInputSchema)
+      .min(1)
+      .max(LOBBY_CANDIDATE_DATES_MAX_COUNT),
   })
   .superRefine((input, ctx) => {
     const today = todayDateString();
@@ -194,7 +202,10 @@ export type CreateLobbyAvailabilityDateInput = z.infer<
 // game-session と異なり、置き換え後の候補日が 0 件になる更新は許可しない（design-v1.1 §Lobby Schedules）。
 export const BulkUpdateLobbyAvailabilityDatesInputSchema = z
   .object({
-    dates: z.array(LobbyCandidateDateInputSchema).min(1),
+    dates: z
+      .array(LobbyCandidateDateInputSchema)
+      .min(1)
+      .max(LOBBY_CANDIDATE_DATES_MAX_COUNT),
   })
   .superRefine((input, ctx) => {
     const dates = input.dates.map((entry) => entry.date);

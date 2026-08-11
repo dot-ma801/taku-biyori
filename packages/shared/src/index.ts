@@ -71,6 +71,7 @@ export {
   type Lobby,
   LobbyCandidateDateInputSchema,
   type LobbyCandidateDateInput,
+  LOBBY_CANDIDATE_DATES_MAX_COUNT,
   CreateLobbyInputSchema,
   type CreateLobbyInput,
   UpdateLobbyInputSchema,

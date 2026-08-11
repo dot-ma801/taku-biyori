@@ -147,29 +147,41 @@ function updateDateNote(date: string, dateNote: string) {
 }
 
 /*
- * 「日付・入力欄・削除」を1行に並べる。グリッドは行ごとではなく ul 側に持たせ、
- * 行と label を display: contents にして全行を同じ列に載せる
- * （行ごとに grid を作ると、日付の文字数が違う行で入力欄の開始位置がずれる）。
- * 上限20字の入力に幅いっぱいを与えても読みやすくならないので 24em で止め、
- * 余った幅は使わずに左寄せする。
+ * 候補日は2列に並べる。1列だと候補日が増えたぶんだけ縦に伸び、
+ * 上限20字の入力に対して横幅が余りすぎる。
+ * auto-fit と max-width の組み合わせで、幅が足りなければ自動で1列に落ちる。
  */
 .dates {
   display: grid;
-  grid-template-columns: max-content minmax(0, 24em) max-content max-content;
-  justify-content: start;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(20em, 1fr));
+  max-width: 52em;
+  gap: var(--space-3) var(--space-4);
   margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.date-row,
+/*
+ * 1件ぶんの内訳。日付と削除ボタンは入力欄と同じ行に置き、
+ * カウンターだけ入力欄の下（左寄せ）に回す。
+ */
+.date-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  grid-template-areas:
+    'date input close'
+    '.    counter .';
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: 2px;
+}
+
 .date-field {
   display: contents;
 }
 
 .date-text {
+  grid-area: date;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -177,8 +189,13 @@ function updateDateNote(date: string, dateNote: string) {
   cursor: pointer;
 }
 
+.note-input {
+  grid-area: input;
+}
+
 /* 文字数カウンター。プレイメモ（PlayMemoEditor）と同じ `N / MAX` 形式に揃える */
 .counter {
+  grid-area: counter;
   color: var(--color-text-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -191,6 +208,7 @@ function updateDateNote(date: string, dateNote: string) {
 }
 
 .remove {
+  grid-area: close;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -225,20 +243,16 @@ function updateDateNote(date: string, dateNote: string) {
   .dates {
     display: flex;
     flex-direction: column;
-    /* グリッド用に指定した align-items: center が flex にも効くと、
-       カードが内容幅に縮んで中央寄せになるため明示的に戻す */
-    align-items: stretch;
     gap: var(--space-3);
+    max-width: none;
   }
 
   .date-row {
-    display: grid;
     grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-areas:
       'head close'
       'input input'
       'counter counter';
-    align-items: center;
     gap: var(--space-2);
     padding: var(--space-3);
     background: var(--color-surface-raised);
@@ -249,20 +263,6 @@ function updateDateNote(date: string, dateNote: string) {
   .date-text {
     grid-area: head;
     color: var(--color-text);
-  }
-
-  .note-input {
-    grid-area: input;
-  }
-
-  /* 横に置く余裕がないので入力欄の下・右寄せに回す */
-  .counter {
-    grid-area: counter;
-    justify-self: end;
-  }
-
-  .remove {
-    grid-area: close;
   }
 }
 </style>

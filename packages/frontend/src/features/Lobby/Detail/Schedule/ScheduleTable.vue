@@ -193,6 +193,8 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
   width: 12em;
   font-size: 12px;
   color: var(--color-text-secondary);
+  /* 空白のない長い連続文字列（URL等）でも折り返し、隣の回答列に重ならないようにする */
+  overflow-wrap: anywhere;
 }
 
 .th--member {

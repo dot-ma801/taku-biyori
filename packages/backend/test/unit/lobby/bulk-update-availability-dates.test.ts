@@ -15,20 +15,29 @@ const existingDates: LobbyAvailabilityDate[] = [
   { id: 'date-2', date: '2025-10-02', dateNote: null, answers: [] },
 ];
 
+// makeRepo:
+// `executeWithLock` のモックは「コールバックを同期的にそのまま実行する」スタブを既定とする。
+// 実 DB ではここでトランザクション境界 + 行ロックが張られるが、ユニットテストでは
+// application 層の判定ロジックが lockedRepo 経由で正しく走ることだけ検証したいため
+// トランザクションの中身は素通しで良い（既存 delete-lobby / confirm-lobby と同方針）。
 const makeRepo = (
   overrides: Partial<BulkUpdateAvailabilityDatesRepository> = {},
-): BulkUpdateAvailabilityDatesRepository => ({
-  findHostUserId: vi.fn().mockResolvedValue('user-1'),
-  findStatusFields: vi.fn().mockResolvedValue({
-    isPublished: true,
-    openUntil: null,
-    closedAt: null,
-    cancelledAt: null,
-  }),
-  findByLobbyId: vi.fn().mockResolvedValue(existingDates),
-  applyDateChanges: vi.fn().mockResolvedValue(undefined),
-  ...overrides,
-});
+): BulkUpdateAvailabilityDatesRepository => {
+  const repo: BulkUpdateAvailabilityDatesRepository = {
+    findHostUserId: vi.fn().mockResolvedValue('user-1'),
+    findStatusFields: vi.fn().mockResolvedValue({
+      isPublished: true,
+      openUntil: null,
+      closedAt: null,
+      cancelledAt: null,
+    }),
+    findByLobbyId: vi.fn().mockResolvedValue(existingDates),
+    applyDateChanges: vi.fn().mockResolvedValue(undefined),
+    executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
+    ...overrides,
+  };
+  return repo;
+};
 
 describe('bulkUpdateAvailabilityDates', () => {
   it('ホストが候補日を一括更新でき、更新後の一覧を返す', async () => {
@@ -274,5 +283,45 @@ describe('bulkUpdateAvailabilityDates', () => {
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });
+  });
+
+  describe('TOCTOU 対策（トランザクション + 行ロック）', () => {
+    it('読み取りから書き込みまでを `executeWithLock` の中で 1 回のスコープにまとめる', async () => {
+      // Arrange
+      const repo = makeRepo();
+
+      // Act
+      await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
+        dates: [{ date: '2025-10-01' }, { date: '2025-10-05' }],
+      });
+
+      // Assert
+      expect(repo.executeWithLock).toHaveBeenCalledTimes(1);
+      expect(repo.executeWithLock).toHaveBeenCalledWith(
+        'lobby-1',
+        expect.any(Function),
+      );
+    });
+
+    it('`executeWithLock` が返した結果をそのまま返す', async () => {
+      // Arrange
+      const repo = makeRepo({
+        executeWithLock: vi.fn().mockResolvedValue({ type: 'notFound' }),
+      });
+
+      // Act
+      const result = await bulkUpdateAvailabilityDates(
+        repo,
+        'lobby-1',
+        'user-1',
+        { dates: [{ date: '2025-10-01' }] },
+      );
+
+      // Assert
+      expect(result).toEqual({ type: 'notFound' });
+      expect(repo.findHostUserId).not.toHaveBeenCalled();
+      expect(repo.findByLobbyId).not.toHaveBeenCalled();
+      expect(repo.applyDateChanges).not.toHaveBeenCalled();
+    });
   });
 });

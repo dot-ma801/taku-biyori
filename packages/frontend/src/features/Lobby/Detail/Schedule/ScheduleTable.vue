@@ -16,13 +16,10 @@ const props = defineProps<{
   editableMemberIds: string[];
   // 編集中ドラフト。`${memberId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
-  canConfirm?: boolean;
-  selectedDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
   cellClick: [memberId: string, dateId: string];
-  dateSelect: [dateId: string];
 }>();
 
 const { getAnswer, hasAnyDateNote } = useScheduleView(
@@ -37,13 +34,9 @@ const { isEditing, editHint } = useScheduleEditHint(
   'table',
 );
 
-// 空行の colspan（確定列? + 候補日列 + ひとこと列? + メンバー列）
+// 空行の colspan（候補日列 + ひとこと列? + メンバー列）
 const emptyRowColspan = computed(
-  () =>
-    props.members.length +
-    1 +
-    (props.canConfirm ? 1 : 0) +
-    (hasAnyDateNote.value ? 1 : 0),
+  () => props.members.length + 1 + (hasAnyDateNote.value ? 1 : 0),
 );
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
@@ -82,7 +75,6 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
     <table class="table">
       <thead>
         <tr>
-          <th v-if="canConfirm" scope="col" class="th th--confirm">確定</th>
           <th scope="col" class="th th--date">候補日程</th>
           <th v-if="hasAnyDateNote" scope="col" class="th th--note">
             ひとこと
@@ -100,16 +92,6 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
       </thead>
       <tbody>
         <tr v-for="date in availabilityDates" :key="date.id" class="tr">
-          <td v-if="canConfirm" class="td td--confirm">
-            <input
-              type="radio"
-              name="confirm-date"
-              :value="date.id"
-              :checked="selectedDateId === date.id"
-              :aria-label="`${formatDateWithWeekday(date.date)} を確定`"
-              @change="emit('dateSelect', date.id)"
-            />
-          </td>
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
           <td v-if="hasAnyDateNote" class="td td--note">
             <span class="note-text">{{ date.dateNote }}</span>
@@ -170,16 +152,6 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
   z-index: 1;
 }
 
-.th--confirm {
-  text-align: center;
-  width: 1%;
-  white-space: nowrap;
-}
-
-.td--confirm {
-  text-align: center;
-}
-
 .th--date {
   text-align: left;
   width: 1%;
@@ -199,6 +171,15 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
 .th--note,
 .td--note {
   width: 1%;
+  /* 候補日程列と同じく、右に区切り線を引いて回答（メンバー列）と切り分ける */
+  border-right: 1px solid var(--color-border);
+}
+
+.th--note {
+  text-align: center;
+}
+
+.td--note {
   text-align: left;
 }
 

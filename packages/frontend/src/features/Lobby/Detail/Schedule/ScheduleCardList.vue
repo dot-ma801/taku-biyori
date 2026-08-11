@@ -17,13 +17,10 @@ const props = defineProps<{
   editableMemberIds: string[];
   // 編集中ドラフト。`${memberId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
-  canConfirm?: boolean;
-  selectedDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
   cellClick: [memberId: string, dateId: string];
-  dateSelect: [dateId: string];
 }>();
 
 const { getAnswer } = useScheduleView(
@@ -98,22 +95,10 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
     <p v-if="isEditing" class="edit-hint">{{ editHint }}</p>
     <div v-for="date in availabilityDates" :key="date.id" class="card">
       <div class="card-header">
-        <input
-          v-if="canConfirm"
-          type="radio"
-          name="confirm-date-card"
-          :value="date.id"
-          :checked="selectedDateId === date.id"
-          :aria-label="`${formatDateWithWeekday(date.date)} を確定`"
-          @change="emit('dateSelect', date.id)"
-        />
         <span class="card-date">{{ formatDateWithWeekday(date.date) }}</span>
       </div>
 
-      <!--
-        ひとことはヘッダーの外に独立した行として置く。ヘッダーは
-        [ラジオ][日付] の横並びなので、ここに足すと折り返して縦位置がずれる。
-      -->
+      <!-- ひとことは日付の見出し行の外に、独立した行として置く -->
       <p v-if="date.dateNote" class="card-note">{{ date.dateNote }}</p>
 
       <div class="chips">

@@ -64,8 +64,6 @@ const {
   refetchSchedule,
 );
 
-const selectedDateId = ref<string | null>(null);
-
 const { canConfirm } = useScheduleConfirm(
   () => props.lobby.hostUserId,
   () => props.lobby.status,
@@ -160,10 +158,7 @@ const canEditSchedule = computed(
           :my-member-id="myMemberId"
           :editable-member-ids="editableMemberIds"
           :draft-answers="tableDraftAnswers"
-          :can-confirm="canConfirm"
-          :selected-date-id="selectedDateId"
           @cell-click="onCellClick"
-          @date-select="(id) => (selectedDateId = id)"
         />
       </div>
       <div class="schedule-cards">
@@ -173,10 +168,7 @@ const canEditSchedule = computed(
           :my-member-id="myMemberId"
           :editable-member-ids="editableMemberIds"
           :draft-answers="tableDraftAnswers"
-          :can-confirm="canConfirm"
-          :selected-date-id="selectedDateId"
           @cell-click="onCellClick"
-          @date-select="(id) => (selectedDateId = id)"
         />
       </div>
       <div v-if="displayMemberId" class="actions">
@@ -198,15 +190,6 @@ const canEditSchedule = computed(
           </BaseButton>
         </template>
         <template v-else>
-          <BaseButton
-            v-if="canConfirm && selectedDateId"
-            variant="secondary"
-            :left-icon="RotateCcw"
-            class="reset-btn"
-            @click="selectedDateId = null"
-          >
-            選択を解除
-          </BaseButton>
           <BaseButton
             v-if="canEditSchedule"
             variant="secondary"
@@ -231,7 +214,6 @@ const canEditSchedule = computed(
     v-model="confirmFlowDialogModel"
     :lobby="lobby"
     :availability-dates="availabilityDates"
-    :initial-date-id="selectedDateId"
     @lobby-changed="emit('lobby-changed')"
   />
 </template>
@@ -249,10 +231,6 @@ const canEditSchedule = computed(
 
 .state-message.error {
   color: var(--color-error);
-}
-
-.reset-btn {
-  margin-right: auto;
 }
 
 .actions {

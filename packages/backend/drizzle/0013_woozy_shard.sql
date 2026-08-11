@@ -1,0 +1,1 @@
+ALTER TABLE "lobby"."lobby_candidates" ADD COLUMN "date_note" text;

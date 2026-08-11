@@ -2,6 +2,7 @@ import type {
   LobbyAvailabilityDate,
   CreateLobbyAvailabilityDateInput,
 } from '@taku-biyori/shared';
+import { normalizeDateNote } from '@taku-biyori/shared';
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
 import type { LobbyStatusInput } from '@/lobby/domain/lobby-status';
 import {
@@ -11,7 +12,11 @@ import {
 
 export interface AddAvailabilityDateRepository extends LobbyHostRepository {
   findStatusFields(id: string): Promise<LobbyStatusInput | null>;
-  addDate(lobbyId: string, date: string): Promise<LobbyAvailabilityDate>;
+  addDate(
+    lobbyId: string,
+    date: string,
+    dateNote: string | null,
+  ): Promise<LobbyAvailabilityDate>;
 }
 
 export type AddAvailabilityDateResult =
@@ -35,6 +40,10 @@ export const addAvailabilityDate = async (
   if (!EDITABLE_CANDIDATE_STATUSES.has(getLobbyStatus(fields)))
     return { type: 'invalidStatus' };
 
-  const date = await repo.addDate(lobbyId, input.date);
+  const date = await repo.addDate(
+    lobbyId,
+    input.date,
+    normalizeDateNote(input.dateNote),
+  );
   return { type: 'ok', date };
 };

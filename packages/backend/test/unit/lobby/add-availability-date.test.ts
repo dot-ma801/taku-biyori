@@ -6,6 +6,7 @@ import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
 const mockDate: LobbyAvailabilityDate = {
   id: 'date-1',
   date: '2025-09-01',
+  dateNote: null,
   answers: [],
 };
 
@@ -116,6 +117,21 @@ describe('addAvailabilityDate', () => {
     });
 
     // Assert
-    expect(addDate).toHaveBeenCalledWith('lobby-1', '2025-10-15');
+    expect(addDate).toHaveBeenCalledWith('lobby-1', '2025-10-15', null);
+  });
+
+  it('addDate にひとことを正規化して渡す', async () => {
+    // Arrange
+    const addDate = vi.fn().mockResolvedValue(mockDate);
+    const repo = makeRepo({ addDate });
+
+    // Act
+    await addAvailabilityDate(repo, 'lobby-1', 'user-1', {
+      date: '2025-10-15',
+      dateNote: '  午後から  ',
+    });
+
+    // Assert
+    expect(addDate).toHaveBeenCalledWith('lobby-1', '2025-10-15', '午後から');
   });
 });

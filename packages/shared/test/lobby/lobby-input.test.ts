@@ -7,21 +7,78 @@ import {
   CreateLobbyAvailabilityDateInputSchema,
   BulkUpdateLobbyAvailabilityDatesInputSchema,
 } from '@/lobby';
+import { DATE_NOTE_MAX_LENGTH } from '@/lobby/date-note';
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
+// 件数上限のテスト用に、重複しない未来日を n 件生成する
+const makeUniqueDates = (n: number): { date: string }[] =>
+  Array.from({ length: n }, (_, i) => {
+    const d = new Date(Date.UTC(2099, 0, 1) + i * 86_400_000);
+    return { date: d.toISOString().slice(0, 10) };
+  });
+
 describe('CreateLobbyInputSchema', () => {
   it('title と candidateDates があれば成功する', () => {
     // Arrange
-    const input = { title: '募集', candidateDates: ['2099-09-01'] };
+    const input = { title: '募集', candidateDates: [{ date: '2099-09-01' }] };
 
     // Act
     const result = CreateLobbyInputSchema.safeParse(input);
 
     // Assert
     expect(result.success).toBe(true);
+  });
+
+  describe('candidateDates の dateNote（ひとこと）', () => {
+    it('dateNote を添えても成功する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: [{ date: '2099-09-01', dateNote: '13:00〜17:00' }],
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('dateNote が上限を超えると失敗する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: [
+          {
+            date: '2099-09-01',
+            dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1),
+          },
+        ],
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+
+    it('dateNote が null（未入力）でも成功する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: [{ date: '2099-09-01', dateNote: null }],
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
   });
 
   it('candidateDates が空配列なら失敗する', () => {
@@ -35,12 +92,46 @@ describe('CreateLobbyInputSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  describe('candidateDates の件数上限', () => {
+    it('上限ちょうどの件数は成功する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: makeUniqueDates(100),
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('上限を超える件数は失敗する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: makeUniqueDates(101),
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('candidateDates の重複禁止', () => {
     it('重複する日付を含むと失敗する', () => {
       // Arrange
       const input = {
         title: '募集',
-        candidateDates: ['2099-09-01', '2099-09-02', '2099-09-01'],
+        candidateDates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-01' },
+        ],
       };
 
       // Act
@@ -54,7 +145,11 @@ describe('CreateLobbyInputSchema', () => {
       // Arrange
       const input = {
         title: '募集',
-        candidateDates: ['2099-09-01', '2099-09-02', '2099-09-03'],
+        candidateDates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-03' },
+        ],
       };
 
       // Act
@@ -72,7 +167,7 @@ describe('CreateLobbyInputSchema', () => {
       const input = {
         title: '募集',
         openUntil: '2025-06-14',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       };
 
       // Act
@@ -88,7 +183,7 @@ describe('CreateLobbyInputSchema', () => {
       const input = {
         title: '募集',
         openUntil: '2025-06-15',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       };
 
       // Act
@@ -268,18 +363,65 @@ describe('CreateLobbyAvailabilityDateInputSchema', () => {
     // Assert
     expect(result.success).toBe(false);
   });
+
+  it('dateNote を添えても成功する', () => {
+    // Arrange
+    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+    const input = { date: '2025-06-15', dateNote: '夕方から' };
+
+    // Act
+    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
   it('1 件以上の日付があれば成功する', () => {
     // Arrange
-    const input = { dates: ['2099-09-01', '2099-09-02'] };
+    const input = { dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }] };
 
     // Act
     const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
 
     // Assert
     expect(result.success).toBe(true);
+  });
+
+  describe('dates の dateNote（ひとこと）', () => {
+    it('dateNote を添えても成功する', () => {
+      // Arrange
+      const input = {
+        dates: [{ date: '2099-09-01', dateNote: '午後から' }],
+      };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('dateNote が上限を超えると失敗する', () => {
+      // Arrange
+      const input = {
+        dates: [
+          {
+            date: '2099-09-01',
+            dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1),
+          },
+        ],
+      };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
   });
 
   it('dates が空配列なら失敗する（game-session と異なり 1 件以上が必須）', () => {
@@ -304,10 +446,42 @@ describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  describe('dates の件数上限', () => {
+    it('上限ちょうどの件数は成功する', () => {
+      // Arrange
+      const input = { dates: makeUniqueDates(100) };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('上限を超える件数は失敗する', () => {
+      // Arrange
+      const input = { dates: makeUniqueDates(101) };
+
+      // Act
+      const result =
+        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('dates の重複禁止', () => {
     it('重複する日付を含むと失敗する', () => {
       // Arrange
-      const input = { dates: ['2099-09-01', '2099-09-02', '2099-09-01'] };
+      const input = {
+        dates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-01' },
+        ],
+      };
 
       // Act
       const result =
@@ -319,7 +493,13 @@ describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
 
     it('すべて異なる日付なら成功する', () => {
       // Arrange
-      const input = { dates: ['2099-09-01', '2099-09-02', '2099-09-03'] };
+      const input = {
+        dates: [
+          { date: '2099-09-01' },
+          { date: '2099-09-02' },
+          { date: '2099-09-03' },
+        ],
+      };
 
       // Act
       const result =

@@ -14,7 +14,7 @@ import type {
   UpdateLobbyStatusInput,
   GameSession,
 } from '@taku-biyori/shared';
-import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
+import { DATE_NOTE_MAX_LENGTH, GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { ListMembersResult } from '@/lobby/application/list-members';
 import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
@@ -81,6 +81,7 @@ const mockGetOk: GetLobbyResult = {
 const mockAvailabilityDate: LobbyAvailabilityDate = {
   id: 'date-1',
   date: '2025-09-01',
+  dateNote: null,
   answers: [],
 };
 
@@ -220,7 +221,7 @@ describe('POST /api/lobbies', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         title: '新規募集',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       }),
     });
     const body = await response.json();
@@ -240,7 +241,7 @@ describe('POST /api/lobbies', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         title: '募集',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       }),
     });
 
@@ -286,7 +287,10 @@ describe('POST /api/lobbies', () => {
     const response = await app.request('/api/lobbies', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '', candidateDates: ['2099-09-01'] }),
+      body: JSON.stringify({
+        title: '',
+        candidateDates: [{ date: '2099-09-01' }],
+      }),
     });
 
     // Assert
@@ -304,7 +308,7 @@ describe('POST /api/lobbies', () => {
       body: JSON.stringify({
         title: '募集',
         openUntil: '2000-01-01',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       }),
     });
 
@@ -324,7 +328,7 @@ describe('POST /api/lobbies', () => {
       body: JSON.stringify({
         title: '詳細募集',
         maxPlayers: 4,
-        candidateDates: ['2099-09-01', '2099-09-02'],
+        candidateDates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
       }),
     });
 
@@ -334,7 +338,7 @@ describe('POST /api/lobbies', () => {
       expect.objectContaining({
         title: '詳細募集',
         maxPlayers: 4,
-        candidateDates: ['2099-09-01', '2099-09-02'],
+        candidateDates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
       }),
     );
   });
@@ -1781,7 +1785,9 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: ['2099-09-01', '2099-09-02'] }),
+        body: JSON.stringify({
+          dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
+        }),
       },
     );
     const body = await response.json();
@@ -1801,7 +1807,7 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: ['2099-09-01'] }),
+        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
       },
     );
 
@@ -1823,7 +1829,7 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: ['2099-09-01'] }),
+        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
       },
     );
 
@@ -1845,7 +1851,7 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: ['2099-09-01'] }),
+        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
       },
     );
 
@@ -1867,7 +1873,7 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: ['2099-09-01'] }),
+        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
       },
     );
 
@@ -1891,6 +1897,55 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
 
     // Assert
     expect(response.status).toBe(400);
+  });
+
+  it('dateNote が上限を超えると 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/availability-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          dates: [
+            {
+              date: '2099-09-01',
+              dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1),
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('dateNote 付きの候補日をユースケースへそのまま渡す', async () => {
+    // Arrange
+    const bulkUpdateAvailabilityDates = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] });
+    const app = makeApp({ bulkUpdateAvailabilityDates });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/availability-dates', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        dates: [{ date: '2099-09-01', dateNote: '13:00〜17:00' }],
+      }),
+    });
+
+    // Assert
+    expect(bulkUpdateAvailabilityDates).toHaveBeenCalledWith(
+      'lobby-1',
+      'user-1',
+      { dates: [{ date: '2099-09-01', dateNote: '13:00〜17:00' }] },
+    );
   });
 
   it('dates 未指定なら 400 を返す', async () => {
@@ -1926,14 +1981,16 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
     await app.request('/api/lobbies/lobby-1/availability-dates', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ dates: ['2099-09-01', '2099-09-02'] }),
+      body: JSON.stringify({
+        dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
+      }),
     });
 
     // Assert
     expect(bulkUpdateAvailabilityDates).toHaveBeenCalledWith(
       'lobby-1',
       'user-1',
-      { dates: ['2099-09-01', '2099-09-02'] },
+      { dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }] },
     );
   });
 });
@@ -2580,7 +2637,7 @@ describe('POST → PATCH(公開) → GET の一連フロー', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         title: 'フロー確認',
-        candidateDates: ['2099-09-01'],
+        candidateDates: [{ date: '2099-09-01' }],
       }),
     });
     const created = (await createRes.json()) as Lobby;

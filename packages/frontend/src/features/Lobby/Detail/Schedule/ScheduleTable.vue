@@ -16,18 +16,16 @@ const props = defineProps<{
   editableMemberIds: string[];
   // 編集中ドラフト。`${memberId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
-  canConfirm?: boolean;
-  selectedDateId?: string | null;
 }>();
 
 const emit = defineEmits<{
   cellClick: [memberId: string, dateId: string];
-  dateSelect: [dateId: string];
 }>();
 
-const { getAnswer } = useScheduleView(
+const { getAnswer, hasAnyDateNote } = useScheduleView(
   toRef(props, 'editableMemberIds'),
   toRef(props, 'draftAnswers'),
+  toRef(props, 'availabilityDates'),
 );
 
 const { isEditing, editHint } = useScheduleEditHint(
@@ -36,9 +34,9 @@ const { isEditing, editHint } = useScheduleEditHint(
   'table',
 );
 
-// 空行の colspan（確定列? + 候補日列 + メンバー列）
+// 空行の colspan（候補日列 + ひとこと列? + メンバー列）
 const emptyRowColspan = computed(
-  () => props.members.length + 1 + (props.canConfirm ? 1 : 0),
+  () => props.members.length + 1 + (hasAnyDateNote.value ? 1 : 0),
 );
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
@@ -77,8 +75,10 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
     <table class="table">
       <thead>
         <tr>
-          <th v-if="canConfirm" scope="col" class="th th--confirm">確定</th>
           <th scope="col" class="th th--date">候補日程</th>
+          <th v-if="hasAnyDateNote" scope="col" class="th th--note">
+            ひとこと
+          </th>
           <th
             v-for="member in members"
             :key="member.id"
@@ -92,17 +92,10 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
       </thead>
       <tbody>
         <tr v-for="date in availabilityDates" :key="date.id" class="tr">
-          <td v-if="canConfirm" class="td td--confirm">
-            <input
-              type="radio"
-              name="confirm-date"
-              :value="date.id"
-              :checked="selectedDateId === date.id"
-              :aria-label="`${formatDateWithWeekday(date.date)} を確定`"
-              @change="emit('dateSelect', date.id)"
-            />
-          </td>
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
+          <td v-if="hasAnyDateNote" class="td td--note">
+            <span class="note-text">{{ date.dateNote }}</span>
+          </td>
           <td
             v-for="member in members"
             :key="member.id"
@@ -159,21 +152,49 @@ function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
   z-index: 1;
 }
 
-.th--confirm {
-  text-align: center;
-  width: 1%;
-  white-space: nowrap;
-}
-
-.td--confirm {
-  text-align: center;
-}
-
 .th--date {
   text-align: left;
   width: 1%;
   left: 0;
   z-index: 2;
+}
+
+/*
+ * ひとこと列は sticky にしない。左端に固定するのは候補日程列だけに保ち、
+ * 横スクロール時にメンバー列へ使える幅を狭めないため。
+ *
+ * width: 1% は「内容ぶんまで縮める」指定（候補日程列と同じ手）。これが無いと
+ * table-layout: auto が余った幅を最大幅の列＝ひとこと列に寄せてしまい、
+ * メンバーが少ないときにこの列だけが極端に広がる。折り返し幅の上限は
+ * td ではなく内側の span に持たせる（td の max-width は幅配分に効かないため）。
+ */
+.th--note,
+.td--note {
+  width: 1%;
+  /* 候補日程列と同じく、右に区切り線を引いて回答（メンバー列）と切り分ける */
+  border-right: 1px solid var(--color-border);
+}
+
+.th--note {
+  text-align: center;
+}
+
+.td--note {
+  text-align: left;
+}
+
+/*
+ * 幅は max-width ではなく width で決め打ちする。td の width: 1%（内容ぶんまで縮める）
+ * と組み合わせると、この span の幅がそのまま列の min-content になるため、
+ * 列幅がひとことの文字数に左右されなくなる（短くても長くても 12em）。
+ */
+.note-text {
+  display: inline-block;
+  width: 12em;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  /* 空白のない長い連続文字列（URL等）でも折り返し、隣の回答列に重ならないようにする */
+  overflow-wrap: anywhere;
 }
 
 .th--member {

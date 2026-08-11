@@ -5,6 +5,7 @@ import InputScheduleInfo from '@/features/Lobby/Edit/InputScheduleInfo.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -21,7 +22,7 @@ const description = defineModel<string>('description', { default: '' });
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
-const pendingDates = defineModel<string[]>('pendingDates', {
+const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
 

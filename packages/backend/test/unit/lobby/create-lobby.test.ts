@@ -30,7 +30,7 @@ describe('createLobby', () => {
     // Act
     const result = await createLobby(repo, 'user-1', {
       title: 'テスト募集',
-      candidateDates: ['2099-09-01'],
+      candidateDates: [{ date: '2099-09-01' }],
     });
 
     // Assert
@@ -51,7 +51,7 @@ describe('createLobby', () => {
     // Act
     await createLobby(repo, 'user-99', {
       title: 'マイ募集',
-      candidateDates: ['2099-09-01', '2099-09-02'],
+      candidateDates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
     });
 
     // Assert
@@ -59,7 +59,37 @@ describe('createLobby', () => {
       expect.objectContaining({
         hostUserId: 'user-99',
         title: 'マイ募集',
-        candidateDates: ['2099-09-01', '2099-09-02'],
+        candidateDates: [
+          { date: '2099-09-01', dateNote: null },
+          { date: '2099-09-02', dateNote: null },
+        ],
+      }),
+    );
+  });
+
+  it('候補日のひとことを正規化して createWithHostAndCandidates に渡す', async () => {
+    // Arrange
+    const createWithHostAndCandidates = vi.fn().mockResolvedValue(mockLobby);
+    const repo: CreateLobbyRepository = { createWithHostAndCandidates };
+
+    // Act
+    await createLobby(repo, 'user-1', {
+      title: '募集',
+      candidateDates: [
+        { date: '2099-09-01', dateNote: '  13:00〜17:00  ' },
+        { date: '2099-09-02', dateNote: '   ' },
+        { date: '2099-09-03' },
+      ],
+    });
+
+    // Assert
+    expect(createWithHostAndCandidates).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidateDates: [
+          { date: '2099-09-01', dateNote: '13:00〜17:00' },
+          { date: '2099-09-02', dateNote: null },
+          { date: '2099-09-03', dateNote: null },
+        ],
       }),
     );
   });
@@ -72,7 +102,7 @@ describe('createLobby', () => {
     // Act
     await createLobby(repo, 'user-1', {
       title: '募集',
-      candidateDates: ['2099-09-01'],
+      candidateDates: [{ date: '2099-09-01' }],
     });
 
     // Assert
@@ -94,7 +124,7 @@ describe('createLobby', () => {
       location: '大阪',
       maxPlayers: 5,
       openUntil: '2099-09-01',
-      candidateDates: ['2099-09-10'],
+      candidateDates: [{ date: '2099-09-10' }],
     });
 
     // Assert

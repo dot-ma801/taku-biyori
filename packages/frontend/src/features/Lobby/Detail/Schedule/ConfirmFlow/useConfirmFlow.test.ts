@@ -46,6 +46,7 @@ const dates: LobbyAvailabilityDate[] = [
   {
     id: 'date-1',
     date: '2025-09-01',
+    dateNote: '13:00〜17:00',
     answers: [
       { id: 'ans-1', memberId: 'member-1', answer: 'ok', comment: null },
       { id: 'ans-2', memberId: 'member-2', answer: 'maybe', comment: null },
@@ -55,6 +56,7 @@ const dates: LobbyAvailabilityDate[] = [
   {
     id: 'date-2',
     date: '2025-09-08',
+    dateNote: null,
     answers: [
       { id: 'ans-4', memberId: 'member-1', answer: 'ok', comment: null },
     ],
@@ -80,8 +82,18 @@ describe('candidateOptions', () => {
 
     // Act & Assert
     expect(candidateOptions.value).toEqual([
-      { id: 'date-1', date: '2025-09-01', counts: { ok: 1, maybe: 1, ng: 1 } },
-      { id: 'date-2', date: '2025-09-08', counts: { ok: 1, maybe: 0, ng: 0 } },
+      {
+        id: 'date-1',
+        date: '2025-09-01',
+        dateNote: '13:00〜17:00',
+        counts: { ok: 1, maybe: 1, ng: 1 },
+      },
+      {
+        id: 'date-2',
+        date: '2025-09-08',
+        dateNote: null,
+        counts: { ok: 1, maybe: 0, ng: 0 },
+      },
     ]);
   });
 });

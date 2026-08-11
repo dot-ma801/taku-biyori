@@ -72,6 +72,9 @@ export const lobbyCandidates = lobbySchema.table(
       .notNull()
       .references(() => lobbies.id, { onDelete: 'cascade' }),
     date: date('date').notNull(),
+    // ホストがこの候補日に添えるひとこと（「13:00〜17:00」「午後から」など）。
+    // 時刻を構造化せず自由記述にしている理由は shared の date-note.ts を参照。
+    dateNote: text('date_note'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()

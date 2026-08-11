@@ -48,7 +48,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getLobby).mockResolvedValue(lobby);
   vi.mocked(listLobbyAvailabilityDates).mockResolvedValue([
-    { id: 'date-1', date: '2026-07-25', answers: [] },
+    {
+      id: 'date-1',
+      date: '2026-07-25',
+      dateNote: '13:00〜17:00',
+      answers: [],
+    },
   ]);
   vi.mocked(updateLobby).mockResolvedValue(lobby);
   vi.mocked(bulkUpdateLobbyAvailabilityDates).mockResolvedValue([]);
@@ -76,14 +81,32 @@ describe('useUpdateLobby', () => {
     expect(description.value).toBe('Description');
     expect(openUntil.value).toBe('2026-07-20');
     expect(location.value).toBe('Tokyo');
-    expect(pendingDates.value).toEqual(['2026-07-25']);
+    // 保存済みのひとことは編集フォームに引き継がれる（未入力は空文字で持つ）
+    expect(pendingDates.value).toEqual([
+      { date: '2026-07-25', dateNote: '13:00〜17:00' },
+    ]);
+  });
+
+  // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
+  it('ひとことが上限を超えていたら更新をブロックする', async () => {
+    const { title, pendingDates, errorMessages, submit } =
+      useUpdateLobby(LOBBY_ID);
+    title.value = 'Test lobby';
+    pendingDates.value = [{ date: '2025-05-01', dateNote: 'あ'.repeat(21) }];
+
+    await submit();
+
+    expect(updateLobby).not.toHaveBeenCalled();
+    expect(errorMessages.value).toEqual([
+      '5/1（木）のひとことは20文字以内で入力してください',
+    ]);
   });
 
   it('does not update when max members is outside the allowed range', async () => {
     const { title, pendingDates, maxMembers, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
     maxMembers.value = '21';
 
     await submit();
@@ -99,7 +122,7 @@ describe('useUpdateLobby', () => {
     const { title, pendingDates, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = '   ';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
 
     // Act
     await submit();
@@ -141,7 +164,7 @@ describe('useUpdateLobby', () => {
     description.value = '';
     openUntil.value = '';
     location.value = '';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
 
     await submit();
 
@@ -154,7 +177,7 @@ describe('useUpdateLobby', () => {
       location: null,
     });
     expect(bulkUpdateLobbyAvailabilityDates).toHaveBeenCalledWith(LOBBY_ID, {
-      dates: ['2026-07-25'],
+      dates: [{ date: '2026-07-25', dateNote: null }],
     });
     expect(pushMock).toHaveBeenCalledWith({
       name: 'lobbies-detail',
@@ -203,7 +226,7 @@ describe('useUpdateLobby', () => {
     const { submit, errorMessages, fetchError, title, pendingDates } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = ['2026-07-25'];
+    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
 
     // Act
     await submit();

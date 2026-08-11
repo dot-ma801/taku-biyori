@@ -31,6 +31,7 @@ function makeDates(): LobbyAvailabilityDate[] {
     {
       id: DATE_ID_1,
       date: '2026-07-01',
+      dateNote: null,
       answers: [
         { id: 'ans-1', memberId: MY_MEMBER_ID, answer: 'ok', comment: null },
         {
@@ -44,6 +45,7 @@ function makeDates(): LobbyAvailabilityDate[] {
     {
       id: DATE_ID_2,
       date: '2026-07-02',
+      dateNote: null,
       answers: [],
     },
   ];

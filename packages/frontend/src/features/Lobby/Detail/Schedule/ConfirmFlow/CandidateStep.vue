@@ -5,6 +5,7 @@ defineProps<{
   candidateOptions: {
     id: string;
     date: string;
+    dateNote: string | null;
     counts: { ok: number; maybe: number; ng: number };
   }[];
   selectedCandidateId: string | null;
@@ -27,9 +28,14 @@ const emit = defineEmits<{
       ]"
       @click="emit('select', option.id)"
     >
-      <span class="candidate-date">{{
-        formatDateWithWeekday(option.date)
-      }}</span>
+      <span class="candidate-main">
+        <span class="candidate-date">{{
+          formatDateWithWeekday(option.date)
+        }}</span>
+        <span v-if="option.dateNote" class="candidate-note">{{
+          option.dateNote
+        }}</span>
+      </span>
       <span class="candidate-counts">
         <span class="count ok">◯ {{ option.counts.ok }}</span>
         <span class="count maybe">△ {{ option.counts.maybe }}</span>
@@ -72,6 +78,18 @@ const emit = defineEmits<{
 .candidate-item:hover {
   border-color: var(--color-primary);
   background-color: var(--color-surface-raised);
+}
+
+.candidate-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.candidate-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .candidate-item--selected {

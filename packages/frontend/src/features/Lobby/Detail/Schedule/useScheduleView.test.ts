@@ -25,6 +25,7 @@ function makeDate(
   return {
     id: DATE_ID,
     date: '2026-06-02',
+    dateNote: null,
     answers: answers.map((a, i) => ({
       id: `answer-${i}`,
       memberId: a.memberId,
@@ -39,6 +40,14 @@ function setup(
   draftAnswers: Map<string, Answer> = new Map(),
 ) {
   return useScheduleView(ref(editableMemberIds), ref(draftAnswers));
+}
+
+function setupWithDates(availabilityDates: LobbyAvailabilityDate[]) {
+  return useScheduleView(
+    ref<string[]>([]),
+    ref(new Map<string, Answer>()),
+    ref(availabilityDates),
+  );
 }
 
 describe('getAnswer', () => {
@@ -181,5 +190,56 @@ describe('answerCounts', () => {
 
     // Assert
     expect(result).toEqual({ ok: 0, maybe: 1, ng: 1 });
+  });
+});
+
+describe('hasAnyDateNote', () => {
+  // ホストが1件も書いていなければ表にひとこと列を出さないための判定
+  it('ひとことが1件もなければ false を返す', () => {
+    // Arrange
+    const dates = [makeDate([]), makeDate([])];
+    const { hasAnyDateNote } = setupWithDates(dates);
+
+    // Act
+    const result = hasAnyDateNote.value;
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it('ひとことが1件でもあれば true を返す', () => {
+    // Arrange
+    const dates = [makeDate([]), { ...makeDate([]), dateNote: '13:00〜' }];
+    const { hasAnyDateNote } = setupWithDates(dates);
+
+    // Act
+    const result = hasAnyDateNote.value;
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  it('空文字のひとことは書かれていない扱いにする', () => {
+    // Arrange
+    const dates = [{ ...makeDate([]), dateNote: '' }];
+    const { hasAnyDateNote } = setupWithDates(dates);
+
+    // Act
+    const result = hasAnyDateNote.value;
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it('候補日が空なら false を返す', () => {
+    // Arrange
+    const dates: LobbyAvailabilityDate[] = [];
+    const { hasAnyDateNote } = setupWithDates(dates);
+
+    // Act
+    const result = hasAnyDateNote.value;
+
+    // Assert
+    expect(result).toBe(false);
   });
 });

@@ -69,6 +69,9 @@ export {
   type LobbyListItem,
   LobbySchema,
   type Lobby,
+  LobbyCandidateDateInputSchema,
+  type LobbyCandidateDateInput,
+  LOBBY_CANDIDATE_DATES_MAX_COUNT,
   CreateLobbyInputSchema,
   type CreateLobbyInput,
   UpdateLobbyInputSchema,
@@ -108,3 +111,8 @@ export {
   LOBBY_ACTION_POLICIES,
   canPerformLobbyAction,
 } from './lobby/permissions.js';
+export {
+  DATE_NOTE_MAX_LENGTH,
+  DateNoteSchema,
+  normalizeDateNote,
+} from './lobby/date-note.js';

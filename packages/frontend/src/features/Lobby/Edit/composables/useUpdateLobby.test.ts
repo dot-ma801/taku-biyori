@@ -87,6 +87,21 @@ describe('useUpdateLobby', () => {
     ]);
   });
 
+  // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
+  it('ひとことが上限を超えていたら更新をブロックする', async () => {
+    const { title, pendingDates, errorMessages, submit } =
+      useUpdateLobby(LOBBY_ID);
+    title.value = 'Test lobby';
+    pendingDates.value = [{ date: '2025-05-01', dateNote: 'あ'.repeat(21) }];
+
+    await submit();
+
+    expect(updateLobby).not.toHaveBeenCalled();
+    expect(errorMessages.value).toEqual([
+      '5/1（木）のひとことは20文字以内で入力してください',
+    ]);
+  });
+
   it('does not update when max members is outside the allowed range', async () => {
     const { title, pendingDates, maxMembers, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);

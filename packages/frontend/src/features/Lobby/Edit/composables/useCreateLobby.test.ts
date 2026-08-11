@@ -54,6 +54,26 @@ describe('useCreateLobby', () => {
       expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
     });
 
+    // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
+    it('ひとことが上限を超えていたら送信をブロックする', async () => {
+      // Arrange
+      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      title.value = '募集枠';
+      pendingDates.value = [
+        { date: '2025-05-01', dateNote: 'あ'.repeat(21) },
+        { date: '2025-05-02', dateNote: '午後から' },
+      ];
+
+      // Act
+      await submit();
+
+      // Assert
+      expect(createLobby).not.toHaveBeenCalled();
+      expect(errorMessages.value).toEqual([
+        '5/1（木）のひとことは20文字以内で入力してください',
+      ]);
+    });
+
     it('候補日が1件以上あれば candidateDates として送信する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();

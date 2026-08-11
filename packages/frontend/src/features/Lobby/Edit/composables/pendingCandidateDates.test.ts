@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { DATE_NOTE_MAX_LENGTH } from '@taku-biyori/shared';
 import {
+  getDateNoteCounter,
   getDateNoteError,
+  getPendingDateNoteErrors,
   syncPendingDates,
   toCandidateDateInputs,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
@@ -158,5 +160,122 @@ describe('toCandidateDateInputs', () => {
       { date: '2025-10-02', dateNote: null },
       { date: '2025-10-03', dateNote: null },
     ]);
+  });
+});
+
+describe('getPendingDateNoteErrors', () => {
+  it('すべて上限内なら空配列を返す', () => {
+    // Arrange
+    const pending = [
+      { date: '2025-05-01', dateNote: '13:00〜17:00' },
+      { date: '2025-05-02', dateNote: '' },
+    ];
+
+    // Act
+    const result = getPendingDateNoteErrors(pending);
+
+    // Assert
+    expect(result).toEqual([]);
+  });
+
+  // 送信時のアラートは複数まとめて出るので、どの候補日のことか分かる文言にする
+  it('超過した候補日は日付付きのエラー文言を返す', () => {
+    // Arrange
+    const pending = [
+      { date: '2025-05-01', dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1) },
+    ];
+
+    // Act
+    const result = getPendingDateNoteErrors(pending);
+
+    // Assert
+    expect(result).toEqual([
+      `5/1（木）のひとことは${DATE_NOTE_MAX_LENGTH}文字以内で入力してください`,
+    ]);
+  });
+
+  it('超過した候補日が複数あればすべて返す', () => {
+    // Arrange
+    const pending = [
+      { date: '2025-05-01', dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1) },
+      { date: '2025-05-02', dateNote: '午後から' },
+      { date: '2025-05-03', dateNote: 'い'.repeat(DATE_NOTE_MAX_LENGTH + 5) },
+    ];
+
+    // Act
+    const result = getPendingDateNoteErrors(pending);
+
+    // Assert
+    expect(result).toHaveLength(2);
+    expect(result[0]).toContain('5/1（木）');
+    expect(result[1]).toContain('5/3（土）');
+  });
+});
+
+describe('getDateNoteCounter', () => {
+  it('未入力は 0 から数える', () => {
+    // Arrange
+    const value = '';
+
+    // Act
+    const result = getDateNoteCounter(value);
+
+    // Assert
+    expect(result).toEqual({
+      label: `0 / ${DATE_NOTE_MAX_LENGTH}`,
+      isOver: false,
+    });
+  });
+
+  it('入力済みの文字数を数える', () => {
+    // Arrange
+    const value = '13:00〜17:00';
+
+    // Act
+    const result = getDateNoteCounter(value);
+
+    // Assert
+    expect(result).toEqual({
+      label: `11 / ${DATE_NOTE_MAX_LENGTH}`,
+      isOver: false,
+    });
+  });
+
+  it('上限ちょうどは超過扱いにしない', () => {
+    // Arrange
+    const value = 'あ'.repeat(DATE_NOTE_MAX_LENGTH);
+
+    // Act
+    const result = getDateNoteCounter(value);
+
+    // Assert
+    expect(result.isOver).toBe(false);
+  });
+
+  it('上限を超えると isOver が true になる', () => {
+    // Arrange
+    const value = 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1);
+
+    // Act
+    const result = getDateNoteCounter(value);
+
+    // Assert
+    expect(result).toEqual({
+      label: `${DATE_NOTE_MAX_LENGTH + 1} / ${DATE_NOTE_MAX_LENGTH}`,
+      isOver: true,
+    });
+  });
+
+  // 保存されるのは正規化後の値なので、カウンターも同じ基準で数える
+  // （そうしないと「21/20 なのにエラーが出ない」がありうる）
+  it('前後の空白は数えない', () => {
+    // Arrange
+    const value = '  午後から  ';
+
+    // Act
+    const result = getDateNoteCounter(value);
+
+    // Assert
+    expect(result.label).toBe(`4 / ${DATE_NOTE_MAX_LENGTH}`);
   });
 });

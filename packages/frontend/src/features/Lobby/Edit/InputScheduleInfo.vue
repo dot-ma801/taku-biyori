@@ -40,6 +40,17 @@ const selectedDates = computed<string[]>({
 
 const hasDates = computed(() => pendingDates.value.length > 0);
 
+// 表示用の行データ。日付の整形とひとことカウンターの導出をここに集約し、
+// template 側では算出済みの値を参照するだけにする。
+const dateRows = computed(() =>
+  pendingDates.value.map((entry) => ({
+    date: entry.date,
+    dateNote: entry.dateNote,
+    dateLabel: formatDateWithWeekday(entry.date),
+    counter: getDateNoteCounter(entry.dateNote),
+  })),
+);
+
 const dateNoteRules = [(v: unknown) => getDateNoteError(v as string) ?? true];
 
 function removeDate(date: string) {
@@ -81,7 +92,7 @@ function updateDateNote(date: string, dateNote: string) {
       </div>
 
       <ul v-if="hasDates" class="dates">
-        <li v-for="item in pendingDates" :key="item.date" class="date-row">
+        <li v-for="row in dateRows" :key="row.date" class="date-row">
           <!--
             日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
             関連付けられるので、BaseTextBox に label を渡さなくても
@@ -89,24 +100,20 @@ function updateDateNote(date: string, dateNote: string) {
             削除ボタンは label の外に置く（中に入れると押下で入力欄にフォーカスが移る）。
           -->
           <label class="date-field">
-            <span class="date-text">{{
-              formatDateWithWeekday(item.date)
-            }}</span>
+            <span class="date-text">{{ row.dateLabel }}</span>
             <BaseTextBox
               class="note-input"
-              :model-value="item.dateNote"
+              :model-value="row.dateNote"
               placeholder="例）19:00〜 / 午後から / 終日OK"
               :rules="dateNoteRules"
-              @update:model-value="updateDateNote(item.date, $event)"
+              @update:model-value="updateDateNote(row.date, $event)"
             />
           </label>
           <span
             class="counter"
-            :class="{
-              'counter--over': getDateNoteCounter(item.dateNote).isOver,
-            }"
+            :class="{ 'counter--over': row.counter.isOver }"
           >
-            {{ getDateNoteCounter(item.dateNote).label }}
+            {{ row.counter.label }}
           </span>
           <!-- アイコンのみのボタン。ラベル文字列は aria-label で補う
                （親が渡した aria-label は BaseButton 側の指定より優先される） -->
@@ -115,8 +122,8 @@ function updateDateNote(date: string, dateNote: string) {
             variant="ghost"
             size="sm"
             :left-icon="X"
-            :aria-label="`${formatDateWithWeekday(item.date)} を候補日から外す`"
-            @click="removeDate(item.date)"
+            :aria-label="`${row.dateLabel} を候補日から外す`"
+            @click="removeDate(row.date)"
           />
         </li>
       </ul>

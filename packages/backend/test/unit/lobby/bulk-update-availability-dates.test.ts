@@ -7,11 +7,12 @@ const existingDates: LobbyAvailabilityDate[] = [
   {
     id: 'date-1',
     date: '2025-10-01',
+    dateNote: null,
     answers: [
       { id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null },
     ],
   },
-  { id: 'date-2', date: '2025-10-02', answers: [] },
+  { id: 'date-2', date: '2025-10-02', dateNote: null, answers: [] },
 ];
 
 const makeRepo = (
@@ -34,7 +35,7 @@ describe('bulkUpdateAvailabilityDates', () => {
     // Arrange
     const updatedDates: LobbyAvailabilityDate[] = [
       ...existingDates,
-      { id: 'date-3', date: '2025-10-03', answers: [] },
+      { id: 'date-3', date: '2025-10-03', dateNote: null, answers: [] },
     ];
     const findByLobbyId = vi
       .fn()
@@ -47,7 +48,13 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01', '2025-10-02', '2025-10-03'] },
+      {
+        dates: [
+          { date: '2025-10-01' },
+          { date: '2025-10-02' },
+          { date: '2025-10-03' },
+        ],
+      },
     );
 
     // Assert
@@ -62,13 +69,14 @@ describe('bulkUpdateAvailabilityDates', () => {
     // Act
     // date-1 (2025-10-01) は残し、date-2 (2025-10-02) を消して 2025-10-05 を足す
     await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
-      dates: ['2025-10-01', '2025-10-05'],
+      dates: [{ date: '2025-10-01' }, { date: '2025-10-05' }],
     });
 
     // Assert
     expect(applyDateChanges).toHaveBeenCalledWith('lobby-1', {
-      datesToAdd: ['2025-10-05'],
+      datesToAdd: [{ date: '2025-10-05', dateNote: null }],
       dateIdsToRemove: ['date-2'],
+      notesToUpdate: [],
     });
   });
 
@@ -82,7 +90,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01', '2025-10-02'] },
+      { dates: [{ date: '2025-10-01' }, { date: '2025-10-02' }] },
     );
 
     // Assert
@@ -94,7 +102,7 @@ describe('bulkUpdateAvailabilityDates', () => {
     // Arrange
     const afterUpdate: LobbyAvailabilityDate[] = [
       existingDates[0]!, // date-1 は回答付きのまま残る
-      { id: 'date-3', date: '2025-10-03', answers: [] },
+      { id: 'date-3', date: '2025-10-03', dateNote: null, answers: [] },
     ];
     const findByLobbyId = vi
       .fn()
@@ -107,7 +115,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01', '2025-10-03'] },
+      { dates: [{ date: '2025-10-01' }, { date: '2025-10-03' }] },
     );
 
     // Assert
@@ -115,6 +123,74 @@ describe('bulkUpdateAvailabilityDates', () => {
     expect(afterUpdate[0]!.answers).toEqual([
       { id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null },
     ]);
+  });
+
+  describe('ひとこと（dateNote）', () => {
+    it('日付は変えずひとことだけ足すと notesToUpdate として渡る', async () => {
+      // Arrange
+      const applyDateChanges = vi.fn().mockResolvedValue(undefined);
+      const repo = makeRepo({ applyDateChanges });
+
+      // Act
+      await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
+        dates: [
+          { date: '2025-10-01', dateNote: '13:00〜17:00' },
+          { date: '2025-10-02' },
+        ],
+      });
+
+      // Assert
+      expect(applyDateChanges).toHaveBeenCalledWith('lobby-1', {
+        datesToAdd: [],
+        dateIdsToRemove: [],
+        notesToUpdate: [{ id: 'date-1', dateNote: '13:00〜17:00' }],
+      });
+    });
+
+    it('空白のみのひとことは null に正規化され、書き込みも発生しない', async () => {
+      // Arrange
+      const applyDateChanges = vi.fn().mockResolvedValue(undefined);
+      const repo = makeRepo({ applyDateChanges });
+
+      // Act
+      const result = await bulkUpdateAvailabilityDates(
+        repo,
+        'lobby-1',
+        'user-1',
+        {
+          dates: [
+            { date: '2025-10-01', dateNote: '   ' },
+            { date: '2025-10-02', dateNote: '' },
+          ],
+        },
+      );
+
+      // Assert
+      expect(applyDateChanges).not.toHaveBeenCalled();
+      expect(result).toEqual({ type: 'ok', dates: existingDates });
+    });
+
+    it('追加する候補日のひとことは前後の空白を落として渡る', async () => {
+      // Arrange
+      const applyDateChanges = vi.fn().mockResolvedValue(undefined);
+      const repo = makeRepo({ applyDateChanges });
+
+      // Act
+      await bulkUpdateAvailabilityDates(repo, 'lobby-1', 'user-1', {
+        dates: [
+          { date: '2025-10-01' },
+          { date: '2025-10-02' },
+          { date: '2025-10-05', dateNote: '  午後から  ' },
+        ],
+      });
+
+      // Assert
+      expect(applyDateChanges).toHaveBeenCalledWith('lobby-1', {
+        datesToAdd: [{ date: '2025-10-05', dateNote: '午後から' }],
+        dateIdsToRemove: [],
+        notesToUpdate: [],
+      });
+    });
   });
 
   it('存在しない募集枠IDは notFound を返す', async () => {
@@ -126,7 +202,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'nonexistent',
       'user-1',
-      { dates: ['2025-10-01'] },
+      { dates: [{ date: '2025-10-01' }] },
     );
 
     // Assert
@@ -146,7 +222,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2025-10-01'] },
+      { dates: [{ date: '2025-10-01' }] },
     );
 
     // Assert
@@ -170,7 +246,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2026-07-01'] },
+      { dates: [{ date: '2026-07-01' }] },
     );
 
     // Assert
@@ -193,7 +269,7 @@ describe('bulkUpdateAvailabilityDates', () => {
       repo,
       'lobby-1',
       'user-1',
-      { dates: ['2026-07-01'] },
+      { dates: [{ date: '2026-07-01' }] },
     );
 
     // Assert

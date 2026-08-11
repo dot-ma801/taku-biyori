@@ -1,5 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Lobby, CreateLobbyInput } from '@taku-biyori/shared';
+import { normalizeDateNote } from '@taku-biyori/shared';
+import type { CandidateDateEntry } from '@/lobby/domain/candidate-date-diff';
 
 export interface CreateLobbyRepository {
   createWithHostAndCandidates(params: {
@@ -10,7 +12,7 @@ export interface CreateLobbyRepository {
     location?: string;
     maxPlayers?: number;
     openUntil?: string;
-    candidateDates: string[];
+    candidateDates: CandidateDateEntry[];
     guestLinkToken: string;
   }): Promise<Lobby>;
 }
@@ -29,7 +31,11 @@ export const createLobby = async (
     location: input.location,
     maxPlayers: input.maxPlayers,
     openUntil: input.openUntil,
-    candidateDates: input.candidateDates,
+    // ひとことは空白のみを null に寄せてから渡す（DB に空文字を残さない）
+    candidateDates: input.candidateDates.map((entry) => ({
+      date: entry.date,
+      dateNote: normalizeDateNote(entry.dateNote),
+    })),
     guestLinkToken,
   });
 };

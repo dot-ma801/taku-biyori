@@ -388,9 +388,10 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
 
       if (params.candidateDates.length > 0) {
         await tx.insert(lobbyCandidates).values(
-          params.candidateDates.map((date) => ({
+          params.candidateDates.map((entry) => ({
             lobbyId: row.id,
-            date,
+            date: entry.date,
+            dateNote: entry.dateNote,
           })),
         );
       }
@@ -532,6 +533,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .select({
         candidateId: lobbyCandidates.id,
         date: lobbyCandidates.date,
+        dateNote: lobbyCandidates.dateNote,
         answerId: lobbyAnswers.id,
         memberId: lobbyAnswers.memberId,
         answer: lobbyAnswers.answer,
@@ -548,6 +550,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         map.set(row.candidateId, {
           id: row.candidateId,
           date: row.date,
+          dateNote: row.dateNote,
           answers: [],
         });
       }
@@ -566,15 +569,24 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return [...map.values()];
   },
 
-  async addDate(lobbyId: string, date: string): Promise<LobbyAvailabilityDate> {
+  async addDate(
+    lobbyId: string,
+    date: string,
+    dateNote: string | null,
+  ): Promise<LobbyAvailabilityDate> {
     const result = await db
       .insert(lobbyCandidates)
-      .values({ lobbyId, date })
+      .values({ lobbyId, date, dateNote })
       .returning();
 
     const row = result[0];
     if (!row) throw new Error('候補日の追加に失敗しました');
-    return { id: row.id, date: row.date, answers: [] };
+    return {
+      id: row.id,
+      date: row.date,
+      dateNote: row.dateNote,
+      answers: [],
+    };
   },
 
   async findCandidateOwner(
@@ -614,9 +626,26 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       }
 
       if (diff.datesToAdd.length > 0) {
+        await tx.insert(lobbyCandidates).values(
+          diff.datesToAdd.map((entry) => ({
+            lobbyId,
+            date: entry.date,
+            dateNote: entry.dateNote,
+          })),
+        );
+      }
+
+      // 残る候補日のひとことだけを更新する。行を作り直さないので回答は保持される
+      for (const note of diff.notesToUpdate) {
         await tx
-          .insert(lobbyCandidates)
-          .values(diff.datesToAdd.map((date) => ({ lobbyId, date })));
+          .update(lobbyCandidates)
+          .set({ dateNote: note.dateNote })
+          .where(
+            and(
+              eq(lobbyCandidates.lobbyId, lobbyId),
+              eq(lobbyCandidates.id, note.id),
+            ),
+          );
       }
     });
   },

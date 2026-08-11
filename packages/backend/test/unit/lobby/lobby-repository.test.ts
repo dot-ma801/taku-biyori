@@ -553,6 +553,7 @@ describe('findByLobbyId', () => {
       {
         candidateId: 'date-1',
         date: '2025-09-01',
+        dateNote: '13:00〜17:00',
         answerId: 'answer-1',
         memberId: 'member-1',
         answer: 'ok',
@@ -561,6 +562,7 @@ describe('findByLobbyId', () => {
       {
         candidateId: 'date-1',
         date: '2025-09-01',
+        dateNote: '13:00〜17:00',
         answerId: 'answer-2',
         memberId: 'member-2',
         answer: 'ng',
@@ -569,6 +571,7 @@ describe('findByLobbyId', () => {
       {
         candidateId: 'date-2',
         date: '2025-09-08',
+        dateNote: null,
         answerId: null,
         memberId: null,
         answer: null,
@@ -585,6 +588,7 @@ describe('findByLobbyId', () => {
       {
         id: 'date-1',
         date: '2025-09-01',
+        dateNote: '13:00〜17:00',
         answers: [
           { id: 'answer-1', memberId: 'member-1', answer: 'ok', comment: null },
           {
@@ -595,7 +599,7 @@ describe('findByLobbyId', () => {
           },
         ],
       },
-      { id: 'date-2', date: '2025-09-08', answers: [] },
+      { id: 'date-2', date: '2025-09-08', dateNote: null, answers: [] },
     ]);
   });
 
@@ -627,15 +631,43 @@ describe('addDate', () => {
   it('回答なしの LobbyAvailabilityDate を返す', async () => {
     // Arrange
     const { db } = makeInsertReturningDb([
-      { id: 'date-1', date: '2025-09-01' },
+      { id: 'date-1', date: '2025-09-01', dateNote: null },
     ]);
     const repo = createLobbyRepository(db);
 
     // Act
-    const result = await repo.addDate(mockLobbyRow.id, '2025-09-01');
+    const result = await repo.addDate(mockLobbyRow.id, '2025-09-01', null);
 
     // Assert
-    expect(result).toEqual({ id: 'date-1', date: '2025-09-01', answers: [] });
+    expect(result).toEqual({
+      id: 'date-1',
+      date: '2025-09-01',
+      dateNote: null,
+      answers: [],
+    });
+  });
+
+  it('ひとことを insert に渡し、返り値にも含める', async () => {
+    // Arrange
+    const { db, insertChain } = makeInsertReturningDb([
+      { id: 'date-1', date: '2025-09-01', dateNote: '午後から' },
+    ]);
+    const repo = createLobbyRepository(db);
+
+    // Act
+    const result = await repo.addDate(
+      mockLobbyRow.id,
+      '2025-09-01',
+      '午後から',
+    );
+
+    // Assert
+    expect(insertChain.values).toHaveBeenCalledWith({
+      lobbyId: mockLobbyRow.id,
+      date: '2025-09-01',
+      dateNote: '午後から',
+    });
+    expect(result.dateNote).toBe('午後から');
   });
 
   it('挿入に失敗したらエラーを投げる', async () => {
@@ -644,7 +676,9 @@ describe('addDate', () => {
     const repo = createLobbyRepository(db);
 
     // Act & Assert
-    await expect(repo.addDate(mockLobbyRow.id, '2025-09-01')).rejects.toThrow();
+    await expect(
+      repo.addDate(mockLobbyRow.id, '2025-09-01', null),
+    ).rejects.toThrow();
   });
 });
 
@@ -708,9 +742,14 @@ describe('applyDateChanges', () => {
     const insertChain = {
       values: vi.fn().mockResolvedValue(undefined),
     };
+    const updateChain = {
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(undefined),
+    };
     const tx = {
       delete: vi.fn().mockReturnValue(deleteChain),
       insert: vi.fn().mockReturnValue(insertChain),
+      update: vi.fn().mockReturnValue(updateChain),
     };
     const db = {
       transaction: vi
@@ -721,6 +760,7 @@ describe('applyDateChanges', () => {
       db,
       tx,
       insertChain,
+      updateChain,
       whereSql: () => {
         if (!capturedWhere) throw new Error('where が呼ばれていません');
         return new PgDialect().sqlToQuery(capturedWhere).sql;
@@ -735,20 +775,39 @@ describe('applyDateChanges', () => {
 
     // Act
     await repo.applyDateChanges(mockLobbyRow.id, {
-      datesToAdd: ['2025-10-05'],
+      datesToAdd: [{ date: '2025-10-05', dateNote: null }],
       dateIdsToRemove: ['date-2'],
+      notesToUpdate: [],
     });
 
     // Assert
     expect(tx.delete).toHaveBeenCalledTimes(1);
     expect(tx.insert).toHaveBeenCalledTimes(1);
     expect(insertChain.values).toHaveBeenCalledWith([
-      { lobbyId: mockLobbyRow.id, date: '2025-10-05' },
+      { lobbyId: mockLobbyRow.id, date: '2025-10-05', dateNote: null },
     ]);
     // 削除は対象募集枠の行に限定される（他の募集枠の候補日を誤って消さない）
     const sql = whereSql();
     expect(sql).toContain('"lobby_id" = ');
     expect(sql).toContain('"id" in ');
+  });
+
+  it('追加する候補日のひとことも一緒に挿入する', async () => {
+    // Arrange
+    const { db, insertChain } = makeApplyTransactionDb();
+    const repo = createLobbyRepository(db);
+
+    // Act
+    await repo.applyDateChanges(mockLobbyRow.id, {
+      datesToAdd: [{ date: '2025-10-05', dateNote: '午後から' }],
+      dateIdsToRemove: [],
+      notesToUpdate: [],
+    });
+
+    // Assert
+    expect(insertChain.values).toHaveBeenCalledWith([
+      { lobbyId: mockLobbyRow.id, date: '2025-10-05', dateNote: '午後から' },
+    ]);
   });
 
   it('追加対象が無ければ insert を呼ばない', async () => {
@@ -760,6 +819,7 @@ describe('applyDateChanges', () => {
     await repo.applyDateChanges(mockLobbyRow.id, {
       datesToAdd: [],
       dateIdsToRemove: ['date-1'],
+      notesToUpdate: [],
     });
 
     // Assert
@@ -774,13 +834,70 @@ describe('applyDateChanges', () => {
 
     // Act
     await repo.applyDateChanges(mockLobbyRow.id, {
-      datesToAdd: ['2025-10-05'],
+      datesToAdd: [{ date: '2025-10-05', dateNote: null }],
       dateIdsToRemove: [],
+      notesToUpdate: [],
     });
 
     // Assert
     expect(tx.delete).not.toHaveBeenCalled();
     expect(tx.insert).toHaveBeenCalledTimes(1);
+  });
+
+  describe('ひとことの更新（notesToUpdate）', () => {
+    it('対象の候補日を update し、行は作り直さない（回答を保持する）', async () => {
+      // Arrange
+      const { db, tx, updateChain } = makeApplyTransactionDb();
+      const repo = createLobbyRepository(db);
+
+      // Act
+      await repo.applyDateChanges(mockLobbyRow.id, {
+        datesToAdd: [],
+        dateIdsToRemove: [],
+        notesToUpdate: [{ id: 'date-1', dateNote: '13:00〜17:00' }],
+      });
+
+      // Assert
+      expect(tx.update).toHaveBeenCalledTimes(1);
+      expect(updateChain.set).toHaveBeenCalledWith({
+        dateNote: '13:00〜17:00',
+      });
+      // 行を消して作り直していないこと（回答のカスケード削除を避ける）
+      expect(tx.delete).not.toHaveBeenCalled();
+      expect(tx.insert).not.toHaveBeenCalled();
+    });
+
+    it('ひとことのクリア（null）も update で反映する', async () => {
+      // Arrange
+      const { db, updateChain } = makeApplyTransactionDb();
+      const repo = createLobbyRepository(db);
+
+      // Act
+      await repo.applyDateChanges(mockLobbyRow.id, {
+        datesToAdd: [],
+        dateIdsToRemove: [],
+        notesToUpdate: [{ id: 'date-1', dateNote: null }],
+      });
+
+      // Assert
+      expect(updateChain.set).toHaveBeenCalledWith({ dateNote: null });
+    });
+
+    it('更新対象が無ければ update を呼ばない', async () => {
+      // Arrange
+      const { db, tx } = makeApplyTransactionDb();
+      const repo = createLobbyRepository(db);
+
+      // Act
+      await repo.applyDateChanges(mockLobbyRow.id, {
+        datesToAdd: [{ date: '2025-10-05', dateNote: null }],
+        dateIdsToRemove: [],
+        notesToUpdate: [],
+      });
+
+      // Assert
+      expect(tx.update).not.toHaveBeenCalled();
+    });
   });
 });
 

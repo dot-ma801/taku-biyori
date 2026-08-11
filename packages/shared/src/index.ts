@@ -69,6 +69,8 @@ export {
   type LobbyListItem,
   LobbySchema,
   type Lobby,
+  LobbyCandidateDateInputSchema,
+  type LobbyCandidateDateInput,
   CreateLobbyInputSchema,
   type CreateLobbyInput,
   UpdateLobbyInputSchema,

@@ -96,12 +96,16 @@ backend・frontend ともに同じ規則です。
 `pgTable()` / `pgEnum()` は使わず、`pgSchema('{機能名}')` 経由で定義する
 （例: `gameSessionSchema.table(...)`。機能ディレクトリ名の kebab-case はスキーマ名では snake_case に読み替える）。
 
-スキーマを変更した場合は以下を実行します。
+スキーマを変更した場合は以下を実行します（**ローカル DB 向け**）。
 
 ```bash
 pnpm --filter @taku-biyori/backend db:generate
 pnpm --filter @taku-biyori/backend db:migrate
 ```
+
+生成された SQL（`packages/backend/drizzle/*.sql`）は必ず commit すること。
+**本番への反映は GitHub Actions が main への merge 時に自動で行う**（手動実行しない）。
+運用手順と、前進のみ運用での注意点（expand → contract）は `docs/deployment-guide.md` を参照。
 
 ---
 

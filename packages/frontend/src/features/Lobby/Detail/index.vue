@@ -6,17 +6,34 @@ import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
 import ConfirmedNotice from '@/features/Lobby/Detail/ConfirmedNotice.vue';
 import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
+import MemberLinkRequests from '@/features/Lobby/Detail/MemberLinkRequests.vue';
 import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
+import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { computed } from 'vue';
 import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
-const { lobby, fetch, patchLobby, addMember, removeMember, memberCount } =
-  useGetLobbyDetail(props.lobbyId);
+const {
+  lobby,
+  fetch,
+  patchLobby,
+  addMember,
+  patchMember,
+  removeMember,
+  memberCount,
+} = useGetLobbyDetail(props.lobbyId);
+
+// ホスト判定は membership に集約されているため再利用する
+const { isHost } = useLobbyMembership(
+  props.lobbyId,
+  () => lobby.value,
+  () => {},
+  () => {},
+);
 
 const scenarioName = computed(() => lobby.value?.scenarioName ?? '未設定');
 
@@ -72,6 +89,11 @@ const isConfirmed = computed(
       :text="lobby.description ?? undefined"
     />
     <ScheduleDisplay :lobby="lobby" @lobby-changed="fetch" />
+    <MemberLinkRequests
+      :lobby="lobby"
+      :is-host="isHost"
+      @member-linked="patchMember"
+    />
     <MemberDisplay :lobby="lobby" @member-removed="removeMember" />
   </div>
 </template>

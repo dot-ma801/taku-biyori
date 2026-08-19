@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/Lobby/Detail/Dialog/GuestJoinDialog.vue';
+import MemberLinkRequestDialog from '@/features/Lobby/Detail/Dialog/MemberLinkRequestDialog.vue';
 import CancelDialog from '@/features/Lobby/Detail/Dialog/CancelDialog.vue';
 import LeaveDialog from '@/features/Lobby/Detail/Dialog/LeaveDialog.vue';
 import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStatus';
 import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
 import { useGuestJoin } from '@/features/Lobby/Detail/composables/useGuestJoin';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
+import { useMemberLinkRequest } from '@/features/Lobby/Detail/composables/useMemberLinkRequest';
 import { useAuthStore } from '@/stores/auth';
 import type { Lobby, LobbyDetail, LobbyMember } from '@taku-biyori/shared';
 import {
@@ -16,6 +18,7 @@ import {
   Globe,
   UserRoundPlus,
   UserRoundMinus,
+  Link2,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -34,6 +37,7 @@ const authStore = useAuthStore();
 const guestJoinDialogModel = ref(false);
 const cancelDialogModel = ref(false);
 const leaveDialogModel = ref(false);
+const memberLinkDialogModel = ref(false);
 
 const { canPublish, canEdit, canCancel, loading, publishLobby, cancelLobby } =
   useLobbyStatus(
@@ -69,6 +73,16 @@ const { canGuestJoin } = useGuestJoin(
   () => {},
 );
 
+// ゲスト参加をアカウントへ紐づける導線（ADR 0008）。
+// ゲストリンクは認証の往復で失われるため、トークンの有無では判定しない。
+const { canRequestLink } = useMemberLinkRequest(
+  props.lobby.id,
+  () => props.lobby.members,
+  () => props.lobby.hostUserId,
+  // ダイアログ側でも申請を持つため、ここでは canRequestLink のみ使う
+  () => {},
+);
+
 const canJoinAny = computed(() => canJoin.value || canGuestJoin.value);
 
 const onClickEdit = () => {
@@ -81,6 +95,10 @@ const onJoinClick = () => {
   } else {
     guestJoinDialogModel.value = true;
   }
+};
+
+const onMemberLinkRequested = () => {
+  memberLinkDialogModel.value = false;
 };
 
 const onGuestJoined = (member: LobbyMember) => {
@@ -125,6 +143,15 @@ const onConfirmCancel = () => {
     </BaseButton>
 
     <BaseButton
+      v-if="canRequestLink"
+      variant="secondary"
+      :left-icon="Link2"
+      @click="memberLinkDialogModel = true"
+    >
+      ゲスト参加を紐づける
+    </BaseButton>
+
+    <BaseButton
       v-if="canEdit"
       variant="secondary"
       :left-icon="SquarePen"
@@ -158,6 +185,11 @@ const onConfirmCancel = () => {
     :lobby-id="lobby.id"
     :lobby-status="lobby.status"
     @joined="onGuestJoined"
+  />
+  <MemberLinkRequestDialog
+    v-model="memberLinkDialogModel"
+    :lobby="lobby"
+    @requested="onMemberLinkRequested"
   />
   <CancelDialog v-model="cancelDialogModel" @confirm="onConfirmCancel" />
   <LeaveDialog v-model="leaveDialogModel" @confirm="leave" />

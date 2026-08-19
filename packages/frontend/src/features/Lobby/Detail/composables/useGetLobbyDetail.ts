@@ -46,6 +46,18 @@ export const useGetLobbyDetail = (id: string) => {
     patchLobby({ members: [...lobby.value.members, member] });
   }
 
+  /** メンバーを差し替える（ゲスト紐づけの承認で user_id が入ったときなど） */
+  function patchMember(member: LobbyMember) {
+    if (!lobby.value) {
+      return;
+    }
+    patchLobby({
+      members: lobby.value.members.map((m) =>
+        m.id === member.id ? member : m,
+      ),
+    });
+  }
+
   /** メンバーを削除する（退出・ホストによる取り消し） */
   function removeMember(memberId: string) {
     if (!lobby.value) {
@@ -66,6 +78,7 @@ export const useGetLobbyDetail = (id: string) => {
     fetch,
     patchLobby,
     addMember,
+    patchMember,
     removeMember,
     memberCount,
   };

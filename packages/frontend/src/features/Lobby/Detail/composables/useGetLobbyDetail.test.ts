@@ -214,3 +214,40 @@ describe('memberCount', () => {
     expect(memberCount.value).toBe(0);
   });
 });
+
+describe('patchMember', () => {
+  it('同じ id のメンバーを差し替える（ゲスト紐づけの承認）', async () => {
+    // Arrange
+    const guest = makeMember('member-1');
+    const other: LobbyMember = {
+      id: 'member-2',
+      userId: 'user-9',
+      userName: 'べつのひと',
+      guestName: null,
+      joinedAt: '2024-01-01T00:00:00Z',
+    };
+    const { lobby, patchMember } = await setupLoaded(
+      makeLobby({ members: [guest, other] }),
+    );
+
+    // Act
+    patchMember({ ...guest, userId: 'user-1', userName: 'たろう' });
+
+    // Assert
+    expect(lobby.value?.members).toEqual([
+      { ...guest, userId: 'user-1', userName: 'たろう' },
+      other,
+    ]);
+  });
+
+  it('lobby 未取得のときは何もしない', () => {
+    // Arrange
+    const { lobby, patchMember } = useGetLobbyDetail(LOBBY_ID);
+
+    // Act
+    patchMember(makeMember('member-1'));
+
+    // Assert
+    expect(lobby.value).toBeNull();
+  });
+});

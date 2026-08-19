@@ -2,11 +2,13 @@
 defineOptions({ name: 'GameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
+import MemberLinkRequests from '@/features/GameSession/Detail/MemberLinkRequests.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import PlayMemoDisplay from '@/features/GameSession/PlayMemo/PlayMemoDisplay.vue';
 import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue';
 import StatusDisplay from '@/features/GameSession/Detail/StatusDisplay.vue';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
+import { useAuthStore } from '@/stores/auth';
 import { computed } from 'vue';
 import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
 import { GameSessionStatus } from '@taku-biyori/shared';
@@ -20,6 +22,12 @@ const {
   fetch,
   updateMember,
 } = useGetGameSessionDetail(props.gameSessionId);
+
+const authStore = useAuthStore();
+
+const isHost = computed(
+  () => gameSession.value?.createdBy === authStore.currentUser?.id,
+);
 
 // NOTE: UIの関心事なので、composable ではなくコンポーネント側に定義する
 const scenarioName = computed(
@@ -76,6 +84,11 @@ const isToday = computed(
     <PlayMemoDisplay v-if="isToday" :game-session="gameSession" />
     <MemoDisplay :text="description" />
     <PlayMemoDisplay v-if="!isToday" :game-session="gameSession" />
+    <MemberLinkRequests
+      :game-session="gameSession"
+      :is-host="isHost"
+      @member-linked="updateMember"
+    />
     <MemberDisplay :game-session="gameSession" @member-updated="updateMember" />
   </div>
 </template>

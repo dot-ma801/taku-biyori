@@ -13,6 +13,7 @@ import type {
   LobbyGuestLinkResponse,
   LobbyListItem,
   LobbyMember,
+  LobbyMemberLinkRequest,
   UpdateLobbyAvailabilityDateResponseInput,
   UpdateLobbyInput,
   UpdateLobbyStatusInput,
@@ -150,4 +151,49 @@ export async function updateGuestLobbyAvailabilityDateResponse(
     `/api/lobbies/${lobbyId}/availability-dates/${dateId}/guest-responses`,
     { method: 'PUT', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
   ))!;
+}
+
+/**
+ * ゲスト参加を自分のアカウントへ紐づけるよう申請する（ADR 0008）。
+ * ゲストトークンは不要。認証の往復でトークンが失われるため要求していない。
+ */
+export async function requestLobbyMemberLink(
+  id: string,
+  memberId: string,
+): Promise<LobbyMemberLinkRequest> {
+  return (await apiRequest<LobbyMemberLinkRequest>(
+    `/api/lobbies/${id}/members/${memberId}/link-requests`,
+    { method: 'POST' },
+  ))!;
+}
+
+/** 承認待ちの紐づけ申請を取得する（ホストのみ）。 */
+export async function listLobbyMemberLinkRequests(
+  id: string,
+): Promise<LobbyMemberLinkRequest[]> {
+  return (await apiRequest<LobbyMemberLinkRequest[]>(
+    `/api/lobbies/${id}/member-link-requests`,
+  ))!;
+}
+
+/** 紐づけ申請を承認する（ホストのみ）。紐づけ後のメンバーを返す。 */
+export async function approveLobbyMemberLink(
+  id: string,
+  requestId: string,
+): Promise<LobbyMember> {
+  return (await apiRequest<LobbyMember>(
+    `/api/lobbies/${id}/member-link-requests/${requestId}/approve`,
+    { method: 'POST' },
+  ))!;
+}
+
+/** 紐づけ申請を取り消す（ホストの却下・申請者本人の取り下げ）。 */
+export function deleteLobbyMemberLinkRequest(
+  id: string,
+  requestId: string,
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/lobbies/${id}/member-link-requests/${requestId}`,
+    { method: 'DELETE' },
+  );
 }

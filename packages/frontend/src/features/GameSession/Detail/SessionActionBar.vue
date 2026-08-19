@@ -9,17 +9,20 @@ import {
   Share2,
   Trash,
   XCircle,
+  Link2,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/GameSession/Detail/Dialog/GuestJoinDialog.vue';
+import MemberLinkRequestDialog from '@/features/GameSession/Detail/Dialog/MemberLinkRequestDialog.vue';
 import DeleteDialog from '@/features/GameSession/Detail/Dialog/DeleteDialog.vue';
 import CancelSessionDialog from '@/features/GameSession/Detail/Dialog/CancelSessionDialog.vue';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import { useGuestLink } from '@/features/GameSession/Detail/useGuestLink';
 import { useGuestJoin } from '@/features/GameSession/Detail/useGuestJoin';
+import { useMemberLinkRequest } from '@/features/GameSession/Detail/useMemberLinkRequest';
 import { useAuthStore } from '@/stores/auth';
 import type { GameSessionDetail } from '@taku-biyori/shared';
 
@@ -39,6 +42,7 @@ const authStore = useAuthStore();
 const deleteDialogModel = ref(false);
 const guestJoinDialogModel = ref(false);
 const cancelSessionDialogModel = ref(false);
+const memberLinkDialogModel = ref(false);
 
 const onRefresh = () => emit('sessionChanged');
 
@@ -89,6 +93,16 @@ const { canGuestJoin } = useGuestJoin(
   () => {},
 );
 
+// ゲスト参加をアカウントへ紐づける導線（ADR 0008）。
+// ゲストリンクは認証の往復で失われるため、トークンの有無では判定しない。
+const { canRequestLink } = useMemberLinkRequest(
+  props.gameSessionId,
+  () => props.gameSession?.members ?? [],
+  () => props.gameSession?.createdBy ?? '',
+  // ダイアログ側でも申請を持つため、ここでは canRequestLink のみ使う
+  () => {},
+);
+
 const canJoinAny = computed(() => canJoin.value || canGuestJoin.value);
 
 function onClickEdit() {
@@ -106,6 +120,10 @@ function onJoinClick() {
   }
 }
 
+function onMemberLinkRequested() {
+  memberLinkDialogModel.value = false;
+}
+
 function onGuestJoined() {
   guestJoinDialogModel.value = false;
   onRefresh();
@@ -121,6 +139,14 @@ function onGuestJoined() {
       @click="deleteDialogModel = true"
     >
       削除
+    </BaseButton>
+    <BaseButton
+      v-if="canRequestLink"
+      :left-icon="Link2"
+      variant="secondary"
+      @click="memberLinkDialogModel = true"
+    >
+      ゲスト参加を紐づける
     </BaseButton>
     <BaseButton
       v-if="isHost"
@@ -182,6 +208,13 @@ function onGuestJoined() {
       退出する
     </BaseButton>
   </div>
+
+  <MemberLinkRequestDialog
+    v-if="gameSession"
+    v-model="memberLinkDialogModel"
+    :game-session="gameSession"
+    @requested="onMemberLinkRequested"
+  />
 
   <GuestJoinDialog
     v-if="gameSession"

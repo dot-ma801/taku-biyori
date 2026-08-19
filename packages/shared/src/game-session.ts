@@ -102,6 +102,21 @@ export const GameSessionMemberSchema = z.object({
 });
 export type GameSessionMember = z.infer<typeof GameSessionMemberSchema>;
 
+/**
+ * ゲスト参加をアカウントへ紐づける申請（ADR 0008）。募集枠側と同構造。
+ */
+export const GameSessionMemberLinkRequestSchema = z.object({
+  id: z.string().uuid(),
+  memberId: z.string().uuid(),
+  memberGuestName: z.string().nullable(),
+  requestedUserId: z.string(),
+  requestedUserName: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type GameSessionMemberLinkRequest = z.infer<
+  typeof GameSessionMemberLinkRequestSchema
+>;
+
 export const GameSessionDetailSchema = GameSessionSchema.extend({
   members: z.array(GameSessionMemberSchema),
 });

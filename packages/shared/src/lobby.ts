@@ -137,6 +137,23 @@ export const LobbyMemberSchema = z.object({
 });
 export type LobbyMember = z.infer<typeof LobbyMemberSchema>;
 
+/**
+ * ゲスト参加をアカウントへ紐づける申請（ADR 0008）。
+ * ホストの承認画面で「どのゲストが誰として名乗り出ているか」を示すため、
+ * 対象ゲストの表示名と申請者のアカウント名を含める。
+ */
+export const LobbyMemberLinkRequestSchema = z.object({
+  id: z.string().uuid(),
+  memberId: z.string().uuid(),
+  memberGuestName: z.string().nullable(),
+  requestedUserId: z.string(),
+  requestedUserName: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type LobbyMemberLinkRequest = z.infer<
+  typeof LobbyMemberLinkRequestSchema
+>;
+
 export const ConfirmedGameSessionSchema = z.object({
   id: z.string().uuid(),
   selectedLobbyMemberIds: z.array(z.string().uuid()),

@@ -38,7 +38,8 @@ export const approveMemberLink = async (
 ): Promise<ApproveMemberLinkResult> => {
   const request = await repo.findLinkRequest(requestId);
   // 他の卓の申請IDを渡して承認できないよう、所属を検証する
-  if (!request || request.gameSessionId !== gameSessionId) return { type: 'notFound' };
+  if (!request || request.gameSessionId !== gameSessionId)
+    return { type: 'notFound' };
 
   const hostUserId = await repo.findHostUserId(gameSessionId);
   if (hostUserId === null) return { type: 'notFound' };

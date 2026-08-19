@@ -3,6 +3,7 @@ import {
   count,
   eq,
   exists,
+  inArray,
   isNotNull,
   isNull,
   or,
@@ -14,6 +15,7 @@ import type {
   GameSessionDetail,
   GameSessionListItem,
   GameSessionMember,
+  GameSessionMemberLinkRequest,
   GameSessionPlayMemo,
   SharedGameSessionPlayMemo,
   JoinAsGuestInput,
@@ -27,8 +29,11 @@ import {
   gameSessions,
   gameSessionMembers,
   gameSessionPlayMemos,
+  gameSessionMemberLinkRequests,
 } from '@/system/infrastructure/database/game-session-schema';
+import { lobbyMembers } from '@/system/infrastructure/database/lobby-schema';
 import { user } from '@/system/infrastructure/database/schema';
+import { isUniqueViolation } from '@/system/infrastructure/database/errors';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
 import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
@@ -47,6 +52,13 @@ import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
 import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
+import type { RequestMemberLinkRepository } from '@/game-session/application/request-member-link';
+import type { ListMemberLinkRequestsRepository } from '@/game-session/application/list-member-link-requests';
+import type {
+  ApproveMemberLinkRepository,
+  LinkRequestOwner,
+} from '@/game-session/application/approve-member-link';
+import type { DeleteMemberLinkRequestRepository } from '@/game-session/application/delete-member-link-request';
 
 export type GameSessionRepository = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -64,7 +76,11 @@ export type GameSessionRepository = ListGameSessionsRepository &
   GetMyPlayMemoRepository &
   UpsertMyPlayMemoRepository &
   UpdateMyPlayMemoVisibilityRepository &
-  ListSharedPlayMemosRepository;
+  ListSharedPlayMemosRepository &
+  RequestMemberLinkRepository &
+  ListMemberLinkRequestsRepository &
+  ApproveMemberLinkRepository &
+  DeleteMemberLinkRequestRepository;
 
 export type GameSessionRow = {
   id: string;
@@ -148,6 +164,44 @@ const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
         ? 'member'
         : null,
 });
+
+/**
+ * 申請IDの配列から、ホストの承認画面に必要な情報（ゲスト表示名・申請者名）を
+ * 揃えて取得します。リポジトリのインターフェースには含めないため関数として切り出します。
+ */
+const findLinkRequestsByIds = async (
+  db: Database,
+  requestIds: string[],
+): Promise<GameSessionMemberLinkRequest[]> => {
+  if (requestIds.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: gameSessionMemberLinkRequests.id,
+      memberId: gameSessionMemberLinkRequests.memberId,
+      memberGuestName: gameSessionMembers.guestName,
+      requestedUserId: gameSessionMemberLinkRequests.requestedUserId,
+      requestedUserName: user.name,
+      createdAt: gameSessionMemberLinkRequests.createdAt,
+    })
+    .from(gameSessionMemberLinkRequests)
+    .innerJoin(
+      gameSessionMembers,
+      eq(gameSessionMembers.id, gameSessionMemberLinkRequests.memberId),
+    )
+    .leftJoin(user, eq(user.id, gameSessionMemberLinkRequests.requestedUserId))
+    .where(inArray(gameSessionMemberLinkRequests.id, requestIds))
+    .orderBy(gameSessionMemberLinkRequests.createdAt);
+
+  return rows.map((r) => ({
+    id: r.id,
+    memberId: r.memberId,
+    memberGuestName: r.memberGuestName,
+    requestedUserId: r.requestedUserId,
+    requestedUserName: r.requestedUserName ?? null,
+    createdAt: r.createdAt.toISOString(),
+  }));
+};
 
 export const createGameSessionRepository = (
   db: Database,
@@ -610,6 +664,164 @@ export const createGameSessionRepository = (
     await db
       .delete(gameSessionMembers)
       .where(eq(gameSessionMembers.id, memberId));
+  },
+
+  async findGameSessionVisibility(
+    id: string,
+  ): Promise<{ isPublished: boolean; hostUserId: string } | null> {
+    const row = await db
+      .select({
+        isPublished: gameSessions.isPublished,
+        hostUserId: gameSessions.hostUserId,
+      })
+      .from(gameSessions)
+      .where(eq(gameSessions.id, id))
+      .limit(1);
+    return row[0] ?? null;
+  },
+
+  async isGuestMember(
+    gameSessionId: string,
+    memberId: string,
+  ): Promise<boolean> {
+    const row = await db
+      .select({ userId: gameSessionMembers.userId })
+      .from(gameSessionMembers)
+      .where(
+        and(
+          eq(gameSessionMembers.id, memberId),
+          eq(gameSessionMembers.gameSessionId, gameSessionId),
+          isNull(gameSessionMembers.userId),
+        ),
+      )
+      .limit(1);
+    return row[0] !== undefined;
+  },
+
+  async insertLinkRequest(
+    memberId: string,
+    userId: string,
+  ): Promise<GameSessionMemberLinkRequest | null> {
+    const result = await db
+      .insert(gameSessionMemberLinkRequests)
+      .values({ memberId, requestedUserId: userId })
+      .onConflictDoNothing()
+      .returning({ id: gameSessionMemberLinkRequests.id });
+
+    // onConflictDoNothing で競合した場合は空配列が返る（重複申請）
+    const inserted = result[0];
+    if (!inserted) return null;
+
+    const rows = await findLinkRequestsByIds(db, [inserted.id]);
+    const row = rows[0];
+    if (!row) throw new Error('紐づけ申請の登録に失敗しました');
+    return row;
+  },
+
+  async findLinkRequestsByGameSessionId(
+    gameSessionId: string,
+  ): Promise<GameSessionMemberLinkRequest[]> {
+    const rows = await db
+      .select({ id: gameSessionMemberLinkRequests.id })
+      .from(gameSessionMemberLinkRequests)
+      .innerJoin(
+        gameSessionMembers,
+        eq(gameSessionMembers.id, gameSessionMemberLinkRequests.memberId),
+      )
+      .where(eq(gameSessionMembers.gameSessionId, gameSessionId));
+
+    return findLinkRequestsByIds(
+      db,
+      rows.map((r) => r.id),
+    );
+  },
+
+  async findLinkRequest(requestId: string): Promise<LinkRequestOwner | null> {
+    const row = await db
+      .select({
+        gameSessionId: gameSessionMembers.gameSessionId,
+        memberId: gameSessionMemberLinkRequests.memberId,
+        requestedUserId: gameSessionMemberLinkRequests.requestedUserId,
+      })
+      .from(gameSessionMemberLinkRequests)
+      .innerJoin(
+        gameSessionMembers,
+        eq(gameSessionMembers.id, gameSessionMemberLinkRequests.memberId),
+      )
+      .where(eq(gameSessionMemberLinkRequests.id, requestId))
+      .limit(1);
+
+    return row[0] ?? null;
+  },
+
+  async deleteLinkRequest(requestId: string): Promise<void> {
+    await db
+      .delete(gameSessionMemberLinkRequests)
+      .where(eq(gameSessionMemberLinkRequests.id, requestId));
+  },
+
+  async applyMemberLink(
+    memberId: string,
+    userId: string,
+  ): Promise<GameSessionMember | null> {
+    try {
+      return await db.transaction(async (tx) => {
+        // user_id IS NULL を条件に含めることで、既に紐づけ済みの行を
+        // 二重承認で上書きしない（0 件更新 → 紐づけ済みとして conflict 扱い）
+        const updated = await tx
+          .update(gameSessionMembers)
+          .set({ userId })
+          .where(
+            and(
+              eq(gameSessionMembers.id, memberId),
+              isNull(gameSessionMembers.userId),
+            ),
+          )
+          .returning();
+
+        const row = updated[0];
+        if (!row) return null;
+
+        // 出自の募集枠メンバーも同時に紐づける。募集枠側の日程回答が本人のものになる。
+        // ここが一意制約に衝突した場合はトランザクション全体を巻き戻す（ADR 0008）
+        if (row.lobbyMemberId !== null) {
+          await tx
+            .update(lobbyMembers)
+            .set({ userId })
+            .where(
+              and(
+                eq(lobbyMembers.id, row.lobbyMemberId),
+                isNull(lobbyMembers.userId),
+              ),
+            );
+        }
+
+        // 承認済みメンバー宛の申請は他ユーザーのものも含めて用済みになる
+        await tx
+          .delete(gameSessionMemberLinkRequests)
+          .where(eq(gameSessionMemberLinkRequests.memberId, memberId));
+
+        const userRow = await tx
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, userId))
+          .limit(1);
+
+        return {
+          id: row.id,
+          userId: row.userId,
+          userName: userRow[0]?.name ?? null,
+          guestName: row.guestName,
+          characterName: row.characterName,
+          lobbyMemberId: row.lobbyMemberId,
+          joinedAt: row.createdAt.toISOString(),
+        };
+      });
+    } catch (error) {
+      // 申請から承認までの間に同じユーザーがログイン参加した場合に起きる
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
   },
 
   async findGuestLinkInfo(

@@ -22,7 +22,8 @@ export const deleteMemberLinkRequest = async (
   userId: string,
 ): Promise<DeleteMemberLinkRequestResult> => {
   const request = await repo.findLinkRequest(requestId);
-  if (!request || request.gameSessionId !== gameSessionId) return { type: 'notFound' };
+  if (!request || request.gameSessionId !== gameSessionId)
+    return { type: 'notFound' };
 
   const hostUserId = await repo.findHostUserId(gameSessionId);
   const isHost = hostUserId === userId;

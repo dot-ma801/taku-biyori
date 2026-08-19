@@ -152,10 +152,9 @@ export const lobbyMemberLinkRequests = lobbySchema.table(
       table.memberId,
     ),
     // 同一ユーザーが同じゲスト行へ重複申請するのを防ぐ
-    memberUserUnique: unique('lobby_member_link_requests_member_user_unique').on(
-      table.memberId,
-      table.requestedUserId,
-    ),
+    memberUserUnique: unique(
+      'lobby_member_link_requests_member_user_unique',
+    ).on(table.memberId, table.requestedUserId),
   }),
 );
 

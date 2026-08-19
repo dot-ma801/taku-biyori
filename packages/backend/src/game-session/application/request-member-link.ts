@@ -6,7 +6,10 @@ export interface RequestMemberLinkRepository {
   ): Promise<{ isPublished: boolean; hostUserId: string } | null>;
   // memberId がその卓のゲストメンバー（user_id = null）か
   isGuestMember(gameSessionId: string, memberId: string): Promise<boolean>;
-  findMemberByUserId(gameSessionId: string, userId: string): Promise<string | null>;
+  findMemberByUserId(
+    gameSessionId: string,
+    userId: string,
+  ): Promise<string | null>;
   // null は一意制約違反（同一ユーザーによる重複申請）を表す
   insertLinkRequest(
     memberId: string,

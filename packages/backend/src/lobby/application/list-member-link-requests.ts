@@ -2,9 +2,7 @@ import type { LobbyMemberLinkRequest } from '@taku-biyori/shared';
 
 export interface ListMemberLinkRequestsRepository {
   findHostUserId(id: string): Promise<string | null>;
-  findLinkRequestsByLobbyId(
-    lobbyId: string,
-  ): Promise<LobbyMemberLinkRequest[]>;
+  findLinkRequestsByLobbyId(lobbyId: string): Promise<LobbyMemberLinkRequest[]>;
 }
 
 export type ListMemberLinkRequestsResult =

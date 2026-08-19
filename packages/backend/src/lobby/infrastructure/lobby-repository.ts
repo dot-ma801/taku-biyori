@@ -14,6 +14,7 @@ import type {
   LobbyDetail,
   LobbyListItem,
   LobbyMember,
+  LobbyMemberLinkRequest,
   LobbyAvailabilityDate,
   LobbyAvailabilityDateAnswer,
   JoinLobbyInput,
@@ -28,7 +29,10 @@ import {
   lobbyMembers,
   lobbyCandidates,
   lobbyAnswers,
+  lobbyMemberLinkRequests,
 } from '@/system/infrastructure/database/lobby-schema';
+import { gameSessionMembers } from '@/system/infrastructure/database/game-session-schema';
+import { isUniqueViolation } from '@/system/infrastructure/database/errors';
 import { user } from '@/system/infrastructure/database/schema';
 import { getLobbyStatus } from '@/lobby/domain/lobby-status';
 import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
@@ -50,6 +54,13 @@ import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delet
 import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
 import type { ConfirmLobbyRepository } from '@/lobby/application/confirm-lobby';
+import type { RequestMemberLinkRepository } from '@/lobby/application/request-member-link';
+import type { ListMemberLinkRequestsRepository } from '@/lobby/application/list-member-link-requests';
+import type {
+  ApproveMemberLinkRepository,
+  LinkRequestOwner,
+} from '@/lobby/application/approve-member-link';
+import type { DeleteMemberLinkRequestRepository } from '@/lobby/application/delete-member-link-request';
 import { insertGameSessionWithMembers } from '@/game-session/infrastructure/insert-game-session-with-members';
 import { findConfirmedGameSessionByLobbyId } from '@/game-session/infrastructure/find-confirmed-game-session-by-lobby-id';
 
@@ -70,7 +81,11 @@ export type LobbyRepository = ListLobbiesRepository &
   DeleteAvailabilityDateRepository &
   UpdateAvailabilityDateResponseRepository &
   UpdateGuestAvailabilityDateResponseRepository &
-  ConfirmLobbyRepository;
+  ConfirmLobbyRepository &
+  RequestMemberLinkRepository &
+  ListMemberLinkRequestsRepository &
+  ApproveMemberLinkRepository &
+  DeleteMemberLinkRequestRepository;
 
 type LobbyRow = {
   id: string;
@@ -141,6 +156,44 @@ const toListItem = (row: ListRow, userId: string): LobbyListItem => ({
         ? 'member'
         : null,
 });
+
+/**
+ * 申請IDの配列から、ホストの承認画面に必要な情報（ゲスト表示名・申請者名）を
+ * 揃えて取得します。リポジトリのインターフェースには含めないため関数として切り出します。
+ */
+const findLinkRequestsByIds = async (
+  db: Database,
+  requestIds: string[],
+): Promise<LobbyMemberLinkRequest[]> => {
+  if (requestIds.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: lobbyMemberLinkRequests.id,
+      memberId: lobbyMemberLinkRequests.memberId,
+      memberGuestName: lobbyMembers.guestName,
+      requestedUserId: lobbyMemberLinkRequests.requestedUserId,
+      requestedUserName: user.name,
+      createdAt: lobbyMemberLinkRequests.createdAt,
+    })
+    .from(lobbyMemberLinkRequests)
+    .innerJoin(
+      lobbyMembers,
+      eq(lobbyMembers.id, lobbyMemberLinkRequests.memberId),
+    )
+    .leftJoin(user, eq(user.id, lobbyMemberLinkRequests.requestedUserId))
+    .where(inArray(lobbyMemberLinkRequests.id, requestIds))
+    .orderBy(lobbyMemberLinkRequests.createdAt);
+
+  return rows.map((r) => ({
+    id: r.id,
+    memberId: r.memberId,
+    memberGuestName: r.memberGuestName,
+    requestedUserId: r.requestedUserId,
+    requestedUserName: r.requestedUserName ?? null,
+    createdAt: r.createdAt.toISOString(),
+  }));
+};
 
 export const createLobbyRepository = (db: Database): LobbyRepository => ({
   async findByUserId(userId: string): Promise<LobbyListItem[]> {
@@ -526,6 +579,125 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
 
   async deleteMemberById(memberId: string): Promise<void> {
     await db.delete(lobbyMembers).where(eq(lobbyMembers.id, memberId));
+  },
+
+  async insertLinkRequest(
+    memberId: string,
+    userId: string,
+  ): Promise<LobbyMemberLinkRequest | null> {
+    const result = await db
+      .insert(lobbyMemberLinkRequests)
+      .values({ memberId, requestedUserId: userId })
+      .onConflictDoNothing()
+      .returning({ id: lobbyMemberLinkRequests.id });
+
+    // onConflictDoNothing で競合した場合は空配列が返る（重複申請）
+    const inserted = result[0];
+    if (!inserted) return null;
+
+    const rows = await findLinkRequestsByIds(db, [inserted.id]);
+    const row = rows[0];
+    if (!row) throw new Error('紐づけ申請の登録に失敗しました');
+    return row;
+  },
+
+  async findLinkRequestsByLobbyId(
+    lobbyId: string,
+  ): Promise<LobbyMemberLinkRequest[]> {
+    const rows = await db
+      .select({ id: lobbyMemberLinkRequests.id })
+      .from(lobbyMemberLinkRequests)
+      .innerJoin(
+        lobbyMembers,
+        eq(lobbyMembers.id, lobbyMemberLinkRequests.memberId),
+      )
+      .where(eq(lobbyMembers.lobbyId, lobbyId));
+
+    return findLinkRequestsByIds(
+      db,
+      rows.map((r) => r.id),
+    );
+  },
+
+  async findLinkRequest(requestId: string): Promise<LinkRequestOwner | null> {
+    const row = await db
+      .select({
+        lobbyId: lobbyMembers.lobbyId,
+        memberId: lobbyMemberLinkRequests.memberId,
+        requestedUserId: lobbyMemberLinkRequests.requestedUserId,
+      })
+      .from(lobbyMemberLinkRequests)
+      .innerJoin(
+        lobbyMembers,
+        eq(lobbyMembers.id, lobbyMemberLinkRequests.memberId),
+      )
+      .where(eq(lobbyMemberLinkRequests.id, requestId))
+      .limit(1);
+
+    return row[0] ?? null;
+  },
+
+  async deleteLinkRequest(requestId: string): Promise<void> {
+    await db
+      .delete(lobbyMemberLinkRequests)
+      .where(eq(lobbyMemberLinkRequests.id, requestId));
+  },
+
+  async applyMemberLink(
+    memberId: string,
+    userId: string,
+  ): Promise<LobbyMember | null> {
+    try {
+      return await db.transaction(async (tx) => {
+        // user_id IS NULL を条件に含めることで、既に紐づけ済みの行を
+        // 二重承認で上書きしない（0 件更新 → 紐づけ済みとして conflict 扱い）
+        const updated = await tx
+          .update(lobbyMembers)
+          .set({ userId })
+          .where(
+            and(eq(lobbyMembers.id, memberId), isNull(lobbyMembers.userId)),
+          )
+          .returning();
+
+        const row = updated[0];
+        if (!row) return null;
+
+        // 確定済みの卓にコピーされたメンバーも同時に紐づける。
+        // ここが一意制約に衝突した場合はトランザクション全体を巻き戻す（ADR 0008）
+        await tx
+          .update(gameSessionMembers)
+          .set({ userId })
+          .where(
+            and(
+              eq(gameSessionMembers.lobbyMemberId, memberId),
+              isNull(gameSessionMembers.userId),
+            ),
+          );
+
+        // 承認済みメンバー宛の申請は他ユーザーのものも含めて用済みになる
+        await tx
+          .delete(lobbyMemberLinkRequests)
+          .where(eq(lobbyMemberLinkRequests.memberId, memberId));
+
+        const userRow = await tx
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, userId))
+          .limit(1);
+
+        return {
+          id: row.id,
+          userId: row.userId,
+          userName: userRow[0]?.name ?? null,
+          guestName: row.guestName,
+          joinedAt: row.createdAt.toISOString(),
+        };
+      });
+    } catch (error) {
+      // 申請から承認までの間に同じユーザーがログイン参加した場合に起きる
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
   },
 
   async findByLobbyId(lobbyId: string): Promise<LobbyAvailabilityDate[]> {

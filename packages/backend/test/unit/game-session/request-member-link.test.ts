@@ -34,7 +34,12 @@ describe('requestMemberLink', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await requestMemberLink(repo, GAME_SESSION_ID, MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', request: mockRequest });
@@ -59,7 +64,12 @@ describe('requestMemberLink', () => {
     });
 
     // Act
-    const result = await requestMemberLink(repo, 'nonexistent', MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      'nonexistent',
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -74,7 +84,12 @@ describe('requestMemberLink', () => {
     });
 
     // Act
-    const result = await requestMemberLink(repo, GAME_SESSION_ID, MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -87,7 +102,12 @@ describe('requestMemberLink', () => {
     });
 
     // Act
-    const result = await requestMemberLink(repo, GAME_SESSION_ID, MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notGuestMember' });
@@ -100,7 +120,12 @@ describe('requestMemberLink', () => {
     });
 
     // Act
-    const result = await requestMemberLink(repo, GAME_SESSION_ID, MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'alreadyMember' });
@@ -113,7 +138,12 @@ describe('requestMemberLink', () => {
     });
 
     // Act
-    const result = await requestMemberLink(repo, GAME_SESSION_ID, MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'alreadyRequested' });

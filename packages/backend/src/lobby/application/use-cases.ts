@@ -47,6 +47,22 @@ import type {
   ConfirmLobbyResult,
   ConfirmLobbyRepository,
 } from '@/lobby/application/confirm-lobby';
+import type {
+  RequestMemberLinkResult,
+  RequestMemberLinkRepository,
+} from '@/lobby/application/request-member-link';
+import type {
+  ListMemberLinkRequestsResult,
+  ListMemberLinkRequestsRepository,
+} from '@/lobby/application/list-member-link-requests';
+import type {
+  ApproveMemberLinkResult,
+  ApproveMemberLinkRepository,
+} from '@/lobby/application/approve-member-link';
+import type {
+  DeleteMemberLinkRequestResult,
+  DeleteMemberLinkRequestRepository,
+} from '@/lobby/application/delete-member-link-request';
 import { listLobbies } from '@/lobby/application/list-lobbies';
 import { createLobby } from '@/lobby/application/create-lobby';
 import { getLobby } from '@/lobby/application/get-lobby';
@@ -65,6 +81,10 @@ import { deleteAvailabilityDate } from '@/lobby/application/delete-availability-
 import { updateAvailabilityDateResponse } from '@/lobby/application/update-availability-date-response';
 import { updateGuestAvailabilityDateResponse } from '@/lobby/application/update-guest-availability-date-response';
 import { confirmLobby } from '@/lobby/application/confirm-lobby';
+import { requestMemberLink } from '@/lobby/application/request-member-link';
+import { listMemberLinkRequests } from '@/lobby/application/list-member-link-requests';
+import { approveMemberLink } from '@/lobby/application/approve-member-link';
+import { deleteMemberLinkRequest } from '@/lobby/application/delete-member-link-request';
 
 type LobbyRepo = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -83,7 +103,11 @@ type LobbyRepo = ListLobbiesRepository &
   DeleteAvailabilityDateRepository &
   UpdateAvailabilityDateResponseRepository &
   UpdateGuestAvailabilityDateResponseRepository &
-  ConfirmLobbyRepository;
+  ConfirmLobbyRepository &
+  RequestMemberLinkRepository &
+  ListMemberLinkRequestsRepository &
+  ApproveMemberLinkRepository &
+  DeleteMemberLinkRequestRepository;
 
 export interface LobbyUseCases {
   listLobbies(userId: string): Promise<LobbyListItem[]>;
@@ -157,6 +181,25 @@ export interface LobbyUseCases {
     userId: string,
     input: ConfirmLobbyInput,
   ): Promise<ConfirmLobbyResult>;
+  requestMemberLink(
+    lobbyId: string,
+    memberId: string,
+    userId: string,
+  ): Promise<RequestMemberLinkResult>;
+  listMemberLinkRequests(
+    lobbyId: string,
+    userId: string,
+  ): Promise<ListMemberLinkRequestsResult>;
+  approveMemberLink(
+    lobbyId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<ApproveMemberLinkResult>;
+  deleteMemberLinkRequest(
+    lobbyId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<DeleteMemberLinkRequestResult>;
 }
 
 export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
@@ -250,4 +293,27 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
     userId: string,
     input: ConfirmLobbyInput,
   ): Promise<ConfirmLobbyResult> => confirmLobby(repo, lobbyId, userId, input),
+  requestMemberLink: (
+    lobbyId: string,
+    memberId: string,
+    userId: string,
+  ): Promise<RequestMemberLinkResult> =>
+    requestMemberLink(repo, lobbyId, memberId, userId),
+  listMemberLinkRequests: (
+    lobbyId: string,
+    userId: string,
+  ): Promise<ListMemberLinkRequestsResult> =>
+    listMemberLinkRequests(repo, lobbyId, userId),
+  approveMemberLink: (
+    lobbyId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<ApproveMemberLinkResult> =>
+    approveMemberLink(repo, lobbyId, requestId, userId),
+  deleteMemberLinkRequest: (
+    lobbyId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<DeleteMemberLinkRequestResult> =>
+    deleteMemberLinkRequest(repo, lobbyId, requestId, userId),
 });

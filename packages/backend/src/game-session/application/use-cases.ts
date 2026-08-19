@@ -42,6 +42,22 @@ import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
 import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
+import type {
+  RequestMemberLinkResult,
+  RequestMemberLinkRepository,
+} from '@/game-session/application/request-member-link';
+import type {
+  ListMemberLinkRequestsResult,
+  ListMemberLinkRequestsRepository,
+} from '@/game-session/application/list-member-link-requests';
+import type {
+  ApproveMemberLinkResult,
+  ApproveMemberLinkRepository,
+} from '@/game-session/application/approve-member-link';
+import type {
+  DeleteMemberLinkRequestResult,
+  DeleteMemberLinkRequestRepository,
+} from '@/game-session/application/delete-member-link-request';
 import { listGameSessions } from '@/game-session/application/list-game-sessions';
 import { createGameSession } from '@/game-session/application/create-game-session';
 import { getGameSession } from '@/game-session/application/get-game-session';
@@ -59,6 +75,10 @@ import { getMyPlayMemo } from '@/game-session/application/get-my-play-memo';
 import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo';
 import { updateMyPlayMemoVisibility } from '@/game-session/application/update-my-play-memo-visibility';
 import { listSharedPlayMemos } from '@/game-session/application/list-shared-play-memos';
+import { requestMemberLink } from '@/game-session/application/request-member-link';
+import { listMemberLinkRequests } from '@/game-session/application/list-member-link-requests';
+import { approveMemberLink } from '@/game-session/application/approve-member-link';
+import { deleteMemberLinkRequest } from '@/game-session/application/delete-member-link-request';
 
 type GameSessionRepo = ListGameSessionsRepository &
   CreateGameSessionRepository &
@@ -76,7 +96,11 @@ type GameSessionRepo = ListGameSessionsRepository &
   GetMyPlayMemoRepository &
   UpsertMyPlayMemoRepository &
   UpdateMyPlayMemoVisibilityRepository &
-  ListSharedPlayMemosRepository;
+  ListSharedPlayMemosRepository &
+  RequestMemberLinkRepository &
+  ListMemberLinkRequestsRepository &
+  ApproveMemberLinkRepository &
+  DeleteMemberLinkRequestRepository;
 
 export interface GameSessionUseCases {
   listGameSessions(userId: string): Promise<GameSessionListItem[]>;
@@ -144,6 +168,25 @@ export interface GameSessionUseCases {
     gameSessionId: string,
     userId: string | null,
   ): Promise<ListSharedPlayMemosResult>;
+  requestMemberLink(
+    gameSessionId: string,
+    memberId: string,
+    userId: string,
+  ): Promise<RequestMemberLinkResult>;
+  listMemberLinkRequests(
+    gameSessionId: string,
+    userId: string,
+  ): Promise<ListMemberLinkRequestsResult>;
+  approveMemberLink(
+    gameSessionId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<ApproveMemberLinkResult>;
+  deleteMemberLinkRequest(
+    gameSessionId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<DeleteMemberLinkRequestResult>;
 }
 
 export const createGameSessionUseCases = (
@@ -227,4 +270,27 @@ export const createGameSessionUseCases = (
     userId: string | null,
   ): Promise<ListSharedPlayMemosResult> =>
     listSharedPlayMemos(repo, gameSessionId, userId),
+  requestMemberLink: (
+    gameSessionId: string,
+    memberId: string,
+    userId: string,
+  ): Promise<RequestMemberLinkResult> =>
+    requestMemberLink(repo, gameSessionId, memberId, userId),
+  listMemberLinkRequests: (
+    gameSessionId: string,
+    userId: string,
+  ): Promise<ListMemberLinkRequestsResult> =>
+    listMemberLinkRequests(repo, gameSessionId, userId),
+  approveMemberLink: (
+    gameSessionId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<ApproveMemberLinkResult> =>
+    approveMemberLink(repo, gameSessionId, requestId, userId),
+  deleteMemberLinkRequest: (
+    gameSessionId: string,
+    requestId: string,
+    userId: string,
+  ): Promise<DeleteMemberLinkRequestResult> =>
+    deleteMemberLinkRequest(repo, gameSessionId, requestId, userId),
 });

@@ -42,7 +42,11 @@ describe('listMemberLinkRequests', () => {
     const repo = makeRepo({ findHostUserId: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const result = await listMemberLinkRequests(repo, 'nonexistent', HOST_USER_ID);
+    const result = await listMemberLinkRequests(
+      repo,
+      'nonexistent',
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });

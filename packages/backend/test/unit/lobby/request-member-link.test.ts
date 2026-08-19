@@ -59,7 +59,12 @@ describe('requestMemberLink', () => {
     });
 
     // Act
-    const result = await requestMemberLink(repo, 'nonexistent', MEMBER_ID, USER_ID);
+    const result = await requestMemberLink(
+      repo,
+      'nonexistent',
+      MEMBER_ID,
+      USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });

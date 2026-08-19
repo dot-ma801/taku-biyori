@@ -37,7 +37,12 @@ describe('approveMemberLink', () => {
     const repo = makeRepo({ applyMemberLink });
 
     // Act
-    const result = await approveMemberLink(repo, GAME_SESSION_ID, REQUEST_ID, HOST_USER_ID);
+    const result = await approveMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', member: linkedMember });
@@ -49,7 +54,12 @@ describe('approveMemberLink', () => {
     const repo = makeRepo({ findLinkRequest: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const result = await approveMemberLink(repo, GAME_SESSION_ID, 'nonexistent', HOST_USER_ID);
+    const result = await approveMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      'nonexistent',
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -66,7 +76,12 @@ describe('approveMemberLink', () => {
     });
 
     // Act
-    const result = await approveMemberLink(repo, GAME_SESSION_ID, REQUEST_ID, HOST_USER_ID);
+    const result = await approveMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -77,7 +92,12 @@ describe('approveMemberLink', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await approveMemberLink(repo, GAME_SESSION_ID, REQUEST_ID, 'other-user');
+    const result = await approveMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      'other-user',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -100,7 +120,12 @@ describe('approveMemberLink', () => {
     const repo = makeRepo({ applyMemberLink: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const result = await approveMemberLink(repo, GAME_SESSION_ID, REQUEST_ID, HOST_USER_ID);
+    const result = await approveMemberLink(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'conflict' });

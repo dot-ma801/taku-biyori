@@ -11,11 +11,13 @@ import { registerGameSessionRoute } from '@/game-session/presentation/controller
 import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
 import { registerPlayMemoRoute } from '@/game-session/presentation/controller/routes/play-memo-route';
+import { registerMemberLinkRoute } from '@/game-session/presentation/controller/routes/member-link-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
 import { registerMemberRoute as registerLobbyMemberRoute } from '@/lobby/presentation/controller/routes/member-route';
 import { registerGuestLinkRoute as registerLobbyGuestLinkRoute } from '@/lobby/presentation/controller/routes/guest-link-route';
 import { registerAvailabilityDateRoute as registerLobbyAvailabilityDateRoute } from '@/lobby/presentation/controller/routes/availability-date-route';
+import { registerMemberLinkRoute as registerLobbyMemberLinkRoute } from '@/lobby/presentation/controller/routes/member-link-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -58,6 +60,13 @@ export const createApp = (options: CreateAppOptions) => {
     updateMember: options.gameSession.updateMember,
     leaveGameSession: options.gameSession.leaveGameSession,
   });
+  registerMemberLinkRoute(app, {
+    getSession: options.getSession,
+    requestMemberLink: options.gameSession.requestMemberLink,
+    listMemberLinkRequests: options.gameSession.listMemberLinkRequests,
+    approveMemberLink: options.gameSession.approveMemberLink,
+    deleteMemberLinkRequest: options.gameSession.deleteMemberLinkRequest,
+  });
   registerGuestLinkRoute(app, {
     getSession: options.getSession,
     getGuestLink: options.gameSession.getGuestLink,
@@ -86,6 +95,13 @@ export const createApp = (options: CreateAppOptions) => {
     joinLobby: options.lobby.joinLobby,
     joinAsGuest: options.lobby.joinAsGuest,
     leaveLobby: options.lobby.leaveLobby,
+  });
+  registerLobbyMemberLinkRoute(app, {
+    getSession: options.getSession,
+    requestMemberLink: options.lobby.requestMemberLink,
+    listMemberLinkRequests: options.lobby.listMemberLinkRequests,
+    approveMemberLink: options.lobby.approveMemberLink,
+    deleteMemberLinkRequest: options.lobby.deleteMemberLinkRequest,
   });
   registerLobbyGuestLinkRoute(app, {
     getSession: options.getSession,

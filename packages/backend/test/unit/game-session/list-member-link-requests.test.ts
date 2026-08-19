@@ -31,7 +31,11 @@ describe('listMemberLinkRequests', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await listMemberLinkRequests(repo, GAME_SESSION_ID, HOST_USER_ID);
+    const result = await listMemberLinkRequests(
+      repo,
+      GAME_SESSION_ID,
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', requests: mockRequests });
@@ -42,7 +46,11 @@ describe('listMemberLinkRequests', () => {
     const repo = makeRepo({ findHostUserId: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const result = await listMemberLinkRequests(repo, 'nonexistent', HOST_USER_ID);
+    const result = await listMemberLinkRequests(
+      repo,
+      'nonexistent',
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -53,7 +61,11 @@ describe('listMemberLinkRequests', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await listMemberLinkRequests(repo, GAME_SESSION_ID, 'other-user');
+    const result = await listMemberLinkRequests(
+      repo,
+      GAME_SESSION_ID,
+      'other-user',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -61,7 +73,9 @@ describe('listMemberLinkRequests', () => {
 
   it('ホスト以外には申請一覧を引きに行かない', async () => {
     // Arrange
-    const findLinkRequestsByGameSessionId = vi.fn().mockResolvedValue(mockRequests);
+    const findLinkRequestsByGameSessionId = vi
+      .fn()
+      .mockResolvedValue(mockRequests);
     const repo = makeRepo({ findLinkRequestsByGameSessionId });
 
     // Act

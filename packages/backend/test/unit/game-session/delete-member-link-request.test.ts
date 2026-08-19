@@ -27,7 +27,12 @@ describe('deleteMemberLinkRequest', () => {
     const repo = makeRepo({ deleteLinkRequest });
 
     // Act
-    const result = await deleteMemberLinkRequest(repo, GAME_SESSION_ID, REQUEST_ID, HOST_USER_ID);
+    const result = await deleteMemberLinkRequest(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok' });
@@ -56,7 +61,12 @@ describe('deleteMemberLinkRequest', () => {
     const repo = makeRepo({ deleteLinkRequest });
 
     // Act
-    const result = await deleteMemberLinkRequest(repo, GAME_SESSION_ID, REQUEST_ID, 'other-user');
+    const result = await deleteMemberLinkRequest(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      'other-user',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -68,7 +78,12 @@ describe('deleteMemberLinkRequest', () => {
     const repo = makeRepo({ findLinkRequest: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const result = await deleteMemberLinkRequest(repo, GAME_SESSION_ID, 'nonexistent', HOST_USER_ID);
+    const result = await deleteMemberLinkRequest(
+      repo,
+      GAME_SESSION_ID,
+      'nonexistent',
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -85,7 +100,12 @@ describe('deleteMemberLinkRequest', () => {
     });
 
     // Act
-    const result = await deleteMemberLinkRequest(repo, GAME_SESSION_ID, REQUEST_ID, HOST_USER_ID);
+    const result = await deleteMemberLinkRequest(
+      repo,
+      GAME_SESSION_ID,
+      REQUEST_ID,
+      HOST_USER_ID,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });

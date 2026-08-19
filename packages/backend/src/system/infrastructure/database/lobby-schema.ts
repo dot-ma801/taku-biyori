@@ -127,6 +127,38 @@ export const lobbyAnswers = lobbySchema.table(
   }),
 );
 
+/**
+ * ゲスト参加をアカウントへ紐づけるための申請（ADR 0008）。
+ *
+ * ゲストには本人確認の手段がないため、申請はホストの承認を経て初めて
+ * `lobby_members.user_id` に反映される。承認・却下のいずれでも行は削除するため、
+ * このテーブルには「承認待ちの申請」だけが残る。
+ */
+export const lobbyMemberLinkRequests = lobbySchema.table(
+  'lobby_member_link_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => lobbyMembers.id, { onDelete: 'cascade' }),
+    requestedUserId: text('requested_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    // ホストの申請一覧取得で member_id を辿るため
+    memberIdIdx: index('lobby_member_link_requests_member_id_idx').on(
+      table.memberId,
+    ),
+    // 同一ユーザーが同じゲスト行へ重複申請するのを防ぐ
+    memberUserUnique: unique('lobby_member_link_requests_member_user_unique').on(
+      table.memberId,
+      table.requestedUserId,
+    ),
+  }),
+);
+
 export const lobbiesRelations = relations(lobbies, ({ one, many }) => ({
   host: one(user, {
     fields: [lobbies.hostUserId],
@@ -148,6 +180,7 @@ export const lobbyMembersRelations = relations(
       references: [user.id],
     }),
     answers: many(lobbyAnswers),
+    linkRequests: many(lobbyMemberLinkRequests),
   }),
 );
 
@@ -172,3 +205,17 @@ export const lobbyAnswersRelations = relations(lobbyAnswers, ({ one }) => ({
     references: [lobbyMembers.id],
   }),
 }));
+
+export const lobbyMemberLinkRequestsRelations = relations(
+  lobbyMemberLinkRequests,
+  ({ one }) => ({
+    member: one(lobbyMembers, {
+      fields: [lobbyMemberLinkRequests.memberId],
+      references: [lobbyMembers.id],
+    }),
+    requestedUser: one(user, {
+      fields: [lobbyMemberLinkRequests.requestedUserId],
+      references: [user.id],
+    }),
+  }),
+);

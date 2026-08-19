@@ -6,6 +6,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -121,6 +122,34 @@ export const gameSessionPlayMemos = gameSessionSchema.table(
   },
 );
 
+/**
+ * ゲスト参加をアカウントへ紐づけるための申請（ADR 0008）。
+ * 募集枠側の lobby_member_link_requests と同構造。承認・却下で行は削除される。
+ */
+export const gameSessionMemberLinkRequests = gameSessionSchema.table(
+  'game_session_member_link_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => gameSessionMembers.id, { onDelete: 'cascade' }),
+    requestedUserId: text('requested_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    // ホストの申請一覧取得で member_id を辿るため
+    memberIdIdx: index('game_session_member_link_requests_member_id_idx').on(
+      table.memberId,
+    ),
+    // 同一ユーザーが同じゲスト行へ重複申請するのを防ぐ
+    memberUserUnique: unique(
+      'game_session_member_link_requests_member_user_unique',
+    ).on(table.memberId, table.requestedUserId),
+  }),
+);
+
 export const gameSessionsRelations = relations(
   gameSessions,
   ({ one, many }) => ({
@@ -138,7 +167,7 @@ export const gameSessionsRelations = relations(
 
 export const gameSessionMembersRelations = relations(
   gameSessionMembers,
-  ({ one }) => ({
+  ({ one, many }) => ({
     gameSession: one(gameSessions, {
       fields: [gameSessionMembers.gameSessionId],
       references: [gameSessions.id],
@@ -155,6 +184,7 @@ export const gameSessionMembersRelations = relations(
       fields: [gameSessionMembers.id],
       references: [gameSessionPlayMemos.memberId],
     }),
+    linkRequests: many(gameSessionMemberLinkRequests),
   }),
 );
 
@@ -164,6 +194,20 @@ export const gameSessionPlayMemosRelations = relations(
     member: one(gameSessionMembers, {
       fields: [gameSessionPlayMemos.memberId],
       references: [gameSessionMembers.id],
+    }),
+  }),
+);
+
+export const gameSessionMemberLinkRequestsRelations = relations(
+  gameSessionMemberLinkRequests,
+  ({ one }) => ({
+    member: one(gameSessionMembers, {
+      fields: [gameSessionMemberLinkRequests.memberId],
+      references: [gameSessionMembers.id],
+    }),
+    requestedUser: one(user, {
+      fields: [gameSessionMemberLinkRequests.requestedUserId],
+      references: [user.id],
     }),
   }),
 );

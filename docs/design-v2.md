@@ -48,7 +48,47 @@
 
 ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキーマは `lobby` と `game_session` の2つのまま。
 
-### 1-3. 消える帳尻合わせ
+### 1-3. なぜ概念とテーブルが1対1に見えるのか
+
+上の表だけを見ると「概念モデルをそのままテーブルに落とした」ように見えるが、そうではない。
+**概念設計に登場する概念のうち、テーブルになるのは一部だけである。**
+
+#### テーブルにする判定基準
+
+次の3つを**すべて**満たすものだけをテーブルにする。
+
+1. **独立した同一性を持つ** — ID で名指しして参照される
+2. **独立したライフサイクルを持つ** — 自分自身の生成・終了のタイミングがある
+3. **他から 0..n の多重度で参照される、または他を 0..n 持つ**
+
+#### テーブルにしない概念
+
+概念設計に出てくるが、意図的にテーブルにしていないものが4つある。
+
+| 概念 | 実装 | テーブルにしない理由 |
+|---|---|---|
+| ステータス（ロビー・セッション） | ファクトカラムからの**導出関数** | 独立した同一性もライフサイクルも無い。状態を保存すると事実と状態の二重管理になる（v1 からの継続方針） |
+| ロール（ホスト / 参加者 / ゲスト参加者） | `lobbies.host_user_id`、`lobby_entries.user_id IS NULL` | ホストは「ロビーが持つ1つの属性」であり、ゲスト参加者は `LobbyEntry` の一状態。`roles.md` も「ゲスト参加者は独立した概念ではなく LobbyEntry の一状態」と明記している |
+| 募集 | `lobbies.is_published` + `open_until` | 概念設計で独立概念化を検討し**棄却済み**（「募集を独立概念にするかの検討」）。「2回目の募集」を区別して語る現実が無い |
+| 選出 / 非選出 | `Seat` の**有無** | 「選ばれた」というファクトは着席そのもの。専用の行を持つと現行の `lobby_member_id` 突合が別の形で復活する |
+
+#### 判断が割れうるもの
+
+| 概念 | 判断 | 記録 |
+|---|---|---|
+| CharacterAssignment | `seats.character_name` という nullable カラムでも成立するが、別テーブルにした | §9-4 に理由と代償を記録 |
+| PlayMemo | 同上（design-v1.2 で同じ判断を済ませている） | design-v1.2 §8 |
+
+#### 逆方向のチェック
+
+**概念に対応しないテーブルも存在しない。** 中間テーブル・非正規化テーブル・履歴テーブルの類は1つも無く、
+9テーブルはすべて概念一覧のいずれかに対応する。`seats` が2つの FK だけでできているのは
+「Seat は純粋な選出ファクトである」という概念上の主張がそのまま制約になった結果である。
+
+つまり **1対1に見えるのは、テーブルになる資格を持つ概念だけを数えているから**であって、
+概念を機械的にテーブルへ写像した結果ではない。
+
+### 1-4. 消える帳尻合わせ
 
 | 現行 | 新モデルでの消え方 |
 |---|---|
@@ -273,12 +313,12 @@ erDiagram
 
 ファクト `{ isPublished, openUntil, disbandedAt }` から導出する。**先頭一致**。
 
-| # | 条件 | ステータス | 意味 |
-|---|---|---|---|
-| 1 | `disbandedAt != null` | `disbanded` | 企画が解散した |
-| 2 | `!isPublished` | `draft` | 下書き（ホストのみ閲覧可） |
-| 3 | `openUntil == null` または `today <= openUntil` | `open` | 受付中 |
-| 4 | それ以外 | `closed` | 受付終了 |
+| # | 条件 | ステータス | 日本語 | 意味 |
+|---|---|---|---|---|
+| 1 | `disbandedAt != null` | `disbanded` | **解散** | 企画そのものを終了した |
+| 2 | `!isPublished` | `draft` | **下書き** | まだ公開していない（ホストのみ閲覧可） |
+| 3 | `openUntil == null` または `today <= openUntil` | `open` | **受付中** | 新しい参加者を受け付けている |
+| 4 | それ以外 | `closed` | **受付終了** | 受付を締め切っている（企画自体は継続中） |
 
 - **`confirmed` は存在しない。** 確定という終端概念が消えるため
 - `closed` は「受付が閉じている」だけを意味する。開催があるかどうかとは**独立**
@@ -296,12 +336,12 @@ erDiagram
 
 ファクト `{ scheduledAt, completedAt, cancelledAt }` から導出する。**先頭一致**。
 
-| # | 条件 | ステータス |
-|---|---|---|
-| 1 | `cancelledAt != null` | `cancelled` |
-| 2 | `completedAt != null` | `completed` |
-| 3 | `scheduledAt` が今日と同じ日付 | `today` |
-| 4 | それ以外 | `scheduled` |
+| # | 条件 | ステータス | 日本語 | 意味 |
+|---|---|---|---|---|
+| 1 | `cancelledAt != null` | `cancelled` | **中止** | この回の開催を取りやめた |
+| 2 | `completedAt != null` | `completed` | **完了** | 開催を終えた |
+| 3 | `scheduledAt` が今日と同じ日付 | `today` | **本日開催** | 開催日が今日 |
+| 4 | それ以外 | `scheduled` | **開催予定** | 開催日が決まっている（未来・または過ぎたが未完了） |
 
 - **`draft` は存在しない。** 公開はロビーの関心事に移ったため
 - **`open` / `scheduling` も存在しない。** v1.1 で既に導出されなくなっていた残骸を完全に削除する
@@ -334,7 +374,7 @@ erDiagram
 | プレイメモの公開切替 | 本人 | 常時 |
 | 公開メモの閲覧 | 着席者 | セッションが `completed` または `cancelled` |
 
-`shared` の `ACTION_POLICIES` / `LOBBY_ACTION_POLICIES` はこの表に合わせて全面的に書き直す。
+**この表は文章ではなく `shared` のポリシーテーブルとして実装する。** 置き場所は §4-5 を参照。
 
 ### 4-4. 遷移図
 
@@ -365,6 +405,42 @@ stateDiagram-v2
 ```
 
 ロビーの状態とセッションの状態は**互いに独立**である。解散したロビーの過去セッションは `completed` のまま残る。
+
+### 4-5. 実装の置き場所（ステータス導出と操作可否）
+
+**ステータス導出も操作可否も、判定ロジックは `shared` に1つだけ置き、backend と frontend が同じ関数を呼ぶ。**
+どちらかに条件分岐をハードコードしない。
+
+| 関心事 | 置き場所 | エクスポート |
+|---|---|---|
+| ロビーのステータス導出 | `packages/shared/src/lobby/status.ts` | `LobbyStatus`（enum）、`getLobbyStatus(facts)` |
+| セッションのステータス導出 | `packages/shared/src/game-session/status.ts` | `GameSessionStatus`（enum）、`getGameSessionStatus(facts)` |
+| ロビーの操作可否 | `packages/shared/src/lobby/permissions.ts` | `LobbyAction`、`LOBBY_ACTION_POLICIES`、`canPerformLobbyAction()` |
+| セッションの操作可否 | `packages/shared/src/game-session/permissions.ts` | `GameSessionAction`、`ACTION_POLICIES`、`canPerform()` |
+
+#### 現行からの変更点
+
+- **ステータス導出関数を backend から `shared` へ移す。** 現在は `packages/backend/src/lobby/domain/lobby-status.ts` と
+  `packages/backend/src/game-session/domain/game-session-status.ts` に実装があり、`shared` には enum しか無い。
+  v2 では導出も `shared/src/*/status.ts` に置き、**backend の `domain/*-status.ts` は削除する**
+- 副次的な効果として、frontend がレスポンスの `status` に依存せず自前で導出できる。
+  `today` は時刻依存なので、日付をまたいで開いたままのページでも正しく表示される
+- **§4-3 の操作可否表を `*_ACTION_POLICIES` にそのまま落とす。** backend のバリデーションと
+  frontend の表示制御（ボタンの活性・非表示）は、どちらもこのテーブル経由で判定する
+- 現行 `update-game-session-status.ts` は `cancelled` への遷移だけ `canPerform` を通さずハードコード判定していた。
+  v2 ではこうした抜け道を作らない。**ポリシーテーブルに無い判定を use case に書かない**
+
+#### ポリシーテーブルで表現しないもの
+
+役割とステータスの2軸で決まらない条件は、ポリシーテーブルに入れず use case 側で判定する。
+何がそちらに残るかを明示しておく。
+
+| 条件 | 例 |
+|---|---|
+| 件数に依存するもの | ロビーの削除（他の参加者なし・セッション0件）、セッションの削除（着席者がホストのみ） |
+| 「最新かどうか」に依存するもの | 候補日の編集・回答（最新の `SchedulePoll` のみ） |
+| 本人性に依存するもの | 脱退・離席・プレイメモ編集（本人 or ホスト） |
+| ロビーとセッションの整合 | `seats.lobby_entry_id` のロビー一致（§3-8） |
 
 ---
 
@@ -433,22 +509,42 @@ stateDiagram-v2
 
 ### 5-5. 表示値の導出（未設定ならロビーを参照）
 
-セッションの表示は保存値ではなく導出値を返す。バックエンドの presentation 直前（application 層）で解決し、
-フロントエンドには解決済みの値と「上書きされているか」の両方を返す。
+セッションの表示は保存値ではなく導出値を返す。バックエンドの application 層で解決し、
+**解決済みの値と、上書きの生値の両方を返す。**
 
 ```ts
-// GameSessionDetail のレスポンス例
+// GameSessionDetail のレスポンス
 {
-  id, lobbyId, scheduledAt,
-  title:        '<解決済み>',   // session.title ?? lobby.title
-  titleOverride: null,          // session.title の生値（編集フォームの初期値に使う）
-  scenarioName: '<解決済み>',
-  scenarioNameOverride: null,
-  location:     '<解決済み>',
-  locationOverride: null,
-  // ...
+  id, lobbyId, scheduledAt, status,
+
+  // 表示用（解決済み）。session の値が null ならロビーの値が入る
+  title:        'マダミス「〇〇」',
+  scenarioName: '〇〇',
+  location:     'オンライン',
+  timeLabel:    '14:00〜',
+
+  // 編集フォーム用（生値）。null＝上書きしていない
+  overrides: {
+    title:        null,
+    scenarioName: null,
+    location:     'カフェ〇〇',   // この開催だけ場所が違う
+    timeLabel:    null,
+  },
 }
 ```
+
+#### なぜ解決済みの値と生値を両方返すのか
+
+**片方だけだと編集フォームが壊れるため。**
+
+| 案 | 起きること |
+|---|---|
+| 解決済みの値だけ返す | 編集フォームを開くと、上書きしていない項目にもロビーの値が入って見える。そのまま保存すると**意図しない上書きが発生し、以後ロビーを改名しても追随しなくなる**。「ロビーと同じ値」と「ロビーの値を明示的にコピーした上書き」を区別できない |
+| 生値だけ返す（＋ロビーを別途取得） | 表示のたびにロビーを取得する必要があり、一覧 API が重くなる。フロントエンドが `??` の解決ロジックを持つことになり、backend と二重実装になる |
+| **両方返す（採用）** | 表示は `title` を使い、編集フォームは `overrides.title` を初期値にする。フォームが空＝上書きなし、が素直に表現できる |
+
+`overrides` にまとめてフラットな `titleOverride` を並べないのは、フィールドが増えたときにレスポンスが
+二重に膨らむのを避けるためと、「この塊は編集用の生値である」という意図を型の形で示すため。
 
 **既定値を DB に書き込まない**ため、ロビーを改名すると上書きしていないセッションの表示も追随する。
 「{ロビーの title} #1」のような連番表示が必要なら、`lobby_id` 内の `scheduled_at` 順で表示時に採番する。
@@ -465,40 +561,64 @@ stateDiagram-v2
   `409` 競合・状態ロック、`422` 状態が操作を許さない（現行の使い分けを継続）
 - `shared` に契約型を先に定義してから実装する（CLAUDE.md）
 
+#### 「認証」列の凡例
+
+| 表記 | 意味 |
+|---|---|
+| ログイン必須 | Better Auth のセッションが無ければ `401` |
+| ログイン任意 | 未ログインでも公開リソースなら見られる。非公開なら未ログインは `401`、ログイン済みで権限が無ければ `403` |
+| ホストのみ | ログイン必須。かつロビーの `host_user_id` と一致しなければ `403` |
+| ゲストトークン | `Guest-Token` ヘッダのトークンがロビーの `guest_link_token` と一致すること。不一致は `403` |
+| 認証不要 | 誰でもアクセスできる |
+
+#### パスの入れ子の規則
+
+「ロビーがセッションを持つ」構造だが、**すべてのパスを入れ子にはしない。**
+
+| 操作 | 形 | 理由 |
+|---|---|---|
+| コレクションの作成・一覧 | **入れ子にする**（`POST|GET /api/lobbies/:lobbyId/game-sessions`） | どのロビーの配下に作るか / どのロビーのぶんを一覧するか、を親が決めるため。親が無いと意味が決まらない |
+| 個別リソースの取得・更新・削除 | **入れ子にしない**（`/api/game-sessions/:id`） | ID が UUID でグローバルに一意なので親は冗長。`lobbyId` を知らないと開けない設計にすると、ダッシュボードや通知からの直リンクが不便になる |
+| 横断一覧 | 入れ子にしない（`GET /api/game-sessions`） | 複数ロビーをまたぐため親を持てない |
+
+`seats` / `play_memos` も同じ規則で `/api/game-sessions/:id/seats`（コレクション）と
+`/api/game-sessions/:id/seats/:seatId`（個別）にする。
+`:seatId` は `:id` の配下に留めており、これは Seat の ID を単独で持ち歩く場面が無いため。
+
 ### 6-2. Lobbies
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/lobbies` | S | 一覧（ホスト / 参加者 / 公開かつ受付中） |
-| POST | `/api/lobbies` | S | 作成。**候補日は任意**（渡すと同時に調整#1を作る） |
-| GET | `/api/lobbies/:id` | S? | 詳細（参加者・最新の調整の要約・セッション一覧を含む） |
-| PATCH | `/api/lobbies/:id` | S | title / scenarioName / description / location / maxPlayers / openUntil |
-| DELETE | `/api/lobbies/:id` | S | `draft` かつ他参加者なしかつセッション0件のときのみ |
-| PATCH | `/api/lobbies/:id/status` | S | target: `open` / `closed` / `disbanded` |
-| GET | `/api/lobbies/:id/guest-link` | S(host) | `{ token }` |
-| POST | `/api/lobbies/:id/guest-link` | S(host) | **トークン再発行**（新規） |
-| GET | `/api/join/:token` | P | 招待リンクのプレビュー。**ロビーを返す**（現行はセッションを返していた） |
+| GET | `/api/lobbies` | ログイン必須 | 一覧（ホスト / 参加者 / 公開かつ受付中） |
+| POST | `/api/lobbies` | ログイン必須 | 作成。**候補日は任意**（渡すと同時に調整#1を作る） |
+| GET | `/api/lobbies/:id` | ログイン任意 | 詳細（参加者・最新の調整の要約・セッション一覧を含む） |
+| PATCH | `/api/lobbies/:id` | ログイン必須 | title / scenarioName / description / location / maxPlayers / openUntil |
+| DELETE | `/api/lobbies/:id` | ログイン必須 | `draft` かつ他参加者なしかつセッション0件のときのみ |
+| PATCH | `/api/lobbies/:id/status` | ログイン必須 | target: `open` / `closed` / `disbanded` |
+| GET | `/api/lobbies/:id/guest-link` | ホストのみ | `{ token }` |
+| POST | `/api/lobbies/:id/guest-link` | ホストのみ | **トークン再発行**（新規） |
+| GET | `/api/join/:token` | 認証不要 | 招待リンクのプレビュー。**ロビーを返す**（現行はセッションを返していた） |
 
 ### 6-3. Lobby Entries
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/lobbies/:id/entries` | S? | 参加者一覧（`leftAt` を含む） |
-| POST | `/api/lobbies/:id/entries` | S | 参加。既存 entry が `leftAt != null` なら復帰（`left_at = NULL`） |
-| POST | `/api/lobbies/:id/guest-entries` | G | ゲスト参加 |
-| DELETE | `/api/lobbies/:id/entries/:entryId` | S | **脱退（`left_at` セット）**。行は消えない。`204` |
+| GET | `/api/lobbies/:id/entries` | ログイン任意 | 参加者一覧（`leftAt` を含む） |
+| POST | `/api/lobbies/:id/entries` | ログイン必須 | 参加。既存 entry が `leftAt != null` なら復帰（`left_at = NULL`） |
+| POST | `/api/lobbies/:id/guest-entries` | ゲストトークン | ゲスト参加 |
+| DELETE | `/api/lobbies/:id/entries/:entryId` | ログイン必須 | **脱退（`left_at` セット）**。行は消えない。`204` |
 
 ### 6-4. Schedule Polls
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/lobbies/:id/schedule-polls` | S? | 調整の履歴一覧（要約のみ） |
-| GET | `/api/lobbies/:id/schedule-polls/latest` | S? | 最新の調整（候補日 + 全回答） |
-| GET | `/api/lobbies/:id/schedule-polls/:pollId` | S? | 過去の調整（読み取り専用） |
-| POST | `/api/lobbies/:id/schedule-polls` | S(host) | **新しい日程調整を始める**（`{ candidateDates[] }`） |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates` | S(host) | 候補日の一括更新。最新以外は `409` |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates/:dateId/answers` | S | 自分の回答 |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates/:dateId/guest-answers` | G | ゲストの回答（body に `entryId`） |
+| GET | `/api/lobbies/:id/schedule-polls` | ログイン任意 | 調整の履歴一覧（要約のみ） |
+| GET | `/api/lobbies/:id/schedule-polls/latest` | ログイン任意 | 最新の調整（候補日 + 全回答） |
+| GET | `/api/lobbies/:id/schedule-polls/:pollId` | ログイン任意 | 過去の調整（読み取り専用） |
+| POST | `/api/lobbies/:id/schedule-polls` | ホストのみ | **新しい日程調整を始める**（`{ candidateDates[] }`） |
+| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates` | ホストのみ | 候補日の一括更新。最新以外は `409` |
+| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates/:dateId/answers` | ログイン必須 | 自分の回答 |
+| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates/:dateId/guest-answers` | ゲストトークン | ゲストの回答（body に `entryId`） |
 
 **廃止**: 候補日の単体 `POST` / `DELETE`（現行の `POST|DELETE /api/lobbies/:id/availability-dates[/:dateId]`）。
 フロントエンドは一括更新しか使っていないため落とす。
@@ -507,13 +627,13 @@ stateDiagram-v2
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/game-sessions` | S | 横断一覧（着席済み / ホストのロビーのもの / 公開ロビーのもの） |
-| POST | `/api/lobbies/:lobbyId/game-sessions` | S(host) | **セッションを開く**（旧 `POST /api/lobbies/:id/confirm`） |
-| GET | `/api/lobbies/:lobbyId/game-sessions` | S? | そのロビーの開催一覧 |
-| GET | `/api/game-sessions/:id` | S? | 詳細（導出済み表示値 + 上書き生値） |
-| PATCH | `/api/game-sessions/:id` | S(host) | scheduledAt / title / scenarioName / description / location / timeLabel |
-| DELETE | `/api/game-sessions/:id` | S(host) | `cancelled` または着席者がホストのみ。`204` |
-| PATCH | `/api/game-sessions/:id/status` | S(host) | target: `completed` / `cancelled` |
+| GET | `/api/game-sessions` | ログイン必須 | 横断一覧（着席済み / ホストのロビーのもの / 公開ロビーのもの） |
+| POST | `/api/lobbies/:lobbyId/game-sessions` | ホストのみ | **セッションを開く**（旧 `POST /api/lobbies/:id/confirm`） |
+| GET | `/api/lobbies/:lobbyId/game-sessions` | ログイン任意 | そのロビーの開催一覧 |
+| GET | `/api/game-sessions/:id` | ログイン任意 | 詳細（導出済み表示値 + 上書き生値） |
+| PATCH | `/api/game-sessions/:id` | ホストのみ | scheduledAt / title / scenarioName / description / location / timeLabel |
+| DELETE | `/api/game-sessions/:id` | ホストのみ | `cancelled` または着席者がホストのみ。`204` |
+| PATCH | `/api/game-sessions/:id/status` | ホストのみ | target: `completed` / `cancelled` |
 
 **廃止**: `POST /api/game-sessions`（トップレベルのセッション直接作成）。セッションは必ずロビー配下に作る。
 **廃止**: `GET /api/game-sessions/:id/guest-link`、`POST /api/game-sessions/:id/guest-members`。トークンはロビーに1本化。
@@ -522,12 +642,12 @@ stateDiagram-v2
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/game-sessions/:id/seats` | S? | 着席者一覧（表示名・キャラ名を含む） |
-| POST | `/api/game-sessions/:id/seats` | S | body 無し＝自分が着席（必要なら参加も同時に）/ `{ entryId }`＝ホストが着席させる |
-| POST | `/api/game-sessions/:id/guest-seats` | G | ゲストが参加 + 着席 |
-| DELETE | `/api/game-sessions/:id/seats/:seatId` | S | 離席。本人またはホスト。`204` |
-| PUT | `/api/game-sessions/:id/seats/:seatId/character` | S | `{ characterName }` を割り当て |
-| DELETE | `/api/game-sessions/:id/seats/:seatId/character` | S | 割り当て解除。`204` |
+| GET | `/api/game-sessions/:id/seats` | ログイン任意 | 着席者一覧（表示名・キャラ名を含む） |
+| POST | `/api/game-sessions/:id/seats` | ログイン必須 | body 無し＝自分が着席（必要なら参加も同時に）/ `{ entryId }`＝ホストが着席させる |
+| POST | `/api/game-sessions/:id/guest-seats` | ゲストトークン | ゲストが参加 + 着席 |
+| DELETE | `/api/game-sessions/:id/seats/:seatId` | ログイン必須 | 離席。本人またはホスト。`204` |
+| PUT | `/api/game-sessions/:id/seats/:seatId/character` | ログイン必須 | `{ characterName }` を割り当て |
+| DELETE | `/api/game-sessions/:id/seats/:seatId/character` | ログイン必須 | 割り当て解除。`204` |
 
 ### 6-7. Play Memos
 
@@ -535,10 +655,10 @@ stateDiagram-v2
 
 | Method | Path | 認証 |
 |---|---|---|
-| GET | `/api/game-sessions/:id/play-memos/me` | S |
-| PUT | `/api/game-sessions/:id/play-memos/me` | S |
-| PATCH | `/api/game-sessions/:id/play-memos/me/visibility` | S |
-| GET | `/api/game-sessions/:id/play-memos` | S? |
+| GET | `/api/game-sessions/:id/play-memos/me` | ログイン必須 |
+| PUT | `/api/game-sessions/:id/play-memos/me` | ログイン必須 |
+| PATCH | `/api/game-sessions/:id/play-memos/me/visibility` | ログイン必須 |
+| GET | `/api/game-sessions/:id/play-memos` | ログイン任意 |
 
 ### 6-8. 現行 API との対応表
 
@@ -633,6 +753,18 @@ stateDiagram-v2
 | `/game-sessions/:gameSessionId/play-memo` | 変更なし |
 | `/game-sessions/new` | **廃止**（`/lobbies/new` の「日程が決まっている」モードに統合） |
 | `/game-sessions/edit/:id` | 開催情報の編集（上書き項目のみ） |
+
+#### 画面ルートを `/lobbies/:lobbyId/game-sessions/:id` にしない理由
+
+API と同じ規則（§6-1）を画面にも適用し、**個別リソースの画面は入れ子にしない**。
+
+- セッション ID は UUID で単独一意なので `lobbyId` は情報として冗長
+- **ダッシュボード・通知・共有リンクから直接開ける必要がある。** 入れ子にすると、
+  遷移元が常に `lobbyId` を知っている必要が生まれる
+- URL が長くなり、参加者に共有しづらい
+
+ロビーとの親子関係は URL ではなく、**画面上のパンくずと「ロビーに戻る」導線**で表現する。
+セッション詳細は `lobbyId` をレスポンスに含むので、そこからロビーへ辿れる。
 
 ### 7-2. ロビー詳細の構成
 

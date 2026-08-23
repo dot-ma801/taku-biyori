@@ -119,13 +119,6 @@ export type FixtureKind = 'gameSession' | 'lobby' | 'user';
 export type TrackFixture = (kind: FixtureKind, id: string) => void;
 
 /**
- * ロック競合のテスト用。コールバックの中の書き込みは**本当にコミットされる**ため、
- * `track` で登録した行を最後に消す。
- *
- * `withRollback` が使えないのは、`SELECT ... FOR UPDATE` の待ちを再現するには
- * 別々のトランザクション（＝別接続）が必要なため。
- */
-/**
  * 登録された fixture を1トランザクションで削除する。
  *
  * gameSession → lobby → user の順に消す（メンバー・候補日・回答は FK の
@@ -164,6 +157,13 @@ const cleanupCommitted = async (
   });
 };
 
+/**
+ * ロック競合のテスト用。コールバックの中の書き込みは**本当にコミットされる**ため、
+ * `track` で登録した行を最後に消す。
+ *
+ * `withRollback` が使えないのは、`SELECT ... FOR UPDATE` の待ちを再現するには
+ * 別々のトランザクション（＝別接続）が必要なため。
+ */
 export const withCommitted = async (
   fn: (db: Database, track: TrackFixture) => Promise<void>,
 ): Promise<void> => {

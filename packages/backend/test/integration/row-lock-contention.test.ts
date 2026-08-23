@@ -31,12 +31,14 @@ import {
   insertUser,
 } from '@test/helpers/fixtures';
 
-afterAll(closeTestDatabase);
-
 // このファイルのテストだけ、別トランザクションの待ちを挟むため既定の
-// timeout（5秒）では足りない。DB 不要な test/unit/ には影響させたくないので
+// testTimeout（5秒）では足りない。DB 不要な test/unit/ には影響させたくないので
 // vite.config.ts をグローバルに延ばすのではなく、このファイル単位で延ばす。
-vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+// hookTimeout はこのファイルの afterAll（closeTestDatabase が接続を閉じるだけ）が
+// 既定値（10秒）で十分収まるため延長しない。
+vi.setConfig({ testTimeout: 30_000 });
+
+afterAll(closeTestDatabase);
 
 interface Deferred {
   promise: Promise<void>;

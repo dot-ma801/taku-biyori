@@ -20,6 +20,8 @@ import {
   dateFromToday,
   insertGameSession,
   insertGameSessionMember,
+  insertLobby,
+  insertLobbyMember,
   insertPlayMemo,
   insertUser,
 } from '@test/helpers/fixtures';
@@ -146,6 +148,25 @@ describe('findByUserId', () => {
 
       // Assert
       expect(rows.find((row) => row.id === draftId)).toBeUndefined();
+    });
+  });
+
+  it('maxPlayers が null のとき maxMembers も null になる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id, {
+        maxPlayers: null,
+      });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const rows = await repo.findByUserId(host.id);
+
+      // Assert
+      expect(
+        rows.find((row) => row.id === gameSessionId)?.maxMembers,
+      ).toBeNull();
     });
   });
 });
@@ -328,6 +349,78 @@ describe('findDetailById', () => {
 
       // Act & Assert
       expect(await repo.findDetailById(MISSING_ID)).toBeNull();
+    });
+  });
+
+  it('募集枠から確定した卓は lobbyId を含める', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(gameSessionId);
+
+      // Assert
+      expect(detail?.lobbyId).toBe(lobbyId);
+    });
+  });
+
+  it('直接立てた卓は lobbyId が null になる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id, {
+        lobbyId: null,
+      });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(gameSessionId);
+
+      // Assert
+      expect(detail?.lobbyId).toBeNull();
+    });
+  });
+
+  it('募集枠のメンバー経由で参加したメンバーは lobbyMemberId を含める', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const lobbyMemberId = await insertLobbyMember(db, lobbyId, {
+        userId: host.id,
+      });
+      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
+      await insertGameSessionMember(db, gameSessionId, {
+        userId: host.id,
+        lobbyMemberId,
+      });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(gameSessionId);
+
+      // Assert
+      expect(detail?.members[0]).toMatchObject({ lobbyMemberId });
+    });
+  });
+
+  it('募集枠を経由しないメンバーは lobbyMemberId が null になる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id);
+      await insertGameSessionMember(db, gameSessionId, { userId: host.id });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(gameSessionId);
+
+      // Assert
+      expect(detail?.members[0]).toMatchObject({ lobbyMemberId: null });
     });
   });
 });
@@ -855,6 +948,28 @@ describe('プレイメモ', () => {
 
       // Act & Assert
       expect(await repo.findPlayMemoByMemberId(memberId)).toBeNull();
+    });
+  });
+
+  it('findPlayMemoByMemberId は公開済みメモの sharedAt を ISO 文字列で返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id);
+      const memberId = await insertGameSessionMember(db, gameSessionId, {
+        userId: host.id,
+      });
+      await insertPlayMemo(db, memberId, {
+        body: '公開済み',
+        sharedAt: new Date('2025-02-01T00:00:00.000Z'),
+      });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const memo = await repo.findPlayMemoByMemberId(memberId);
+
+      // Assert
+      expect(memo?.sharedAt).toBe('2025-02-01T00:00:00.000Z');
     });
   });
 

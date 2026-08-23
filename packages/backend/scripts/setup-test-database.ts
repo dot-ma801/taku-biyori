@@ -14,8 +14,12 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { inArray, like } from 'drizzle-orm';
 import postgres from 'postgres';
 import { assertDistinctFromDatabaseUrl } from '@/system/infrastructure/database/assert-distinct-database-url';
+import { user } from '@/system/infrastructure/database/schema';
+import { lobbies } from '@/system/infrastructure/database/lobby-schema';
+import { gameSessions } from '@/system/infrastructure/database/game-session-schema';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -75,5 +79,43 @@ const runMigrations = async (): Promise<void> => {
   }
 };
 
+/**
+ * `withCommitted`（ロック競合のテスト）はコミット済みの行を明示的に削除して
+ * 後片付けするが、テスト失敗時の例外やテストランナーの強制終了などでその
+ * クリーンアップ自体が実行されなかった場合、`test-user-%` プレフィックスの
+ * 行が残り続ける。`db:test:setup` を実行するたびにその取りこぼしを掃除する。
+ */
+const cleanupLeakedTestRows = async (): Promise<void> => {
+  const client = postgres(testDatabaseUrl, { max: 1 });
+  const db = drizzle(client);
+  try {
+    const leaked = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(like(user.id, 'test-user-%'));
+    const leakedUserIds = leaked.map((row) => row.id);
+
+    if (leakedUserIds.length === 0) {
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(gameSessions)
+        .where(inArray(gameSessions.hostUserId, leakedUserIds));
+      await tx
+        .delete(lobbies)
+        .where(inArray(lobbies.hostUserId, leakedUserIds));
+      await tx.delete(user).where(inArray(user.id, leakedUserIds));
+    });
+    console.log(
+      `取りこぼした test-user-% 由来の行を ${leakedUserIds.length} 件掃除しました`,
+    );
+  } finally {
+    await client.end();
+  }
+};
+
 await ensureDatabaseExists();
 await runMigrations();
+await cleanupLeakedTestRows();

@@ -110,38 +110,79 @@ export type TrackFixture = (kind: FixtureKind, id: string) => void;
  * `withRollback` が使えないのは、`SELECT ... FOR UPDATE` の待ちを再現するには
  * 別々のトランザクション（＝別接続）が必要なため。
  */
-export const withCommitted = async (
-  fn: (db: Database, track: TrackFixture) => Promise<void>,
+/**
+ * 登録された fixture を1トランザクションで削除する。
+ *
+ * gameSession → lobby → user の順に消す（メンバー・候補日・回答は FK の
+ * ON DELETE CASCADE で一緒に消えるため個別に追跡しない）。この順序は
+ * `lobbies.host_user_id` / `lobby_members.user_id` などが `user` を
+ * cascade なしで参照しているため、user を最後に消さないと FK 違反になる。
+ * 1トランザクションにまとめているのは、途中の delete が失敗したときに
+ * それより前の delete だけがコミットされて共有テスト DB に行が残る
+ * （部分的な後片付け漏れ）事態を避けるため。
+ */
+const cleanupCommitted = async (
+  db: Database,
+  created: { kind: FixtureKind; id: string }[],
 ): Promise<void> => {
-  const db = getTestDatabase();
-  const created: { kind: FixtureKind; id: string }[] = [];
-
-  try {
-    await fn(db, (kind, id) => {
-      created.push({ kind, id });
-    });
-  } finally {
-    // メンバー・候補日・回答は FK の ON DELETE CASCADE で一緒に消えるため個別に追跡しない
+  await db.transaction(async (tx) => {
     const gameSessionIds = idsOf(created, 'gameSession');
     if (gameSessionIds.length > 0) {
-      await db
+      await tx
         .delete(gameSessionSchema.gameSessions)
         .where(inArray(gameSessionSchema.gameSessions.id, gameSessionIds));
     }
 
     const lobbyIds = idsOf(created, 'lobby');
     if (lobbyIds.length > 0) {
-      await db
+      await tx
         .delete(lobbySchema.lobbies)
         .where(inArray(lobbySchema.lobbies.id, lobbyIds));
     }
 
     const userIds = idsOf(created, 'user');
     if (userIds.length > 0) {
-      await db
+      await tx
         .delete(authSchema.user)
         .where(inArray(authSchema.user.id, userIds));
     }
+  });
+};
+
+export const withCommitted = async (
+  fn: (db: Database, track: TrackFixture) => Promise<void>,
+): Promise<void> => {
+  const db = getTestDatabase();
+  const created: { kind: FixtureKind; id: string }[] = [];
+
+  // コールバック（テスト本体）のエラーを最優先で伝える。クリーンアップ自体が
+  // 失敗しても、それによってテスト本来の失敗が握り潰されないようにする。
+  let testError: unknown;
+  let testFailed = false;
+  try {
+    await fn(db, (kind, id) => {
+      created.push({ kind, id });
+    });
+  } catch (error) {
+    testFailed = true;
+    testError = error;
+  }
+
+  try {
+    await cleanupCommitted(db, created);
+  } catch (cleanupError) {
+    if (testFailed) {
+      console.error(
+        'withCommitted: クリーンアップにも失敗しました（テスト本来の失敗を優先して再送出します）:',
+        cleanupError,
+      );
+      throw testError;
+    }
+    throw cleanupError;
+  }
+
+  if (testFailed) {
+    throw testError;
   }
 };
 

@@ -172,27 +172,59 @@ describe('findByUserId', () => {
 });
 
 describe('findHostUserId / gameSessionExists', () => {
-  it('ホストの userId と存在有無を返す', async () => {
+  it('findHostUserId はホストの userId を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const gameSessionId = await insertGameSession(db, host.id);
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findHostUserId(gameSessionId)).toBe(host.id);
-      expect(await repo.gameSessionExists(gameSessionId)).toBe(true);
+      // Act
+      const hostUserId = await repo.findHostUserId(gameSessionId);
+
+      // Assert
+      expect(hostUserId).toBe(host.id);
     });
   });
 
-  it('存在しない卓では null / false を返す', async () => {
+  it('gameSessionExists は存在すれば true を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id);
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const exists = await repo.gameSessionExists(gameSessionId);
+
+      // Assert
+      expect(exists).toBe(true);
+    });
+  });
+
+  it('findHostUserId は存在しない卓では null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findHostUserId(MISSING_ID)).toBeNull();
-      expect(await repo.gameSessionExists(MISSING_ID)).toBe(false);
+      // Act
+      const hostUserId = await repo.findHostUserId(MISSING_ID);
+
+      // Assert
+      expect(hostUserId).toBeNull();
+    });
+  });
+
+  it('gameSessionExists は存在しない卓では false を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const exists = await repo.gameSessionExists(MISSING_ID);
+
+      // Assert
+      expect(exists).toBe(false);
     });
   });
 });
@@ -266,14 +298,29 @@ describe('findGameSessionStatus / findStatusFields', () => {
     });
   });
 
-  it('存在しない卓では null を返す', async () => {
+  it('findGameSessionStatus は存在しない卓では null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findGameSessionStatus(MISSING_ID)).toBeNull();
-      expect(await repo.findStatusFields(MISSING_ID)).toBeNull();
+      // Act
+      const status = await repo.findGameSessionStatus(MISSING_ID);
+
+      // Assert
+      expect(status).toBeNull();
+    });
+  });
+
+  it('findStatusFields は存在しない卓では null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const fields = await repo.findStatusFields(MISSING_ID);
+
+      // Assert
+      expect(fields).toBeNull();
     });
   });
 
@@ -549,7 +596,7 @@ describe('countOtherMembers', () => {
 });
 
 describe('publish / complete / cancel', () => {
-  it('publish は未公開の卓だけを公開する', async () => {
+  it('publish は未公開の卓を公開する', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -558,9 +605,29 @@ describe('publish / complete / cancel', () => {
       });
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect((await repo.publish(gameSessionId))?.isPublished).toBe(true);
-      expect(await repo.publish(gameSessionId)).toBeNull();
+      // Act
+      const published = await repo.publish(gameSessionId);
+
+      // Assert
+      expect(published?.isPublished).toBe(true);
+    });
+  });
+
+  it('publish は既に公開済みの卓には null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id, {
+        isPublished: false,
+      });
+      const repo = createGameSessionRepository(db);
+      await repo.publish(gameSessionId);
+
+      // Act
+      const result = await repo.publish(gameSessionId);
+
+      // Assert
+      expect(result).toBeNull();
     });
   });
 
@@ -724,11 +791,26 @@ describe('メンバー操作', () => {
       });
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findMemberByUserId(gameSessionId, member.id)).toBe(
-        memberId,
-      );
-      expect(await repo.findMemberByUserId(gameSessionId, host.id)).toBeNull();
+      // Act
+      const found = await repo.findMemberByUserId(gameSessionId, member.id);
+
+      // Assert
+      expect(found).toBe(memberId);
+    });
+  });
+
+  it('findMemberByUserId は参加していなければ null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const gameSessionId = await insertGameSession(db, host.id);
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const found = await repo.findMemberByUserId(gameSessionId, host.id);
+
+      // Assert
+      expect(found).toBeNull();
     });
   });
 
@@ -799,12 +881,24 @@ describe('メンバー操作', () => {
       });
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findMemberOwner(memberId)).toEqual({
-        gameSessionId,
-        userId: host.id,
-      });
-      expect(await repo.findMemberOwner(MISSING_ID)).toBeNull();
+      // Act
+      const owner = await repo.findMemberOwner(memberId);
+
+      // Assert
+      expect(owner).toEqual({ gameSessionId, userId: host.id });
+    });
+  });
+
+  it('findMemberOwner は存在しないメンバーでは null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const owner = await repo.findMemberOwner(MISSING_ID);
+
+      // Assert
+      expect(owner).toBeNull();
     });
   });
 
@@ -888,12 +982,24 @@ describe('ゲストリンク', () => {
       });
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findGuestLinkInfo(gameSessionId)).toEqual({
-        hostUserId: host.id,
-        token: 'gs-token-1',
-      });
-      expect(await repo.findGuestLinkInfo(MISSING_ID)).toBeNull();
+      // Act
+      const info = await repo.findGuestLinkInfo(gameSessionId);
+
+      // Assert
+      expect(info).toEqual({ hostUserId: host.id, token: 'gs-token-1' });
+    });
+  });
+
+  it('findGuestLinkInfo は存在しない卓では null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const info = await repo.findGuestLinkInfo(MISSING_ID);
+
+      // Assert
+      expect(info).toBeNull();
     });
   });
 
@@ -906,9 +1012,24 @@ describe('ゲストリンク', () => {
       });
       const repo = createGameSessionRepository(db);
 
-      // Act & Assert
-      expect(await repo.findGuestLinkToken(gameSessionId)).toBe('gs-token-2');
-      expect(await repo.findGuestLinkToken(MISSING_ID)).toBeNull();
+      // Act
+      const token = await repo.findGuestLinkToken(gameSessionId);
+
+      // Assert
+      expect(token).toBe('gs-token-2');
+    });
+  });
+
+  it('findGuestLinkToken は存在しない卓では null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const token = await repo.findGuestLinkToken(MISSING_ID);
+
+      // Assert
+      expect(token).toBeNull();
     });
   });
 
@@ -930,7 +1051,19 @@ describe('ゲストリンク', () => {
         id: gameSessionId,
         title: 'トークンで引く卓',
       });
-      expect(await repo.findByGuestLinkToken('unknown-token')).toBeNull();
+    });
+  });
+
+  it('findByGuestLinkToken は未知のトークンでは null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const found = await repo.findByGuestLinkToken('unknown-token');
+
+      // Assert
+      expect(found).toBeNull();
     });
   });
 });

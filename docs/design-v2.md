@@ -284,26 +284,159 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 
 design-v1.2 の設計をそのまま引き継ぎ、ぶら下がり先を `member_id` → `seat_id` に付け替えるだけ。
 
-### 3-11. リレーション概要
+### 3-11. ER図
+
+`created_at` / `updated_at` は全テーブルが同じ形で持つため図では省略する。
+コメント欄の **NULL可** が付いていない列は `NOT NULL`。
 
 ```mermaid
 erDiagram
-    user ||--o{ lobbies : "hosts"
-    user ||--o{ lobby_entries : "is"
-    lobbies ||--o{ lobby_entries : ""
-    lobbies ||--o{ schedule_polls : ""
-    lobbies ||--o{ game_sessions : ""
-    schedule_polls ||--o{ candidate_dates : ""
-    candidate_dates ||--o{ schedule_answers : ""
-    lobby_entries ||--o{ schedule_answers : ""
-    game_sessions ||--o{ seats : ""
-    lobby_entries ||--o{ seats : ""
-    seats ||--o| character_assignments : ""
-    seats ||--o| play_memos : ""
+    user ||--o{ lobbies : "ホストする"
+    user |o--o{ lobby_entries : "参加する（ゲストは NULL）"
+    lobbies ||--o{ lobby_entries : "集める"
+    lobbies ||--o{ schedule_polls : "日程を調整する"
+    lobbies ||--o{ game_sessions : "開催する"
+    schedule_polls ||--o{ candidate_dates : "候補日を挙げる"
+    candidate_dates ||--o{ schedule_answers : "回答される"
+    lobby_entries ||--o{ schedule_answers : "回答する"
+    game_sessions ||--o{ seats : "着席させる"
+    lobby_entries ||--o{ seats : "着席する"
+    seats ||--o| character_assignments : "演じる"
+    seats ||--o| play_memos : "記録を残す"
+
+    user {
+        text id PK "auth スキーマ（Better Auth 管理）"
+        text name "NULL可"
+        text username "NULL可・UNIQUE"
+    }
+
+    lobbies {
+        uuid id PK
+        text host_user_id FK "auth.user.id"
+        text title "企画のタイトル"
+        text scenario_name "NULL可"
+        text description "NULL可"
+        text location "NULL可・場所の既定値"
+        integer max_players "NULL可・定員の目安"
+        text guest_link_token "招待トークン。ロビーに1つ"
+        boolean is_published "既定 false"
+        date open_until "NULL可・NULL は無期限受付"
+        timestamp disbanded_at "NULL可・企画の解散"
+    }
+
+    lobby_entries {
+        uuid id PK
+        uuid lobby_id FK "lobbies.id"
+        text user_id FK "NULL可・auth.user.id。ゲストは NULL"
+        text guest_name "NULL可・ゲストの表示名"
+        timestamp left_at "NULL可・脱退。行は削除しない"
+    }
+
+    schedule_polls {
+        uuid id PK
+        uuid lobby_id FK "lobbies.id"
+    }
+
+    candidate_dates {
+        uuid id PK
+        uuid poll_id FK "schedule_polls.id"
+        date date "1日1枠"
+        text time_label "NULL可・時間帯の自由記述（20文字）"
+    }
+
+    schedule_answers {
+        uuid id PK
+        uuid candidate_date_id FK "candidate_dates.id"
+        uuid lobby_entry_id FK "lobby_entries.id"
+        schedule_answer answer "ok / maybe / ng"
+        text comment "NULL可"
+    }
+
+    game_sessions {
+        uuid id PK
+        uuid lobby_id FK "lobbies.id。必ずロビーに属する"
+        date scheduled_at "この日に開くと決めた事実"
+        text title "NULL可・上書き。NULL ならロビーを参照"
+        text scenario_name "NULL可・上書き"
+        text description "NULL可・当日の連絡事項"
+        text location "NULL可・上書き"
+        text time_label "NULL可・時間帯"
+        timestamp completed_at "NULL可・開催の完了"
+        timestamp cancelled_at "NULL可・開催の中止"
+    }
+
+    seats {
+        uuid id PK
+        uuid game_session_id FK "game_sessions.id"
+        uuid lobby_entry_id FK "lobby.lobby_entries.id"
+    }
+
+    character_assignments {
+        uuid id PK
+        uuid seat_id FK "seats.id・UNIQUE（1着席1割り当て）"
+        text character_name "キャラクター名"
+    }
+
+    play_memos {
+        uuid id PK
+        uuid seat_id FK "seats.id・UNIQUE（1着席1メモ）"
+        text body "既定は空文字・5000文字"
+        timestamp shared_at "NULL可・NULL なら非公開"
+    }
 ```
+
+#### 制約の一覧
+
+| テーブル | 種別 | 内容 |
+|---|---|---|
+| `lobby_entries` | partial unique | `(lobby_id, user_id) WHERE user_id IS NOT NULL` — ログインユーザーの重複参加を防ぐ。`left_at` は条件に含めない |
+| `candidate_dates` | unique | `(poll_id, date)` — 同じ調整に同じ日付は重複しない |
+| `schedule_answers` | unique | `(candidate_date_id, lobby_entry_id)` — upsert の衝突キー |
+| `seats` | unique | `(game_session_id, lobby_entry_id)` — **partial ではない完全な unique**（ゲストも自分の entry を持つため） |
+| `character_assignments` | unique | `seat_id` |
+| `play_memos` | unique | `seat_id` — upsert の衝突キー |
+
+| インデックス | 対象 |
+|---|---|
+| `schedule_polls` | `(lobby_id, created_at DESC)` — 最新の調整の取得 |
+| `candidate_dates` | `(poll_id)` |
+| `schedule_answers` | `(candidate_date_id)`、`(lobby_entry_id)` |
+| `game_sessions` | `(lobby_id, scheduled_at)` |
+| `seats` | `(lobby_entry_id)` |
+
+#### 外部キーの削除時挙動
+
+| 子 → 親 | ON DELETE |
+|---|---|
+| `lobbies.host_user_id` → `auth.user.id` | 既定（RESTRICT） |
+| `lobby_entries.lobby_id` → `lobbies.id` | CASCADE |
+| `lobby_entries.user_id` → `auth.user.id` | 既定（RESTRICT） |
+| `schedule_polls.lobby_id` → `lobbies.id` | CASCADE |
+| `candidate_dates.poll_id` → `schedule_polls.id` | CASCADE |
+| `schedule_answers.candidate_date_id` → `candidate_dates.id` | CASCADE |
+| `schedule_answers.lobby_entry_id` → `lobby_entries.id` | CASCADE |
+| `game_sessions.lobby_id` → `lobbies.id` | CASCADE |
+| `seats.game_session_id` → `game_sessions.id` | CASCADE |
+| `seats.lobby_entry_id` → `lobby_entries.id` | CASCADE |
+| `character_assignments.seat_id` → `seats.id` | CASCADE |
+| `play_memos.seat_id` → `seats.id` | CASCADE |
+
+> **カスケードの連鎖**: ロビーを削除すると `game_sessions` → `seats` → `play_memos` まで一気に消える。
+> これを防いでいるのは DB 制約ではなく §4-3 の「ロビーの削除は `draft` かつ他の参加者なしかつセッション0件のときのみ」
+> というアプリケーション層の条件だけである。
+>
+> 同じ理由で、**着席を解除すると `character_assignments` と `play_memos` が cascade で消える。**
+> §9-5 でロビーからの脱退をソフト化してメモを守ったのに、着席解除では同じ事故が起きる。
+> この非対称は既知の問題として別途扱う。
+
+#### スキーマ境界
 
 `lobby` スキーマ → `game_session` スキーマへの参照は無く、`game_session` 側から `lobby` を参照する
 （`game_sessions.lobby_id`、`seats.lobby_entry_id`）。依存の向きは **セッション → ロビー** の一方向。
+
+**DB で表現できない不変条件が1つある。** `seats.lobby_entry_id` が指す LobbyEntry の `lobby_id` は、
+`seats.game_session_id` が指す GameSession の `lobby_id` と一致しなければならないが、
+単純な FK ではこれを強制できない（§3-8）。アプリケーション層で検証し `422` を返す。
 
 ---
 

@@ -764,7 +764,7 @@ Better Auth が提供する `/api/auth/**` の6パスは本設計の対象外の
 （仕様書には引き続き記載するが、v2 で触るものが1つも無い）。
 
 プレイメモは**パスもレスポンス形も不変**で、内部の紐付けが `member_id` → `seat_id` に変わるだけ。
-移行の等価性検証の基準点として使えるよう、意図的に手を入れない（§6-13-7 に注意点）。
+移行の等価性検証の基準点として使えるよう、意図的に手を入れない（§6-15 に注意点）。
 
 ### 6-9-1. 数え方の突き合わせ
 
@@ -829,6 +829,695 @@ Better Auth が提供する `/api/auth/**` の6パスは本設計の対象外の
 `GET` は `schedule-polls/latest` への改名（パス変更9に計上）、`PUT` の行き先である
 `schedule-polls/:pollId/candidate-dates` はパスとしては新設なのでここに数える。
 なお `PUT` 自体は新規オペレーションではない（改名なので「新規追加（7）」には入らない）。
+
+### 6-10. エラーレスポンスの使い分け
+
+#### ボディ形式
+
+すべてのエラーは同じ形で返す（現行を継続）。
+
+```jsonc
+{ "error": "Not Found" }                     // 定型メッセージ
+{ "error": [ /* zod の issues 配列 */ ] }    // 400 のバリデーション詳細のみ
+```
+
+`error` は文字列またはオブジェクト。エラーコードの機械可読な列挙は**持たない**
+（フロントは HTTP ステータスで分岐し、文言は画面側で決める。現行方針を継続）。
+
+#### 使い分け
+
+| コード | 一言でいうと | 判定するもの | 代表例 |
+|---|---|---|---|
+| `400` | **リクエストが読めない** | ボディ・パラメータの構文と型 | JSON パース失敗、zod の検証落ち、文字数超過、日付形式違反 |
+| `401` | **あなたが誰か分からない** | セッション Cookie の有無 | 未ログインで「ログイン必須」を叩いた。「ログイン任意」で非公開リソースを未ログインで叩いた |
+| `403` | **あなたではない** | ロール・本人性・トークン | ホストでない、着席者本人でない、`Guest-Token` がロビーのトークンと不一致 |
+| `404` | **それは無い** | リソースの存在と親子関係 | ID が存在しない、`pollId` が当該ロビーのものでない、トークンに一致するロビーが無い |
+| `409` | **今の事実と噛み合わない** | ステータス**以外**の事実 | すでに参加済み、最新でない `SchedulePoll` への書き込み、他の参加者がいるため削除できない、`FOR UPDATE` の競合に敗北 |
+| `422` | **今の状態ではできない** | ロール × ステータス（§4-3） | `disbanded` のロビーを編集、`open` でないロビーへの参加、`cancelled` のセッションに着席、ホスト自身の脱退 |
+
+判定は上から順に行う。`400` → `401` → `403` → `404` → `409` / `422` の順で最初に当たったものを返す
+（存在しないリソースに対する権限判定を先に走らせない）。
+
+#### 409 と 422 の境界
+
+現行の §6-1 は「`409` 競合・状態ロック / `422` 状態が操作を許さない」と書いており、
+**どちらもステータスの話に読めてしまう**。v2 では境界を次のように引き直す。
+
+> **`422` は §4-3 のポリシーテーブルが `false` を返したとき。それ以外の「できない」は `409`。**
+
+§4-5 が「ポリシーテーブルで表現しないもの」として挙げた4種のうち、
+件数依存・最新性・並行実行は `409`、本人性は `403` になる。
+
+| 条件の種類 | コード |
+|---|---|
+| ロール × ステータス（ポリシーテーブル） | `422` |
+| 件数（他の参加者がいる・セッションが残っている・着席者がホスト以外にもいる） | `409` |
+| 最新かどうか（`pollId` が最新の `SchedulePoll` でない） | `409` |
+| 重複（すでに参加済み・すでに着席済み） | `409` |
+| 並行実行（`SELECT ... FOR UPDATE` の競合に敗北） | `409` |
+| 本人性（本人でもホストでもない） | `403` |
+| ロビーとセッションの整合（`entryIds` が当該ロビーのものでない） | `422` |
+
+最後の行だけ説明が要る。`entryIds` の検証は「他ロビーの参加者を着席させようとした」という
+**入力の妥当性**であり、`400`（構文）でも `409`（事実との衝突）でもない。
+現行 `confirm-lobby.ts` が `invalidMembers` に `422` を返しているのをそのまま踏襲する。
+
+#### 現行から挙動が変わるもの
+
+境界を引き直した結果、いくつかのエンドポイントでコードが変わる。**実装タスクで合わせること。**
+
+| エンドポイント | 現行 | v2 | 理由 |
+|---|---|---|---|
+| `PATCH /api/lobbies/:id` | `409` | `422` | `disbanded` は「ステータスが許さない」なので `422` |
+| `DELETE /api/lobbies/:id`（ステータス条件） | `409` | `422` | 同上（`draft` でない） |
+| `DELETE /api/lobbies/:id`（件数条件） | `409` | `409` | 据え置き。セッション0件の条件が加わる |
+| `PATCH /api/lobbies/:id/status`（不正な遷移） | `409` | `422` | 遷移可否はポリシーテーブルの管轄 |
+| `PATCH /api/game-sessions/:id/status`（不正な遷移） | `409` | `422` | 同上 |
+| `DELETE /api/game-sessions/:id`（ステータス条件） | `409` | `422` | 同上 |
+| `PUT .../play-memos/me`（`completed`/`cancelled`） | `409` | `409` | **据え置き**（§6-15 の等価性基準点を壊さない） |
+| ゲストの日程回答（ロビーが受付外） | `409` | `422` | ログインユーザー用と同じコードに揃える。design-v1.1 で `409` に寄せた理由（`422` との混在回避）は、上の境界定義で解消される |
+
+`423 Locked` は**使わない**。現行 `openapi.yml` は3箇所で `423` を宣言しているが、
+backend のルートは1度も返しておらず、仕様書だけに残った幽霊だった。v2 の仕様書からは削除する。
+
+### 6-11. 共通のデータ表現
+
+#### スカラの表現
+
+| 種類 | 表現 | 例 |
+|---|---|---|
+| 日付（`date` 列） | `YYYY-MM-DD` の文字列 | `"2026-09-13"` |
+| 日時（`timestamp` 列） | ISO 8601 の文字列 | `"2026-08-22T11:20:31.000Z"` |
+| ID | UUID の文字列 | `"3f2a…"` |
+| ユーザー ID | Better Auth の `text` 型 ID（UUID ではない） | `"user_abc123"` |
+
+- **未設定は `null` で表す。** レスポンスからキーごと消すことはしない
+- `PATCH` 系のリクエストでは「キーが無い＝変更しない」「`null` を渡す＝クリアする」を区別する（現行を継続）
+- ステータスは**返すが受け取らない**。`PATCH /status` が受け取るのは遷移の意図（§6-1）
+- 一覧の並び順はサーバが決めて返す。フロントは並べ替えない
+
+#### 共通スキーマ
+
+以降のフィールド定義で使い回す型。`shared` に置く契約型の名前も併記する
+（`Lobby` プレフィックスは barrel export の名前衝突を避けるため。現行の `LobbyAvailabilityDate` と同じ理由）。
+
+**`LobbyEntry`** — ロビーへの参加（`lobby.lobby_entries`）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `userId` | string \| null | ゲストは `null` |
+| `userName` | string \| null | ログインユーザーの表示名（`auth.user.name`）。ゲストは `null` |
+| `guestName` | string \| null | ゲストの表示名。ログインユーザーは `null` |
+| `joinedAt` | date-time | `created_at` |
+| `leftAt` | date-time \| null | **新規**。脱退時刻。`null` なら在籍中（§9-5） |
+
+**`LobbyScheduleAnswer`** — 候補日への◯△×（`lobby.schedule_answers`）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `entryId` | uuid | `lobby_entries.id`。**現行の `memberId` の改名** |
+| `answer` | `ok` \| `maybe` \| `ng` | |
+| `comment` | string \| null | 最大500文字 |
+
+**`LobbyCandidateDate`** — 候補日（`lobby.candidate_dates`）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `date` | date | |
+| `timeLabel` | string \| null | 最大20文字。**現行の `dateNote` の改名**（§2-3） |
+| `answers` | `LobbyScheduleAnswer[]` | この候補日への回答。回答が無ければ空配列 |
+
+**`LobbySchedulePollSummary`** — 日程調整の要約（履歴一覧・ロビー詳細で使う）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `isLatest` | boolean | 最新の調整かどうか。ちょうど1件だけ `true`（§9-9） |
+| `candidateDateCount` | integer | 候補日の件数 |
+| `answeredEntryCount` | integer | 1件以上回答した `LobbyEntry` の数（脱退者を除く） |
+| `createdAt` | date-time | |
+
+**`LobbySchedulePoll`** — 日程調整の本体
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `lobbyId` | uuid | |
+| `isLatest` | boolean | `false` なら読み取り専用（書き込み系は `409`） |
+| `candidateDates` | `LobbyCandidateDate[]` | `date` 昇順 |
+| `createdAt` | date-time | |
+
+**`Seat`** — 着席（`game_session.seats` + `character_assignments`）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | `seats.id` |
+| `entryId` | uuid | `lobby_entries.id`。表示名の出所 |
+| `userId` | string \| null | 由来の `LobbyEntry` から解決。ゲストは `null` |
+| `userName` | string \| null | 同上 |
+| `guestName` | string \| null | 同上 |
+| `characterName` | string \| null | `character_assignments.character_name`。未割り当ては `null`（§9-4） |
+| `seatedAt` | date-time | `seats.created_at` |
+
+`seats` から `user_id` / `guest_name` / `character_name` カラムは消えるが（§3-8）、
+**レスポンスには JOIN 済みの解決値として現れる。** フロントが着席者を描くのに毎回
+`entries` を引き当てる必要をなくすため。
+
+**`GameSessionSummary`** — ロビー詳細に埋める開催の軽量表現
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `scheduledAt` | date | |
+| `status` | `GameSessionStatus` | |
+| `title` | string | **解決済み**（未設定ならロビーの `title`） |
+| `timeLabel` | string \| null | 解決済み |
+| `seatCount` | integer | 着席者数 |
+
+#### 入力の上限値
+
+`shared` の zod スキーマに落とす値。現行から変わるものだけ太字。
+
+| 対象 | 上限 |
+|---|---|
+| `title` | 100 |
+| `scenarioName` | 200 |
+| `description` | 1000 |
+| `location` | 200 |
+| `characterName` | 100 |
+| `timeLabel` | 20（現行 `dateNote` と同値） |
+| `guestName` | 100 |
+| `comment`（日程回答） | 500 ※ |
+| `maxPlayers` | 2〜20 |
+| 候補日の件数 | 1〜100 |
+| プレイメモ `body` | 5000 |
+
+※ 現行 `openapi.yml` は `comment` を 200 と書いているが、`shared` の
+`UpdateLobbyAvailabilityDateResponseInputSchema` は 500 である。**コードの 500 が正**として仕様書を直す。
+
+### 6-12. フィールド定義 — 新規追加の7エンドポイント
+
+#### 6-12-1. `POST /api/lobbies/:id/guest-link`（招待トークンの再発行）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ホストのみ |
+| リクエスト | ボディなし |
+| レスポンス | `200` `{ "token": string }` |
+
+- `lobbies.guest_link_token` を新しい値で**上書き**する。旧トークンは即座に無効になる
+- 新しいリソースを作るわけではない（ロビーの属性の置き換え）ため `201` ではなく `200`
+- 冪等ではない。呼ぶたびに別のトークンになる
+
+| エラー | 条件 |
+|---|---|
+| `401` | 未ログイン |
+| `403` | ホストでない |
+| `404` | ロビーが存在しない |
+| `422` | ロビーが `disbanded` |
+
+> §4-3 の操作可否表に「招待トークンの再発行 / ホスト / `disbanded` 以外」の行が無い。
+> タスク3 で `LobbyAction` に追加すること（`GET` 側も同じ行で判定してよい）。
+
+#### 6-12-2. `GET /api/lobbies/:id/schedule-polls`（日程調整の履歴一覧）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン任意（ロビーの閲覧可否に従う） |
+| リクエスト | なし |
+| レスポンス | `200` `LobbySchedulePollSummary[]` |
+
+- 並びは `created_at DESC, id DESC`。**先頭が最新**で、その要素だけ `isLatest: true`
+- 調整が1件も無いロビー（候補日なしで作った・直接卓立て）は空配列
+- 候補日と回答は含まない。中身が要るときは `latest` か `:pollId` を引く
+
+| エラー | 条件 |
+|---|---|
+| `401` | 非公開ロビーを未ログインで閲覧 |
+| `403` | 非公開ロビーをホスト以外が閲覧 |
+| `404` | ロビーが存在しない |
+
+#### 6-12-3. `POST /api/lobbies/:id/schedule-polls`（新しい日程調整を始める）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ホストのみ |
+| レスポンス | `201` `LobbySchedulePoll` |
+
+リクエスト:
+
+| フィールド | 型 | 必須 | 制約 |
+|---|---|---|---|
+| `candidateDates` | array | ✅ | 1〜100件 |
+| `candidateDates[].date` | date | ✅ | 今日以降。同一リクエスト内で重複不可 |
+| `candidateDates[].timeLabel` | string \| null | | 最大20文字。空白のみは `null` に正規化 |
+
+- 作った時点でこれが最新の調整になり、**それまでの調整は自動的に読み取り専用**になる（フラグ更新は不要。§9-9）
+- 古い `schedule_polls` は消さない
+- レスポンスの `candidateDates[].answers` は必ず空配列（作りたてなので回答が無い）
+
+| エラー | 条件 |
+|---|---|
+| `400` | `candidateDates` が空・101件以上・日付重複・過去日 |
+| `401` / `403` | 未ログイン / ホストでない |
+| `404` | ロビーが存在しない |
+| `422` | ロビーが `disbanded` |
+
+#### 6-12-4. `GET /api/lobbies/:id/schedule-polls/:pollId`（過去の調整）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン任意 |
+| リクエスト | なし |
+| レスポンス | `200` `LobbySchedulePoll` |
+
+- **読み取り専用のパス。** 最新の調整を指す `pollId` でも `200` を返すが、書き込みはここでは受けない
+- 脱退した参加者の回答も含めて返す（過去の記録なので消さない）。呼び出し側は
+  `LobbyDetail.entries[].leftAt` と突き合わせてグレー表示する
+
+| エラー | 条件 |
+|---|---|
+| `401` / `403` | ロビーの閲覧可否に従う |
+| `404` | ロビーが無い、または `pollId` が**このロビーの**調整でない |
+
+`pollId` が他ロビーの調整だった場合に `403` ではなく `404` を返すのは、
+他ロビーの調整 ID の存在を漏らさないため。
+
+#### 6-12-5. `GET /api/lobbies/:lobbyId/game-sessions`（そのロビーの開催一覧）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン任意 |
+| リクエスト | なし |
+| レスポンス | `200` `GameSessionListItem[]` |
+
+- 並びは `scheduled_at ASC, id ASC`
+- **中止・完了も含めて全件返す。** 絞り込みはフロント（現行の一覧 API と同じ方針）
+- 開催が0件のロビーは空配列（エラーにしない）
+
+`GameSessionListItem`:
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | |
+| `lobbyId` | uuid | **必須**。`null` にならない（§9-3） |
+| `title` | string | 解決済み |
+| `scenarioName` | string \| null | 解決済み |
+| `status` | `GameSessionStatus` | |
+| `scheduledAt` | date | |
+| `timeLabel` | string \| null | 解決済み |
+| `seatCount` | integer | |
+| `role` | `host` \| `seated` \| null | 閲覧者から見た関係。未ログイン・無関係は `null` |
+| `createdAt` / `updatedAt` | date-time | |
+
+**現行の `GameSessionListItem` から消えるもの**: `isPublished`（ロビーへ）、`maxMembers`（ロビーの `maxPlayers` へ）、`memberCount`（→ `seatCount`）。
+`role` の値が `'host' | 'member'` から `'host' | 'seated'` に変わるのは、
+セッション側の関係が「着席しているか」だけになるため。
+
+| エラー | 条件 |
+|---|---|
+| `401` / `403` | ロビーの閲覧可否に従う |
+| `404` | ロビーが存在しない |
+
+#### 6-12-6. `PUT /api/game-sessions/:id/seats/:seatId/character`（キャラ割り当て）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン必須。ホスト**または**その席の本人 |
+| レスポンス | `200` `Seat`（更新後） |
+
+リクエスト:
+
+| フィールド | 型 | 必須 | 制約 |
+|---|---|---|---|
+| `characterName` | string | ✅ | 1〜100文字。空文字は不可（解除は `DELETE`） |
+
+- `character_assignments` への **upsert**。衝突キーは `seat_id`（UNIQUE、§3-9）
+- `PUT` なので冪等。同じ名前を2回送っても結果は同じ
+
+| エラー | 条件 |
+|---|---|
+| `400` | 空文字・101文字以上 |
+| `401` | 未ログイン |
+| `403` | ホストでも本人でもない |
+| `404` | セッションが無い、または `seatId` が**このセッションの**席でない |
+| `422` | セッションが `cancelled`（§4-3）。`completed` では**許可する**（後からキャラ名を埋める運用があるため） |
+
+#### 6-12-7. `DELETE /api/game-sessions/:id/seats/:seatId/character`（割り当て解除）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン必須。ホストまたは本人 |
+| リクエスト | ボディなし |
+| レスポンス | `204`（ボディなし） |
+
+- `character_assignments` の行を**ハード削除**する。従属概念であり、
+  「誰がいつキャラを外したか」を語る現実が無いのでソフト削除にしない
+- **冪等**。すでに未割り当てでも `204`（`404` にしない）
+
+| エラー | 条件 |
+|---|---|
+| `401` / `403` / `404` / `422` | `PUT` と同じ |
+
+### 6-13. フィールド定義 — 仕様変更の6エンドポイント
+
+#### 6-13-1. `POST /api/lobbies`（候補日が必須 → 任意）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン必須 |
+| レスポンス | `201` `Lobby` |
+
+リクエスト:
+
+| フィールド | 型 | 必須 | 制約・v2 での変更 |
+|---|---|---|---|
+| `title` | string | ✅ | 1〜100文字 |
+| `scenarioName` | string | | 最大200文字 |
+| `description` | string | | 最大1000文字 |
+| `location` | string | | 最大200文字 |
+| `maxPlayers` | integer | | 2〜20 |
+| `openUntil` | date | | 今日以降。省略で無期限受付 |
+| `candidateDates` | array | | **✅必須 → 任意に変更。** 省略・空配列可。0〜100件 |
+| `candidateDates[].date` | date | ✅ | 今日以降。重複不可 |
+| `candidateDates[].timeLabel` | string \| null | | 最大20文字（現行 `dateNote` の改名） |
+
+- `candidateDates` を**1件以上渡したときだけ** `SchedulePoll` #1 とその候補日を同時に作る。
+  省略・空配列なら `schedule_polls` は0行のまま（直接卓立ての経路。§5-3）
+- 現行の「候補日0件は `422`」（`lobby-route.ts` の `hasCandidateDates` 事前チェック）は**丸ごと削除**する
+- ホストの `LobbyEntry` を同時に作る（現行を継続）
+- `guest_link_token` を生成する（現行を継続）
+- 作成直後は必ず `draft`。**`isPublished` は入力項目ではない。**
+  §5-3 が `POST /api/lobbies`（`isPublished: false`）と書いているのは既定値の明示であって、
+  リクエストで指定するという意味ではない
+
+レスポンスは `Lobby` 単体。候補日を渡した場合でも poll は返さず、必要なら
+`GET /api/lobbies/:id/schedule-polls/latest` を続けて引く（作成レスポンスを重くしない）。
+
+`Lobby`:
+
+| フィールド | 型 | v2 での変更 |
+|---|---|---|
+| `id` | uuid | |
+| `title` | string | |
+| `scenarioName` | string \| null | |
+| `description` | string \| null | |
+| `location` | string \| null | |
+| `maxPlayers` | integer \| null | |
+| `isPublished` | boolean | |
+| `openUntil` | date \| null | |
+| `disbandedAt` | date-time \| null | **`cancelledAt` からの改名**（§1-2） |
+| `status` | `LobbyStatus` | 値が `draft`/`open`/`closed`/`disbanded` に（§4-1） |
+| `hostUserId` | string | |
+| `createdAt` / `updatedAt` | date-time | |
+| ~~`closedAt`~~ | — | **削除**（「確定」概念の消滅。§1-4） |
+
+| エラー | 条件 |
+|---|---|
+| `400` | 検証落ち（`candidateDates` が101件以上・日付重複・過去日を含む等） |
+| `401` | 未ログイン |
+
+#### 6-13-2. `PATCH /api/lobbies/:id/status`（target が3値に）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ホストのみ |
+| レスポンス | `200` `Lobby`（導出し直した `status` を含む） |
+
+リクエスト: `{ "status": "open" | "closed" | "disbanded" }`
+
+| target | 書き込むファクト | 許可する現ステータス |
+|---|---|---|
+| `open` | `is_published = true`。`open_until` が今日より前なら `NULL` にクリアして受付を開き直す | `draft` / `open` / `closed` |
+| `closed` | `open_until = 昨日`（サーバのローカル日付 − 1日）。`is_published` は変えない | `open` / `closed` |
+| `disbanded` | `disbanded_at = now()` | `draft` / `open` / `closed` |
+
+- **`disbanded` からの遷移はすべて `422`。** 終端状態（§4-4）
+- 同じ状態への遷移は冪等に成功させる（`open` → `open` は `200`）
+- `cancelled` は受け付けない。現行の値は `disbanded` に置き換わる
+
+> **⚠️ 設計上の穴。** §3-2 のスキーマには「受付を閉じた」というファクト列が無く、
+> `closed` は `is_published && open_until < today` からしか導けない（§4-1）。
+> したがって `closed` への遷移は `open_until` を昨日に書き換えるしかない。
+> 「締め切りは昨日だった」という記録自体は嘘ではないが、ホストが元々入れていた
+> 締め切り日が上書きで失われる。代案は `lobbies` に `closed_at` を足すことだが、
+> §9-2 で消したばかりの名前を別の意味で復活させることになる。**レビューで決めたい。**
+
+| エラー | 条件 |
+|---|---|
+| `400` | `status` が3値以外 |
+| `401` / `403` | 未ログイン / ホストでない |
+| `404` | ロビーが存在しない |
+| `422` | 許可されない遷移（`disbanded` からの復帰、`draft` から `closed` 等） |
+
+#### 6-13-3. `DELETE /api/lobbies/:id`（条件に「セッション0件」を追加）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ホストのみ |
+| リクエスト | ボディなし |
+| レスポンス | `204` |
+
+削除できる条件（§4-3）:
+
+1. ステータスが `draft`
+2. ホスト以外の `LobbyEntry` が0件 — **`left_at` の有無を問わない。** 脱退済みでも「他人が居た痕跡」として扱う
+3. **`game_sessions` が0件 —（新規）。** 中止・完了のセッションも数に入れる
+
+3 を足すのは、`game_sessions.lobby_id` が `ON DELETE CASCADE` になったため（§3-7）。
+ロビーを消すと過去の開催記録・着席・プレイメモまで連鎖して消える。
+`draft` のロビーにセッションがぶら下がるのは直接卓立ての経路だけだが、そこで事故が起きうる。
+
+| エラー | 条件 |
+|---|---|
+| `401` / `403` | 未ログイン / ホストでない |
+| `404` | ロビーが存在しない |
+| `409` | 他の参加者がいる、またはセッションが1件以上ある |
+| `422` | `draft` でない |
+
+#### 6-13-4. `GET /api/lobbies/:id`（`confirmedGameSession` → `gameSessions[]` ほか）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン任意 |
+| リクエスト | なし |
+| レスポンス | `200` `LobbyDetail` |
+
+`LobbyDetail` = `Lobby` + 次のフィールド。
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `entries` | `LobbyEntry[]` | **脱退者も含めて全件返す**（`leftAt` で見分ける）。ホストが先頭、以降 `joinedAt` 昇順 |
+| `latestPoll` | `LobbySchedulePollSummary` \| null | 最新の日程調整の**要約**。調整が0件なら `null` |
+| `gameSessions` | `GameSessionSummary[]` | 中止・完了を含む全件。`scheduledAt` 昇順 |
+| `nextGameSession` | `GameSessionSummary` \| null | `cancelled` でも `completed` でもないもののうち `scheduledAt` が最も近い1件（§4-1） |
+| `gameSessionCount` | integer | **中止を除く**セッション数（§4-1） |
+| `hasOpenPoll` | boolean | `schedule_polls` が1件以上ある（§4-1） |
+| ~~`confirmedGameSession`~~ | — | **削除**（「確定」概念の消滅） |
+
+- `latestPoll` を要約に留めるのは、候補日 × 参加者の表が重いため。
+  表を描くときはフロントが `GET .../schedule-polls/latest` を続けて叩く（§6-2 の「最新の調整の要約」）
+- `nextGameSession` は `gameSessions` の要素と**同じオブジェクトの再掲**。
+  ダッシュボードやヘッダが一覧を走査せずに済むように別フィールドで持つ
+- 閲覧可否はステータスではなく `is_published` ファクトで判定する（現行を継続）。
+  `draft` のまま解散したロビーは `disbanded` でも非公開のまま
+
+| エラー | 条件 |
+|---|---|
+| `401` | 非公開ロビーを未ログインで閲覧 |
+| `403` | 非公開ロビーをホスト以外が閲覧 |
+| `404` | ロビーが存在しない |
+
+#### 6-13-5. `GET /api/game-sessions/:id`（表示値の導出）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ログイン任意（所属ロビーの `is_published` に従う） |
+| リクエスト | なし |
+| レスポンス | `200` `GameSessionDetail` |
+
+`GameSessionDetail`:
+
+| フィールド | 型 | 種別 | 説明 |
+|---|---|---|---|
+| `id` | uuid | ファクト | |
+| `lobbyId` | uuid | ファクト | **非 null**（§9-3） |
+| `scheduledAt` | date | ファクト | 「この日に開くと決めた」決定（§3-7） |
+| `status` | `GameSessionStatus` | 導出 | `scheduled`/`today`/`completed`/`cancelled`（§4-2） |
+| `title` | string | **解決済み** | `session.title ?? lobby.title` |
+| `scenarioName` | string \| null | **解決済み** | `session.scenario_name ?? lobby.scenario_name` |
+| `location` | string \| null | **解決済み** | `session.location ?? lobby.location` |
+| `timeLabel` | string \| null | **解決済み** | `session.time_label`（ロビー側に対応列が無いので実質は生値） |
+| `description` | string \| null | ファクト | **当日の連絡事項。上書きではない**（セッション固有。§3-7） |
+| `overrides` | object | **生値** | 下記 |
+| `overrides.title` | string \| null | 生値 | `null` ＝上書きしていない |
+| `overrides.scenarioName` | string \| null | 生値 | |
+| `overrides.location` | string \| null | 生値 | |
+| `overrides.timeLabel` | string \| null | 生値 | |
+| `completedAt` | date-time \| null | ファクト | |
+| `cancelledAt` | date-time \| null | ファクト | |
+| `seats` | `Seat[]` | | 着席者。`seatedAt` 昇順 |
+| `lobby` | object | | 表示のための最小限のロビー情報（下記） |
+| `createdAt` / `updatedAt` | date-time | | |
+
+`lobby` に入れるのは次の4つだけ。ロビー全体を埋め込まないのは、
+セッション詳細画面が必要とするのが「戻り導線」と「ホストかどうかの判定」だけだからである。
+
+| フィールド | 型 | 用途 |
+|---|---|---|
+| `id` | uuid | パンくず・戻り導線 |
+| `title` | string | パンくず表示 |
+| `hostUserId` | string | 閲覧者がホストかの判定（ボタンの活性） |
+| `status` | `LobbyStatus` | 解散済みロビーの開催であることの表示 |
+
+**現行 `GameSession` から消えるフィールド**:
+
+| 消えるもの | 行き先 |
+|---|---|
+| `isPublished` | ロビー（`lobby.status` から判断する） |
+| `maxMembers` | ロビーの `maxPlayers` |
+| `createdBy` | ロビーの `hostUserId`（`lobby.hostUserId` として再掲） |
+| `members` | `seats`（§6-14） |
+
+`overrides` を入れ子にした理由は §5-5。フラットな `titleOverride` を並べない。
+
+| エラー | 条件 |
+|---|---|
+| `401` | 非公開ロビーの開催を未ログインで閲覧 |
+| `403` | 非公開ロビーの開催をホスト以外が閲覧 |
+| `404` | セッションが存在しない |
+
+#### 6-13-6. `GET /api/join/:token`（返すのがセッション → ロビー）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | 認証不要 |
+| リクエスト | なし（トークンはパスパラメータ） |
+| レスポンス | `200` `LobbyInvitePreview` |
+
+> このエンドポイントは backend（`game-session/.../guest-link-route.ts`）に実装済みだが、
+> `openapi.yml` からは漏れていた（廃止した旨のコメントだけが残っていた）。本改訂で仕様書に載せ直し、
+> あわせて **lobby 側へ移設**する（タスク3）。
+
+`LobbyInvitePreview` — **まだ参加していない人に見せる最小限の情報。**
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | ロビー ID。フロントは `/lobbies/:id?token=…` を組み立てる |
+| `title` | string | |
+| `scenarioName` | string \| null | |
+| `location` | string \| null | |
+| `status` | `LobbyStatus` | 解散済み・受付終了を招待された側に伝えるため |
+| `hostName` | string \| null | ホストの表示名。**`hostUserId` は返さない** |
+| `entryCount` | integer | 在籍中（`leftAt IS NULL`）の参加者数 |
+| `maxPlayers` | integer \| null | |
+| `hasOpenPoll` | boolean | 日程調整に答える導線を出すかの判断に使う |
+| `nextGameSession` | `GameSessionSummary` \| null | 直接卓立てのロビーで「いつの卓か」を示す |
+
+- `entries[]` や候補日の中身は**返さない。** まだ参加していない人に他人の名前を見せないため
+- `disbanded` のロビーも `200` で返す（フロントが「この企画は解散しました」と出せるように）
+- `is_published` が `false` でも `200`。**トークンを持っていること自体が招待の証**なので、
+  非公開の直接卓立てロビーでもプレビューできる
+
+| エラー | 条件 |
+|---|---|
+| `404` | トークンに一致するロビーが無い |
+
+`403` を返さないのは、トークンの存在・不在を区別させないため。
+
+#### 6-13-7. `PATCH /api/game-sessions/:id/status`（target が2値に）
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | ホストのみ |
+| レスポンス | `200` `GameSession`（導出し直した `status` を含む） |
+
+リクエスト: `{ "status": "completed" | "cancelled" }`
+
+| target | 書き込むファクト | 許可する現ステータス |
+|---|---|---|
+| `completed` | `completed_at = now()` | `scheduled` / `today` |
+| `cancelled` | `cancelled_at = now()` | `scheduled` / `today` |
+
+- **`open` は受け付けない。** セッションに公開の概念が無くなったため（§4-2、§6-9 の廃止表）
+- `completed` の条件が現行の「`today` のみ」から **`scheduled` も可**に広がる。
+  開催日を過ぎたのに完了操作を忘れていたケースを救うため（§4-3 の表と一致）
+- 逆方向（完了・中止の取り消し）は無い。終端状態
+- 現行 `update-game-session-status.ts` は `cancelled` への遷移だけ `canPerform` を通していなかったが、
+  v2 では両方ともポリシーテーブル経由で判定する（§4-5）
+
+| エラー | 条件 |
+|---|---|
+| `400` | `status` が2値以外 |
+| `401` / `403` | 未ログイン / ホストでない |
+| `404` | セッションが存在しない |
+| `422` | すでに `completed` / `cancelled` |
+
+### 6-14. パス変更9本 — 変わるのは識別子だけ
+
+**リクエスト/レスポンスの構造（入れ子の形・必須の別・件数）は変えない。**
+変わるのはパスと、その中に現れる語彙である。実装タスクは機械的な置換で済ませられること。
+
+| 旧 | 新 | 現れる場所 |
+|---|---|---|
+| `memberId` | `entryId` | 日程回答のボディ（ゲスト用）、回答オブジェクト |
+| `memberId` | `seatId` | セッション側のパスパラメータ |
+| `members`（配列名） | `entries` | ロビー詳細 |
+| `members`（配列名） | `seats` | セッション詳細 |
+| `memberCount` | `entryCount` | ロビー一覧 |
+| `memberCount` | `seatCount` | セッション一覧 |
+| `dateNote` | `timeLabel` | 候補日（§2-3） |
+| `dates`（一括更新のボディ） | `candidateDates` | 候補日の一括更新 |
+| `responses` | `answers` | パスの末尾 |
+| `guest-responses` | `guest-answers` | パスの末尾 |
+| `LobbyMember` | `LobbyEntry` | `shared` の型名 |
+| `LobbyAvailabilityDate` | `LobbyCandidateDate` | `shared` の型名 |
+| `LobbyAvailabilityDateAnswer` | `LobbyScheduleAnswer` | `shared` の型名 |
+| `GameSessionMember` | `Seat` | `shared` の型名 |
+| `joinedAt`（セッション側） | `seatedAt` | 着席オブジェクト |
+
+**消えるフィールド**（対応する新名が無いもの）:
+
+| 消えるもの | 理由 |
+|---|---|
+| `GameSessionMember.lobbyMemberId` | 選出＝Seat の有無になり突合が不要（§1-4） |
+| `GameSessionMember.characterName` の**更新経路** | `PATCH .../members/:memberId` は廃止。`PUT .../seats/:seatId/character` へ（表示用の `Seat.characterName` は残る） |
+
+**増えるフィールド**:
+
+| 増えるもの | 理由 |
+|---|---|
+| `LobbyEntry.leftAt` | 脱退のソフト化（§9-5） |
+
+`DELETE /api/lobbies/:id/entries/:entryId` は**レスポンスが `204` のまま**だが、
+中身は DELETE ではなく `left_at` の UPDATE になる（§6-3）。呼び出し側から見た契約は変わらない。
+
+### 6-15. プレイメモ4本を触らないこと（等価性の基準点）
+
+プレイメモは**パスもリクエストもレスポンスも1文字も変えない。**
+内部の紐付けが `play_memos.member_id` → `seat_id` に変わるだけである（§3-10）。
+
+これは移行の**等価性検証の基準点**として使うための意図的な判断である。
+モデルを全面的に作り直す移行では「壊れたのか、仕様が変わったのか」の区別がつかなくなる。
+契約が完全に固定された経路を4本残しておけば、そこが赤くなったときは
+必ず移行の事故だと断定できる。
+
+したがって次の点は**直さない。**
+
+| 気になる点 | それでも直さない理由 |
+|---|---|
+| レスポンスの `memberId` が実際には `seats.id` を指すようになる | 直すと「レスポンス形不変」が崩れ、基準点として使えなくなる |
+| `GET .../play-memos` の突合先が `.../members` → `.../seats` に変わるのに、突合キー名は `memberId` のまま | 同上 |
+| `PUT .../play-memos/me` の状態エラーが `409`（他は `422` に寄せた。§6-10） | 同上 |
+
+> **レビューで決めたいこと。** `memberId` というキー名が `seats.id` を運ぶのは、
+> 移行が終わったあとには明確な負債になる。**タスク7（横断的な語彙整理）で
+> `memberId` → `seatId` に改名する**のが素直だと考えているが、
+> その場合は基準点の役目が終わったあとに行う必要がある。
+> 「移行中は不変 / 移行後に改名」という段取りでよいか確認したい。
 
 ---
 

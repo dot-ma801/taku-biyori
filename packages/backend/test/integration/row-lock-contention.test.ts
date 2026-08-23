@@ -11,7 +11,7 @@
  * 競合を再現するには別接続・別トランザクションで**コミット**する必要がある。
  * 作成した行は `withCommitted` の後片付けで消す。
  */
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { deleteLobby } from '@/lobby/application/delete-lobby';
 import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
@@ -32,6 +32,11 @@ import {
 } from '@test/helpers/fixtures';
 
 afterAll(closeTestDatabase);
+
+// このファイルのテストだけ、別トランザクションの待ちを挟むため既定の
+// timeout（5秒）では足りない。DB 不要な test/unit/ には影響させたくないので
+// vite.config.ts をグローバルに延ばすのではなく、このファイル単位で延ばす。
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 interface Deferred {
   promise: Promise<void>;

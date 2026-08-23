@@ -25,8 +25,10 @@ export default defineConfig({
   test: {
     // リポジトリ層のテストが実 DB へ接続するため、.env の TEST_DATABASE_URL を読み込む
     setupFiles: ['./test/setup.ts'],
-    // ロック競合のテストは他トランザクションの待ちを挟むため既定より長く取る
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    // ロック競合のテスト（test/integration/row-lock-contention.test.ts）だけが
+    // 他トランザクションの待ちを挟むため長い timeout を必要とする。ここを
+    // グローバルに 30 秒へ延ばすと DB 不要な test/unit/ のハング検知まで
+    // 遅くなってしまうため、既定値のままにし、該当ファイル側で
+    // `vi.setConfig()` によりファイル単位で timeout を延ばしている。
   },
 });

@@ -364,6 +364,52 @@ describe('findDetailById', () => {
       });
     });
   });
+
+  it('募集枠を経由しないメンバーは selectedLobbyMemberIds から除外される', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, { closedAt: new Date() });
+      const memberId = await insertLobbyMember(db, lobbyId, {
+        userId: host.id,
+      });
+      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
+      // 選出メンバーの引き継ぎ（lobbyMemberId あり）
+      await insertGameSessionMember(db, gameSessionId, {
+        userId: host.id,
+        lobbyMemberId: memberId,
+      });
+      // 確定後に直接参加したメンバー（lobbyMemberId なし）
+      await insertGameSessionMember(db, gameSessionId, {
+        guestName: '後から参加',
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(lobbyId);
+
+      // Assert
+      expect(detail?.confirmedGameSession).toEqual({
+        id: gameSessionId,
+        selectedLobbyMemberIds: [memberId],
+      });
+    });
+  });
+
+  it('closedAt があっても卓が見つからなければ confirmedGameSession は null', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, { closedAt: new Date() });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(lobbyId);
+
+      // Assert
+      expect(detail?.confirmedGameSession).toBeNull();
+    });
+  });
 });
 
 describe('updateById', () => {
@@ -696,6 +742,21 @@ describe('メンバー操作', () => {
     });
   });
 
+  it('findMembersByLobbyId はメンバーがいなければ空配列を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const members = await repo.findMembersByLobbyId(lobbyId);
+
+      // Assert
+      expect(members).toEqual([]);
+    });
+  });
+
   it('findMemberByUserId は参加していれば member id を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
@@ -920,6 +981,21 @@ describe('候補日と回答', () => {
         },
       ]);
       expect(dates[1]?.answers).toEqual([]);
+    });
+  });
+
+  it('findByLobbyId は候補日が無ければ空配列を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const dates = await repo.findByLobbyId(lobbyId);
+
+      // Assert
+      expect(dates).toEqual([]);
     });
   });
 
@@ -1169,6 +1245,18 @@ describe('確定（closeLobby / createGameSessionFromLobby）', () => {
         location: 'オンライン',
         maxPlayers: 5,
       });
+    });
+  });
+
+  it('findLobbyCore は募集枠が存在しなければ null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createLobbyRepository(db);
+
+      // Act & Assert
+      expect(
+        await repo.findLobbyCore('00000000-0000-0000-0000-000000000000'),
+      ).toBeNull();
     });
   });
 

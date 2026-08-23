@@ -58,6 +58,11 @@ pnpm --filter @taku-biyori/backend dev
 > 既存のシードデータを削除してから作り直すため、本番の DB に向けて実行するとデータが失われます。
 > マイグレーション（DDL・履歴管理あり・本番でも実行する）とは別物で、
 > シードは DML・履歴管理なし・開発環境専用です。`NODE_ENV=production` では起動時に失敗します。
+>
+> `NODE_ENV=production` に加えて、`DATABASE_URL` の host が localhost / 127.0.0.1 / ::1 の
+> いずれでもない場合も起動時に弾かれます。WSL の PostgreSQL に IP 直指定で接続するなど、
+> ローカル以外のホストを指す `DATABASE_URL` へ意図的に実行したい場合は
+> `SEED_ALLOW_REMOTE=1` を付けてください。
 
 シードで作ったユーザーはユーザー名（`yuki` / `haru` / `natsu` / `aki`）と
 パスワードでログインできます。公開中のロビー・卓は誰の一覧にも出るため、

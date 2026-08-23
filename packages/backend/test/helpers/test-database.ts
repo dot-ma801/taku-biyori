@@ -18,6 +18,7 @@ import type { Database } from '@/system/infrastructure/database/client';
 import * as authSchema from '@/system/infrastructure/database/schema';
 import * as gameSessionSchema from '@/system/infrastructure/database/game-session-schema';
 import * as lobbySchema from '@/system/infrastructure/database/lobby-schema';
+import { assertDistinctFromDatabaseUrl } from '@/system/infrastructure/database/assert-distinct-database-url';
 
 const schema = { ...authSchema, ...gameSessionSchema, ...lobbySchema };
 
@@ -33,6 +34,8 @@ export const getTestDatabaseUrl = (): string => {
       ].join('\n'),
     );
   }
+
+  assertDistinctFromDatabaseUrl(url, process.env.DATABASE_URL);
 
   return url;
 };

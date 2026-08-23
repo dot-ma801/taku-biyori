@@ -15,6 +15,7 @@ import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
+import { assertDistinctFromDatabaseUrl } from '@/system/infrastructure/database/assert-distinct-database-url';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -23,6 +24,8 @@ if (!testDatabaseUrl) {
     'TEST_DATABASE_URL is required. packages/backend/.env.example を参照して設定してください',
   );
 }
+
+assertDistinctFromDatabaseUrl(testDatabaseUrl, process.env.DATABASE_URL);
 
 const url = new URL(testDatabaseUrl);
 const databaseName = decodeURIComponent(url.pathname.replace(/^\//, ''));

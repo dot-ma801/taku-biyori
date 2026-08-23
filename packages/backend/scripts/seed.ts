@@ -18,6 +18,7 @@ import { createAuth } from '@/auth/infrastructure/create-auth';
 import { createDatabase } from '@/system/infrastructure/database/client';
 import type { Database } from '@/system/infrastructure/database/client';
 import { loadBackendConfig } from '@/system/infrastructure/config/env';
+import { assertLocalDatabaseUrl } from '@/system/infrastructure/database/assert-local-database-url';
 import { user } from '@/system/infrastructure/database/schema';
 import {
   lobbies,
@@ -37,11 +38,16 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
+const config = loadBackendConfig();
+
+assertLocalDatabaseUrl(
+  config.databaseUrl,
+  process.env.SEED_ALLOW_REMOTE === '1',
+);
+
 /** シードで作ったユーザーを見分けるためのメールドメイン。後片付けの目印にもなる */
 const SEED_EMAIL_DOMAIN = 'seed.taku-biyori.local';
 const SEED_PASSWORD = 'seed-password-1234';
-
-const config = loadBackendConfig();
 const db = createDatabase(config.databaseUrl);
 const auth = createAuth({
   db,

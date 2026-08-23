@@ -585,6 +585,14 @@ stateDiagram-v2
 `/api/game-sessions/:id/seats/:seatId`（個別）にする。
 `:seatId` は `:id` の配下に留めており、これは Seat の ID を単独で持ち歩く場面が無いため。
 
+#### パスパラメータの綴り
+
+親の ID は原則 `:id` と綴る。**例外はセッションのコレクション**
+（`/api/lobbies/:lobbyId/game-sessions`）だけで、ここはパスに2種類のリソースが登場して
+`:id` がどちらを指すか読めなくなるため `:lobbyId` とする。
+以降 §6-8 / §6-9 の表で `/api/lobbies/:id/game-sessions` と略記している箇所があるが、
+正は `:lobbyId` である（`openapi.yml` もそちらに揃えている）。
+
 ### 6-2. Lobbies
 
 | Method | Path | 認証 | 説明 |

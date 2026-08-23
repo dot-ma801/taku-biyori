@@ -6,7 +6,7 @@
     "build": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && vite build",
     "build:vercel": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && vite build --config vite.config.vercel.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.scripts.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.scripts.json && tsc --noEmit -p tsconfig.test.json",
     "lint:eslint": "eslint . --fix --cache",
     "lint:oxlint": "oxlint . --fix",
     "lint": "pnpm run lint:eslint && pnpm run lint:oxlint",

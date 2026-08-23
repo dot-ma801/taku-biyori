@@ -745,26 +745,49 @@ stateDiagram-v2
 
 | path | 変更 |
 |---|---|
+| path | 変更 |
+|---|---|
 | `/lobbies` | 一覧（現在は `/dashboard` へのリダイレクト。据え置き） |
 | `/lobbies/new` | 「ロビーを作る」。候補日は任意入力に |
-| `/lobbies/edit/:lobbyId` | 企画情報の編集。候補日は詳細画面へ移す |
 | `/lobbies/:lobbyId` | **中心画面**。参加者・日程調整・開催一覧をすべてここに集約 |
-| `/game-sessions/:gameSessionId` | 開催の詳細（着席者・キャラ・当日連絡・メモ導線） |
-| `/game-sessions/:gameSessionId/play-memo` | 変更なし |
-| `/game-sessions/new` | **廃止**（`/lobbies/new` の「日程が決まっている」モードに統合） |
-| `/game-sessions/edit/:id` | 開催情報の編集（上書き項目のみ） |
+| `/lobbies/:lobbyId/edit` | 企画情報の編集。候補日は詳細画面へ移す（現行 `/lobbies/edit/:lobbyId` から順序を変更） |
+| `/lobbies/:lobbyId/game-sessions/:gameSessionId` | 開催の詳細（着席者・キャラ・当日連絡・メモ導線） |
+| `/lobbies/:lobbyId/game-sessions/:gameSessionId/edit` | 開催情報の編集（上書き項目のみ） |
+| `/lobbies/:lobbyId/game-sessions/:gameSessionId/play-memo` | プレイメモ |
+| `/game-sessions/*` | **すべて廃止**（`/game-sessions/new` は `/lobbies/new` の「日程が決まっている」モードへ統合） |
 
-#### 画面ルートを `/lobbies/:lobbyId/game-sessions/:id` にしない理由
+#### 画面ルートを入れ子にする理由
 
-API と同じ規則（§6-1）を画面にも適用し、**個別リソースの画面は入れ子にしない**。
+**API の規則（§6-1）とは意図的に別の判断をしている。** API URL の消費者はコードで、
+関心はリソースの同一性とエンドポイント数。画面 URL の消費者は人間で、関心は階層の見通しと共有である。
+同じ規則で運用する必然性はない。
 
-- セッション ID は UUID で単独一意なので `lobbyId` は情報として冗長
-- **ダッシュボード・通知・共有リンクから直接開ける必要がある。** 入れ子にすると、
-  遷移元が常に `lobbyId` を知っている必要が生まれる
-- URL が長くなり、参加者に共有しづらい
+画面側を入れ子にする理由は2つ。
 
-ロビーとの親子関係は URL ではなく、**画面上のパンくずと「ロビーに戻る」導線**で表現する。
-セッション詳細は `lobbyId` をレスポンスに含むので、そこからロビーへ辿れる。
+1. **hackable であること。** [NN/g「URL as UI」（Nielsen）](https://www.nngroup.com/articles/url-as-ui/) が
+   URL 設計の中心に置く性質で、「末尾を削れば上位階層に上がれる」こと。
+   `/lobbies/:lobbyId/game-sessions/:id` は削ればロビー詳細に着くが、`/game-sessions/:id` は
+   削っても親に行けない
+2. **モデルとの一貫性。** v2 は `game_sessions.lobby_id` を NOT NULL にして
+   「セッションは単独では存在しない」と主張し、ロビー詳細を中心画面に据えている（§7-2）。
+   画面 URL だけが「セッションは独立したリソース」と言っているのは矛盾する
+
+したがって編集画面も `/lobbies/edit/:lobbyId` ではなく `/lobbies/:lobbyId/edit` にする
+（前者は末尾を削ると `/lobbies/edit` という存在しない階層に着くため hackable でない）。
+
+#### 代償として受け入れること
+
+- **URL が長い。** プレイメモ画面は UUID 2つを含み 110 文字前後になる。
+  同記事は「78文字以内」も推奨しているが、その根拠は1999年当時のメール折り返しであり、
+  共有がコピー主体の現在は優先度が低いと判断した
+- **`router.push` に常に `lobbyId` が要る。** 一覧・詳細のレスポンスに `lobbyId` を含めるため
+  実運用では手元にあるが、セッション ID しか持たない経路（将来の通知など）を作る場合は
+  先にロビーを引く必要がある
+- **旧 `/game-sessions/*` からのリダイレクトは用意しない。** 実ユーザーがおらず、
+  破壊的な作り直しという前提（§3-1）と整合するため
+
+> ゲストがプレイメモ画面を開くと URL から `lobbyId` が見えるが、限定公開の機能が無い現状では問題にならない。
+> 限定公開を導入する場合はこの前提を見直す。
 
 ### 7-2. ロビー詳細の構成
 

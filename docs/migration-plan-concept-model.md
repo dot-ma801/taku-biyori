@@ -183,7 +183,7 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **frontend**: ダッシュボードを design-v2 §7-5 の4セクションに再編、`GameSessionStatusBadge` / `LobbyStatusBadge` のラベル更新、日本語ラベルの一斉置換（「募集枠」→「ロビー」、「卓」→「開催 / セッション」、「参加メンバー」→「着席者」、「募集中止」→「解散」、「確定」系文言の削除）、ルーティング整理。**docs**: `openapi.yml` は**残差の突き合わせのみ**（全面改訂はタスク1 で完了済み）、`design-v1.md` / `v1.1` / `v1.2` に supersede 注記、`game-session-status.md` を更新、ADR 0006 を `Superseded` に、`db:seed` の生成データを新モデルに追従、CLAUDE.md の用語とディレクトリ例を更新 |
+| スコープ | **frontend**: ダッシュボードを design-v2 §7-5 の4セクションに再編、`GameSessionStatusBadge` / `LobbyStatusBadge` のラベル更新、日本語ラベルの一斉置換（「募集枠」→「ロビー」、「卓」→「開催 / セッション」、「参加メンバー」→「着席者」、「募集中止」→「解散」、「確定」系文言の削除）、**画面ルートの入れ子化**（design-v2 §7-1。`/game-sessions/*` を廃止し `/lobbies/:lobbyId/game-sessions/:gameSessionId/*` へ、`/lobbies/edit/:lobbyId` を `/lobbies/:lobbyId/edit` へ。旧パスからのリダイレクトは作らない）。**docs**: `openapi.yml` は**残差の突き合わせのみ**（全面改訂はタスク1 で完了済み）、`design-v1.md` / `v1.1` / `v1.2` に supersede 注記、`game-session-status.md` を更新、ADR 0006 を `Superseded` に、`db:seed` の生成データを新モデルに追従、CLAUDE.md の用語とディレクトリ例を更新 |
 | 既存への影響 | 表示文言とドキュメントのみ |
 | 完了条件 | badge の2テストが新ラベルで green / `募集枠` `卓確定` `confirmed` `closedAt` `lobbyMemberId` `dateNote` `availability` `game_session_members` で全体を grep して0件（`features/Landing/` の「卓」のみ除外） / `openapi.yml` と実装のルートが一致 |
 | 検証 | ダッシュボードの4セクションがそれぞれ正しい対象を出す。UI 上に「確定」「募集枠」という語が残っていない |

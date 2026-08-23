@@ -1,0 +1,148 @@
+/**
+ * 実 DB に対するテストの接続とトランザクション境界を扱うヘルパー。
+ *
+ * 方針（migration-plan-concept-model.md §2 タスク0）:
+ * - Testcontainers も PGlite も使わない。すでに動いている PostgreSQL に
+ *   テスト用データベースを1つ足し、`TEST_DATABASE_URL` で接続先を切り替える
+ * - テスト間の分離は **各テストをトランザクションで包んでロールバック** する。
+ *   TRUNCATE 不要で速く、テストが並行に走っても互いの未コミットデータが見えない
+ * - `SELECT ... FOR UPDATE` の競合だけはロールバック方式では再現できない
+ *   （同一トランザクション内では自分のロックと競合しないため）。
+ *   そのケースは `withCommitted` で本当にコミットし、後片付けを明示的に行う
+ */
+import { inArray } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import type { Sql } from 'postgres';
+import type { Database } from '@/system/infrastructure/database/client';
+import * as authSchema from '@/system/infrastructure/database/schema';
+import * as gameSessionSchema from '@/system/infrastructure/database/game-session-schema';
+import * as lobbySchema from '@/system/infrastructure/database/lobby-schema';
+
+const schema = { ...authSchema, ...gameSessionSchema, ...lobbySchema };
+
+export const getTestDatabaseUrl = (): string => {
+  const url = process.env.TEST_DATABASE_URL;
+
+  if (!url) {
+    throw new Error(
+      [
+        'TEST_DATABASE_URL が設定されていません。',
+        'packages/backend/.env に TEST_DATABASE_URL を追加し、',
+        '`pnpm --filter @taku-biyori/backend db:test:setup` を実行してください。',
+      ].join('\n'),
+    );
+  }
+
+  return url;
+};
+
+let client: Sql | undefined;
+let database: Database | undefined;
+
+/**
+ * テスト用 DB への接続を1ワーカーにつき1つだけ作って使い回す。
+ * ロック競合のテストが同時に複数のトランザクションを開くため、プールは複数接続を許す。
+ */
+export const getTestDatabase = (): Database => {
+  if (!database) {
+    client = postgres(getTestDatabaseUrl(), { max: 5 });
+    database = drizzle(client, { schema });
+  }
+
+  return database;
+};
+
+export const closeTestDatabase = async (): Promise<void> => {
+  if (client) {
+    await client.end();
+  }
+  client = undefined;
+  database = undefined;
+};
+
+/** トランザクションを巻き戻すためだけの内部シグナル。テストの失敗としては扱わない */
+class RollbackSignal extends Error {
+  constructor() {
+    super('rollback');
+    this.name = 'RollbackSignal';
+  }
+}
+
+/**
+ * コールバックをトランザクションの中で実行し、最後に必ずロールバックする。
+ *
+ * 渡される `Database` はトランザクションハンドルなので、この中の書き込みは
+ * 他の接続からは見えず、テスト終了時に消える。リポジトリが内部で
+ * `db.transaction()` を呼んだ場合は SAVEPOINT にネストされる。
+ */
+export const withRollback = async (
+  fn: (db: Database) => Promise<void>,
+): Promise<void> => {
+  try {
+    await getTestDatabase().transaction(async (tx) => {
+      // Drizzle の tx（PgTransaction）と Database（PostgresJsDatabase）は兄弟型で
+      // 直接代入できないが、リポジトリが使う API は同一インターフェース。
+      // 本番コード（createXxxRepository の executeWithLock）と同じ扱い方に揃える。
+      await fn(tx as unknown as Database);
+      throw new RollbackSignal();
+    });
+  } catch (error) {
+    if (error instanceof RollbackSignal) {
+      return;
+    }
+    throw error;
+  }
+};
+
+export type FixtureKind = 'gameSession' | 'lobby' | 'user';
+
+/** `withCommitted` の中で作った行を後片付けの対象として登録する */
+export type TrackFixture = (kind: FixtureKind, id: string) => void;
+
+/**
+ * ロック競合のテスト用。コールバックの中の書き込みは**本当にコミットされる**ため、
+ * `track` で登録した行を最後に消す。
+ *
+ * `withRollback` が使えないのは、`SELECT ... FOR UPDATE` の待ちを再現するには
+ * 別々のトランザクション（＝別接続）が必要なため。
+ */
+export const withCommitted = async (
+  fn: (db: Database, track: TrackFixture) => Promise<void>,
+): Promise<void> => {
+  const db = getTestDatabase();
+  const created: { kind: FixtureKind; id: string }[] = [];
+
+  try {
+    await fn(db, (kind, id) => {
+      created.push({ kind, id });
+    });
+  } finally {
+    // メンバー・候補日・回答は FK の ON DELETE CASCADE で一緒に消えるため個別に追跡しない
+    const gameSessionIds = idsOf(created, 'gameSession');
+    if (gameSessionIds.length > 0) {
+      await db
+        .delete(gameSessionSchema.gameSessions)
+        .where(inArray(gameSessionSchema.gameSessions.id, gameSessionIds));
+    }
+
+    const lobbyIds = idsOf(created, 'lobby');
+    if (lobbyIds.length > 0) {
+      await db
+        .delete(lobbySchema.lobbies)
+        .where(inArray(lobbySchema.lobbies.id, lobbyIds));
+    }
+
+    const userIds = idsOf(created, 'user');
+    if (userIds.length > 0) {
+      await db
+        .delete(authSchema.user)
+        .where(inArray(authSchema.user.id, userIds));
+    }
+  }
+};
+
+const idsOf = (
+  created: { kind: FixtureKind; id: string }[],
+  kind: FixtureKind,
+): string[] => created.filter((row) => row.kind === kind).map((row) => row.id);

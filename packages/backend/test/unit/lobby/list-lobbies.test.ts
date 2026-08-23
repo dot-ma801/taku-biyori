@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { listLobbies } from '@/lobby/application/list-lobbies';
 import type { ListLobbiesRepository } from '@/lobby/application/list-lobbies';
 import type { LobbyListItem } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const mockListItem: LobbyListItem = {
   id: 'lobby-1',
   title: 'テスト募集',
-  status: 'draft',
+  status: LobbyStatus.draft,
   isPublished: false,
   memberCount: 1,
   role: 'host',

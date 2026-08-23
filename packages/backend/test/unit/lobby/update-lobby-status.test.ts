@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { updateLobbyStatus } from '@/lobby/application/update-lobby-status';
 import type { UpdateLobbyStatusRepository } from '@/lobby/application/update-lobby-status';
 import type { Lobby } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const baseLobby: Lobby = {
   id: 'lobby-1',
   title: 'テスト募集',
-  status: 'draft',
+  status: LobbyStatus.draft,
   isPublished: false,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',

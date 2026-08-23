@@ -10,6 +10,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
+import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
 import {
   lobbies,
   lobbyAnswers,
@@ -590,11 +591,7 @@ describe('createWithHostAndCandidates', () => {
       const created = await repo.createWithHostAndCandidates({
         hostUserId: host.id,
         title: '新しい募集',
-        description: null,
-        scenarioName: null,
-        location: null,
         maxPlayers: 4,
-        openUntil: null,
         guestLinkToken: 'token-create',
         candidateDates: [
           { date: '2100-01-01', dateNote: '13:00〜' },
@@ -630,11 +627,6 @@ describe('createWithHostAndCandidates', () => {
       const created = await repo.createWithHostAndCandidates({
         hostUserId: host.id,
         title: '候補日なし',
-        description: null,
-        scenarioName: null,
-        location: null,
-        maxPlayers: null,
-        openUntil: null,
         guestLinkToken: 'token-empty',
         candidateDates: [],
       });
@@ -1255,9 +1247,15 @@ describe('executeWithLock', () => {
       const repo = createLobbyRepository(db);
 
       // Act
+      // 複数の narrower interface（Update/Delete/BulkUpdate/Confirm）が
+      // それぞれ異なる callback 引数型で executeWithLock を宣言しているため、
+      // 交差型の LobbyRepository では最初の宣言（UpdateLobbyRepository）が
+      // 採用され locked の推論型に deleteById が現れない。実体は
+      // createLobbyRepository が返すフル機能のリポジトリなので、ここでは
+      // DeleteLobbyRepository として明示的にキャストする。
       const result = await repo.executeWithLock(lobbyId, async (locked) => {
         const hostUserId = await locked.findHostUserId(lobbyId);
-        await locked.deleteById(lobbyId);
+        await (locked as unknown as DeleteLobbyRepository).deleteById(lobbyId);
         return hostUserId;
       });
 
@@ -1276,7 +1274,7 @@ describe('executeWithLock', () => {
 
       // Act
       const act = repo.executeWithLock(lobbyId, async (locked) => {
-        await locked.deleteById(lobbyId);
+        await (locked as unknown as DeleteLobbyRepository).deleteById(lobbyId);
         throw new Error('途中で失敗');
       });
 

@@ -14,7 +14,12 @@ import type {
   UpdateLobbyStatusInput,
   GameSession,
 } from '@taku-biyori/shared';
-import { DATE_NOTE_MAX_LENGTH, GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
+import {
+  DATE_NOTE_MAX_LENGTH,
+  GUEST_TOKEN_HEADER,
+  LobbyStatus,
+  GameSessionStatus,
+} from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { ListMembersResult } from '@/lobby/application/list-members';
 import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
@@ -28,6 +33,7 @@ import type { DeleteAvailabilityDateResult } from '@/lobby/application/delete-av
 import type { UpdateAvailabilityDateResponseResult } from '@/lobby/application/update-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseResult } from '@/lobby/application/update-guest-availability-date-response';
 import type { ConfirmLobbyResult } from '@/lobby/application/confirm-lobby';
+import type { UpdateLobbyStatusResult } from '@/lobby/application/update-lobby-status';
 
 const mockSession = { user: { id: 'user-1' } };
 
@@ -50,7 +56,7 @@ const mockGuestMember: LobbyMember = {
 const mockListItem: LobbyListItem = {
   id: 'f2b4dbb8-0000-4000-8000-000000000001',
   title: 'テスト募集',
-  status: 'draft',
+  status: LobbyStatus.draft,
   isPublished: false,
   memberCount: 1,
   role: 'host',
@@ -61,7 +67,7 @@ const mockListItem: LobbyListItem = {
 const mockLobby: Lobby = {
   id: 'f2b4dbb8-0000-4000-8000-000000000001',
   title: '新規募集',
-  status: 'draft',
+  status: LobbyStatus.draft,
   isPublished: false,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
@@ -95,7 +101,7 @@ const mockAnswer: LobbyAvailabilityDateAnswer = {
 const mockGameSession: GameSession = {
   id: 'game-session-1',
   title: '新規募集',
-  status: 'confirmed',
+  status: GameSessionStatus.confirmed,
   isPublished: true,
   scheduledAt: '2099-09-01',
   lobbyId: mockLobby.id,
@@ -2610,17 +2616,26 @@ describe('POST → PATCH(公開) → GET の一連フロー', () => {
           ...mockLobby,
           title: input.title,
           hostUserId: userId,
-          status: 'draft',
+          status: LobbyStatus.draft,
           isPublished: false,
         };
         return stored;
       },
     );
     const updateLobbyStatus = vi.fn(
-      async (_id: string, _userId: string, input: UpdateLobbyStatusInput) => {
+      async (
+        _id: string,
+        _userId: string,
+        input: UpdateLobbyStatusInput,
+      ): Promise<UpdateLobbyStatusResult> => {
         if (input.status === 'open' && stored) {
-          stored = { ...stored, status: 'open', isPublished: true };
-          return { type: 'ok' as const, lobby: stored };
+          const updated: Lobby = {
+            ...stored,
+            status: LobbyStatus.open,
+            isPublished: true,
+          };
+          stored = updated;
+          return { type: 'ok' as const, lobby: updated };
         }
         return { type: 'invalidTransition' as const };
       },

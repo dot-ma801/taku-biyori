@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createLobby } from '@/lobby/application/create-lobby';
 import type { CreateLobbyRepository } from '@/lobby/application/create-lobby';
 import type { Lobby } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const mockLobby: Lobby = {
   id: 'lobby-1',
@@ -10,7 +11,7 @@ const mockLobby: Lobby = {
   description: null,
   location: null,
   maxPlayers: null,
-  status: 'draft',
+  status: LobbyStatus.draft,
   isPublished: false,
   openUntil: null,
   closedAt: null,

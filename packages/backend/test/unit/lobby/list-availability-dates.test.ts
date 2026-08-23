@@ -4,8 +4,8 @@ import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-a
 import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
 
 const mockDates: LobbyAvailabilityDate[] = [
-  { id: 'date-1', date: '2025-09-01', answers: [] },
-  { id: 'date-2', date: '2025-09-08', answers: [] },
+  { id: 'date-1', date: '2025-09-01', dateNote: null, answers: [] },
+  { id: 'date-2', date: '2025-09-08', dateNote: null, answers: [] },
 ];
 
 const makeRepo = (

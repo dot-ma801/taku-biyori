@@ -575,9 +575,6 @@ describe('createWithHost', () => {
       const created = await repo.createWithHost({
         hostUserId: host.id,
         title: '新しい卓',
-        description: null,
-        scenarioName: null,
-        location: null,
         maxMembers: 4,
         scheduledAt: '2100-09-09',
         guestLinkToken: 'token-create',

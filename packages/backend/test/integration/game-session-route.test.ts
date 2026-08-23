@@ -8,6 +8,7 @@ import type {
   GameSession,
   GameSessionPlayMemo,
 } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -18,18 +19,21 @@ const FUTURE_DATE = '2999-12-31';
 const mockListItem: GameSessionListItem = {
   id: 'session-1',
   title: 'テスト卓',
-  status: 'draft',
+  status: GameSessionStatus.draft,
   isPublished: false,
   memberCount: 1,
+  scheduledAt: FUTURE_DATE,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
+  role: 'host',
 };
 
 const mockGameSession: GameSession = {
   id: 'session-1',
   title: '新規卓',
-  status: 'draft',
+  status: GameSessionStatus.draft,
   isPublished: false,
+  scheduledAt: FUTURE_DATE,
   createdBy: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
@@ -101,6 +105,12 @@ const makeApp = (
     upsertMyPlayMemo:
       overrides.upsertMyPlayMemo ??
       vi.fn().mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
+    updateMyPlayMemoVisibility:
+      overrides.updateMyPlayMemoVisibility ??
+      vi.fn().mockResolvedValue({ type: 'ok', playMemo: mockPlayMemo }),
+    listSharedPlayMemos:
+      overrides.listSharedPlayMemos ??
+      vi.fn().mockResolvedValue({ type: 'ok', playMemos: [] }),
   };
 
   return createApp({

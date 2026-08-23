@@ -17,6 +17,8 @@ import { deleteLobby } from '@/lobby/application/delete-lobby';
 import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
 import { deleteGameSession } from '@/game-session/application/delete-game-session';
 import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
+import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
+import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
 import { lobbyCandidates } from '@/system/infrastructure/database/lobby-schema';
 import { closeTestDatabase, withCommitted } from '@test/helpers/test-database';
@@ -87,10 +89,17 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
       const release = createDeferred();
 
       // Act: ロックを保持したまま削除するトランザクションを開く
+      // LobbyRepository は複数の narrower interface（Update/Delete/BulkUpdate/
+      // Confirm）を交差しており、それぞれ executeWithLock の callback 引数型が
+      // 異なるため、推論された lockedRepo の型に deleteById が現れない。
+      // 実体は createLobbyRepository が返すフル機能のリポジトリなので、
+      // DeleteLobbyRepository として明示的にキャストする。
       const deleting = repo.executeWithLock(lobbyId, async (lockedRepo) => {
         locked.resolve();
         await release.promise;
-        await lockedRepo.deleteById(lobbyId);
+        await (lockedRepo as unknown as DeleteLobbyRepository).deleteById(
+          lobbyId,
+        );
       });
       await locked.promise;
 
@@ -233,10 +242,14 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       const release = createDeferred();
 
       // Act: 先行トランザクションがロックを握ったまま候補日を1件追加する
+      // 同様に、交差型の推論では BulkUpdateAvailabilityDatesRepository が
+      // 選ばれず applyDateChanges が見えないため明示的にキャストする。
       const leading = repo.executeWithLock(lobbyId, async (lockedRepo) => {
         locked.resolve();
         await release.promise;
-        await lockedRepo.applyDateChanges(lobbyId, {
+        await (
+          lockedRepo as unknown as BulkUpdateAvailabilityDatesRepository
+        ).applyDateChanges(lobbyId, {
           datesToAdd: [{ date: '2100-12-12', dateNote: null }],
           dateIdsToRemove: [],
           notesToUpdate: [],

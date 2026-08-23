@@ -2,13 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { updateGameSession } from '@/game-session/application/update-game-session';
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const mockGameSession: GameSession = {
   id: 'session-1',
   title: '更新後の卓',
   description: null,
   scenarioName: null,
-  status: 'draft',
+  status: GameSessionStatus.draft,
   isPublished: false,
   scheduledAt: '2025-05-30',
   completedAt: null,

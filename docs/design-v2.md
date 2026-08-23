@@ -679,21 +679,37 @@ stateDiagram-v2
 
 ### 6-9. レビュー用: エンドポイント差分サマリ
 
-現行 30 パス / 43 オペレーション → v2 は 31 パス / 42 オペレーション。分類は次のとおり。
+**現行 31 パス / 44 オペレーション → v2 は 33 パス / 46 オペレーション。** 内訳の突き合わせは §6-9-1 を参照。
+分類は次のとおり。
+
+> 現行の数え方について。`openapi.yml` には長らく 30 パス / 43 オペレーションしか記載が無かったが、
+> これは `GET /api/join/:token`（backend の `game-session/.../guest-link-route.ts` に実装済み）が
+> 仕様書から漏れていたためである。本改訂で追記するので、**現行の実態は 31 パス / 44 オペレーション**として数える。
 
 #### 新規追加（7）
+
+前身となる現行エンドポイントがまったく存在しないもの。
 
 | Method | Path | 目的 |
 |---|---|---|
 | POST | `/api/lobbies/:id/guest-link` | 招待トークンの再発行 |
 | GET | `/api/lobbies/:id/schedule-polls` | 日程調整の履歴一覧 |
-| GET | `/api/lobbies/:id/schedule-polls/latest` | 最新の調整（候補日 + 全回答） |
-| GET | `/api/lobbies/:id/schedule-polls/:pollId` | 過去の調整（読み取り専用） |
 | POST | `/api/lobbies/:id/schedule-polls` | 新しい日程調整を始める（リスケの起点） |
+| GET | `/api/lobbies/:id/schedule-polls/:pollId` | 過去の調整（読み取り専用） |
 | GET | `/api/lobbies/:lobbyId/game-sessions` | そのロビーの開催一覧 |
-| PUT / DELETE | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当て / 解除 |
+| PUT | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当て |
+| DELETE | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当ての解除 |
+
+> 初版はここに `GET /api/lobbies/:id/schedule-polls/latest` も並べていたが、これは
+> `GET /api/lobbies/:id/availability-dates` の**改名**であって新規ではない（下の「パス変更」に同じ行がある）。
+> 二重計上だったため取り除き、代わりに `PUT / DELETE .../character` を1行1オペレーションに割った。
+> 行数は7のまま、**7行がちょうど7オペレーション**になる。
 
 #### 廃止（8）
+
+**この表は「現行仕様書から消える記述」を数えており、オペレーション数とは一致しない。**
+8行のうち後継を持たないのは5オペレーションで、`confirm` と `guest-members` には形を変えた後継があり、
+最後の1行はそもそもオペレーションではなく enum 値である。詳細は §6-9-1。
 
 | Method | Path | 理由 |
 |---|---|---|
@@ -734,8 +750,85 @@ stateDiagram-v2
 
 #### 変更なし（5）
 
-`GET /` / `POST|GET /api/auth/**` / `GET|PATCH /api/profile` / プレイメモ4本（`/api/game-sessions/:id/play-memos/me`、`.../me/visibility`、`.../play-memos`）。
-プレイメモは**パスもレスポンス形も不変**で、内部の紐付けが `member_id` → `seat_id` に変わるだけ。移行の等価性検証の基準点として使える。
+**5パス**である。
+
+| Path | オペレーション |
+|---|---|
+| `/` | `GET` |
+| `/api/profile` | `GET` / `PATCH` |
+| `/api/game-sessions/:id/play-memos/me` | `GET` / `PUT` |
+| `/api/game-sessions/:id/play-memos/me/visibility` | `PATCH` |
+| `/api/game-sessions/:id/play-memos` | `GET` |
+
+Better Auth が提供する `/api/auth/**` の6パスは本設計の対象外のため、この数には含めない
+（仕様書には引き続き記載するが、v2 で触るものが1つも無い）。
+
+プレイメモは**パスもレスポンス形も不変**で、内部の紐付けが `member_id` → `seat_id` に変わるだけ。
+移行の等価性検証の基準点として使えるよう、意図的に手を入れない（§6-13-7 に注意点）。
+
+### 6-9-1. 数え方の突き合わせ
+
+上の5分類は「**現行仕様書の記述がどう扱われるか**」を数えた行数であり、そのまま足してもオペレーション数にはならない。
+レビュー時にレンダリング済みドキュメントと突き合わせるための対応を明示しておく。
+
+#### オペレーション数
+
+```text
+現行 44
+  − 後継を持たない廃止 5
+  + 新規 7
+  = v2 46
+```
+
+後継を持たない5オペレーションはこれだけである。
+
+| Method | Path |
+|---|---|
+| POST | `/api/game-sessions` |
+| GET | `/api/game-sessions/:id/guest-link` |
+| PATCH | `/api/game-sessions/:id/members/:memberId` |
+| POST | `/api/lobbies/:id/availability-dates` |
+| DELETE | `/api/lobbies/:id/availability-dates/:dateId` |
+
+「廃止（8）」の残り3行は次の扱いになる。
+
+| 廃止表の行 | 実際の扱い |
+|---|---|
+| `POST /api/lobbies/:id/confirm` | `POST /api/lobbies/:lobbyId/game-sessions` が後継。オペレーションとしては存続する（§9-7） |
+| `POST /api/game-sessions/:id/guest-members` | `POST /api/game-sessions/:id/guest-seats` が後継。パスと認可の出所が変わるだけで、オペレーションとしては存続する |
+| （`GameSessionStatus.open` を受け付ける遷移） | オペレーションではなく `PATCH /api/game-sessions/:id/status` が受け付ける enum 値。パス数・オペレーション数に影響しない |
+
+この2行を「廃止 + 新規」ではなく「廃止表に載せたうえで後継あり」と扱うのは、
+**呼び出し側から見た意味が変わるため**である（前者は「確定」から「開催の作成」へ、
+後者は認可の出所が卓のトークンからロビーのトークンへ）。単なる改名ではないので
+「パス変更」には入れず、しかし新しい API が生えたわけでもないので「新規」にも入れない。
+
+#### パス数
+
+| 区分 | パス数 |
+|---|---|
+| Better Auth（対象外） | 6 |
+| 変更なし | 5 |
+| ロビー・セッション系（新規・パス変更・仕様変更の対象） | 22 |
+| **合計** | **33** |
+
+現行 31 パスからの増減は `+5 / −3` で、`31 − 3 + 5 = 33`。
+
+| 増える（+5） | 減る（−3） |
+|---|---|
+| `/api/lobbies/:id/schedule-polls` | `/api/lobbies/:id/confirm` |
+| `/api/lobbies/:id/schedule-polls/:pollId` | `/api/lobbies/:id/availability-dates/:dateId` |
+| `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates` ※ | `/api/game-sessions/:id/guest-link` |
+| `/api/lobbies/:lobbyId/game-sessions` | |
+| `/api/game-sessions/:id/seats/:seatId/character` | |
+
+パス変更9本（`members` → `entries` / `seats`、`availability-dates` → `schedule-polls/latest`、
+`guest-members` → `guest-entries` / `guest-seats` など）は改名なのでパス数に影響しない。
+
+※ 現行 `/api/lobbies/:id/availability-dates` は `GET` と `PUT` が別のパスに割れる。
+`GET` は `schedule-polls/latest` への改名（パス変更9に計上）、`PUT` の行き先である
+`schedule-polls/:pollId/candidate-dates` はパスとしては新設なのでここに数える。
+なお `PUT` 自体は新規オペレーションではない（改名なので「新規追加（7）」には入らない）。
 
 ---
 

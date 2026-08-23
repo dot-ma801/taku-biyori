@@ -7,6 +7,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Database } from '@/system/infrastructure/database/client';
+import { firstRow } from '@/system/infrastructure/database/first-row';
 import { user } from '@/system/infrastructure/database/schema';
 import {
   lobbies,
@@ -71,7 +72,7 @@ export const insertLobby = async (
     })
     .returning({ id: lobbies.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertLobby').id;
 };
 
 export const insertLobbyMember = async (
@@ -88,7 +89,7 @@ export const insertLobbyMember = async (
     })
     .returning({ id: lobbyMembers.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertLobbyMember').id;
 };
 
 export const insertCandidateDate = async (
@@ -102,7 +103,7 @@ export const insertCandidateDate = async (
     .values({ lobbyId, date, dateNote })
     .returning({ id: lobbyCandidates.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertCandidateDate').id;
 };
 
 export const insertAnswer = async (
@@ -117,7 +118,7 @@ export const insertAnswer = async (
     .values({ candidateId, memberId, answer, comment })
     .returning({ id: lobbyAnswers.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertAnswer').id;
 };
 
 export interface InsertGameSessionOverrides {
@@ -157,7 +158,7 @@ export const insertGameSession = async (
     })
     .returning({ id: gameSessions.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertGameSession').id;
 };
 
 export const insertGameSessionMember = async (
@@ -181,7 +182,7 @@ export const insertGameSessionMember = async (
     })
     .returning({ id: gameSessionMembers.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertGameSessionMember').id;
 };
 
 export const insertPlayMemo = async (

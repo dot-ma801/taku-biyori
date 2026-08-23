@@ -19,6 +19,7 @@ import { createDatabase } from '@/system/infrastructure/database/client';
 import type { Database } from '@/system/infrastructure/database/client';
 import { loadBackendConfig } from '@/system/infrastructure/config/env';
 import { assertLocalDatabaseUrl } from '@/system/infrastructure/database/assert-local-database-url';
+import { firstRow } from '@/system/infrastructure/database/first-row';
 import { dateFromToday } from '@/system/domain/date-from-today';
 import { user } from '@/system/infrastructure/database/schema';
 import {
@@ -144,7 +145,7 @@ const insertLobby = async (
     })
     .returning({ id: lobbies.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'insertLobby').id;
 };
 
 const addLobbyMember = async (
@@ -161,7 +162,7 @@ const addLobbyMember = async (
     })
     .returning({ id: lobbyMembers.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'addLobbyMember').id;
 };
 
 const addCandidateDate = async (
@@ -175,7 +176,7 @@ const addCandidateDate = async (
     .values({ lobbyId, date, dateNote })
     .returning({ id: lobbyCandidates.id });
 
-  return rows[0]!.id;
+  return firstRow(rows, 'addCandidateDate').id;
 };
 
 const main = async (): Promise<void> => {
@@ -297,7 +298,10 @@ const main = async (): Promise<void> => {
       lobbyId: closedLobbyId,
     })
     .returning({ id: gameSessions.id });
-  const confirmedSessionId = confirmedSessionRows[0]!.id;
+  const confirmedSessionId = firstRow(
+    confirmedSessionRows,
+    '確定済み卓の作成',
+  ).id;
 
   const confirmedMemberRows = await db
     .insert(gameSessionMembers)
@@ -343,7 +347,10 @@ const main = async (): Promise<void> => {
       completedAt: daysAgo(7),
     })
     .returning({ id: gameSessions.id });
-  const completedSessionId = completedSessionRows[0]!.id;
+  const completedSessionId = firstRow(
+    completedSessionRows,
+    '完了済み卓の作成',
+  ).id;
 
   const completedMemberRows = await db
     .insert(gameSessionMembers)
@@ -367,14 +374,21 @@ const main = async (): Promise<void> => {
     ])
     .returning({ id: gameSessionMembers.id });
 
+  const [lighthouseKeeperMember, visitorMember] = completedMemberRows;
+  if (!lighthouseKeeperMember || !visitorMember) {
+    throw new Error(
+      'completedMemberRows の取得結果が想定（3件）より少ないです',
+    );
+  }
+
   await db.insert(gameSessionPlayMemos).values([
     {
-      memberId: completedMemberRows[0]!.id,
+      memberId: lighthouseKeeperMember.id,
       body: '灯台守視点のメモ。序盤に鍵の話を振れたのがよかった。',
       sharedAt: daysAgo(6),
     },
     {
-      memberId: completedMemberRows[1]!.id,
+      memberId: visitorMember.id,
       body: '（非公開）次に同じシナリオを回すときのための覚え書き。',
       sharedAt: null,
     },
@@ -396,7 +410,7 @@ const main = async (): Promise<void> => {
       scheduledAt: dateFromToday(30),
     })
     .returning({ id: gameSessions.id });
-  const directSessionId = directSessionRows[0]!.id;
+  const directSessionId = firstRow(directSessionRows, '直接卓立ての作成').id;
   await db.insert(gameSessionMembers).values([
     { gameSessionId: directSessionId, userId: natsuId },
     { gameSessionId: directSessionId, userId: akiId, characterName: 'PC2' },

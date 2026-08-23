@@ -9,6 +9,21 @@
  * - `SELECT ... FOR UPDATE` の競合だけはロールバック方式では再現できない
  *   （同一トランザクション内では自分のロックと競合しないため）。
  *   そのケースは `withCommitted` で本当にコミットし、後片付けを明示的に行う
+ *
+ * ⚠️ **不変条件（並行実行の前提）**: `withCommitted` でコミットした行は、
+ * `withRollback` の行と違って**他のテストファイル・他ワーカーからも見える**。
+ * vitest はテストファイルを並行に走らせるため、`withCommitted` を使うテストで
+ * 「一覧を取得して `toHaveLength(N)` で全体件数を assert する」ような書き方を
+ * すると、たまたま同時に走った別の `withCommitted` テストの行を巻き込んで
+ * flaky になる。一覧系のアサーションは必ず `find`/`filter` で自分が作った
+ * fixture の ID に絞ってから行うこと（本ファイル内の既存テストを参照）。
+ *
+ * `getTestDatabase` の `{ max: 5 }` は、1ワーカーが同時に複数のトランザクション
+ * を開くロック競合テスト（`row-lock-contention.test.ts` は同一ワーカー内で
+ * 複数の `executeWithLock` を並行に開く）のための接続プールサイズ。
+ * 「ワーカー数 × 5 が PostgreSQL の `max_connections`（既定 100）を
+ * 超えない」ことを前提にしており、CI・ローカルとも vitest のデフォルト
+ * ワーカー数（CPU コア数程度）であればこの前提は成立する。
  */
 import { inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';

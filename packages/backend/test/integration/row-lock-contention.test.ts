@@ -49,6 +49,20 @@ const createDeferred = (): Deferred => {
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * 「ロックのせいで待たされている」ことを判定するための待ち時間。
+ *
+ * ⚠️ この方式には原理的な限界がある。実際にはロックが効いておらず対象の
+ * 操作がただ遅いだけでも、BLOCK_PROBE_MS 以内に settle しなければ
+ * 「ブロックされている」と判定してしまう（vacuous pass）。ロックが壊れた
+ * ときにテストが検知できず緑のまま通り得る、ということ。ここでは
+ * 「実測で安定して 300ms 以内に完了する軽い操作が、ロック保持中だけは
+ * 明確に待たされる」ことの確認に留め、後段で `release.resolve()` した後に
+ * 対象の Promise が実際に解決することも必ず assert して、
+ * 「ロックが原因で待たされていた」こと自体は別途裏付けている。
+ */
+const BLOCK_PROBE_MS = 300;
+
 describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
   it('同じ募集枠への並行削除は直列化され、成功するのは1つだけ', async () => {
     await withCommitted(async (db, track) => {
@@ -102,7 +116,11 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
           lobbyId,
         );
       });
-      await locked.promise;
+      // executeWithLock のコールバックが locked.resolve() 前に throw すると
+      // locked.promise だけを await した場合 testTimeout（30秒）までハングする。
+      // deleting も一緒に race しておけば、そのケースは deleting の reject で
+      // 即座に検知できる。
+      await Promise.race([locked.promise, deleting]);
 
       // 別トランザクションからの参加は親行の FOR KEY SHARE を取れずブロックされる
       const joining = repo.addMember(lobbyId, joiner.id, {});
@@ -112,7 +130,7 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
       );
       const raced = await Promise.race([
         joiningSettled,
-        sleep(300).then(() => 'blocked' as const),
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
       ]);
 
       // Assert
@@ -179,7 +197,9 @@ describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
           await lockedRepo.deleteById(gameSessionId);
         },
       );
-      await locked.promise;
+      // deleting も race しておくことで、コールバックが locked.resolve() 前に
+      // throw した場合に testTimeout までハングせず即座に検知できる。
+      await Promise.race([locked.promise, deleting]);
 
       const joining = repo.addMember(gameSessionId, joiner.id, {});
       const joiningSettled = joining.then(
@@ -188,7 +208,7 @@ describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
       );
       const raced = await Promise.race([
         joiningSettled,
-        sleep(300).then(() => 'blocked' as const),
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
       ]);
 
       // Assert
@@ -256,7 +276,9 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
           notesToUpdate: [],
         });
       });
-      await locked.promise;
+      // leading も race しておくことで、コールバックが locked.resolve() 前に
+      // throw した場合に testTimeout までハングせず即座に検知できる。
+      await Promise.race([locked.promise, leading]);
 
       const following = bulkUpdateAvailabilityDates(repo, lobbyId, host.id, {
         dates: [{ date: '2100-12-12', dateNote: null }],
@@ -267,7 +289,7 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       );
       const raced = await Promise.race([
         followingSettled,
-        sleep(300).then(() => 'blocked' as const),
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
       ]);
 
       // Assert: 先行トランザクションのコミット前は待たされている
@@ -313,7 +335,9 @@ describe('confirm-lobby の TOCTOU（FOR KEY SHARE 競合）', () => {
         locked.resolve();
         await release.promise;
       });
-      await locked.promise;
+      // confirming も race しておくことで、コールバックが locked.resolve() 前に
+      // throw した場合に testTimeout までハングせず即座に検知できる。
+      await Promise.race([locked.promise, confirming]);
 
       // 別トランザクションからの退出（同じメンバー行の DELETE）はロック解放待ちでブロックされる
       const leaving = repo.deleteMemberById(memberId);
@@ -323,7 +347,7 @@ describe('confirm-lobby の TOCTOU（FOR KEY SHARE 競合）', () => {
       );
       const raced = await Promise.race([
         leavingSettled,
-        sleep(300).then(() => 'blocked' as const),
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
       ]);
 
       // Assert: ロック保持中は待たされている

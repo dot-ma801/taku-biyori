@@ -19,6 +19,7 @@ import { createDatabase } from '@/system/infrastructure/database/client';
 import type { Database } from '@/system/infrastructure/database/client';
 import { loadBackendConfig } from '@/system/infrastructure/config/env';
 import { assertLocalDatabaseUrl } from '@/system/infrastructure/database/assert-local-database-url';
+import { dateFromToday } from '@/system/domain/date-from-today';
 import { user } from '@/system/infrastructure/database/schema';
 import {
   lobbies,
@@ -55,18 +56,6 @@ const auth = createAuth({
   baseURL: config.betterAuthUrl,
   trustedOrigin: config.frontendOrigin,
 });
-
-/** `YYYY-MM-DD` 形式で今日からの相対日付を作る（サーバのローカル日付基準） */
-const dateFromToday = (offsetDays: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
 
 const daysAgo = (days: number): Date => {
   const date = new Date();

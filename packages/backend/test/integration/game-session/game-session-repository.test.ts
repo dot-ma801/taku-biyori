@@ -15,9 +15,9 @@ import {
   gameSessionPlayMemos,
   gameSessions,
 } from '@/system/infrastructure/database/game-session-schema';
+import { dateFromToday } from '@/system/domain/date-from-today';
 import { closeTestDatabase, withRollback } from '@test/helpers/test-database';
 import {
-  dateFromToday,
   insertGameSession,
   insertGameSessionMember,
   insertLobby,

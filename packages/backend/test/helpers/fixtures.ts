@@ -196,18 +196,6 @@ export const insertPlayMemo = async (
   });
 };
 
-/**
- * `YYYY-MM-DD` 形式で今日からの相対日付を作る（`scheduled_at` の境界テスト用）。
- * ステータス導出はサーバのローカル時刻で Y/M/D を比較するため、UTC ではなく
- * ローカルの年月日から組み立てる。
- */
-export const dateFromToday = (offsetDays: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
+// dateFromToday（`scheduled_at` の境界テスト用の相対日付ヘルパー）は
+// scripts/seed.ts と重複していたため `@/system/domain/date-from-today` へ
+// 切り出した。ここでは re-export せず、利用側にそちらを直接 import させる。

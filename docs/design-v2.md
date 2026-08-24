@@ -747,6 +747,28 @@ stateDiagram-v2
   `409` 競合・状態ロック、`422` 状態が操作を許さない（現行の使い分けを継続）
 - `shared` に契約型を先に定義してから実装する（CLAUDE.md）
 
+#### 導出できる値をレスポンスに足さない
+
+**API は汎用的な形を保ち、UI の都合で欲しい値をサーバ側で先回りして作らない。**
+すでに返している配列から計算できるものは、クライアントが計算する。
+
+| 足さない | 代わりに返すもの |
+|---|---|
+| `nextGameSession` / `gameSessionCount` | `gameSessions[]` |
+| `hasOpenPoll` / `latestPoll` | `schedulePolls[]`（`createdAt` 降順・先頭が最新） |
+| `isLatest` / `candidateDateCount` | `schedulePolls[]` の並び / `candidateDates[]` |
+| `seatCount` / `memberCount` | `seats[]` / `entries[]` |
+| `role` | `hostUserId`（誰がホストかも分かる） |
+
+ステータス導出を `shared` に置いて FE からも呼べるようにする方針（§4-5）とも整合する。
+「最も近い開催を選ぶ」程度の導出をサーバに置く理由が無い。
+
+**例外は、中身を見せたくないために件数だけを返す場合。** `LobbyInvitePreview.entryCount` は
+まだ参加していない人に参加者名を見せないことが目的なので、配列を返す選択肢が無い（§6-12）。
+
+要否が定まっていない集計値（`answeredEntryCount` など）は**足さない**。
+必要が実証された時点で「このAPIに含めるか、詳細取得APIを叩くか」を判断する。
+
 #### 「認証」列の凡例
 
 | 表記 | 意味 |
@@ -937,7 +959,7 @@ stateDiagram-v2
 | POST | `/api/lobbies` | **候補日が必須 → 任意**。渡した場合は調整#1 を同時に作る |
 | PATCH | `/api/lobbies/:id/status` | target が `open`/`cancelled` → `open`/`closed`/`disbanded`。`closed → open`（追加募集）の往復を許可 |
 | DELETE | `/api/lobbies/:id` | 条件に「セッション0件」を追加 |
-| GET | `/api/lobbies/:id` | レスポンスから `confirmedGameSession` を削除、`gameSessions[]` / `latestPoll` / `nextGameSession` を追加 |
+| GET | `/api/lobbies/:id` | レスポンスから `confirmedGameSession` を削除、`gameSessions[]` / `schedulePolls[]` を追加 |
 | GET | `/api/game-sessions/:id` | ホスト・定員・公開フラグがロビー由来になり、表示値は導出済み + 上書き生値の二重表現（§5-5） |
 | GET | `/api/join/:token` | **返すのがセッション → ロビー** |
 | PATCH | `/api/game-sessions/:id/status` | target が `open`/`completed`/`cancelled` → `completed`/`cancelled` |
@@ -1149,10 +1171,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `id` | uuid | |
-| `isLatest` | boolean | 最新の調整かどうか。ちょうど1件だけ `true`（§9-9） |
-| `candidateDateCount` | integer | 候補日の件数 |
-| `answeredEntryCount` | integer | 1件以上回答した `LobbyEntry` の数（脱退者を除く） |
-| `createdAt` | date-time | |
+| `createdAt` | date-time | 並び順の基準。`clock_timestamp()` 由来なので衝突しない（§3-4） |
 
 **`LobbySchedulePoll`** — 日程調整の本体
 
@@ -1160,9 +1179,14 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 |---|---|---|
 | `id` | uuid | |
 | `lobbyId` | uuid | |
-| `isLatest` | boolean | `false` なら読み取り専用（書き込み系は `409`） |
 | `candidateDates` | `LobbyCandidateDate[]` | `date` 昇順 |
 | `createdAt` | date-time | |
+
+> **`isLatest` / `candidateDateCount` / `answeredEntryCount` は持たない。**
+> `createdAt` の降順で並べれば先頭が最新であることはクライアントが判断でき、
+> 候補日の件数は `candidateDates` の長さで足りる。`answeredEntryCount` は
+> 表示する場面が確定していないため、必要になった時点で「このAPIに含めるか、
+> 詳細取得APIを叩くか」を判断する（§6-1 の方針）。
 
 **`Seat`** — 着席（`game_session.seats` + `character_assignments`）
 
@@ -1189,7 +1213,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `status` | `GameSessionStatus` | |
 | `title` | string | **解決済み**（未設定ならロビーの `title`） |
 | `timeLabel` | string \| null | 解決済み |
-| `seatCount` | integer | 着席者数 |
+| `seats` | `Seat[]` | 着席者。件数が要るなら長さを取る |
 
 #### 入力の上限値
 
@@ -1244,7 +1268,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | リクエスト | なし |
 | レスポンス | `200` `LobbySchedulePollSummary[]` |
 
-- 並びは `created_at DESC, id DESC`。**先頭が最新**で、その要素だけ `isLatest: true`
+- 並びは `created_at DESC`。**先頭が最新**（`clock_timestamp()` 由来なので同値にならない。§3-4）
 - 調整が1件も無いロビー（候補日なしで作った・直接卓立て）は空配列
 - 候補日と回答は含まない。中身が要るときは `latest` か `:pollId` を引く
 
@@ -1323,13 +1347,17 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `status` | `GameSessionStatus` | |
 | `scheduledAt` | date | |
 | `timeLabel` | string \| null | 解決済み |
-| `seatCount` | integer | |
-| `role` | `host` \| `seated` \| null | 閲覧者から見た関係。未ログイン・無関係は `null` |
+| `seats` | `Seat[]` | 着席者。件数が要るなら長さを取る |
+| `hostUserId` | string | ロビーのホスト。`hostUserId === myUserId` で自分がホストか判定する |
 | `createdAt` / `updatedAt` | date-time | |
 
-**現行の `GameSessionListItem` から消えるもの**: `isPublished`（ロビーへ）、`maxMembers`（ロビーの `maxPlayers` へ）、`memberCount`（→ `seatCount`）。
-`role` の値が `'host' | 'member'` から `'host' | 'seated'` に変わるのは、
-セッション側の関係が「着席しているか」だけになるため。
+**現行の `GameSessionListItem` から消えるもの**: `isPublished`（ロビーへ）、`maxMembers`（ロビーの `maxPlayers` へ）、
+`memberCount`（→ `seats` 配列）、`role`（→ `hostUserId` + `seats`）。
+
+`role` を `hostUserId` に置き換えるのは、`role` が導出値でありながら**元の情報を捨てていた**ため。
+「自分がホストか」は `hostUserId` から判定でき、加えて「**誰がホストか**」も表示できる。
+「自分が着席しているか」は `seats` から分かる。将来ホストが複数になったりロールが増えても、
+そのとき `role` を足せばよい。
 
 | エラー | 条件 |
 |---|---|
@@ -1505,18 +1533,17 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `entries` | `LobbyEntry[]` | **脱退者も含めて全件返す**（`leftAt` で見分ける）。ホストが先頭、以降 `joinedAt` 昇順 |
-| `latestPoll` | `LobbySchedulePollSummary` \| null | 最新の日程調整の**要約**。調整が0件なら `null` |
+| `schedulePolls` | `LobbySchedulePollSummary[]` | 日程調整の履歴。`createdAt` 降順で**先頭が最新** |
 | `gameSessions` | `GameSessionSummary[]` | 中止・完了を含む全件。`scheduledAt` 昇順 |
-| `nextGameSession` | `GameSessionSummary` \| null | `cancelled` でも `completed` でもないもののうち `scheduledAt` が最も近い1件（§4-1） |
-| `gameSessionCount` | integer | **中止を除く**セッション数（§4-1） |
-| `hasOpenPoll` | boolean | `schedule_polls` が1件以上ある（§4-1） |
 | ~~`confirmedGameSession`~~ | — | **削除**（「確定」概念の消滅） |
 
-- `latestPoll` を要約に留めるのは、候補日 × 参加者の表が重いため。
-  表を描くときはフロントが `GET .../schedule-polls/latest` を続けて叩く（§6-2 の「最新の調整の要約」）
-- `nextGameSession` は `gameSessions` の要素と**同じオブジェクトの再掲**。
-  ダッシュボードやヘッダが一覧を走査せずに済むように別フィールドで持つ
-- 閲覧可否はステータスではなく `is_published` ファクトで判定する（現行を継続）。
+- **`nextGameSession` / `gameSessionCount` / `hasOpenPoll` / `latestPoll` は持たない。**
+  いずれも `gameSessions` と `schedulePolls` の配列からクライアントが導出できる。
+  サーバが先回りして計算した値を別フィールドで持つのは、UI の都合を API に持ち込むことになる（§6-1）
+- `schedulePolls` を要約（`id` と `createdAt` だけ）に留めるのは、候補日 × 参加者の表が重いため。
+  **配列の先頭が最新の調整**なので、表を描くときはその `id` で `GET .../schedule-polls/:pollId` を叩く。
+  クライアントが最新の `pollId` を知る手段がこれで揃うため、`latest` 専用パスは不要になった
+- 閲覧可否はステータスではなく `published_at` ファクトで判定する（現行を継続）。
   `draft` のまま解散したロビーは `disbanded` でも非公開のまま
 
 | エラー | 条件 |
@@ -1608,13 +1635,12 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `hostName` | string \| null | ホストの表示名。**`hostUserId` は返さない** |
 | `entryCount` | integer | 在籍中（`leftAt IS NULL`）の参加者数 |
 | `maxPlayers` | integer \| null | |
-| `hasOpenPoll` | boolean | 日程調整に答える導線を出すかの判断に使う |
-| `nextGameSession` | `GameSessionSummary` \| null | 直接卓立てのロビーで「いつの卓か」を示す |
 
 - `entries[]` や候補日の中身は**返さない。** まだ参加していない人に他人の名前を見せないため
+- `entryCount` は例外的に件数のまま返す。**中身を見せないことが目的**なので、配列を返す選択肢が無い
 - `disbanded` のロビーも `200` で返す（フロントが「この企画は解散しました」と出せるように）
-- `is_published` が `false` でも `200`。**トークンを持っていること自体が招待の証**なので、
-  非公開の直接卓立てロビーでもプレビューできる
+- `published_at` が NULL でも `200`。**トークンを持っていること自体が招待の証**なので、
+  下書きの直接卓立てロビーでもプレビューできる
 
 | エラー | 条件 |
 |---|---|
@@ -1662,8 +1688,8 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `memberId` | `seatId` | セッション側のパスパラメータ |
 | `members`（配列名） | `entries` | ロビー詳細 |
 | `members`（配列名） | `seats` | セッション詳細 |
-| `memberCount` | `entryCount` | ロビー一覧 |
-| `memberCount` | `seatCount` | セッション一覧 |
+| `memberCount` | `entries` 配列 | ロビー一覧 |
+| `memberCount` | `seats` 配列 | セッション一覧 |
 | `dateNote` | `timeLabel` | 候補日（§2-3） |
 | `dates`（一括更新のボディ） | `candidateDates` | 候補日の一括更新 |
 | `responses` | `answers` | パスの末尾 |
@@ -1879,7 +1905,7 @@ v2 は次の4セクションに再編する。
 概念設計は「一直線のフェーズは独立した事実に分解される」と述べており、素直に読めば単一 enum は不適切である。
 しかし UI にはバッジ1つで状態を示す場所があり、`draft`/`open`/`closed`/`disbanded` は互いに排他なので
 enum として成立する。**「ロビーのステータス＝受付の状態」と定義を狭め**、開催の有無は
-`nextGameSession` / `gameSessionCount` という別のフィールドで表現することにした（§4-1）。
+ステータスに載せず、`gameSessions` 配列からクライアントが判断することにした（§4-1・§6-1）。
 
 ### 9-2. `closed` という名前を再利用すること
 

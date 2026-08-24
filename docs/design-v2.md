@@ -1034,7 +1034,7 @@ frontend から /api/join の呼び出し  → 無し
 | POST | `/api/lobbies/:id/guest-link` | 招待トークンの再発行 |
 | GET | `/api/lobbies/:id/schedule-polls` | 日程調整の履歴一覧 |
 | POST | `/api/lobbies/:id/schedule-polls` | 新しい日程調整を始める（リスケの起点） |
-| GET | `/api/lobbies/:id/schedule-polls/:pollId` | 過去の調整（読み取り専用） |
+| GET | `/api/lobbies/:id/schedule-polls/:pollId` | 指定した調整（履歴も取得できる） |
 | GET | `/api/lobbies/:lobbyId/game-sessions` | そのロビーの開催一覧 |
 | PUT | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当て |
 | DELETE | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当ての解除 |
@@ -1393,7 +1393,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 
 - 並びは `created_at DESC`。**先頭が最新**（`clock_timestamp()` 由来なので同値にならない。§3-4）
 - 調整が1件も無いロビー（候補日なしで作った・直接卓立て）は空配列
-- 候補日と回答は含まない。中身が要るときは `latest` か `:pollId` を引く
+- 候補日と回答は含まない。中身が要るときは `:pollId` を引く
 
 | エラー | 条件 |
 |---|---|
@@ -1435,7 +1435,8 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | リクエスト | なし |
 | レスポンス | `200` `LobbySchedulePoll` |
 
-- **読み取り専用のパス。** 最新の調整を指す `pollId` でも `200` を返すが、書き込みはここでは受けない
+- **最新かどうかを問わず取得できる。** 書き込み系（候補日の一括更新・回答）は最新の調整に限定して
+  `409` を返すが、取得はその制限を受けない。過去の調整を履歴として読むための経路である
 - 脱退した参加者の回答も含めて返す（過去の記録なので消さない）。呼び出し側は
   `LobbyDetail.entries[].leftAt` と突き合わせてグレー表示する
 
@@ -1560,7 +1561,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
   リクエストで指定するという意味ではない
 
 レスポンスは `Lobby` 単体。候補日を渡した場合でも poll は返さず、必要なら
-`GET /api/lobbies/:id/schedule-polls/latest` を続けて引く（作成レスポンスを重くしない）。
+`GET /api/lobbies/:id/schedule-polls/:pollId` を続けて引く（作成レスポンスを重くしない）。
 
 `Lobby`:
 
@@ -2119,7 +2120,7 @@ CLAUDE.md の「表示用フォールバックはコンポーネントに置く�
 
 ### 9-9. 日程調整の「最新」を timestamp で決める
 
-`schedule_polls` に `is_latest` のようなフラグや連番を持たせず、`created_at DESC, id DESC` で決める。
+`schedule_polls` に `is_latest` のようなフラグや連番を持たせず、`created_at DESC` で決める。
 フラグは「ちょうど1行が true」という不変条件を UPDATE 2本で守る必要があり壊れやすい。
 ロビーあたりの poll 数は高々数件なのでソートコストは無視できる。
 

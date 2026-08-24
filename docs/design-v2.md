@@ -805,15 +805,33 @@ stateDiagram-v2
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/lobbies` | ログイン必須 | 一覧（ホスト / 参加者 / 公開かつ受付中） |
+| GET | `/api/me/lobbies` | ログイン必須 | **自分のロビー**（ホスト or 参加中） |
+| GET | `/api/lobbies` | ログイン任意 | **公開ロビーを探す**（公開かつ受付中のもの） |
 | POST | `/api/lobbies` | ログイン必須 | 作成。**候補日は任意**（渡すと同時に調整#1を作る） |
-| GET | `/api/lobbies/:id` | ログイン任意 | 詳細（参加者・最新の調整の要約・セッション一覧を含む） |
+| GET | `/api/lobbies/:id` | ログイン任意 | 詳細（参加者・調整の履歴・セッション一覧を含む） |
 | PATCH | `/api/lobbies/:id` | ログイン必須 | title / scenarioName / description / location / maxPlayers / openUntil |
 | DELETE | `/api/lobbies/:id` | ログイン必須 | `draft` かつ他参加者なしかつセッション0件のときのみ |
 | PATCH | `/api/lobbies/:id/status` | ログイン必須 | target: `open` / `closed` / `disbanded` |
 | GET | `/api/lobbies/:id/guest-link` | ホストのみ | `{ token }` |
 | POST | `/api/lobbies/:id/guest-link` | ホストのみ | **トークン再発行**（新規） |
-| GET | `/api/join/:token` | 認証不要 | 招待リンクのプレビュー。**ロビーを返す**（現行はセッションを返していた） |
+
+#### 「自分の」と「探す」を別のエンドポイントにする理由
+
+現行の `GET /api/lobbies` は「ホスト or 参加者 **or 公開かつ受付中**」を1つの一覧で返していた。
+この混在は §7-5 の画面構成と噛み合っていない。
+
+| 画面 | 欲しいもの |
+|---|---|
+| ダッシュボードの4セクション | **すべて自分のもの** |
+| 「募集中のロビー」（`PublicLobbyList`） | **公開されているものを探す** |
+
+用途が違うので分ける。`/api/me/lobbies` は名前どおり自分のものだけを返し、
+`/api/lobbies` は公開ロビーの探索に専念する。
+
+**`/api/me/game-sessions` も同様**（§6-5）。`/api/game-sessions/me` にしないのは、
+`me` が ID の位置に来ると「`me` という名前のセッション」に読めるため。
+`/api/me/…` は現在のユーザーを疑似リソースとして扱う形で、GitHub の `/user/repos` や
+Spotify の `/me/playlists` と同じ。
 
 ### 6-3. Lobby Entries
 
@@ -829,69 +847,145 @@ stateDiagram-v2
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
 | GET | `/api/lobbies/:id/schedule-polls` | ログイン任意 | 調整の履歴一覧（要約のみ） |
-| GET | `/api/lobbies/:id/schedule-polls/latest` | ログイン任意 | 最新の調整（候補日 + 全回答） |
-| GET | `/api/lobbies/:id/schedule-polls/:pollId` | ログイン任意 | 過去の調整（読み取り専用） |
+| GET | `/api/lobbies/:id/schedule-polls/:pollId` | ログイン任意 | 指定した調整（候補日 + 全回答） |
 | POST | `/api/lobbies/:id/schedule-polls` | ホストのみ | **新しい日程調整を始める**（`{ candidateDates[] }`） |
 | PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates` | ホストのみ | 候補日の一括更新。最新以外は `409` |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates/:dateId/answers` | ログイン必須 | 自分の回答 |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates/:dateId/guest-answers` | ゲストトークン | ゲストの回答（body に `entryId`） |
+| PUT | `/api/lobbies/:id/schedule-polls/:pollId/answers` | ログイン必須 | **自分の回答を一括登録・更新** |
+| PUT | `/api/lobbies/:id/schedule-polls/:pollId/guest-answers` | ゲストトークン | ゲストの回答を一括（body に `entryId`） |
 
 **廃止**: 候補日の単体 `POST` / `DELETE`（現行の `POST|DELETE /api/lobbies/:id/availability-dates[/:dateId]`）。
 フロントエンドは一括更新しか使っていないため落とす。
 
+**廃止**: `GET .../schedule-polls/latest`。`GET /api/lobbies/:id` が `schedulePolls[]` を
+`createdAt` 降順で返すので、クライアントは先頭の `id` で `GET .../schedule-polls/:pollId` を叩けばよい。
+
+#### 回答は候補日ごとではなく調整ごとに一括で受ける
+
+現実の操作は「調整の表を開いて、全部の候補日に◯△×を付けて保存」であり、
+候補日ごとに1リクエスト（現行の `PUT .../availability-dates/:dateId/responses`）は実態と合っていない。
+候補日の一括更新（`PUT .../candidate-dates`）とも形が揃う。
+
+```jsonc
+PUT /api/lobbies/{id}/schedule-polls/{pollId}/answers
+{
+  "answers": [
+    { "candidateDateId": "…", "answer": "ok",    "comment": null },
+    { "candidateDateId": "…", "answer": "maybe", "comment": "夜なら" }
+  ]
+}
+```
+
+**送った候補日ぶんだけ upsert する差分更新**とし、送らなかった候補日の回答は消さない。
+「全消しして入れ直す」にすると、複数人が同時に触ったときに他人の回答まで巻き込む余地が出るため。
+
+ゲスト用は同じ形に `entryId` を足す。ゲストには本人確認手段が無いため、
+どの参加を更新するかをボディで名指しする（トークン保持者は全ゲストぶんを編集できる。現行方針を継続）。
+
 ### 6-5. Game Sessions
+
+セッションのパスは**すべてロビー配下に置く**。同じタグの中で入れ子の有無が混ざらないようにする。
 
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/game-sessions` | ログイン必須 | 横断一覧（着席済み / ホストのロビーのもの / 公開ロビーのもの） |
-| POST | `/api/lobbies/:lobbyId/game-sessions` | ホストのみ | **セッションを開く**（旧 `POST /api/lobbies/:id/confirm`） |
+| GET | `/api/me/game-sessions` | ログイン必須 | **自分の開催**（着席済み / 自分がホストのロビーのもの） |
 | GET | `/api/lobbies/:lobbyId/game-sessions` | ログイン任意 | そのロビーの開催一覧 |
-| GET | `/api/game-sessions/:id` | ログイン任意 | 詳細（導出済み表示値 + 上書き生値） |
-| PATCH | `/api/game-sessions/:id` | ホストのみ | scheduledAt / title / scenarioName / description / location / timeLabel |
-| DELETE | `/api/game-sessions/:id` | ホストのみ | `cancelled` または着席者がホストのみ。`204` |
-| PATCH | `/api/game-sessions/:id/status` | ホストのみ | target: `completed` / `cancelled` |
+| POST | `/api/lobbies/:lobbyId/game-sessions` | ホストのみ | **セッションを開く**（旧 `POST /api/lobbies/:id/confirm`） |
+| GET | `/api/lobbies/:lobbyId/game-sessions/:id` | ログイン任意 | 詳細（`overrides` + `lobby`） |
+| PATCH | `/api/lobbies/:lobbyId/game-sessions/:id` | ホストのみ | scheduledAt / title / scenarioName / description / location / timeLabel |
+| DELETE | `/api/lobbies/:lobbyId/game-sessions/:id` | ホストのみ | `cancelled` または着席者がホストのみ。`204` |
+| PATCH | `/api/lobbies/:lobbyId/game-sessions/:id/status` | ホストのみ | target: `completed` / `cancelled` |
 
 **廃止**: `POST /api/game-sessions`（トップレベルのセッション直接作成）。セッションは必ずロビー配下に作る。
 **廃止**: `GET /api/game-sessions/:id/guest-link`、`POST /api/game-sessions/:id/guest-members`。トークンはロビーに1本化。
+**廃止**: `GET /api/join/:token`。理由は §6-5-1。
+
+#### パスをすべて入れ子にする
+
+もともと「コレクションはネスト、個別リソースはフラット」という規則にしていたが、
+**同じタグの中で形が混ざる代償のほうが大きい**ため、すべて入れ子にする。
+画面ルートを入れ子に揃えたのと同じ判断（§7-1）。
+
+例外は `GET /api/me/game-sessions` だけ。複数ロビーをまたぐため親を持てない。
+
+**代償**: 各ハンドラで「URL の `:lobbyId` が、そのセッションの実際の `lobby_id` と一致するか」の
+検証が必要になる（不一致は `404`）。共通ミドルウェアか、リポジトリの取得関数に `lobbyId` を
+必須引数として持たせて、検証漏れが起きない形にする。
+
+#### 6-5-1. `GET /api/join/:token` を廃止する
+
+現行の backend には実装が残っているが、**フロントエンドには対応する画面も呼び出しも無い**。
+
+```
+frontend の router に /join ルート → 無し
+frontend から /api/join の呼び出し  → 無し
+```
+
+理由は招待リンクの形にある。`useGuestLink.ts` が組み立てる URL は
+`/lobbies/{lobbyId}?token={token}` で、**すでに `lobbyId` を含んでいる**。
+トークンからロビーを引く必要が最初から無かった。
+
+したがって `LobbyInvitePreview` 型も作らない。ゲストは通常のロビー詳細を
+`Guest-Token` ヘッダ付きで取得する。
 
 ### 6-6. Seats
 
+**着席させられるのはホストだけ。** 選出はホストの仕事であり、Seat は選出のファクトである（§3-8）。
+ログインユーザーもゲストも、自分の操作は「ロビーに参加する」までで、着席はホストが行う。
+
 | Method | Path | 認証 | 説明 |
 |---|---|---|---|
-| GET | `/api/game-sessions/:id/seats` | ログイン任意 | 着席者一覧（表示名・キャラ名を含む） |
-| POST | `/api/game-sessions/:id/seats` | ログイン必須 | body 無し＝自分が着席（必要なら参加も同時に）/ `{ entryId }`＝ホストが着席させる |
-| POST | `/api/game-sessions/:id/guest-seats` | ゲストトークン | ゲストが参加 + 着席 |
-| DELETE | `/api/game-sessions/:id/seats/:seatId` | ログイン必須 | 離席。本人またはホスト。`204` |
-| PUT | `/api/game-sessions/:id/seats/:seatId/character` | ログイン必須 | `{ characterName }` を割り当て |
-| DELETE | `/api/game-sessions/:id/seats/:seatId/character` | ログイン必須 | 割り当て解除。`204` |
+| GET | `/api/lobbies/:lobbyId/game-sessions/:id/seats` | ログイン任意 | 着席者一覧（表示名・キャラ名を含む） |
+| POST | `/api/lobbies/:lobbyId/game-sessions/:id/seats` | ホストのみ | `{ entryId }` **必須**。選出して着席させる |
+| DELETE | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId` | ログイン必須 | 離席。本人またはホスト。`204` |
+| PUT | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId/character` | ログイン必須 | `{ characterName }` を割り当て |
+| DELETE | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId/character` | ログイン必須 | 割り当て解除。`204` |
+
+**廃止**: `POST .../guest-seats`（ゲストの「参加 + 着席」）。
+
+#### 「参加 + 着席」を1操作にしない
+
+概念設計の未決事項「直接卓立ての参加フロー」は、**提供しない**方向で決着とする。
+
+- **モデルを壊す。** ゲストだけが自分で Seat を作れるなら、「選出＝ホストが Seat を作ること」という
+  v2 の中心的な主張が崩れる。ログインユーザーとゲストで着席の権限が変わるのは、その歪みの現れだった
+- **セッションが複数あると成立しない。** 招待リンクは `/lobbies/{lobbyId}?token=…` でロビーしか
+  指していない。開催が2つあるロビー（2日に分けたケース）では、リンクから来た人がどちらに
+  着席するのか決まらない。成立するのは開催がちょうど1つのときだけで、モデルはそれを保証しない
+
+直接卓立ては「リンクを配る → 来た人が参加する → ホストが着席させる」の3ステップになるが、
+ホストは誰が来るか分かっているので実質1クリックで済む。
 
 ### 6-7. Play Memos
 
-現行のパスをそのまま維持する（内部の紐付けが `member_id` → `seat_id` に変わるだけ）。
+パスはセッション配下に移すが、**リクエスト・レスポンスの形は現行のまま**（§6-15）。
 
 | Method | Path | 認証 |
 |---|---|---|
-| GET | `/api/game-sessions/:id/play-memos/me` | ログイン必須 |
-| PUT | `/api/game-sessions/:id/play-memos/me` | ログイン必須 |
-| PATCH | `/api/game-sessions/:id/play-memos/me/visibility` | ログイン必須 |
-| GET | `/api/game-sessions/:id/play-memos` | ログイン任意 |
+| GET | `/api/lobbies/:lobbyId/game-sessions/:id/play-memos/me` | ログイン必須 |
+| PUT | `/api/lobbies/:lobbyId/game-sessions/:id/play-memos/me` | ログイン必須 |
+| PATCH | `/api/lobbies/:lobbyId/game-sessions/:id/play-memos/me/visibility` | ログイン必須 |
+| GET | `/api/lobbies/:lobbyId/game-sessions/:id/play-memos` | ログイン任意 |
 
 ### 6-8. 現行 API との対応表
 
 | 現行 | v2 | 備考 |
 |---|---|---|
+| `GET /api/lobbies` | `GET /api/me/lobbies` + `GET /api/lobbies` | 「自分の」と「探す」に分割 |
 | `POST /api/lobbies/:id/confirm` | `POST /api/lobbies/:id/game-sessions` | 「確定」から「開催を作る」へ |
-| `GET|PUT /api/lobbies/:id/availability-dates` | `.../schedule-polls/latest`, `.../schedule-polls/:pollId/candidate-dates` | poll が1階層挟まる |
+| `GET|PUT /api/lobbies/:id/availability-dates` | `.../schedule-polls/:pollId`, `.../schedule-polls/:pollId/candidate-dates` | poll が1階層挟まる |
 | `POST|DELETE /api/lobbies/:id/availability-dates[/:dateId]` | **廃止** | 一括更新に一本化 |
-| `.../availability-dates/:dateId/responses` | `.../candidate-dates/:dateId/answers` | 語彙を概念名に合わせる |
-| `/api/lobbies/:id/members` | `/api/lobbies/:id/entries` | 同上 |
+| `.../availability-dates/:dateId/responses` | `.../schedule-polls/:pollId/answers` | 候補日ごと → 調整ごとの一括に |
+| `.../availability-dates/:dateId/guest-responses` | `.../schedule-polls/:pollId/guest-answers` | 同上 |
+| `/api/lobbies/:id/members` | `/api/lobbies/:id/entries` | 語彙を概念名に合わせる |
 | `PATCH /api/lobbies/:id/status` (`open`/`cancelled`) | 同 (`open`/`closed`/`disbanded`) | `closed` 追加、`cancelled`→`disbanded` |
+| `GET /api/game-sessions` | `GET /api/me/game-sessions` | 公開セッションの横断一覧は廃止（ロビー経由で辿る） |
 | `POST /api/game-sessions` | **廃止** | ロビー配下へ |
-| `/api/game-sessions/:id/members[/:memberId]` | `/api/game-sessions/:id/seats[/:seatId]` | |
+| `/api/game-sessions/:id` ほか個別操作 | `/api/lobbies/:lobbyId/game-sessions/:id` ほか | すべてロビー配下に入れ子化 |
+| `/api/game-sessions/:id/members[/:memberId]` | `/api/lobbies/:lobbyId/game-sessions/:id/seats[/:seatId]` | |
 | `PATCH .../members/:memberId`（キャラ名） | `PUT .../seats/:seatId/character` | |
-| `/api/game-sessions/:id/guest-link`, `/guest-members` | **廃止** | ロビー側へ |
-| `GET /api/join/:token` | 同（返すのがロビーになる） | |
-| Play Memo 4本 | 変更なし | |
+| `/api/game-sessions/:id/guest-link`, `/guest-members` | **廃止** | トークンはロビーに1本化 |
+| `GET /api/join/:token` | **廃止** | 招待リンクが `lobbyId` を含むため不要（§6-5-1） |
+| Play Memo 4本 | パスのみ入れ子化。**形は変更なし** | 等価性の基準点（§6-15） |
 
 ### 6-9. レビュー用: エンドポイント差分サマリ
 

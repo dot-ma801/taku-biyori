@@ -695,42 +695,71 @@ stateDiagram-v2
 
 ### 5-5. 表示値の導出（未設定ならロビーを参照）
 
-セッションの表示は保存値ではなく導出値を返す。バックエンドの application 層で解決し、
-**解決済みの値と、上書きの生値の両方を返す。**
+セッションの `title` / `scenarioName` / `location` / `timeLabel` は、未設定ならロビーの値を表示する。
+API は**上書きの生値（`overrides`）とロビーの既定値（`lobby`）を返し、解決はクライアントが行う。**
 
 ```ts
 // GameSessionDetail のレスポンス
 {
   id, lobbyId, scheduledAt, status,
+  description: '当日は 13:50 に VC 集合',   // 上書きではない。セッション固有の値
 
-  // 表示用（解決済み）。session の値が null ならロビーの値が入る
-  title:        'マダミス「〇〇」',
-  scenarioName: '〇〇',
-  location:     'オンライン',
-  timeLabel:    '14:00〜',
-
-  // 編集フォーム用（生値）。null＝上書きしていない
+  // この開催だけの上書き。null＝上書きしていない
   overrides: {
     title:        null,
     scenarioName: null,
     location:     'カフェ〇〇',   // この開催だけ場所が違う
     timeLabel:    null,
   },
+
+  // 既定値の出所
+  lobby: {
+    id:           '…',
+    title:        'マダミス「〇〇」',
+    scenarioName: '〇〇',
+    location:     'オンライン',
+    maxPlayers:   6,
+    hostUserId:   '…',
+  },
 }
 ```
 
-#### なぜ解決済みの値と生値を両方返すのか
+#### 解決済みの値を返さない理由
 
-**片方だけだと編集フォームが壊れるため。**
+以前は「解決済みの値 + `overrides`」を返す設計にしていたが、**`lobby` を返すなら解決済みの値は冗長**になる。
+`overrides.title ?? lobby.title` で求まるものをサーバが先回りして持つのは、
+§6-1 の「導出できる値をレスポンスに足さない」に反する。
+
+`overrides` と `lobby` の**両方**が要る理由は、片方だけだと編集フォームが壊れるため。
 
 | 案 | 起きること |
 |---|---|
-| 解決済みの値だけ返す | 編集フォームを開くと、上書きしていない項目にもロビーの値が入って見える。そのまま保存すると**意図しない上書きが発生し、以後ロビーを改名しても追随しなくなる**。「ロビーと同じ値」と「ロビーの値を明示的にコピーした上書き」を区別できない |
-| 生値だけ返す（＋ロビーを別途取得） | 表示のたびにロビーを取得する必要があり、一覧 API が重くなる。フロントエンドが `??` の解決ロジックを持つことになり、backend と二重実装になる |
-| **両方返す（採用）** | 表示は `title` を使い、編集フォームは `overrides.title` を初期値にする。フォームが空＝上書きなし、が素直に表現できる |
+| 解決済みの値だけ | 編集フォームを開くと、上書きしていない項目にもロビーの値が入って見える。そのまま保存すると**意図しない上書きが発生し、以後ロビーを改名しても追随しなくなる**。「ロビーと同じ値」と「ロビーの値を明示的にコピーした上書き」を区別できない |
+| `overrides` だけ | 表示のたびにロビーを別途取得する必要がある |
+| **`overrides` + `lobby`（採用）** | 表示は `??` で解決、編集フォームの初期値は `overrides.title`。**フォームが空＝上書きなし**が素直に表現できる |
 
-`overrides` にまとめてフラットな `titleOverride` を並べないのは、フィールドが増えたときにレスポンスが
-二重に膨らむのを避けるためと、「この塊は編集用の生値である」という意図を型の形で示すため。
+#### 解決ロジックは `shared` に置く
+
+FE と BE で `??` を二重に書かないよう、`shared` に解決関数を1つ置いて両方から呼ぶ。
+ステータス導出を `shared` に置く方針（§4-5）と同じ棚に並べる。
+
+```ts
+// packages/shared/src/game-session/display.ts
+export const resolveGameSessionDisplay = (
+  session: { overrides: GameSessionOverrides },
+  lobby: LobbySummary,
+) => ({
+  title:        session.overrides.title        ?? lobby.title,
+  scenarioName: session.overrides.scenarioName ?? lobby.scenarioName,
+  location:     session.overrides.location     ?? lobby.location,
+  timeLabel:    session.overrides.timeLabel,   // ロビーに既定値が無い
+});
+```
+
+一覧（`GameSessionListItem` / `GameSessionSummary`）は**ロビーが自明な文脈で使われる**ため、
+`lobby` を要素ごとに繰り返さず、解決済みの値を持たせる。
+`GET /api/lobbies/:id` の `gameSessions[]` は親がロビーそのもの、
+`GET /api/me/game-sessions` は一覧 API 側で解決して返す。
 
 **既定値を DB に書き込まない**ため、ロビーを改名すると上書きしていないセッションの表示も追随する。
 「{ロビーの title} #1」のような連番表示が必要なら、`lobby_id` 内の `scheduled_at` 順で表示時に採番する。
@@ -1646,11 +1675,11 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `403` | 非公開ロビーをホスト以外が閲覧 |
 | `404` | ロビーが存在しない |
 
-#### 6-13-5. `GET /api/game-sessions/:id`（表示値の導出）
+#### 6-13-5. `GET /api/lobbies/:lobbyId/game-sessions/:id`（`overrides` + `lobby`）
 
 | 項目 | 内容 |
 |---|---|
-| 認証 | ログイン任意（所属ロビーの `is_published` に従う） |
+| 認証 | ログイン任意（所属ロビーの `published_at` に従う） |
 | リクエスト | なし |
 | レスポンス | `200` `GameSessionDetail` |
 
@@ -1662,31 +1691,36 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `lobbyId` | uuid | ファクト | **非 null**（§9-3） |
 | `scheduledAt` | date | ファクト | 「この日に開くと決めた」決定（§3-7） |
 | `status` | `GameSessionStatus` | 導出 | `scheduled`/`today`/`completed`/`cancelled`（§4-2） |
-| `title` | string | **解決済み** | `session.title ?? lobby.title` |
-| `scenarioName` | string \| null | **解決済み** | `session.scenario_name ?? lobby.scenario_name` |
-| `location` | string \| null | **解決済み** | `session.location ?? lobby.location` |
-| `timeLabel` | string \| null | **解決済み** | `session.time_label`（ロビー側に対応列が無いので実質は生値） |
 | `description` | string \| null | ファクト | **当日の連絡事項。上書きではない**（セッション固有。§3-7） |
-| `overrides` | object | **生値** | 下記 |
+| `overrides` | object | **生値** | この開催だけの上書き。下記 |
 | `overrides.title` | string \| null | 生値 | `null` ＝上書きしていない |
 | `overrides.scenarioName` | string \| null | 生値 | |
 | `overrides.location` | string \| null | 生値 | |
-| `overrides.timeLabel` | string \| null | 生値 | |
+| `overrides.timeLabel` | string \| null | 生値 | ロビー側に対応列が無いので実質は生値のみ |
 | `completedAt` | date-time \| null | ファクト | |
 | `cancelledAt` | date-time \| null | ファクト | |
 | `seats` | `Seat[]` | | 着席者。`seatedAt` 昇順 |
-| `lobby` | object | | 表示のための最小限のロビー情報（下記） |
+| `lobby` | `LobbySummary` | | 既定値の出所（下記） |
 | `createdAt` / `updatedAt` | date-time | | |
 
-`lobby` に入れるのは次の4つだけ。ロビー全体を埋め込まないのは、
-セッション詳細画面が必要とするのが「戻り導線」と「ホストかどうかの判定」だけだからである。
+**解決済みの `title` / `scenarioName` / `location` は返さない。**
+`overrides` と `lobby` があれば `??` で求まるため（§5-5・§6-1）。
+クライアントは `shared` の `resolveGameSessionDisplay()` を呼ぶ。
+
+`LobbySummary` — 既定値の出所であり、パンくずと権限判定の材料でもある。
 
 | フィールド | 型 | 用途 |
 |---|---|---|
 | `id` | uuid | パンくず・戻り導線 |
-| `title` | string | パンくず表示 |
+| `title` | string | **既定値**（`overrides.title` が null のとき）+ パンくず表示 |
+| `scenarioName` | string \| null | 既定値 |
+| `location` | string \| null | 既定値 |
+| `maxPlayers` | integer \| null | 定員の目安の表示 |
 | `hostUserId` | string | 閲覧者がホストかの判定（ボタンの活性） |
 | `status` | `LobbyStatus` | 解散済みロビーの開催であることの表示 |
+
+ロビー全体を埋め込まないのは、`entries` や `gameSessions` まで抱えるとレスポンスが重くなるため。
+`LobbySummary` は他のエンドポイントからも参照する共通スキーマとして切る。
 
 **現行 `GameSession` から消えるフィールド**:
 
@@ -1829,29 +1863,38 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 
 この1本だけは実装タスクで機械的な置換にならないので、タスク4 で注意すること。
 
-### 6-15. プレイメモ4本を触らないこと（等価性の基準点）
+### 6-15. プレイメモ4本の扱い（等価性の基準点）
 
-プレイメモは**パスもリクエストもレスポンスも1文字も変えない。**
-内部の紐付けが `play_memos.member_id` → `seat_id` に変わるだけである（§3-10）。
+プレイメモは**リクエスト・レスポンスの構造を変えない。**
+パスはセッション配下への入れ子化に追従するが（§6-7）、ボディの形は現行のままとする。
 
 これは移行の**等価性検証の基準点**として使うための意図的な判断である。
 モデルを全面的に作り直す移行では「壊れたのか、仕様が変わったのか」の区別がつかなくなる。
-契約が完全に固定された経路を4本残しておけば、そこが赤くなったときは
-必ず移行の事故だと断定できる。
+形が固定された経路を4本残しておけば、そこが赤くなったときは必ず移行の事故だと断定できる。
 
-したがって次の点は**直さない。**
+#### ただし `memberId` は `seatId` に改名する
 
-| 気になる点 | それでも直さない理由 |
+当初は「キー名も1文字も変えない」としていたが、**それは採らない。**
+
+`memberId` というキーに `seats.id` を入れて返すと、**名前が嘘をつく**。移行が終わった後も
+その嘘が残り、`memberId` で grep した人が `game_session_members` を探すことになる。
+その場しのぎの検証都合のために恒久的な負債を作ることになるため、改名する。
+
+| 変更 | 対象 |
 |---|---|
-| レスポンスの `memberId` が実際には `seats.id` を指すようになる | 直すと「レスポンス形不変」が崩れ、基準点として使えなくなる |
-| `GET .../play-memos` の突合先が `.../members` → `.../seats` に変わるのに、突合キー名は `memberId` のまま | 同上 |
-| `PUT .../play-memos/me` の状態エラーが `409`（他は `422` に寄せた。§6-10） | 同上 |
+| `memberId` → `seatId` | `MyGameSessionPlayMemo` / `SharedGameSessionPlayMemo` の突合キー |
+| 突合先 | `GET .../seats` の `id` |
 
-> **レビューで決めたいこと。** `memberId` というキー名が `seats.id` を運ぶのは、
-> 移行が終わったあとには明確な負債になる。**タスク7（横断的な語彙整理）で
-> `memberId` → `seatId` に改名する**のが素直だと考えているが、
-> その場合は基準点の役目が終わったあとに行う必要がある。
-> 「移行中は不変 / 移行後に改名」という段取りでよいか確認したい。
+等価性の確認は、キー名を凍結しなくても
+**「移行前のレスポンスを記録しておき、キー名の対応表を通して突き合わせる」**で足りる。
+凍結すべきなのは**エンドポイントの集合と意味論**であって、リテラルなキー名ではない。
+
+改名はタスク6（プレイメモの `seat_id` 付け替え）と同時に行う。別タスクに分けると
+`memberId` のまま動く期間が生まれ、かえって混乱するため。
+
+なお `PUT .../play-memos/me` の状態エラーが `409`（他は `422` に寄せた。§6-10）である点は
+**現行のまま据え置く。** これはレスポンス形ではなくステータスコードの話であり、
+基準点としての価値がそのまま残るため。
 
 ---
 

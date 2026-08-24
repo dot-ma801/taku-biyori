@@ -69,7 +69,7 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 |---|---|---|
 | ステータス（ロビー・セッション） | ファクトカラムからの**導出関数** | 独立した同一性もライフサイクルも無い。状態を保存すると事実と状態の二重管理になる（v1 からの継続方針） |
 | ロール（ホスト / 参加者 / ゲスト参加者） | `lobbies.host_user_id`、`lobby_entries.user_id IS NULL` | ホストは「ロビーが持つ1つの属性」であり、ゲスト参加者は `LobbyEntry` の一状態。`roles.md` も「ゲスト参加者は独立した概念ではなく LobbyEntry の一状態」と明記している |
-| 募集 | `lobbies.is_published` + `open_until` | 概念設計で独立概念化を検討し**棄却済み**（「募集を独立概念にするかの検討」）。「2回目の募集」を区別して語る現実が無い |
+| 募集 | `lobbies.published_at` + `open_until` + `reception_closed_at` | 概念設計で独立概念化を検討し**棄却済み**（「募集を独立概念にするかの検討」）。「2回目の募集」を区別して語る現実が無い |
 | 選出 / 非選出 | `Seat` の**有無** | 「選ばれた」というファクトは着席そのもの。専用の行を持つと現行の `lobby_member_id` 突合が別の形で復活する |
 
 #### 判断が割れうるもの
@@ -98,7 +98,7 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 | 中止が募集枠側と卓側の2概念に割れる | 「企画の解散（`disbanded_at`）」と「開催の中止（`cancelled_at`）」は別テーブルの別カラム |
 | `lobbies.closed_at`（確定＝終端） | カラムごと消滅 |
 | 再調整＝新しい募集枠を立て直す | 同じロビーに `schedule_polls` をもう1行作るだけ |
-| `game_sessions.is_published` / `max_players` / `host_user_id` | すべてロビー側の関心事。セッションからは消える |
+| `game_sessions.is_published`（→ ロビーの `published_at`） / `max_players` / `host_user_id` | すべてロビー側の関心事。セッションからは消える |
 
 ---
 
@@ -162,12 +162,31 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 | `location` | text | | 場所の既定値 |
 | `max_players` | integer | | 定員の目安。超えて集めてよい |
 | `guest_link_token` | text | NOT NULL | ゲスト招待トークン。**ロビーに1つだけ**。再発行で上書き |
-| `is_published` | boolean | NOT NULL, default false | 公開フラグ |
+| `published_at` | timestamp | | 下書きを抜けて動き出した時点。NULL なら下書き |
 | `open_until` | date | | 受付締め切り。NULL は無期限受付 |
+| `reception_closed_at` | timestamp | | ホストが受付を手動で閉じた時点。追加募集で NULL に戻す |
 | `disbanded_at` | timestamp | | 企画の解散 |
 | `created_at` / `updated_at` | timestamp | NOT NULL | |
 
-**現行からの差分**: `closed_at` を削除、`cancelled_at` を `disbanded_at` に改名。他は据え置き。
+**現行からの差分**: `closed_at` を削除、`cancelled_at` を `disbanded_at` に改名、
+`is_published`（boolean）を `published_at`（nullable timestamp）に変更、`reception_closed_at` を追加。
+
+#### `is_published` を `published_at` にする理由
+
+1. **命名が2つの意味に読める。** 「下書きではない」と「全ユーザーに公開されている」の両方に取れる。
+   将来「全ユーザーに公開する / URL 共有のみ」という軸が生えたとき、`is_published` に載せると必ず混線する。
+   `published_at` は「動き出した時点」という**事実**に限定され、可視性は別の属性として足せる
+2. **この設計で唯一 boolean のファクトだった。** 他は `disbanded_at` / `left_at` / `completed_at` /
+   `cancelled_at` / `shared_at` とすべて nullable timestamp で、形が揃っていなかった
+
+#### 「受付の締め切り」と「受付を閉じた」を分ける理由
+
+`open_until`（締め切り日）と `reception_closed_at`（手動クローズ）は**別の出来事**である。
+1列にまとめると「今すぐ受付を閉じる」を `open_until = 昨日` で表現するしかなくなり、
+ホストが元々入れていた締め切り日が失われる。追加募集で開き直すときに復元できず、
+ホストが選んでいない日付が「受付締切」として UI に出ることにもなる。
+
+分けておけば、追加募集は `reception_closed_at` を NULL に戻すだけで済み、締め切り日はそのまま残る。
 
 ### 3-3. `lobby.lobby_entries`
 
@@ -181,9 +200,19 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 | `created_at` / `updated_at` | timestamp | NOT NULL | |
 
 - partial unique index `(lobby_id, user_id) WHERE user_id IS NOT NULL` — 現行の `lobby_members` から継続
-- **`left_at` は unique の条件に含めない。** 再参加は新しい行を作らず `left_at = NULL` に戻す（同じ人の参加は常に1行）。
+- **`left_at` は unique の条件に含めない。** 再参加は新しい行を作らず `left_at = NULL` に戻す。
   これにより過去の着席・回答・メモが自然に繋がったまま復帰できる
 - **脱退はハード削除しない。** Seat・ScheduleAnswer・PlayMemo が参照しているため、削除すると過去の開催記録が壊れる
+
+> **「同じ人の参加は1行」が成り立つのはログインユーザーだけである。**
+> partial unique の条件が `user_id IS NOT NULL` なので、ゲスト（`user_id` が NULL）は対象外になる。
+> ゲストには本人確認手段が無く、招待リンクを開き直せば別の行ができる。したがって
+> **ゲストが一度ロビーから外れると、過去の回答・着席・メモには繋がらない。**
+>
+> これは v2 で持ち込んだ制限ではなく、ゲストに同一性が無いことの帰結である（v0.1 も同じ）。
+> 実際に問題になるのは「ホストがゲストを外し、そのゲストがリンクを開き直した場合」に限られる
+> （ゲスト自身は認証できないため、自分では脱退できない）。
+> ゲストに同一性を持たせるかどうかは Ph2 の検討事項とする（§10）。
 
 ### 3-4. `lobby.schedule_polls`
 
@@ -191,11 +220,24 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 |---|---|---|---|
 | `id` | uuid | PK | |
 | `lobby_id` | uuid | NOT NULL, FK → `lobbies.id` ON DELETE CASCADE | |
-| `created_at` / `updated_at` | timestamp | NOT NULL | |
+| `created_at` | timestamp | NOT NULL, **default `clock_timestamp()`** | 調整の開始日時。既定値が他テーブルと違う（下記） |
+| `updated_at` | timestamp | NOT NULL | |
 
 - index `(lobby_id, created_at DESC)`
-- 「最新の調整」は `ORDER BY created_at DESC, id DESC LIMIT 1` で取る（同一 timestamp のタイブレークに `id` を使う）
+- 「最新の調整」は `ORDER BY created_at DESC LIMIT 1` で取る
 - 終了ファクト（`closed_at`）は**持たない**。概念設計の未決事項どおり、必要になったら additive に追加する
+
+#### `created_at` の既定値だけ `clock_timestamp()` にする理由
+
+PostgreSQL の `now()` は**トランザクション開始時刻**を返すため、同一トランザクション内で
+2つの poll を作ると `created_at` が完全に同値になる（#110 の先行検証で実測）。
+`id` は uuid v4 で順序を持たないためタイブレークにもならず、**「最新の調整」が不定になる**。
+
+`clock_timestamp()` は実時刻を返すので、同一トランザクション内でも値が衝突しない。
+「同じトランザクションで poll を2つ作る経路を作らない」という規約で守る手もあるが、
+規約はシードスクリプトやテストで破られるため、仕組みで担保する。
+
+このテーブルだけ既定値の意味が他と異なる（他は `now()` ＝トランザクション開始時刻）点に注意。
 
 ### 3-5. `lobby.candidate_dates`
 
@@ -242,7 +284,7 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 | `created_at` / `updated_at` | timestamp | NOT NULL | |
 
 - index `(lobby_id, scheduled_at)`
-- **削除されるカラム**: `host_user_id`（→ ロビー）、`guest_link_token`（→ ロビー）、`is_published`（→ ロビー）、`max_players`（→ ロビー）
+- **削除されるカラム**: `host_user_id`（→ ロビー）、`guest_link_token`（→ ロビー）、`is_published`（→ ロビーの `published_at`）、`max_players`（→ ロビー）
 - 「直接卓立て」も **必ずロビーを1つ作る**。`lobby_id` を nullable にしない理由は §9-3
 
 ### 3-8. `game_session.seats`
@@ -319,8 +361,9 @@ erDiagram
         text location "NULL可・場所の既定値"
         integer max_players "NULL可・定員の目安"
         text guest_link_token "招待トークン。ロビーに1つ"
-        boolean is_published "既定 false"
+        timestamp published_at "NULL可・NULL なら下書き"
         date open_until "NULL可・NULL は無期限受付"
+        timestamp reception_closed_at "NULL可・手動で受付を閉じた"
         timestamp disbanded_at "NULL可・企画の解散"
     }
 
@@ -444,26 +487,35 @@ erDiagram
 
 ### 4-1. ロビーのステータス
 
-ファクト `{ isPublished, openUntil, disbandedAt }` から導出する。**先頭一致**。
+ファクト `{ publishedAt, openUntil, receptionClosedAt, disbandedAt }` から導出する。**先頭一致**。
 
 | # | 条件 | ステータス | 日本語 | 意味 |
 |---|---|---|---|---|
 | 1 | `disbandedAt != null` | `disbanded` | **解散** | 企画そのものを終了した |
-| 2 | `!isPublished` | `draft` | **下書き** | まだ公開していない（ホストのみ閲覧可） |
-| 3 | `openUntil == null` または `today <= openUntil` | `open` | **受付中** | 新しい参加者を受け付けている |
-| 4 | それ以外 | `closed` | **受付終了** | 受付を締め切っている（企画自体は継続中） |
+| 2 | `publishedAt == null` | `draft` | **下書き** | まだ公開していない（ホストのみ閲覧可） |
+| 3 | `receptionClosedAt != null` | `closed` | **受付終了** | ホストが手動で締め切った |
+| 4 | `openUntil == null` または `today <= openUntil` | `open` | **受付中** | 新しい参加者を受け付けている |
+| 5 | それ以外 | `closed` | **受付終了** | 締め切り日を過ぎた |
 
 - **`confirmed` は存在しない。** 確定という終端概念が消えるため
 - `closed` は「受付が閉じている」だけを意味する。開催があるかどうかとは**独立**
-- `open ⇄ closed` は往復する（追加募集＝もう一度開く）
+- `closed` に至る経路は2つある（手動クローズ / 締め切り日の経過）。**表示上は区別しない**が、
+  ファクトとしては別なので、追加募集で開き直すときの挙動が変わる（下記）
+- `open ⇄ closed` は往復する
 
-ロビーの「今どうなっているか」は、ステータス1つでは語れない。UI は次の**独立したファクト**を併せて表示する。
+#### 受付を閉じる / 開き直す
 
-| 導出値 | 定義 |
+| 操作 | 書き込み |
 |---|---|
-| `nextGameSession` | `cancelled` でも `completed` でもないセッションのうち `scheduled_at` が最も近いもの |
-| `gameSessionCount` | 中止を除くセッション数 |
-| `hasOpenPoll` | `schedule_polls` が1件以上ある（＝最新の調整が回答を受け付けている） |
+| 受付を閉じる | `reception_closed_at = now()` |
+| 追加募集（開き直す） | `reception_closed_at = NULL`。**`open_until` も過ぎていれば併せて延長が必要** |
+
+追加募集の際、`open_until` が過去のままだと `reception_closed_at` を消しても `closed` のままになる。
+UI はこのとき締め切り日の入力を促すか、同時に `open_until` を更新する。
+
+> ロビーの「今どうなっているか」はステータス1つでは語れないが、**セッションや調整の件数を
+> 導出フィールドとして API に持たせることはしない**（§6-1）。クライアントは `gameSessions` /
+> `schedulePolls` の配列から必要な値を自分で求める。
 
 ### 4-2. セッションのステータス
 
@@ -487,14 +539,15 @@ erDiagram
 |---|---|---|
 | ロビーの編集 | ホスト | `disbanded` 以外 |
 | ロビーの公開（`draft`→`open`） | ホスト | `draft` |
-| 受付を閉じる / 開く（`open`⇄`closed`） | ホスト | `open` または `closed` |
+| 受付を閉じる（`reception_closed_at` をセット） | ホスト | `open` |
+| 追加募集（`reception_closed_at` をクリア） | ホスト | `closed` |
 | ロビーの解散 | ホスト | `disbanded` 以外 |
 | ロビーの削除 | ホスト | `draft` かつ 他の参加者なし かつ セッション0件 |
 | ロビーへの参加 | 参加者 / ゲスト | `open` |
 | ロビーからの脱退 | 本人 / ホスト | `disbanded` 以外。ホスト自身の参加は脱退不可 |
 | 日程調整を始める | ホスト | `disbanded` 以外 |
 | 候補日の編集 | ホスト | 最新の調整のみ。`disbanded` 以外 |
-| ◯△×の回答 | 参加者 / ゲスト | 最新の調整のみ。ロビーが `disbanded` 以外かつ `isPublished` |
+| ◯△×の回答 | 参加者 / ゲスト | 最新の調整のみ。ロビーが `disbanded` 以外かつ公開済み（`publishedAt != null`） |
 | セッションを開く | ホスト | ロビーが `disbanded` 以外 |
 | セッションの編集 | ホスト | `cancelled` 以外 |
 | セッションの完了 | ホスト | `today` または `scheduled` |
@@ -624,7 +677,7 @@ stateDiagram-v2
 ### 5-3. 直接卓立て
 
 受付を開かないロビーを作り、そこにセッションを1つ作る。API 上は
-`POST /api/lobbies`（`isPublished: false`・候補日なし）→ `POST /api/lobbies/:id/game-sessions` の2ステップ。
+`POST /api/lobbies`（候補日なし。作成直後は必ず下書き）→ `POST /api/lobbies/:id/game-sessions` の2ステップ。
 **フロントエンドはこれを1画面1ボタンで提供する**（BFF 的な合成はせず、フロントの composable が2回叩く）。
 
 ### 5-4. 参加 + 着席（1操作）
@@ -1865,6 +1918,22 @@ Seat・ScheduleAnswer・PlayMemo がすべて `lobby_entry_id` を参照する�
 
 再参加時は新しい行を作らず `left_at = NULL` に戻す。partial unique index が「同じ人の参加は1行」を保証する。
 
+#### この保護が及ぶ範囲
+
+**「過去の記録が壊れない」と言えるのは、ロビーからの脱退についてだけである。**
+
+| 操作 | 過去のメモ・キャラ割り当て |
+|---|---|
+| ロビーからの脱退（`lobby_entries.left_at`） | **残る**（本節の対象） |
+| **着席の解除・離席**（`seats` の行を削除） | **消える**（`play_memos` / `character_assignments` が cascade） |
+
+着席の解除では、その回のメモとキャラ割り当てが消える。`seats` にも `left_at` を持たせて
+ソフト削除にすれば防げるが、**着席を解除されたならその回の記録も不要**と判断し、採らなかった。
+着席者一覧・定員カウントなどすべてのクエリに `left_at IS NULL` が必要になる割に、
+守られるのは「一度着席を外された人のメモ」だけであるため。
+
+**ゲストにはこの保護が及ばない**（同一性を追えないため）。§3-3 の注記を参照。
+
 ### 9-6. 候補日の単体 POST / DELETE を廃止する
 
 フロントエンドは一括更新 `PUT` しか使っておらず、単体エンドポイントは実質デッドコードだった
@@ -1911,6 +1980,9 @@ CLAUDE.md の「表示用フォールバックはコンポーネントに置く�
 | 見学者・補欠 | 「着席か否か」の二値が濁る | `seats` の種別として検討 |
 | CharacterAssignment を LobbyEntry 側へ | マダミス / 連作でどちらが自然か未決 | FK を `seat_id` → `lobby_entry_id` に付け替え |
 | 仮押さえ（仮確定） | `cancelled_at` が二義になる | 要望が来たら検討 |
+| **ゲストの同一性** | 本人確認手段が無く、リンクを開き直すと別の参加として扱われる（§3-3）。解決にはブラウザ保持のゲストトークン等が必要でスコープが大きい | `lobby_entries` にゲスト識別子を追加 |
+| **ロビーの可視性（全体公開 / URL 共有のみ）** | v0.3 では直接卓立てのロビーも公開一覧に載る。v0.1 と同じ挙動なので退行ではない | `lobbies` に `visibility` を追加し、公開一覧のクエリで絞る。`published_at` とは別の軸として足せる |
+| **着席解除でメモが消える** | 着席を外されたならその回の記録も不要と判断（§9-5） | `seats` に `left_at` を追加してソフト削除にする |
 | グループ（固定メンバーの集まり） | メンバー管理の現実がまだ無い | ロビーの上位概念として追加 |
 | シナリオの独立概念化 | Ph2 のシナリオ管理待ち | `lobbies.scenario_name` → `scenario_id` 参照へ |
 | `GameSession → CandidateDate` の出自リンク | 現実に語る場面がない | `game_sessions` に nullable FK 追加 |

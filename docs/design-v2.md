@@ -1217,14 +1217,26 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `answer` | `ok` \| `maybe` \| `ng` | |
 | `comment` | string \| null | 最大500文字 |
 
-**`LobbyCandidateDate`** — 候補日（`lobby.candidate_dates`）
+**`LobbyCandidateDate`** — 候補日そのもの（`lobby.candidate_dates`）
 
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `id` | uuid | |
 | `date` | date | |
 | `timeLabel` | string \| null | 最大20文字。**現行の `dateNote` の改名**（§2-3） |
+
+**`LobbyCandidateDateWithAnswers`** — 候補日 + 回答（`LobbyCandidateDate` + `answers`）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| （`LobbyCandidateDate` の全フィールド） | | |
 | `answers` | `LobbyScheduleAnswer[]` | この候補日への回答。回答が無ければ空配列 |
+
+回答を入れ子で返すのは**表を描くための読み取り系だけ**にする。
+`LobbySchedulePoll`（`GET .../schedule-polls/:pollId`、ロビー詳細）は回答つき、
+候補日を書き換える `PUT .../candidate-dates` のレスポンスは回答なし。
+書き込みの結果として「差し替えで消えた回答・残った回答」を返すと、
+表の状態と書き込みの結果が同じ形で混ざる。表を描き直したいときは調整を取り直す。
 
 **`LobbySchedulePollSummary`** — 日程調整の要約（履歴一覧・ロビー詳細で使う）
 
@@ -1239,7 +1251,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 |---|---|---|
 | `id` | uuid | |
 | `lobbyId` | uuid | |
-| `candidateDates` | `LobbyCandidateDate[]` | `date` 昇順 |
+| `candidateDates` | `LobbyCandidateDateWithAnswers[]` | `date` 昇順 |
 | `createdAt` | date-time | |
 
 > **`isLatest` / `candidateDateCount` / `answeredEntryCount` は持たない。**

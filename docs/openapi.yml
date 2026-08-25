@@ -791,6 +791,10 @@ paths:
 
         v0.2 にあった候補日の単体 `POST` / `DELETE` は廃止した（フロントは一括更新しか使っていなかった。
         design-v2 §9-6）。
+
+        送った候補日で**全置換**するため、メソッドは `PUT`（回答の差分更新 `PATCH .../answers` と対）。
+        置換で消えた候補日の回答は cascade で消える。レスポンスは候補日だけを返し、
+        回答は含まない（残った回答も含めて表を描き直すなら `GET .../schedule-polls/{pollId}` を取り直す）。
       operationId: replaceCandidateDates
       requestBody:
         required: true
@@ -800,7 +804,10 @@ paths:
               $ref: '#/components/schemas/ReplaceCandidateDatesInput'
       responses:
         '200':
-          description: 更新後の候補日一覧
+          description: |
+            更新後の候補日一覧（`date` 昇順）。**回答は含まない**。
+            新しく採番された候補日の `id` を返すためのレスポンスであり、
+            回答つきの表を描き直したい場合は `GET .../schedule-polls/{pollId}` を取り直す。
           content:
             application/json:
               schema:
@@ -2364,7 +2371,7 @@ components:
           type: array
           description: '`date` 昇順'
           items:
-            $ref: '#/components/schemas/LobbyCandidateDate'
+            $ref: '#/components/schemas/LobbyCandidateDateWithAnswers'
         createdAt:
           type: string
           format: date-time
@@ -2372,9 +2379,9 @@ components:
     LobbyCandidateDate:
       type: object
       description: |
-        候補日（lobby.candidate_dates）。v0.2 の `LobbyAvailabilityDate` の改名。
-        各参加者の回答一覧を `answers` に入れ子で持つ。
-      required: [id, date, timeLabel, answers]
+        候補日（lobby.candidate_dates）そのもの。v0.2 の `LobbyAvailabilityDate` の改名。
+        **回答は含まない。** 回答つきで欲しいときは `LobbyCandidateDateWithAnswers` を使う。
+      required: [id, date, timeLabel]
       properties:
         id:
           type: string
@@ -2389,18 +2396,32 @@ components:
           description: |
             時間帯の自由記述（「午後」「〜15時」等）。最大20文字。未入力は null。
             v0.2 の `dateNote`（ひとこと）の改名。実態が時間帯の記述だったため意味を明確にした。
-        answers:
-          type: array
-          description: この候補日に対する各参加者の◯△×回答。回答が無ければ空配列
-          items:
-            $ref: '#/components/schemas/LobbyScheduleAnswer'
+
+    LobbyCandidateDateWithAnswers:
+      description: |
+        候補日 + その候補日に対する各参加者の◯△×回答。
+        **日程調整の表を描く読み取り系（`GET .../schedule-polls/{pollId}` など）専用。**
+        候補日を書き換える系（`PUT .../candidate-dates`）は回答を返さない。
+        候補日の差し替えで消えた回答・残った回答をレスポンスから読み取らせると、
+        書き込みの結果と表の状態が同じ形で混ざってしまうため
+        （表を描き直したいときは調整を取り直す）。
+      allOf:
+        - $ref: '#/components/schemas/LobbyCandidateDate'
+        - type: object
+          required: [answers]
+          properties:
+            answers:
+              type: array
+              description: この候補日に対する各参加者の◯△×回答。回答が無ければ空配列
+              items:
+                $ref: '#/components/schemas/LobbyScheduleAnswer'
 
     LobbyScheduleAnswer:
       type: object
       description: |
         候補日に対する◯△×回答（lobby.schedule_answers）。
         v0.2 の `LobbyAvailabilityDateAnswer` の改名。
-        `LobbyCandidateDate.answers` に入れ子で返すため、親候補日への逆参照と `createdAt` は持たない。
+        `LobbyCandidateDateWithAnswers.answers` に入れ子で返すため、親候補日への逆参照と `createdAt` は持たない。
       required: [id, entryId, answer]
       properties:
         id:

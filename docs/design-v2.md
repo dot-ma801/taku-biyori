@@ -879,8 +879,8 @@ Spotify の `/me/playlists` と同じ。
 | GET | `/api/lobbies/:id/schedule-polls/:pollId` | ログイン任意 | 指定した調整（候補日 + 全回答） |
 | POST | `/api/lobbies/:id/schedule-polls` | ホストのみ | **新しい日程調整を始める**（`{ candidateDates[] }`） |
 | PUT | `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates` | ホストのみ | 候補日の一括更新。最新以外は `409` |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/answers` | ログイン必須 | **自分の回答を一括登録・更新** |
-| PUT | `/api/lobbies/:id/schedule-polls/:pollId/guest-answers` | ゲストトークン | ゲストの回答を一括（body に `entryId`） |
+| PATCH | `/api/lobbies/:id/schedule-polls/:pollId/answers` | ログイン必須 | **自分の回答を一括登録・更新**（差分 upsert） |
+| PATCH | `/api/lobbies/:id/schedule-polls/:pollId/guest-answers` | ゲストトークン | ゲストの回答を一括（body に `entryId`） |
 
 **廃止**: 候補日の単体 `POST` / `DELETE`（現行の `POST|DELETE /api/lobbies/:id/availability-dates[/:dateId]`）。
 フロントエンドは一括更新しか使っていないため落とす。
@@ -892,10 +892,9 @@ Spotify の `/me/playlists` と同じ。
 
 現実の操作は「調整の表を開いて、全部の候補日に◯△×を付けて保存」であり、
 候補日ごとに1リクエスト（現行の `PUT .../availability-dates/:dateId/responses`）は実態と合っていない。
-候補日の一括更新（`PUT .../candidate-dates`）とも形が揃う。
 
 ```jsonc
-PUT /api/lobbies/{id}/schedule-polls/{pollId}/answers
+PATCH /api/lobbies/{id}/schedule-polls/{pollId}/answers
 {
   "answers": [
     { "candidateDateId": "…", "answer": "ok",    "comment": null },
@@ -906,6 +905,11 @@ PUT /api/lobbies/{id}/schedule-polls/{pollId}/answers
 
 **送った候補日ぶんだけ upsert する差分更新**とし、送らなかった候補日の回答は消さない。
 「全消しして入れ直す」にすると、複数人が同時に触ったときに他人の回答まで巻き込む余地が出るため。
+
+そのためメソッドは `PUT` ではなく **`PATCH`** にする。
+`PUT` はコレクション全体を送ったもので置き換える約束であり、差分 upsert とは合わない。
+候補日の一括更新（`PUT .../candidate-dates`）が全置換で、回答（`PATCH .../answers`）が差分、
+という対比がそのままメソッドに出る。ゲスト用（`PATCH .../guest-answers`）も同じ。
 
 ゲスト用は同じ形に `entryId` を足す。ゲストには本人確認手段が無いため、
 どの参加を更新するかをボディで名指しする（トークン保持者は全ゲストぶんを編集できる。現行方針を継続）。
@@ -1793,7 +1797,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | レスポンス | `LobbyAvailabilityDate[]`（候補日の配列） | `LobbySchedulePoll`（`candidateDates` を内包） |
 
 `SchedulePoll` が1階層挟まったためである。**配列のままにはできない。**
-候補日の一括更新も回答も `PUT .../schedule-polls/:pollId/...` を叩くので、
+候補日の一括更新（`PUT`）も回答（`PATCH`）も `.../schedule-polls/:pollId/...` を叩くので、
 フロントは `pollId` を知る必要があり、それを運べるのは poll 本体を返す形しかない。
 
 `pollId` は `GET /api/lobbies/:id` の `schedulePolls[0].id`（最新）から得る。

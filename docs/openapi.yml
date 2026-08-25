@@ -42,6 +42,17 @@ info:
     判定は `400` → `401` → `403` → `404` → `409`/`422` の順に行う。
     `423 Locked` は使わない（v0.2 の仕様書には記載があったが実装は一度も返していなかった）。
 
+    ## メソッドの使い分け
+    | メソッド | 意味 | 例 |
+    |---|---|---|
+    | `PUT` | 送ったもので**全体を置き換える** | `PUT .../candidate-dates`（候補日の全置換） |
+    | `PATCH` | 送ったぶんだけ**部分的に変える** | `PATCH .../answers`（回答の差分 upsert）、`PATCH .../seats/{seatId}` |
+    | `POST` | 新しいリソースを作る・再発行する | `POST .../entries`、`POST .../guest-link` |
+    | `DELETE` | リソースを消す | `DELETE .../seats/{seatId}`（離席） |
+
+    「一括で送る」ことは `PUT` の理由にならない。全部送っても、送らなかったぶんを
+    消さない操作は `PATCH` である。
+
     ## 命名規則
     - URL は `/lobbies`・`/game-sessions` を使用
     - コード内の変数・型名は `gameSession` / `GameSession` プレフィックスを使用（Better Auth の `session` と衝突回避のため）
@@ -822,7 +833,7 @@ paths:
       - $ref: '#/components/parameters/LobbyId'
       - $ref: '#/components/parameters/SchedulePollId'
 
-    put:
+    patch:
       tags: [SchedulePolls]
       summary: 日程回答を一括登録・更新（◯△×・ログインユーザー）
       description: |
@@ -830,12 +841,18 @@ paths:
         Cookie のセッションからユーザーを解決し、そのユーザーの LobbyEntry を自動で特定する。
         **自分の回答のみ**編集可。
 
+        操作の主体をパスやボディで受け取らないのは、この API 全体の規約である。
+        ログインユーザーの主体は常に Cookie から解決し（`POST .../entries`、`.../play-memos/me` も同じ）、
+        クライアントが名乗った ID は信用しない。主体をボディで名指しするのは、
+        Cookie を持たないゲスト（`guest-answers` の `entryId`）だけである。
+
         実際の操作は「調整の表を開いて全部の候補日に◯△×を付けて保存」なので、
         候補日ごとに1リクエストではなく調整ごとの一括更新にする（design-v2 §6-4）。
-        候補日の一括更新（`PUT .../candidate-dates`）とも形が揃う。
 
         **送った候補日ぶんだけ upsert する差分更新**であり、送らなかった候補日の回答は消さない。
         全消しして入れ直す方式にすると、複数人が同時に触ったときに他人の回答まで巻き込む余地が出るため。
+        コレクション全体を送り直す操作ではないため、メソッドは `PUT` ではなく **`PATCH`** を使う。
+        全置換である候補日の一括更新（`PUT .../candidate-dates`）と対になる。
 
         **最新の調整に対してのみ許可**する。`pollId` が最新でない場合は `409`。
         ロビーが `disbanded`、または未公開（`publishedAt == null`）の場合は `422`。
@@ -843,7 +860,7 @@ paths:
         ゲスト（`user_id = null`）の回答はこのエンドポイントでは行わない。`guest-answers` を使う。
 
         v0.2 の `PUT /api/lobbies/{id}/availability-dates/{dateId}/responses` の後継。
-        パスが候補日単位から調整単位へ1階層上がっている。
+        パスが候補日単位から調整単位へ1階層上がり、差分更新に合わせてメソッドが `PATCH` になっている。
       operationId: upsertScheduleAnswers
       requestBody:
         required: true
@@ -887,12 +904,13 @@ paths:
       - $ref: '#/components/parameters/SchedulePollId'
       - $ref: '#/components/parameters/GuestToken'
 
-    put:
+    patch:
       tags: [SchedulePolls]
       summary: ゲストの日程回答を一括登録・更新（◯△×・完全匿名）
       description: |
         ゲストが**この調整の複数の候補日にまとめて**回答する。**認証不要**。
-        ログインユーザー用と同じく差分更新（送った候補日ぶんだけ upsert）。
+        ログインユーザー用と同じく差分更新（送った候補日ぶんだけ upsert）なので、
+        メソッドも同じく `PATCH`。
 
         - `Guest-Token` ヘッダー必須。ロビーの `guest_link_token` と一致しなければ `403`。
         - `entryId` は必須（v0.2 の `memberId` の改名）。指定した LobbyEntry がその

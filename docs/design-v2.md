@@ -1018,37 +1018,39 @@ frontend から /api/join の呼び出し  → 無し
 
 ### 6-9. レビュー用: エンドポイント差分サマリ
 
-**現行 31 パス / 44 オペレーション → v2 は 33 パス / 46 オペレーション。** 内訳の突き合わせは §6-9-1 を参照。
-分類は次のとおり。
+現行の実装 **31 パス / 44 オペレーション** → v2 も **31 パス / 44 オペレーション**。
+偶然同数だが中身は大きく入れ替わる。
 
-> 現行の数え方について。`openapi.yml` には長らく 30 パス / 43 オペレーションしか記載が無かったが、
-> これは `GET /api/join/:token`（backend の `game-session/.../guest-link-route.ts` に実装済み）が
-> 仕様書から漏れていたためである。本改訂で追記するので、**現行の実態は 31 パス / 44 オペレーション**として数える。
+> 現行を「30 パス / 43 オペレーション」ではなく 31 / 44 と数えるのは、
+> `GET /api/join/{token}` が backend に実装されているのに `openapi.yml` から
+> 記載だけ落ちていたためである（廃止した旨のコメントだけが残っていた）。
 
-#### 新規追加（7）
+数字は `openapi.yml` の実ファイルから機械的に突き合わせている。
 
-前身となる現行エンドポイントがまったく存在しないもの。
+```
+両方に存在（そのまま）  12 パス   ← Health 1 / Auth 6 / Profile 1 / Lobbies 4
+v0.2 のみ               19 パス   ← 廃止 + 改名元
+v2 のみ                 19 パス   ← 新規 + 改名先
+```
+
+#### 完全に新規（5パス / 7オペレーション）
+
+前身となる現行エンドポイントが存在しないもの。
 
 | Method | Path | 目的 |
 |---|---|---|
-| POST | `/api/lobbies/:id/guest-link` | 招待トークンの再発行 |
+| GET | `/api/me/lobbies` | 自分のロビー一覧（`GET /api/lobbies` から分離） |
+| GET | `/api/me/game-sessions` | 自分の開催一覧（`GET /api/game-sessions` の後継だが対象が変わる） |
 | GET | `/api/lobbies/:id/schedule-polls` | 日程調整の履歴一覧 |
 | POST | `/api/lobbies/:id/schedule-polls` | 新しい日程調整を始める（リスケの起点） |
-| GET | `/api/lobbies/:id/schedule-polls/:pollId` | 指定した調整（履歴も取得できる） |
-| GET | `/api/lobbies/:lobbyId/game-sessions` | そのロビーの開催一覧 |
-| PUT | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当て |
-| DELETE | `/api/game-sessions/:id/seats/:seatId/character` | キャラ割り当ての解除 |
+| GET | `/api/lobbies/:id/schedule-polls/:pollId` | 指定した調整（候補日 + 回答） |
+| PUT | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId/character` | キャラ割り当て |
+| DELETE | 同上 | キャラ割り当ての解除 |
 
-> 初版はここに `GET /api/lobbies/:id/schedule-polls/latest` も並べていたが、これは
-> `GET /api/lobbies/:id/availability-dates` の**改名**であって新規ではない（下の「パス変更」に同じ行がある）。
-> 二重計上だったため取り除き、代わりに `PUT / DELETE .../character` を1行1オペレーションに割った。
-> 行数は7のまま、**7行がちょうど7オペレーション**になる。
+`POST /api/lobbies/:id/guest-link`（トークン再発行）は既存パスへのメソッド追加なので
+パス数には現れないが、新規オペレーションとして数える。
 
-#### 廃止（8）
-
-**この表は「現行仕様書から消える記述」を数えており、オペレーション数とは一致しない。**
-8行のうち後継を持たないのは5オペレーションで、`confirm` と `guest-members` には形を変えた後継があり、
-最後の1行はそもそもオペレーションではなく enum 値である。詳細は §6-9-1。
+#### 廃止（8パス / 10オペレーション）
 
 | Method | Path | 理由 |
 |---|---|---|
@@ -1057,117 +1059,52 @@ frontend から /api/join の呼び出し  → 無し
 | DELETE | `/api/lobbies/:id/availability-dates/:dateId` | 同上 |
 | POST | `/api/game-sessions` | セッションは必ずロビー配下に作る（§9-3） |
 | GET | `/api/game-sessions/:id/guest-link` | トークンはロビーに1本化 |
-| POST | `/api/game-sessions/:id/guest-members` | 同上（`POST /api/game-sessions/:id/guest-seats` が近い後継だが認可の出所が変わる） |
+| POST | `/api/game-sessions/:id/guest-members` | 同上 |
 | PATCH | `/api/game-sessions/:id/members/:memberId` | キャラ名更新は `PUT .../seats/:seatId/character` へ |
-| — | （`GameSessionStatus.open` を受け付ける遷移） | セッションに公開概念が無くなるため |
+| GET | `/api/join/:token` | 招待リンクが `lobbyId` を含むため不要（§6-5-1） |
 
-#### パス変更（リソース名の付け替え・9）
+#### 改名 / 入れ子化（14パス）
 
-| 現行 | v2 |
+パスは変わるが、そのエンドポイントの役割は残るもの。
+
+| v0.2 | v2 |
 |---|---|
-| `GET|POST /api/lobbies/:id/members` | `GET|POST /api/lobbies/:id/entries` |
-| `POST /api/lobbies/:id/guest-members` | `POST /api/lobbies/:id/guest-entries` |
-| `DELETE /api/lobbies/:id/members/:memberId` | `DELETE /api/lobbies/:id/entries/:entryId` |
-| `GET /api/lobbies/:id/availability-dates` | `GET /api/lobbies/:id/schedule-polls/latest` |
+| `/api/lobbies/:id/members` | `/api/lobbies/:id/entries` |
+| `/api/lobbies/:id/members/:memberId` | `/api/lobbies/:id/entries/:entryId` |
+| `/api/lobbies/:id/guest-members` | `/api/lobbies/:id/guest-entries` |
+| `GET /api/lobbies/:id/availability-dates` | `GET /api/lobbies/:id/schedule-polls/:pollId` |
 | `PUT /api/lobbies/:id/availability-dates` | `PUT /api/lobbies/:id/schedule-polls/:pollId/candidate-dates` |
-| `PUT .../availability-dates/:dateId/responses` | `PUT .../schedule-polls/:pollId/candidate-dates/:dateId/answers` |
-| `PUT .../availability-dates/:dateId/guest-responses` | `PUT .../schedule-polls/:pollId/candidate-dates/:dateId/guest-answers` |
-| `GET|POST /api/game-sessions/:id/members` | `GET|POST /api/game-sessions/:id/seats` |
-| `DELETE /api/game-sessions/:id/members/:memberId` | `DELETE /api/game-sessions/:id/seats/:seatId` |
+| `.../availability-dates/:dateId/responses` | `.../schedule-polls/:pollId/answers` |
+| `.../availability-dates/:dateId/guest-responses` | `.../schedule-polls/:pollId/guest-answers` |
+| `/api/game-sessions/:id` | `/api/lobbies/:lobbyId/game-sessions/:id` |
+| `/api/game-sessions/:id/status` | `/api/lobbies/:lobbyId/game-sessions/:id/status` |
+| `/api/game-sessions/:id/members` | `/api/lobbies/:lobbyId/game-sessions/:id/seats` |
+| `/api/game-sessions/:id/members/:memberId` | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId` |
+| `/api/game-sessions/:id/play-memos` | `/api/lobbies/:lobbyId/game-sessions/:id/play-memos` |
+| `/api/game-sessions/:id/play-memos/me` | 同上 `/me` |
+| `/api/game-sessions/:id/play-memos/me/visibility` | 同上 `/me/visibility` |
 
-#### 仕様変更（パス据え置き・6）
+このうち**形も変わるのは3つだけ**。
+
+| | 変わる内容 |
+|---|---|
+| `availability-dates` → `schedule-polls/:pollId` | レスポンスが配列 → オブジェクト（`pollId` を運ぶ必要があるため） |
+| `responses` → `answers` | 候補日ごと1件 → 調整ごとの一括（§6-4） |
+| `members` → `seats` | `characterName` が分離され、表示名は LobbyEntry 由来に |
+
+#### パス据え置き・中身が変わる（4）
 
 | Method | Path | 変更点 |
 |---|---|---|
-| POST | `/api/lobbies` | **候補日が必須 → 任意**。渡した場合は調整#1 を同時に作る |
-| PATCH | `/api/lobbies/:id/status` | target が `open`/`cancelled` → `open`/`closed`/`disbanded`。`closed → open`（追加募集）の往復を許可 |
-| DELETE | `/api/lobbies/:id` | 条件に「セッション0件」を追加 |
-| GET | `/api/lobbies/:id` | レスポンスから `confirmedGameSession` を削除、`gameSessions[]` / `schedulePolls[]` を追加 |
-| GET | `/api/game-sessions/:id` | ホスト・定員・公開フラグがロビー由来になり、表示値は導出済み + 上書き生値の二重表現（§5-5） |
-| GET | `/api/join/:token` | **返すのがセッション → ロビー** |
-| PATCH | `/api/game-sessions/:id/status` | target が `open`/`completed`/`cancelled` → `completed`/`cancelled` |
+| GET | `/api/lobbies` | **自分のもの + 公開** → **公開のみ**。未ログインでも取得可に |
+| POST | `/api/lobbies` | 候補日が必須 → 任意 |
+| GET | `/api/lobbies/:id` | `confirmedGameSession` 削除、3配列（`entries` / `schedulePolls` / `gameSessions`）を返す |
+| PATCH | `/api/lobbies/:id/status` | target が `open`/`cancelled` → `open`/`closed`/`disbanded` |
 
-#### 変更なし（5）
+#### 変更なし（8パス）
 
-**5パス**である。
-
-| Path | オペレーション |
-|---|---|
-| `/` | `GET` |
-| `/api/profile` | `GET` / `PATCH` |
-| `/api/game-sessions/:id/play-memos/me` | `GET` / `PUT` |
-| `/api/game-sessions/:id/play-memos/me/visibility` | `PATCH` |
-| `/api/game-sessions/:id/play-memos` | `GET` |
-
-Better Auth が提供する `/api/auth/**` の6パスは本設計の対象外のため、この数には含めない
-（仕様書には引き続き記載するが、v2 で触るものが1つも無い）。
-
-プレイメモは**パスもレスポンス形も不変**で、内部の紐付けが `member_id` → `seat_id` に変わるだけ。
-移行の等価性検証の基準点として使えるよう、意図的に手を入れない（§6-15 に注意点）。
-
-### 6-9-1. 数え方の突き合わせ
-
-上の5分類は「**現行仕様書の記述がどう扱われるか**」を数えた行数であり、そのまま足してもオペレーション数にはならない。
-レビュー時にレンダリング済みドキュメントと突き合わせるための対応を明示しておく。
-
-#### オペレーション数
-
-```text
-現行 44
-  − 後継を持たない廃止 5
-  + 新規 7
-  = v2 46
-```
-
-後継を持たない5オペレーションはこれだけである。
-
-| Method | Path |
-|---|---|
-| POST | `/api/game-sessions` |
-| GET | `/api/game-sessions/:id/guest-link` |
-| PATCH | `/api/game-sessions/:id/members/:memberId` |
-| POST | `/api/lobbies/:id/availability-dates` |
-| DELETE | `/api/lobbies/:id/availability-dates/:dateId` |
-
-「廃止（8）」の残り3行は次の扱いになる。
-
-| 廃止表の行 | 実際の扱い |
-|---|---|
-| `POST /api/lobbies/:id/confirm` | `POST /api/lobbies/:lobbyId/game-sessions` が後継。オペレーションとしては存続する（§9-7） |
-| `POST /api/game-sessions/:id/guest-members` | `POST /api/game-sessions/:id/guest-seats` が後継。パスと認可の出所が変わるだけで、オペレーションとしては存続する |
-| （`GameSessionStatus.open` を受け付ける遷移） | オペレーションではなく `PATCH /api/game-sessions/:id/status` が受け付ける enum 値。パス数・オペレーション数に影響しない |
-
-この2行を「廃止 + 新規」ではなく「廃止表に載せたうえで後継あり」と扱うのは、
-**呼び出し側から見た意味が変わるため**である（前者は「確定」から「開催の作成」へ、
-後者は認可の出所が卓のトークンからロビーのトークンへ）。単なる改名ではないので
-「パス変更」には入れず、しかし新しい API が生えたわけでもないので「新規」にも入れない。
-
-#### パス数
-
-| 区分 | パス数 |
-|---|---|
-| Better Auth（対象外） | 6 |
-| 変更なし | 5 |
-| ロビー・セッション系（新規・パス変更・仕様変更の対象） | 22 |
-| **合計** | **33** |
-
-現行 31 パスからの増減は `+5 / −3` で、`31 − 3 + 5 = 33`。
-
-| 増える（+5） | 減る（−3） |
-|---|---|
-| `/api/lobbies/:id/schedule-polls` | `/api/lobbies/:id/confirm` |
-| `/api/lobbies/:id/schedule-polls/:pollId` | `/api/lobbies/:id/availability-dates/:dateId` |
-| `/api/lobbies/:id/schedule-polls/:pollId/candidate-dates` ※ | `/api/game-sessions/:id/guest-link` |
-| `/api/lobbies/:lobbyId/game-sessions` | |
-| `/api/game-sessions/:id/seats/:seatId/character` | |
-
-パス変更9本（`members` → `entries` / `seats`、`availability-dates` → `schedule-polls/latest`、
-`guest-members` → `guest-entries` / `guest-seats` など）は改名なのでパス数に影響しない。
-
-※ 現行 `/api/lobbies/:id/availability-dates` は `GET` と `PUT` が別のパスに割れる。
-`GET` は `schedule-polls/latest` への改名（パス変更9に計上）、`PUT` の行き先である
-`schedule-polls/:pollId/candidate-dates` はパスとしては新設なのでここに数える。
-なお `PUT` 自体は新規オペレーションではない（改名なので「新規追加（7）」には入らない）。
+`/`（Health 1）、Auth 6、`/api/profile` 1。
+Better Auth の6パスは本設計の対象外。
 
 ### 6-10. エラーレスポンスの使い分け
 
@@ -1359,7 +1296,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 ※ 現行 `openapi.yml` は `comment` を 200 と書いているが、`shared` の
 `UpdateLobbyAvailabilityDateResponseInputSchema` は 500 である。**コードの 500 が正**として仕様書を直す。
 
-### 6-12. フィールド定義 — 新規追加の7エンドポイント
+### 6-12. フィールド定義 — 新規追加のエンドポイント
 
 #### 6-12-1. `POST /api/lobbies/:id/guest-link`（招待トークンの再発行）
 
@@ -1528,7 +1465,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 |---|---|
 | `401` / `403` / `404` / `422` | `PUT` と同じ |
 
-### 6-13. フィールド定義 — 仕様変更の6エンドポイント
+### 6-13. フィールド定義 — 仕様が変わるエンドポイント
 
 #### 6-13-1. `POST /api/lobbies`（候補日が必須 → 任意）
 
@@ -1805,11 +1742,11 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `404` | セッションが存在しない |
 | `422` | すでに `completed` / `cancelled` |
 
-### 6-14. パス変更9本 — 変わるのは識別子だけ
+### 6-14. 改名・入れ子化14本 — ほとんどは識別子の置換
 
-**9本のうち8本は、リクエスト/レスポンスの構造（入れ子の形・必須の別・件数）を変えない。**
+**14本のうち11本は、リクエスト/レスポンスの構造（入れ子の形・必須の別・件数）を変えない。**
 変わるのはパスと、その中に現れる語彙だけなので、実装タスクは機械的な置換で済ませられる。
-唯一の例外 `GET .../schedule-polls/latest` は本節の末尾に切り出した。
+形も変わる3本は本節の末尾に切り出した。
 
 | 旧 | 新 | 現れる場所 |
 |---|---|---|
@@ -1845,24 +1782,33 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 `DELETE /api/lobbies/:id/entries/:entryId` は**レスポンスが `204` のまま**だが、
 中身は DELETE ではなく `left_at` の UPDATE になる（§6-3）。呼び出し側から見た契約は変わらない。
 
-#### 例外: `GET .../schedule-polls/latest` だけは形も変わる
+#### 形も変わる3本
 
-9本のうち1本だけ、識別子のリネームでは済まない。
+識別子のリネームでは済まないもの。実装タスクで注意する。
 
-| | 旧 `GET /api/lobbies/:id/availability-dates` | 新 `GET /api/lobbies/:id/schedule-polls/latest` |
+**1. `GET .../availability-dates` → `GET .../schedule-polls/:pollId`**（タスク4）
+
+| | 旧 | 新 |
 |---|---|---|
-| レスポンス | `LobbyAvailabilityDate[]`（候補日の配列） | `LobbySchedulePoll \| null`（candidateDates を内包） |
-| 調整が0件 | `[]` | `null` |
+| レスポンス | `LobbyAvailabilityDate[]`（候補日の配列） | `LobbySchedulePoll`（`candidateDates` を内包） |
 
 `SchedulePoll` が1階層挟まったためである。**配列のままにはできない。**
 候補日の一括更新も回答も `PUT .../schedule-polls/:pollId/...` を叩くので、
 フロントは `pollId` を知る必要があり、それを運べるのは poll 本体を返す形しかない。
 
-調整が0件のとき `404` ではなく `200` + `null` を返すのは、プレイメモの
-「まだ書いていない」を `404` にしない判断（design-v1.2 §8）と同じ理由である。
-フロントに「エラー」と「まだ調整していない」の分岐を作らせない。
+`pollId` は `GET /api/lobbies/:id` の `schedulePolls[0].id`（最新）から得る。
+専用の `latest` パスは持たない（§6-4）。
 
-この1本だけは実装タスクで機械的な置換にならないので、タスク4 で注意すること。
+**2. `PUT .../availability-dates/:dateId/responses` → `PUT .../schedule-polls/:pollId/answers`**（タスク4）
+
+候補日ごと1件の upsert から、**調整ごとの一括 upsert** に変わる（§6-4）。
+パスが1階層上がり、ボディが `{ answer, comment }` から `{ answers: [...] }` になる。
+ゲスト用も同じ形（`entryId` 付き）。
+
+**3. `/api/game-sessions/:id/members` → `/api/lobbies/:lobbyId/game-sessions/:id/seats`**（タスク5・6）
+
+入れ子化に加えて、`characterName` が別リソース（`.../seats/:seatId/character`）へ分離され、
+表示名が `LobbyEntry` 由来の解決値になる。
 
 ### 6-15. プレイメモ4本の扱い（等価性の基準点）
 

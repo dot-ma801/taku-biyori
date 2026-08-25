@@ -249,17 +249,24 @@ paths:
 
   # ========== Lobbies ==========
 
-  /api/lobbies:
+  /api/me/lobbies:
     get:
       tags: [Lobbies]
-      summary: ロビー一覧取得
-      description: >-
-        ログインユーザーがホスト・参加しているロビーに加えて、未参加でも公開かつ受付中の
-        ロビーを一覧で返す（絞り込みはフロント）。
-      operationId: listLobbies
+      summary: 自分のロビー一覧取得
+      description: |
+        ログインユーザーが**ホスト、または参加している**ロビーを返す。下書き・解散済みも含む
+        （絞り込みはフロント）。ダッシュボードの「参加中のロビー」「下書きのロビー」がこれを使う。
+
+        v0.2 の `GET /api/lobbies` は「自分のもの」と「公開かつ受付中のもの」を1つの一覧で
+        混ぜて返していた。§7-5 の画面構成では前者と後者を別のセクションで扱うため、
+        エンドポイントを2本に分ける（design-v2 §6-2）。
+
+        `/api/me/…` と綴るのは、`/api/lobbies/me` にすると `me` が ID の位置に来て
+        「`me` という名前のロビー」に読めるため。
+      operationId: listMyLobbies
       responses:
         '200':
-          description: ロビー一覧
+          description: 自分のロビー一覧
           content:
             application/json:
               schema:
@@ -268,6 +275,29 @@ paths:
                   $ref: '#/components/schemas/LobbyListItem'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/lobbies:
+    get:
+      tags: [Lobbies]
+      summary: 公開ロビーを探す
+      description: |
+        **公開かつ受付中**のロビーを返す。未参加の人が遊べる卓を探すための一覧で、
+        フロントの「募集中のロビー」がこれを使う。**未ログインでも取得できる。**
+
+        含まれる条件は「`publishedAt != null` かつステータスが `open`」。
+        下書き・受付終了・解散済みは含まない。自分がホスト・参加中のロビーは
+        `GET /api/me/lobbies` で取る。
+      operationId: listPublicLobbies
+      security: []
+      responses:
+        '200':
+          description: 公開ロビー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyListItem'
 
     post:
       tags: [Lobbies]
@@ -280,7 +310,7 @@ paths:
         日程調整 #1（`SchedulePoll`）とその候補日を同時に作る。省略・空配列なら調整は0件のまま
         （「直接卓立て」の経路。design-v2 §5-3）。v0.2 にあった「候補日0件は 422」は廃止した。
 
-        作成直後は必ず `draft`。`isPublished` は入力項目ではなく、公開は
+        作成直後は必ず `draft`（`publishedAt` は null）。`publishedAt` は入力項目ではなく、公開は
         `PATCH /api/lobbies/{id}/status` に `open` を送って行う。
       operationId: createLobby
       requestBody:
@@ -316,9 +346,10 @@ paths:
         非公開はホストのみ。
 
         v0.2 からの差分は `confirmedGameSession` の削除と、
-        `gameSessions[]` / `latestPoll` / `nextGameSession` / `gameSessionCount` / `hasOpenPoll` の追加。
-        候補日 × 参加者の◯△×表は重いため `latestPoll` には含めない。表を描くときは
-        `GET /api/lobbies/{id}/schedule-polls/latest` を続けて呼ぶ。
+        `entries[]` / `schedulePolls[]` / `gameSessions[]` の3配列を返すこと。
+        **導出できる値はフィールドとして持たない**（design-v2 §6-1）。
+        候補日 × 参加者の◯△×表は重いため `schedulePolls` には含めない。表を描くときは
+        先頭（最新）の `id` で `GET /api/lobbies/{id}/schedule-polls/{pollId}` を続けて呼ぶ。
       operationId: getLobby
       security: []
       responses:
@@ -631,10 +662,11 @@ paths:
       tags: [SchedulePolls]
       summary: 日程調整の履歴一覧取得
       description: |
-        このロビーで行われた日程調整の**要約**を新しい順に返す（`created_at DESC, id DESC`）。
-        先頭が最新で、その要素だけ `isLatest: true` になる。
+        このロビーで行われた日程調整の**要約**を新しい順に返す（`created_at DESC`）。
+        **先頭が最新**。`isLatest` のようなフラグは持たせず、並び順で表現する
+        （`created_at` の既定値が `clock_timestamp()` なので同値にならない。design-v2 §3-4）。
 
-        候補日と回答は含まない。中身が要るときは `latest` か `{pollId}` を引く。
+        候補日と回答は含まない。中身が要るときは `{pollId}` を引く。
         調整が1件も無いロビー（候補日なしで作った・直接卓立て）は空配列を返す。
       operationId: listSchedulePolls
       security: []
@@ -693,39 +725,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /api/lobbies/{id}/schedule-polls/latest:
-    parameters:
-      - $ref: '#/components/parameters/LobbyId'
-
-    get:
-      tags: [SchedulePolls]
-      summary: 最新の日程調整を取得（候補日 + 全回答）
-      description: |
-        最新の日程調整を候補日・回答つきで返す。候補日 × 参加者の◯△×表を描くための本命エンドポイント。
-        `is_published = true` なら未認証でも取得可。
-
-        v0.2 の `GET /api/lobbies/{id}/availability-dates` の後継。
-        `SchedulePoll` が1階層挟まり、レスポンスが配列からオブジェクトになった。
-        調整が1件も無い場合は `404` ではなく `200` で `null` を返す
-        （フロントに「エラー」と「まだ調整していない」の分岐を作らせないため）。
-      operationId: getLatestSchedulePoll
-      security: []
-      responses:
-        '200':
-          description: 最新の日程調整。調整が0件のロビーでは `null`
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/LobbySchedulePoll'
-                  - type: 'null'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /api/lobbies/{id}/schedule-polls/{pollId}:
     parameters:
@@ -818,40 +817,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/lobbies/{id}/schedule-polls/{pollId}/candidate-dates/{dateId}/answers:
+  /api/lobbies/{id}/schedule-polls/{pollId}/answers:
     parameters:
       - $ref: '#/components/parameters/LobbyId'
       - $ref: '#/components/parameters/SchedulePollId'
-      - $ref: '#/components/parameters/CandidateDateId'
 
     put:
       tags: [SchedulePolls]
-      summary: 日程回答を登録・更新（◯△×・ログインユーザー）
+      summary: 日程回答を一括登録・更新（◯△×・ログインユーザー）
       description: |
-        ログインユーザーが候補日に対して回答する。既存の回答があれば上書き（upsert）。
+        ログインユーザーが**この調整の複数の候補日にまとめて**回答する。
         Cookie のセッションからユーザーを解決し、そのユーザーの LobbyEntry を自動で特定する。
         **自分の回答のみ**編集可。
 
+        実際の操作は「調整の表を開いて全部の候補日に◯△×を付けて保存」なので、
+        候補日ごとに1リクエストではなく調整ごとの一括更新にする（design-v2 §6-4）。
+        候補日の一括更新（`PUT .../candidate-dates`）とも形が揃う。
+
+        **送った候補日ぶんだけ upsert する差分更新**であり、送らなかった候補日の回答は消さない。
+        全消しして入れ直す方式にすると、複数人が同時に触ったときに他人の回答まで巻き込む余地が出るため。
+
         **最新の調整に対してのみ許可**する。`pollId` が最新でない場合は `409`。
-        ロビーが `disbanded`、または `isPublished` が false の場合は `422`。
+        ロビーが `disbanded`、または未公開（`publishedAt == null`）の場合は `422`。
 
         ゲスト（`user_id = null`）の回答はこのエンドポイントでは行わない。`guest-answers` を使う。
 
         v0.2 の `PUT /api/lobbies/{id}/availability-dates/{dateId}/responses` の後継。
-      operationId: upsertScheduleAnswer
+        パスが候補日単位から調整単位へ1階層上がっている。
+      operationId: upsertScheduleAnswers
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpsertScheduleAnswerInput'
+              $ref: '#/components/schemas/UpsertScheduleAnswersInput'
       responses:
         '200':
-          description: 登録・更新後の回答
+          description: 登録・更新後の回答（送った候補日ぶん）
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LobbyScheduleAnswer'
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyScheduleAnswer'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -873,43 +881,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/lobbies/{id}/schedule-polls/{pollId}/candidate-dates/{dateId}/guest-answers:
+  /api/lobbies/{id}/schedule-polls/{pollId}/guest-answers:
     parameters:
       - $ref: '#/components/parameters/LobbyId'
       - $ref: '#/components/parameters/SchedulePollId'
-      - $ref: '#/components/parameters/CandidateDateId'
       - $ref: '#/components/parameters/GuestToken'
 
     put:
       tags: [SchedulePolls]
-      summary: ゲストの日程回答を登録・更新（◯△×・完全匿名）
+      summary: ゲストの日程回答を一括登録・更新（◯△×・完全匿名）
       description: |
-        ゲストが候補日に対して回答する。既存の回答があれば上書き。**認証不要**。
+        ゲストが**この調整の複数の候補日にまとめて**回答する。**認証不要**。
+        ログインユーザー用と同じく差分更新（送った候補日ぶんだけ upsert）。
 
         - `Guest-Token` ヘッダー必須。ロビーの `guest_link_token` と一致しなければ `403`。
         - `entryId` は必須（v0.2 の `memberId` の改名）。指定した LobbyEntry がその
           ロビーの**ゲスト（`user_id = null`）**であることをサーバーで検証する。
           ログイン参加者の LobbyEntry を指定した場合は `403`。脱退済み（`leftAt != null`）も `403`。
+          ゲストには本人確認手段が無いため、どの参加を更新するかをボディで名指しする。
         - 本人確認はしないため、トークンさえ持っていれば**どのゲストでも全ゲスト列を編集可**（調整さん方式）。
         - **最新の調整に対してのみ許可**する。`pollId` が最新でない場合は `409`。
 
         v0.2 はロビーが受付外のときに `409` を返していたが、v2 では**ログインユーザー用と同じ `422` に揃える**
         （409 と 422 の境界を design-v2 §6-10 で引き直したため）。
-      operationId: upsertGuestScheduleAnswer
+      operationId: upsertGuestScheduleAnswers
       security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GuestUpsertScheduleAnswerInput'
+              $ref: '#/components/schemas/GuestUpsertScheduleAnswersInput'
       responses:
         '200':
-          description: 登録・更新後の回答
+          description: 登録・更新後の回答（送った候補日ぶん）
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LobbyScheduleAnswer'
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbyScheduleAnswer'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -994,46 +1005,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/join/{token}:
-    parameters:
-      - $ref: '#/components/parameters/JoinToken'
-
-    get:
-      tags: [GuestLinks]
-      summary: 招待リンクのプレビュー
-      description: |
-        招待トークンから**ロビー**の最小限の情報を返す。**認証不要**。
-        まだ参加していない人に見せる画面のための情報なので、参加者一覧や候補日の中身は返さない。
-
-        - v0.2 は**セッション**を返していた。v2 ではトークンがロビーに一本化されたためロビーを返す。
-        - `is_published` が false でも `200`。**トークンを持っていること自体が招待の証**なので、
-          非公開の直接卓立てロビーでもプレビューできる。
-        - `disbanded` のロビーも `200`（フロントが「この企画は解散しました」と表示できるように）。
-        - トークンに一致するロビーが無ければ `404`。`403` を返さないのは、
-          トークンの存在・不在を区別させないため。
-
-        > v0.2 の仕様書はこのエンドポイントを「廃止」と注記したまま記載を落としていたが、
-        > 実際には backend に実装が残っていた。本改訂で記載を復活させ、あわせて
-        > game-session 側から lobby 側へ移設する。
-      operationId: getInvitePreview
-      security: []
-      responses:
-        '200':
-          description: 招待リンクのプレビュー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LobbyInvitePreview'
-        '404':
-          description: トークンに一致するロビーが無い
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  # ========== Game Sessions ==========
-
-  /api/game-sessions:
+  /api/me/game-sessions:
     get:
       tags: [GameSessions]
       summary: セッション横断一覧取得
@@ -1143,8 +1115,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/game-sessions/{id}:
+  /api/lobbies/{lobbyId}/game-sessions/{id}:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
 
     get:
@@ -1245,8 +1218,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/game-sessions/{id}/status:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/status:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
 
     patch:
@@ -1301,8 +1275,9 @@ paths:
 
   # ========== Seats ==========
 
-  /api/game-sessions/{id}/seats:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/seats:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
 
     get:
@@ -1336,14 +1311,21 @@ paths:
 
     post:
       tags: [Seats]
-      summary: 着席（自分で着席 / ホストが着席させる）
+      summary: 着席させる（選出。ホストのみ）
       description: |
-        ボディの有無で意味が変わる。
+        ホストが指定した LobbyEntry を着席させる。**`entryId` 必須。ホスト以外は `403`。**
 
-        - **ボディなし（または `{}`）**: 自分が着席する。ロビーに自分の LobbyEntry が無ければ
-          同一トランザクションで作ってから着席する（「参加 + 着席」を1操作にする。design-v2 §5-4）。
-          脱退済みの LobbyEntry があれば `left_at` を NULL に戻して再利用する。
-        - **`{ entryId }`**: ホストが指定した LobbyEntry を着席させる。ホスト以外が送ると `403`。
+        着席は選出のファクトであり、**選出はホストの仕事**である。ログインユーザーもゲストも、
+        自分の操作は「ロビーに参加する」までで、着席させるのはホスト（design-v2 §6-6）。
+
+        v0.2 の「自分で着席する」経路と、ゲストの「参加 + 着席」（`guest-seats`）は
+        どちらも廃止した。後者を持たない理由は2つ。
+
+        1. ゲストだけが自分で Seat を作れると、「選出＝ホストが Seat を作ること」という
+           v2 の中心的な主張が崩れる
+        2. 招待リンクは `/lobbies/{lobbyId}?token=…` でロビーしか指していないため、
+           開催が2つあるロビーでは着席先が決まらない。成立するのは開催が
+           ちょうど1つのときだけで、モデルはそれを保証しない
 
         **ホストによる代理の新規参加登録は持たない**（`entryId` は既存の LobbyEntry でなければならない）。
       operationId: createSeat
@@ -1383,57 +1365,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/game-sessions/{id}/guest-seats:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}:
     parameters:
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/GuestToken'
-
-    post:
-      tags: [Seats]
-      summary: ゲストが参加 + 着席（完全匿名）
-      description: |
-        ゲスト招待リンク経由で、ゲストの LobbyEntry を作りつつ着席する。**認証不要**。同一トランザクション。
-
-        - `Guest-Token` ヘッダー必須。**セッションが属するロビーの** `guest_link_token` と
-          一致しなければ `403`。v0.2 はセッション自身のトークンで認可していたので、認可の出所が変わる。
-        - 重複参加を許容する（本人確認手段がないため）。
-        - 定員チェックは行わない。
-
-        v0.2 の `POST /api/game-sessions/{id}/guest-members` の後継。
-      operationId: createGuestSeat
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateGuestSeatInput'
-      responses:
-        '201':
-          description: 作成された Seat
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Seat'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          description: Guest-Token がロビーのトークンと一致しない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          description: セッションが `completed` / `cancelled`、またはロビーが `disbanded`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/game-sessions/{id}/seats/{seatId}:
-    parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
       - $ref: '#/components/parameters/SeatId'
 
@@ -1465,8 +1399,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/game-sessions/{id}/seats/{seatId}/character:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}/character:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
       - $ref: '#/components/parameters/SeatId'
 
@@ -1551,8 +1486,9 @@ paths:
   # 内部の紐付けが play_memos.member_id → seat_id に変わるだけで、
   # 移行の等価性検証の基準点として使うため意図的に固定する。
 
-  /api/game-sessions/{id}/play-memos/me:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/play-memos/me:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
 
     get:
@@ -1615,8 +1551,9 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /api/game-sessions/{id}/play-memos/me/visibility:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/play-memos/me/visibility:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
 
     patch:
@@ -1655,8 +1592,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/game-sessions/{id}/play-memos:
+  /api/lobbies/{lobbyId}/game-sessions/{id}/play-memos:
     parameters:
+      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
       - $ref: '#/components/parameters/GameSessionId'
 
     get:
@@ -1669,12 +1607,11 @@ paths:
         **閲覧者に依存しない**（閲覧者自身の公開メモも含めて返す。分岐のある権限フィルタは
         漏洩バグの温床になるため。design-v1.2 §4）。完了・中止前は空配列を返す。
 
-        ただしセッションそのものの閲覧制御は `GET /api/game-sessions/{id}` と同一で、
+        ただしセッションそのものの閲覧制御は `GET /api/lobbies/{lobbyId}/game-sessions/{id}` と同一で、
         非公開ロビーのセッションをホスト以外が呼ぶと 403 になる。
 
-        表示名は含まない。着席者情報は `GET /api/game-sessions/{id}/seats` と突合する。
-        **突合キーは `memberId` のまま**だが、v2 では `seats.id` を運ぶ
-        （レスポンス形を固定するため改名しない。design-v2 §6-15）。
+        表示名は含まない。着席者情報は `GET /api/lobbies/{lobbyId}/game-sessions/{id}/seats` と突合する。
+        突合キーは `seatId`（v0.2 の `memberId` の改名。design-v2 §6-15）。
       operationId: listSharedGameSessionPlayMemos
       security: []
       responses:
@@ -1784,15 +1721,6 @@ components:
         type: string
         format: uuid
 
-    CandidateDateId:
-      name: dateId
-      in: path
-      required: true
-      description: 候補日のID（lobby.candidate_dates.id）
-      schema:
-        type: string
-        format: uuid
-
     GameSessionId:
       name: id
       in: path
@@ -1810,14 +1738,6 @@ components:
       schema:
         type: string
         format: uuid
-
-    JoinToken:
-      name: token
-      in: path
-      required: true
-      description: ゲスト招待トークン（lobby.lobbies.guest_link_token）
-      schema:
-        type: string
 
     GuestToken:
       name: Guest-Token
@@ -2057,19 +1977,24 @@ components:
         - closed
         - disbanded
       description: |
-        ロビー（企画）のステータス。ファクトカラム（`isPublished` / `openUntil` / `disbandedAt`）から
+        ロビー（企画）のステータス。ファクトカラム
+        （`publishedAt` / `openUntil` / `receptionClosedAt` / `disbandedAt`）から
         **先頭一致**で導出する（design-v2 §4-1）。
 
-        | ステータス | 日本語 | 導出条件 |
-        |---|---|---|
-        | `disbanded` | 解散 | `disbandedAt != null` |
-        | `draft` | 下書き | `!isPublished` |
-        | `open` | 受付中 | `openUntil == null` または `today <= openUntil` |
-        | `closed` | 受付終了 | それ以外 |
+        | # | ステータス | 日本語 | 導出条件 |
+        |---|---|---|---|
+        | 1 | `disbanded` | 解散 | `disbandedAt != null` |
+        | 2 | `draft` | 下書き | `publishedAt == null` |
+        | 3 | `closed` | 受付終了 | `receptionClosedAt != null`（手動で締め切った） |
+        | 4 | `open` | 受付中 | `openUntil == null` または `today <= openUntil` |
+        | 5 | `closed` | 受付終了 | それ以外（締め切り日を過ぎた） |
 
         - v0.2 の `scheduling` / `confirmed` は**廃止**。「確定」という終端概念が消えたため。
         - `closed` は「受付が閉じている」だけを意味し、開催があるかどうかとは独立している。
           v1.1 の `lobbies.closed_at`（＝確定）とは別物。
+        - `closed` に至る経路は2つあり（手動クローズ / 締め切り日の経過）、表示上は区別しない。
+          ただし追加募集で開き直すときの挙動が変わる（`receptionClosedAt` を null に戻す。
+          `openUntil` も過ぎていれば併せて延長が必要）。
         - `open ⇄ closed` は往復する（追加募集）。
 
     GameSessionStatus:
@@ -2111,7 +2036,7 @@ components:
     LobbyListItem:
       type: object
       description: ロビー一覧表示用の軽量スキーマ
-      required: [id, title, status, isPublished, entryCount, gameSessionCount, hasOpenPoll, role, createdAt, updatedAt]
+      required: [id, title, status, publishedAt, entries, hostUserId, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2123,36 +2048,38 @@ components:
           type: [string, 'null']
         status:
           $ref: '#/components/schemas/LobbyStatus'
-        isPublished:
-          type: boolean
-          description: 公開フラグ。false の間は draft
+        publishedAt:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            下書きを抜けて動き出した時点。null なら `draft`。
+            v0.2 の `isPublished`（boolean）から変更した（design-v2 §3-2）。
         openUntil:
           type: [string, 'null']
           format: date
           description: 受付締め切り日。null なら無期限受付
+        receptionClosedAt:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            ホストが受付を手動で閉じた時点。追加募集で null に戻す。
+            締め切り日（`openUntil`）とは別のファクト（design-v2 §3-2）。
         maxPlayers:
           type: [integer, 'null']
-        entryCount:
-          type: integer
-          description: '**在籍中**（`leftAt == null`）の参加者数。v0.2 の `memberCount` の改名'
-        gameSessionCount:
-          type: integer
-          description: 中止を除くセッション数（design-v2 §4-1）
-        hasOpenPoll:
-          type: boolean
-          description: 日程調整が1件以上ある（design-v2 §4-1）
-        nextGameSession:
-          oneOf:
-            - $ref: '#/components/schemas/GameSessionSummary'
-            - type: 'null'
-          description: 中止でも完了でもないセッションのうち `scheduledAt` が最も近いもの
-        role:
-          type: [string, 'null']
-          enum: [host, entrant, null]
+        entries:
+          type: array
           description: |
-            閲覧者から見たこのロビーとの関係。無関係なら null。
-            v0.2 の `'host' | 'member'` から `member` を `entrant` に改名した
-            （`LobbyMember` → `LobbyEntry` の語彙変更に合わせる）。
+            参加者。**脱退者も含む**（`leftAt` で見分ける）。
+            件数が要るなら長さを取る。v0.2 の `memberCount` を置き換えた。
+          items:
+            $ref: '#/components/schemas/LobbyEntry'
+        hostUserId:
+          type: string
+          description: |
+            ホストの userId。`hostUserId === myUserId` で自分がホストか判定する。
+            v0.2 の `role`（`'host' | 'member'`）を置き換えた。role は導出値でありながら
+            「誰がホストか」を捨てていたため（design-v2 §6-13）。
+            「自分が参加しているか」は `entries` から分かる。
         createdAt:
           type: string
           format: date-time
@@ -2165,7 +2092,7 @@ components:
       description: |
         ロビー（企画）。開催を重ねても `disbanded_at` がセットされるまで生き続ける。
         v0.2 の `closedAt`（＝卓確定）は**カラムごと廃止**、`cancelledAt` は `disbandedAt` に改名した。
-      required: [id, title, status, isPublished, hostUserId, createdAt, updatedAt]
+      required: [id, title, status, publishedAt, hostUserId, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2184,13 +2111,26 @@ components:
           description: 場所の既定値。セッションが上書きしていなければこれが表示される
         status:
           $ref: '#/components/schemas/LobbyStatus'
-        isPublished:
-          type: boolean
-          description: 公開フラグ。false の間は draft
+        publishedAt:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            下書きを抜けて動き出した時点。null なら `draft`。
+            v0.2 の `isPublished`（boolean）から変更した。「下書きではない」と
+            「全ユーザーに公開」の二義に読めることと、この設計で唯一 boolean の
+            ファクト列だったことが理由（design-v2 §3-2）。
         openUntil:
           type: [string, 'null']
           format: date
           description: 受付締め切り日。null なら無期限受付
+        receptionClosedAt:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            ホストが受付を手動で閉じた時点。追加募集で null に戻す。
+            `openUntil`（締め切り日を決めた）とは別の出来事なので列を分けている。
+            1列にまとめると「今すぐ閉じる」を `openUntil = 昨日` で表すしかなく、
+            ホストが入れた締め切り日が失われる（design-v2 §3-2）。
         maxPlayers:
           type: [integer, 'null']
           description: 定員の目安。超えて集めてよい。null なら目安なし
@@ -2216,84 +2156,38 @@ components:
         - type: object
           description: |
             ロビー詳細。v0.2 の `confirmedGameSession` を削除し、
-            `gameSessions` / `latestPoll` / `nextGameSession` / `gameSessionCount` / `hasOpenPoll` を追加した。
-          required: [entries, gameSessions, gameSessionCount, hasOpenPoll]
+            `entries` / `schedulePolls` / `gameSessions` の3つの配列を返す。
+
+            **導出できる値はフィールドとして持たない**（design-v2 §6-1）。
+            「次の開催」「中止を除くセッション数」「調整が1件以上あるか」はすべて
+            この配列から求まるため、サーバー側で先回りして計算しない。
+          required: [entries, schedulePolls, gameSessions]
           properties:
             entries:
               type: array
               description: 参加者。**脱退者も含めて全件返す**（`leftAt` で見分ける）。ホストが先頭、以降 `joinedAt` 昇順
               items:
                 $ref: '#/components/schemas/LobbyEntry'
-            latestPoll:
-              oneOf:
-                - $ref: '#/components/schemas/LobbySchedulePollSummary'
-                - type: 'null'
+            schedulePolls:
+              type: array
               description: |
-                最新の日程調整の**要約**。調整が0件なら null。
+                日程調整の履歴（要約）。**`createdAt` 降順なので先頭が最新**。
                 候補日 × 参加者の◯△×表は重いためここには含めない。
-                表を描くときは `GET /api/lobbies/{id}/schedule-polls/latest` を続けて呼ぶ。
+                表を描くときは先頭の `id` で `GET /api/lobbies/{id}/schedule-polls/{pollId}` を呼ぶ。
+                クライアントが最新の `pollId` を知る手段がこれで揃うため、`latest` 専用パスは廃止した。
+              items:
+                $ref: '#/components/schemas/LobbySchedulePollSummary'
             gameSessions:
               type: array
               description: 中止・完了を含む全件。`scheduledAt` 昇順
               items:
                 $ref: '#/components/schemas/GameSessionSummary'
-            nextGameSession:
-              oneOf:
-                - $ref: '#/components/schemas/GameSessionSummary'
-                - type: 'null'
-              description: |
-                中止でも完了でもないセッションのうち `scheduledAt` が最も近い1件。
-                `gameSessions` の要素と同じオブジェクトの再掲で、
-                ヘッダやダッシュボードが一覧を走査せずに済むよう別フィールドで持つ。
-            gameSessionCount:
-              type: integer
-              description: 中止を除くセッション数
-            hasOpenPoll:
-              type: boolean
-              description: 日程調整が1件以上ある
-
-    LobbyInvitePreview:
-      type: object
-      description: |
-        招待リンク（`GET /api/join/{token}`）のプレビュー。
-        **まだ参加していない人に見せる最小限の情報**なので、参加者一覧や候補日の中身は返さない。
-        `hostUserId` も返さず、表示名（`hostName`）だけを返す。
-      required: [id, title, status, entryCount, hasOpenPoll]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ロビーID。フロントは `/lobbies/{id}?token={token}` を組み立てる
-        title:
-          type: string
-        scenarioName:
-          type: [string, 'null']
-        location:
-          type: [string, 'null']
-        status:
-          $ref: '#/components/schemas/LobbyStatus'
-        hostName:
-          type: [string, 'null']
-          description: ホストの表示名（auth.user.name）
-        entryCount:
-          type: integer
-          description: 在籍中（`leftAt == null`）の参加者数
-        maxPlayers:
-          type: [integer, 'null']
-        hasOpenPoll:
-          type: boolean
-          description: 日程調整に答える導線を出すかの判断に使う
-        nextGameSession:
-          oneOf:
-            - $ref: '#/components/schemas/GameSessionSummary'
-            - type: 'null'
-          description: 直接卓立てのロビーで「いつの卓か」を示す
 
     CreateLobbyInput:
       type: object
       required: [title]
       description: |
-        ロビーの作成入力。`isPublished` は入力項目ではなく、作成直後は必ず `draft`。
+        ロビーの作成入力。`publishedAt` は入力項目ではなく、作成直後は必ず `draft`。
         公開は `PATCH /api/lobbies/{id}/status` に `open` を送って行う。
       properties:
         title:
@@ -2434,33 +2328,32 @@ components:
     LobbySchedulePollSummary:
       type: object
       description: |
-        日程調整の要約。履歴一覧とロビー詳細（`latestPoll`）で使う。候補日・回答は含まない。
-      required: [id, isLatest, candidateDateCount, answeredEntryCount, createdAt]
+        日程調整の要約。履歴一覧とロビー詳細（`schedulePolls`）で使う。候補日・回答は含まない。
+
+        **`isLatest` / `candidateDateCount` / `answeredEntryCount` は持たない**（design-v2 §6-1）。
+        配列が `createdAt` 降順で返るので先頭が最新であることはクライアントが判断でき、
+        候補日の件数は本体を引いたときの `candidateDates` の長さで足りる。
+        `answeredEntryCount` は表示する場面が確定していないため足さない。
+      required: [id, createdAt]
       properties:
         id:
           type: string
           format: uuid
           description: lobby.schedule_polls.id
-        isLatest:
-          type: boolean
-          description: |
-            最新の日程調整かどうか。ちょうど1件だけ true。
-            DB にフラグは持たず `created_at DESC, id DESC` から導出する（design-v2 §9-9）。
-        candidateDateCount:
-          type: integer
-        answeredEntryCount:
-          type: integer
-          description: 1件以上回答した LobbyEntry の数（脱退者を除く）
         createdAt:
           type: string
           format: date-time
+          description: |
+            並び順の基準。既定値が `clock_timestamp()` なので、同一トランザクションで
+            2件作っても値が衝突しない（design-v2 §3-4）。
 
     LobbySchedulePoll:
       type: object
       description: |
         日程調整の本体。候補日と各参加者の◯△×回答を入れ子で持つ。
-        `isLatest: false` のものは読み取り専用で、候補日の編集・回答は `409` になる。
-      required: [id, lobbyId, isLatest, candidateDates, createdAt]
+        最新でない調整も取得できるが、候補日の編集・回答は最新に限られ、
+        それ以外は `409` になる。
+      required: [id, lobbyId, candidateDates, createdAt]
       properties:
         id:
           type: string
@@ -2468,8 +2361,6 @@ components:
         lobbyId:
           type: string
           format: uuid
-        isLatest:
-          type: boolean
         candidateDates:
           type: array
           description: '`date` 昇順'
@@ -2574,45 +2465,68 @@ components:
           items:
             $ref: '#/components/schemas/LobbyCandidateDateInput'
 
-    UpsertScheduleAnswerInput:
+    ScheduleAnswerItem:
       type: object
-      required: [answer]
-      description: |
-        ログインユーザー用。回答対象の LobbyEntry は Cookie のセッションから自動解決するため
-        `entryId` は受け取らない（自分の回答のみ編集可）。
+      required: [candidateDateId, answer]
+      description: 1つの候補日への回答。
       properties:
+        candidateDateId:
+          type: string
+          format: uuid
+          description: |
+            回答対象の候補日。この `pollId` に属していなければ `404`。
         answer:
           $ref: '#/components/schemas/ScheduleAnswerValue'
         comment:
-          type: string
+          type: [string, 'null']
           maxLength: 500
 
-    GuestUpsertScheduleAnswerInput:
+    UpsertScheduleAnswersInput:
       type: object
-      required: [entryId, answer]
+      required: [answers]
+      description: |
+        ログインユーザー用。回答対象の LobbyEntry は Cookie のセッションから自動解決するため
+        `entryId` は受け取らない（自分の回答のみ編集可）。
+
+        **送った候補日ぶんだけ upsert する差分更新**であり、送らなかった候補日の回答は消さない。
+        全消しして入れ直す方式にすると、複数人が同時に触ったときに他人の回答まで
+        巻き込む余地が出るため（design-v2 §6-4）。
+      properties:
+        answers:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ScheduleAnswerItem'
+
+    GuestUpsertScheduleAnswersInput:
+      type: object
+      required: [entryId, answers]
       description: |
         ゲスト用。`entryId` 必須（v0.2 の `memberId` の改名）。
         指定した LobbyEntry はそのロビーのゲスト（`user_id = null`）かつ在籍中でなければならない。
-        認可は Guest-Token ヘッダーで行う。
+        認可は Guest-Token ヘッダーで行う。差分更新である点はログインユーザー用と同じ。
       properties:
         entryId:
           type: string
           format: uuid
           description: 回答対象のゲスト LobbyEntry（lobby_entries.id, user_id = null）
-        answer:
-          $ref: '#/components/schemas/ScheduleAnswerValue'
-        comment:
-          type: string
-          maxLength: 500
+        answers:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ScheduleAnswerItem'
 
     # ---------- GameSession ----------
 
     GameSessionSummary:
       type: object
       description: |
-        ロビー詳細・招待プレビューに埋め込む開催の軽量表現。
-        `title` / `timeLabel` は「未設定ならロビーを参照」で**解決済み**の値。
-      required: [id, scheduledAt, status, title, seatCount]
+        ロビー詳細に埋め込む開催の軽量表現。
+
+        **一覧・埋め込みの文脈ではロビーが自明**なので、`overrides` + `lobby` ではなく
+        解決済みの `title` / `timeLabel` を持たせる。要素ごとに `lobby` を繰り返さないため
+        （design-v2 §5-5）。単体取得の `GameSessionDetail` は逆に生値を返す。
+      required: [id, scheduledAt, status, title, seats]
       properties:
         id:
           type: string
@@ -2628,17 +2542,23 @@ components:
         timeLabel:
           type: [string, 'null']
           description: 解決済み
-        seatCount:
-          type: integer
-          description: 着席者数
+        seats:
+          type: array
+          description: 着席者。件数が要るなら長さを取る（v0.2 の `seatCount` を置き換えた）
+          items:
+            $ref: '#/components/schemas/Seat'
 
     GameSessionListItem:
       type: object
       description: |
         セッション一覧表示用の軽量スキーマ。
         v0.2 から `isPublished`・`maxMembers` が消え（ロビーの関心事）、
-        `memberCount` が `seatCount` に、`lobbyId` が非 null になった。
-      required: [id, lobbyId, title, status, scheduledAt, seatCount, role, createdAt, updatedAt]
+        `memberCount` が `seats` 配列に、`role` が `hostUserId` に置き換わり、
+        `lobbyId` が非 null になった。
+
+        `title` / `scenarioName` / `timeLabel` は一覧の文脈では**解決済み**の値を返す
+        （`GameSessionSummary` と同じ理由。design-v2 §5-5）。
+      required: [id, lobbyId, title, status, scheduledAt, seats, hostUserId, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2663,16 +2583,17 @@ components:
         timeLabel:
           type: [string, 'null']
           description: 解決済み
-        seatCount:
-          type: integer
-          description: 'v0.2 の `memberCount` の改名'
-        role:
-          type: [string, 'null']
-          enum: [host, seated, null]
+        seats:
+          type: array
+          description: 着席者。件数が要るなら長さを取る（v0.2 の `memberCount` を置き換えた）
+          items:
+            $ref: '#/components/schemas/Seat'
+        hostUserId:
+          type: string
           description: |
-            閲覧者から見たこのセッションとの関係。未ログイン・無関係は null。
-            v0.2 の `'host' | 'member'` から `member` を `seated` に改名した
-            （セッション側の関係は「着席しているか」だけになるため）。
+            ロビーのホスト。`hostUserId === myUserId` で自分がホストか判定する。
+            v0.2 の `role`（`'host' | 'member'`）を置き換えた。
+            「自分が着席しているか」は `seats` から分かる（design-v2 §6-13）。
         createdAt:
           type: string
           format: date-time
@@ -2702,11 +2623,17 @@ components:
         timeLabel:
           type: [string, 'null']
 
-    GameSessionLobbyRef:
+    LobbySummary:
       type: object
       description: |
-        セッション詳細に埋め込む最小限のロビー情報。
-        パンくず・戻り導線と、閲覧者がホストかどうかの判定に必要な分だけを持つ。
+        セッション詳細に埋め込むロビー情報。**3つの役割を兼ねる。**
+
+        1. **既定値の出所** — `overrides.*` が null のとき表示に使う値
+        2. パンくず・戻り導線
+        3. 閲覧者がホストかどうかの判定（`hostUserId`）
+
+        ロビー全体を埋め込まないのは、`entries` や `gameSessions` まで抱えると重くなるため
+        （design-v2 §6-13）。
       required: [id, title, hostUserId, status]
       properties:
         id:
@@ -2714,6 +2641,16 @@ components:
           format: uuid
         title:
           type: string
+          description: '**既定値**（`overrides.title` が null のとき）+ パンくず表示'
+        scenarioName:
+          type: [string, 'null']
+          description: 既定値
+        location:
+          type: [string, 'null']
+          description: 既定値
+        maxPlayers:
+          type: [integer, 'null']
+          description: 定員の目安の表示
         hostUserId:
           type: string
           description: 閲覧者がホストかの判定（ボタンの活性）に使う
@@ -2725,12 +2662,18 @@ components:
       description: |
         セッション（1回の開催）。
 
-        `title` / `scenarioName` / `location` / `timeLabel` は
-        「セッションの値 ?? ロビーの値」で**解決済み**の値が入る。上書きの生値は `overrides` にある。
+        **表示値は返さない。** `title` / `scenarioName` / `location` は
+        上書きの生値（`overrides`）とロビーの既定値（`lobby`）から
+        `overrides.title ?? lobby.title` で求める。クライアントは `shared` の
+        `resolveGameSessionDisplay()` を呼ぶ。
+
+        解決済みの値をサーバー側で先回りして持たないのは、`lobby` を返す以上それが冗長になり、
+        「導出できる値をレスポンスに足さない」方針に反するため（design-v2 §5-5・§6-1）。
         既定値を DB に書き込まないため、ロビーを改名すると上書きしていないセッションの表示も追随する。
 
-        v0.2 から消えたフィールド: `isPublished`・`maxMembers`・`createdBy`（すべてロビーへ）。
-      required: [id, lobbyId, scheduledAt, status, title, overrides, createdAt, updatedAt]
+        v0.2 から消えたフィールド: `isPublished`・`maxMembers`・`createdBy`（すべてロビーへ）、
+        解決済みの `title` / `scenarioName` / `location`（`overrides` + `lobby` から求める）。
+      required: [id, lobbyId, scheduledAt, status, overrides, lobby, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2747,18 +2690,6 @@ components:
             `GameSession → CandidateDate` の出自リンクは持たない。
         status:
           $ref: '#/components/schemas/GameSessionStatus'
-        title:
-          type: string
-          description: '**解決済み**（`session.title ?? lobby.title`）'
-        scenarioName:
-          type: [string, 'null']
-          description: 解決済み
-        location:
-          type: [string, 'null']
-          description: 解決済み
-        timeLabel:
-          type: [string, 'null']
-          description: 時間帯の自由記述。ロビー側に対応する列が無いため実質は生値
         description:
           type: [string, 'null']
           description: |
@@ -2766,6 +2697,8 @@ components:
             **上書き項目ではなくセッション固有のファクト**なので `overrides` に入らない。
         overrides:
           $ref: '#/components/schemas/GameSessionOverrides'
+        lobby:
+          $ref: '#/components/schemas/LobbySummary'
         completedAt:
           type: [string, 'null']
           format: date-time
@@ -2795,7 +2728,7 @@ components:
               items:
                 $ref: '#/components/schemas/Seat'
             lobby:
-              $ref: '#/components/schemas/GameSessionLobbyRef'
+              $ref: '#/components/schemas/LobbySummary'
 
     CreateGameSessionInput:
       type: object
@@ -2927,7 +2860,7 @@ components:
           example: アルベルト
           description: |
             character_assignments.character_name。未割り当ては null。
-            更新は `PUT /api/game-sessions/{id}/seats/{seatId}/character` で行う。
+            更新は `PUT /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}/character` で行う。
         seatedAt:
           type: string
           format: date-time
@@ -2935,27 +2868,20 @@ components:
 
     CreateSeatInput:
       type: object
+      required: [entryId]
       description: |
-        着席の入力。**ボディなし（または空オブジェクト）で自分が着席**する。
-        `entryId` を渡した場合はホストが他人を着席させる操作になり、ホスト以外は `403`。
+        着席の入力。**`entryId` は必須で、操作できるのはホストだけ。**
       properties:
         entryId:
           type: string
           format: uuid
           description: |
-            着席させる LobbyEntry の ID。**ホストのみ指定できる**。
-            省略すると Cookie のセッションから自分の LobbyEntry を解決し、
-            無ければ同一トランザクションで作ってから着席する（design-v2 §5-4）。
+            着席させる LobbyEntry の ID。**既存の在籍中（`leftAt == null`）の
+            LobbyEntry でなければならない**（ホストによる代理の新規参加登録は持たない）。
 
-    CreateGuestSeatInput:
-      type: object
-      required: [guestName]
-      properties:
-        guestName:
-          type: string
-          minLength: 1
-          maxLength: 100
-          description: ゲストの表示名（lobby_entries.guest_name に保存）
+            この LobbyEntry の `lobby_id` が、対象セッションの `lobby_id` と
+            一致しない場合は `422`。単純な FK では表現できない不変条件なので
+            アプリケーション層で検証する（design-v2 §3-8）。
 
     AssignCharacterInput:
       type: object
@@ -2995,16 +2921,19 @@ components:
         updatedAt の型だけが用途によって異なるため、ここから除いている。
         レスポンスの参照には GameSessionPlayMemo / MyGameSessionPlayMemo を使い、
         このスキーマを直接参照しない。
-      required: [memberId, body, sharedAt]
+      required: [seatId, body, sharedAt]
       properties:
-        memberId:
+        seatId:
           type: string
           format: uuid
           description: |
-            メモの所有者。**v2 では `seats.id` を運ぶ**が、
-            移行の等価性検証の基準点としてレスポンス形を固定するため、
-            キー名は `memberId` のまま据え置く（design-v2 §6-15）。
-            突合先は `GET /api/game-sessions/{id}/seats` の `id`。
+            メモの所有者（着席）。**v0.2 の `memberId` の改名**。
+            突合先は `GET /api/lobbies/{lobbyId}/game-sessions/{id}/seats` の `id`。
+
+            当初は「レスポンス形を1文字も変えない」ことで移行の等価性検証の基準点に
+            しようとしていたが、`memberId` というキーに `seats.id` を入れると
+            名前が嘘をつき、移行後も負債が残るため改名する。等価性の確認は
+            キー名の凍結ではなく対応表での突き合わせで行う（design-v2 §6-15）。
         body:
           type: string
           maxLength: 5000

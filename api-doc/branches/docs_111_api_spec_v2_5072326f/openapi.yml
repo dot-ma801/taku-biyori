@@ -42,6 +42,17 @@ info:
     判定は `400` → `401` → `403` → `404` → `409`/`422` の順に行う。
     `423 Locked` は使わない（v0.2 の仕様書には記載があったが実装は一度も返していなかった）。
 
+    ## メソッドの使い分け
+    | メソッド | 意味 | 例 |
+    |---|---|---|
+    | `PUT` | 送ったもので**全体を置き換える** | `PUT .../candidate-dates`（候補日の全置換） |
+    | `PATCH` | 送ったぶんだけ**部分的に変える** | `PATCH .../answers`（回答の差分 upsert）、`PATCH .../seats/{seatId}` |
+    | `POST` | 新しいリソースを作る・再発行する | `POST .../entries`、`POST .../guest-link` |
+    | `DELETE` | リソースを消す | `DELETE .../seats/{seatId}`（離席） |
+
+    「一括で送る」ことは `PUT` の理由にならない。全部送っても、送らなかったぶんを
+    消さない操作は `PATCH` である。
+
     ## 命名規則
     - URL は `/lobbies`・`/game-sessions` を使用
     - コード内の変数・型名は `gameSession` / `GameSession` プレフィックスを使用（Better Auth の `session` と衝突回避のため）
@@ -780,6 +791,10 @@ paths:
 
         v0.2 にあった候補日の単体 `POST` / `DELETE` は廃止した（フロントは一括更新しか使っていなかった。
         design-v2 §9-6）。
+
+        送った候補日で**全置換**するため、メソッドは `PUT`（回答の差分更新 `PATCH .../answers` と対）。
+        置換で消えた候補日の回答は cascade で消える。レスポンスは候補日だけを返し、
+        回答は含まない（残った回答も含めて表を描き直すなら `GET .../schedule-polls/{pollId}` を取り直す）。
       operationId: replaceCandidateDates
       requestBody:
         required: true
@@ -789,7 +804,10 @@ paths:
               $ref: '#/components/schemas/ReplaceCandidateDatesInput'
       responses:
         '200':
-          description: 更新後の候補日一覧
+          description: |
+            更新後の候補日一覧（`date` 昇順）。**回答は含まない**。
+            新しく採番された候補日の `id` を返すためのレスポンスであり、
+            回答つきの表を描き直したい場合は `GET .../schedule-polls/{pollId}` を取り直す。
           content:
             application/json:
               schema:
@@ -822,7 +840,7 @@ paths:
       - $ref: '#/components/parameters/LobbyId'
       - $ref: '#/components/parameters/SchedulePollId'
 
-    put:
+    patch:
       tags: [SchedulePolls]
       summary: 日程回答を一括登録・更新（◯△×・ログインユーザー）
       description: |
@@ -830,12 +848,18 @@ paths:
         Cookie のセッションからユーザーを解決し、そのユーザーの LobbyEntry を自動で特定する。
         **自分の回答のみ**編集可。
 
+        操作の主体をパスやボディで受け取らないのは、この API 全体の規約である。
+        ログインユーザーの主体は常に Cookie から解決し（`POST .../entries`、`.../play-memos/me` も同じ）、
+        クライアントが名乗った ID は信用しない。主体をボディで名指しするのは、
+        Cookie を持たないゲスト（`guest-answers` の `entryId`）だけである。
+
         実際の操作は「調整の表を開いて全部の候補日に◯△×を付けて保存」なので、
         候補日ごとに1リクエストではなく調整ごとの一括更新にする（design-v2 §6-4）。
-        候補日の一括更新（`PUT .../candidate-dates`）とも形が揃う。
 
         **送った候補日ぶんだけ upsert する差分更新**であり、送らなかった候補日の回答は消さない。
         全消しして入れ直す方式にすると、複数人が同時に触ったときに他人の回答まで巻き込む余地が出るため。
+        コレクション全体を送り直す操作ではないため、メソッドは `PUT` ではなく **`PATCH`** を使う。
+        全置換である候補日の一括更新（`PUT .../candidate-dates`）と対になる。
 
         **最新の調整に対してのみ許可**する。`pollId` が最新でない場合は `409`。
         ロビーが `disbanded`、または未公開（`publishedAt == null`）の場合は `422`。
@@ -843,7 +867,7 @@ paths:
         ゲスト（`user_id = null`）の回答はこのエンドポイントでは行わない。`guest-answers` を使う。
 
         v0.2 の `PUT /api/lobbies/{id}/availability-dates/{dateId}/responses` の後継。
-        パスが候補日単位から調整単位へ1階層上がっている。
+        パスが候補日単位から調整単位へ1階層上がり、差分更新に合わせてメソッドが `PATCH` になっている。
       operationId: upsertScheduleAnswers
       requestBody:
         required: true
@@ -887,12 +911,13 @@ paths:
       - $ref: '#/components/parameters/SchedulePollId'
       - $ref: '#/components/parameters/GuestToken'
 
-    put:
+    patch:
       tags: [SchedulePolls]
       summary: ゲストの日程回答を一括登録・更新（◯△×・完全匿名）
       description: |
         ゲストが**この調整の複数の候補日にまとめて**回答する。**認証不要**。
-        ログインユーザー用と同じく差分更新（送った候補日ぶんだけ upsert）。
+        ログインユーザー用と同じく差分更新（送った候補日ぶんだけ upsert）なので、
+        メソッドも同じく `PATCH`。
 
         - `Guest-Token` ヘッダー必須。ロビーの `guest_link_token` と一致しなければ `403`。
         - `entryId` は必須（v0.2 の `memberId` の改名）。指定した LobbyEntry がその
@@ -1371,61 +1396,35 @@ paths:
       - $ref: '#/components/parameters/GameSessionId'
       - $ref: '#/components/parameters/SeatId'
 
-    delete:
+    patch:
       tags: [Seats]
-      summary: 離席
+      summary: 着席を更新（キャラクター名の割り当て・解除）
       description: |
-        セッションから離席する。**本人またはホスト**が操作可能。
-        Seat の行はハード削除する（着席は「選ばれた」というファクトそのものなので、
-        取り消しは行を消すことで表す。LobbyEntry のソフト脱退とは扱いが違う）。
+        着席のキャラクター名を更新する。**ホストまたはその席の本人**が操作可能。
 
-        Seat を消すと、その席のキャラクター割り当てとプレイメモも cascade で消える。
-
-        v0.2 の `DELETE /api/game-sessions/{id}/members/{memberId}` の改名。
-      operationId: deleteSeat
-      responses:
-        '204':
-          description: 離席成功
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          description: セッションが `completed` / `cancelled`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}/character:
-    parameters:
-      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/SeatId'
-
-    put:
-      tags: [Seats]
-      summary: キャラクターを割り当て
-      description: |
-        着席にキャラクター名を割り当てる。**ホストまたはその席の本人**が操作可能。
-        `character_assignments` への upsert で、衝突キーは `seat_id`（UNIQUE。1着席1割り当て）。
-        `PUT` なので冪等。
+        - `characterName` に文字列を渡すと割り当て（`character_assignments` への upsert。
+          衝突キーは `seat_id`。UNIQUE なので1着席1割り当て）
+        - `characterName` に `null` を渡すと解除（`character_assignments` の行をハード削除）。
+          **冪等**で、もともと未割り当てでも `200` を返す
 
         v0.2 の `PATCH /api/game-sessions/{id}/members/{memberId}` の後継。
-        キャラクター名が `seats` のカラムではなく別テーブルになったため
-        （design-v2 §9-4）、専用のサブリソースにした。
+        キャラクター名の実体は `seats` のカラムではなく `character_assignments` に移るが
+        （design-v2 §9-4）、**API から見た更新対象は着席（Seat）のまま**にする。
+        `Seat` の表現に `characterName` が現れる以上、読み書きの相手を揃えるべきで、
+        親で読めて子でしか書けない形にはしない（レスポンスが `Seat` なのもそのため）。
 
-        セッションが `completed` でも割り当てられる（後からキャラ名を埋める運用があるため）。
+        Seat の他のフィールド（`entryId` / `userId` / `seatedAt` 等）は
+        着席というファクトそのものなので変更できない。更新可能なのは `characterName` だけ。
+
+        セッションが `completed` でも更新できる（後からキャラ名を埋める運用があるため）。
         `cancelled` は `422`。
-      operationId: assignCharacter
+      operationId: updateSeat
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignCharacterInput'
+              $ref: '#/components/schemas/UpdateSeatInput'
       responses:
         '200':
           description: 更新後の Seat
@@ -1454,37 +1453,44 @@ paths:
 
     delete:
       tags: [Seats]
-      summary: キャラクターの割り当てを解除
+      summary: 離席
       description: |
-        `character_assignments` の行をハード削除する。ホストまたは本人が操作可能。
-        従属概念であり「誰がいつキャラを外したか」を語る現実が無いのでソフト削除にしない。
+        セッションから離席する。**本人またはホスト**が操作可能。
+        Seat の行はハード削除する（着席は「選ばれた」というファクトそのものなので、
+        取り消しは行を消すことで表す。LobbyEntry のソフト脱退とは扱いが違う）。
 
-        **冪等**。すでに未割り当てでも `204` を返す（`404` にしない）。
-      operationId: unassignCharacter
+        Seat を消すと、その席のキャラクター割り当てとプレイメモも cascade で消える。
+
+        v0.2 の `DELETE /api/game-sessions/{id}/members/{memberId}` の改名。
+      operationId: deleteSeat
       responses:
         '204':
-          description: 解除成功（もともと未割り当てだった場合も含む）
+          description: 離席成功
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
-          description: セッションが無い、または `seatId` がこのセッションの席でない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/NotFound'
         '422':
-          description: セッションが `cancelled`
+          description: セッションが `completed` / `cancelled`
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
   # ========== Play Memos ==========
-  # design-v2 §6-15: パス・リクエスト・レスポンスを一切変えない。
+  # design-v2 §6-15: リクエスト・レスポンスの形を一切変えない。
   # 内部の紐付けが play_memos.member_id → seat_id に変わるだけで、
   # 移行の等価性検証の基準点として使うため意図的に固定する。
+  #
+  # パスだけは他のセッション配下リソース（seats / status / …）と同じく
+  # /api/lobbies/{lobbyId}/game-sessions/{id}/... へ入れ子化する。
+  # セッションを指すパスを v2 で1本に統一する（横断一覧の /api/me/game-sessions だけが例外。
+  # design-v2 §6-1）方針の対象であり、ここだけ /api/game-sessions/{id}/... を残すと
+  # 「セッション配下のリソースはロビー配下にある」という規則に穴が開くため。
+  # 末尾の /me は「この文脈での自分のもの」で、/api/me/lobbies の /me
+  # （＝自分の持ち物の横断一覧）とは別物なので前方には出さない。
 
   /api/lobbies/{lobbyId}/game-sessions/{id}/play-memos/me:
     parameters:
@@ -2127,7 +2133,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: |
-            ホストが受付を手動で閉じた時点。追加募集で null に戻す。
+            ホストが**新しい参加の受付**を手動で閉じた時点。追加募集で null に戻す。
+            閉じるのは入口だけで、企画そのものは動き続ける（すでに参加している人は
+            日程回答も着席もできるし、開催も作れる）。→ `closed`
+
             `openUntil`（締め切り日を決めた）とは別の出来事なので列を分けている。
             1列にまとめると「今すぐ閉じる」を `openUntil = 昨日` で表すしかなく、
             ホストが入れた締め切り日が失われる（design-v2 §3-2）。
@@ -2138,7 +2147,15 @@ components:
           type: [string, 'null']
           format: date-time
           description: |
-            企画の解散日時。ホストの解散アクションで記録。null なら継続中。
+            **企画そのもの**を畳んだ日時。ホストの解散アクションで記録。null なら継続中。
+            以後この企画では何もできない（`disbanded` は導出順の先頭で、他のどの条件より優先される）。
+            → `disbanded`
+
+            `receptionClosedAt` との違いは「閉じるのが入口か企画全体か」と「戻せるか」の2点。
+            受付終了は追加募集で `open` に戻せる往復状態だが、解散は終端で戻さない。
+            「もう募集しないが日程調整は続ける」が受付終了、
+            「この企画は無くなった」が解散である。
+
             v0.2 の `cancelledAt` の改名。セッション側の `cancelledAt`（開催の中止）とは別概念。
         hostUserId:
           type: string
@@ -2365,7 +2382,7 @@ components:
           type: array
           description: '`date` 昇順'
           items:
-            $ref: '#/components/schemas/LobbyCandidateDate'
+            $ref: '#/components/schemas/LobbyCandidateDateWithAnswers'
         createdAt:
           type: string
           format: date-time
@@ -2373,9 +2390,9 @@ components:
     LobbyCandidateDate:
       type: object
       description: |
-        候補日（lobby.candidate_dates）。v0.2 の `LobbyAvailabilityDate` の改名。
-        各参加者の回答一覧を `answers` に入れ子で持つ。
-      required: [id, date, timeLabel, answers]
+        候補日（lobby.candidate_dates）そのもの。v0.2 の `LobbyAvailabilityDate` の改名。
+        **回答は含まない。** 回答つきで欲しいときは `LobbyCandidateDateWithAnswers` を使う。
+      required: [id, date, timeLabel]
       properties:
         id:
           type: string
@@ -2390,18 +2407,32 @@ components:
           description: |
             時間帯の自由記述（「午後」「〜15時」等）。最大20文字。未入力は null。
             v0.2 の `dateNote`（ひとこと）の改名。実態が時間帯の記述だったため意味を明確にした。
-        answers:
-          type: array
-          description: この候補日に対する各参加者の◯△×回答。回答が無ければ空配列
-          items:
-            $ref: '#/components/schemas/LobbyScheduleAnswer'
+
+    LobbyCandidateDateWithAnswers:
+      description: |
+        候補日 + その候補日に対する各参加者の◯△×回答。
+        **日程調整の表を描く読み取り系（`GET .../schedule-polls/{pollId}` など）専用。**
+        候補日を書き換える系（`PUT .../candidate-dates`）は回答を返さない。
+        候補日の差し替えで消えた回答・残った回答をレスポンスから読み取らせると、
+        書き込みの結果と表の状態が同じ形で混ざってしまうため
+        （表を描き直したいときは調整を取り直す）。
+      allOf:
+        - $ref: '#/components/schemas/LobbyCandidateDate'
+        - type: object
+          required: [answers]
+          properties:
+            answers:
+              type: array
+              description: この候補日に対する各参加者の◯△×回答。回答が無ければ空配列
+              items:
+                $ref: '#/components/schemas/LobbyScheduleAnswer'
 
     LobbyScheduleAnswer:
       type: object
       description: |
         候補日に対する◯△×回答（lobby.schedule_answers）。
         v0.2 の `LobbyAvailabilityDateAnswer` の改名。
-        `LobbyCandidateDate.answers` に入れ子で返すため、親候補日への逆参照と `createdAt` は持たない。
+        `LobbyCandidateDateWithAnswers.answers` に入れ子で返すため、親候補日への逆参照と `createdAt` は持たない。
       required: [id, entryId, answer]
       properties:
         id:
@@ -2544,9 +2575,14 @@ components:
           description: 解決済み
         seats:
           type: array
-          description: 着席者。件数が要るなら長さを取る（v0.2 の `seatCount` を置き換えた）
+          description: |
+            着席の**参照のみ**（`GameSessionListItem.seats` と同じ理由）。
+            件数は長さ、「自分が着席しているか」は `userId` の一致で分かる。
+            着席者の表示名・キャラクター名が要る画面は
+            `GET .../game-sessions/{id}` か `GET .../seats` を取る。
+            v0.2 の `seatCount`（件数だけ）を置き換えたもの。
           items:
-            $ref: '#/components/schemas/Seat'
+            $ref: '#/components/schemas/SeatRef'
 
     GameSessionListItem:
       type: object
@@ -2585,15 +2621,21 @@ components:
           description: 解決済み
         seats:
           type: array
-          description: 着席者。件数が要るなら長さを取る（v0.2 の `memberCount` を置き換えた）
+          description: |
+            着席の**参照のみ**。一覧で要るのは「何人いるか」（長さ）と
+            「自分が着席しているか」（`userId` の一致）の2つだけなので、
+            表示名・キャラクター名・`seatedAt` は載せない。
+            完全な `Seat` が要るのは詳細（`GET .../game-sessions/{id}`）と
+            `GET .../seats` の2つで、そちらで取る。
+            v0.2 の `memberCount`（件数だけ）を置き換えたもの。
           items:
-            $ref: '#/components/schemas/Seat'
+            $ref: '#/components/schemas/SeatRef'
         hostUserId:
           type: string
           description: |
             ロビーのホスト。`hostUserId === myUserId` で自分がホストか判定する。
             v0.2 の `role`（`'host' | 'member'`）を置き換えた。
-            「自分が着席しているか」は `seats` から分かる（design-v2 §6-13）。
+            「自分が着席しているか」は `seats[].userId` から分かる（design-v2 §6-13）。
         createdAt:
           type: string
           format: date-time
@@ -2860,11 +2902,30 @@ components:
           example: アルベルト
           description: |
             character_assignments.character_name。未割り当ては null。
-            更新は `PUT /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}/character` で行う。
+            更新は `PATCH /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}` で行う。
         seatedAt:
           type: string
           format: date-time
           description: 'seats.created_at。v0.2 の `joinedAt` の改名'
+
+    SeatRef:
+      type: object
+      description: |
+        着席の軽量参照。一覧（`GameSessionListItem.seats`）で使う。
+
+        `userId` だけは落とさない。これが無いと「この開催に自分が着席しているか」が
+        判定できず、一覧が着席状態を描くために開催ごとに `GET .../seats` を
+        引き当てることになるため。ゲストは `userId` が null で、
+        一覧の文脈では誰なのかを区別しない（区別が要る画面は詳細を取る）。
+      required: [id, userId]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: seats.id
+        userId:
+          type: [string, 'null']
+          description: 由来の LobbyEntry から解決。ゲストは null
 
     CreateSeatInput:
       type: object
@@ -2883,18 +2944,22 @@ components:
             一致しない場合は `422`。単純な FK では表現できない不変条件なので
             アプリケーション層で検証する（design-v2 §3-8）。
 
-    AssignCharacterInput:
+    UpdateSeatInput:
       type: object
       required: [characterName]
+      description: |
+        着席の更新入力。更新できるのはキャラクター名だけ（それ以外は着席というファクトそのもの）。
+        `required` にしているのは、キーの有無で「変更しない」と「解除する」を
+        区別させないため（`null` は明示的な解除であって未指定ではない）。
       properties:
         characterName:
-          type: string
+          type: [string, 'null']
           minLength: 1
           maxLength: 100
           example: アルベルト
           description: |
-            割り当てるキャラクター名。空文字は不可
-            （解除は `DELETE .../character` を使う）。
+            割り当てるキャラクター名。`null` で割り当てを解除する。
+            空文字は不可（解除の意図は `null` で表す）。
 
     # ---------- GuestLink ----------
 

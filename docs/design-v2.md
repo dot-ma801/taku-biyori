@@ -792,8 +792,9 @@ export const resolveGameSessionDisplay = (
 ステータス導出を `shared` に置いて FE からも呼べるようにする方針（§4-5）とも整合する。
 「最も近い開催を選ぶ」程度の導出をサーバに置く理由が無い。
 
-**例外は、中身を見せたくないために件数だけを返す場合。** `LobbyInvitePreview.entryCount` は
-まだ参加していない人に参加者名を見せないことが目的なので、配列を返す選択肢が無い（§6-12）。
+**いまのところ例外は無い。** 唯一の例外だった `LobbyInvitePreview.entryCount`
+（まだ参加していない人に名前を見せないために件数だけ返す）は、`GET /api/join/:token` ごと
+廃止したため消えている（§6-5-1）。中身を見せたくないという理由でだけ件数に落とす余地は残す。
 
 要否が定まっていない集計値（`answeredEntryCount` など）は**足さない**。
 必要が実証された時点で「このAPIに含めるか、詳細取得APIを叩くか」を判断する。
@@ -1706,44 +1707,7 @@ v0.2 の `PATCH /api/game-sessions/:id/members/:memberId` と同じ位置に戻�
 | `403` | 非公開ロビーの開催をホスト以外が閲覧 |
 | `404` | セッションが存在しない |
 
-#### 6-13-6. `GET /api/join/:token`（返すのがセッション → ロビー）
-
-| 項目 | 内容 |
-|---|---|
-| 認証 | 認証不要 |
-| リクエスト | なし（トークンはパスパラメータ） |
-| レスポンス | `200` `LobbyInvitePreview` |
-
-> このエンドポイントは backend（`game-session/.../guest-link-route.ts`）に実装済みだが、
-> `openapi.yml` からは漏れていた（廃止した旨のコメントだけが残っていた）。本改訂で仕様書に載せ直し、
-> あわせて **lobby 側へ移設**する（タスク3）。
-
-`LobbyInvitePreview` — **まだ参加していない人に見せる最小限の情報。**
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `id` | uuid | ロビー ID。フロントは `/lobbies/:id?token=…` を組み立てる |
-| `title` | string | |
-| `scenarioName` | string \| null | |
-| `location` | string \| null | |
-| `status` | `LobbyStatus` | 解散済み・受付終了を招待された側に伝えるため |
-| `hostName` | string \| null | ホストの表示名。**`hostUserId` は返さない** |
-| `entryCount` | integer | 在籍中（`leftAt IS NULL`）の参加者数 |
-| `maxPlayers` | integer \| null | |
-
-- `entries[]` や候補日の中身は**返さない。** まだ参加していない人に他人の名前を見せないため
-- `entryCount` は例外的に件数のまま返す。**中身を見せないことが目的**なので、配列を返す選択肢が無い
-- `disbanded` のロビーも `200` で返す（フロントが「この企画は解散しました」と出せるように）
-- `published_at` が NULL でも `200`。**トークンを持っていること自体が招待の証**なので、
-  下書きの直接卓立てロビーでもプレビューできる
-
-| エラー | 条件 |
-|---|---|
-| `404` | トークンに一致するロビーが無い |
-
-`403` を返さないのは、トークンの存在・不在を区別させないため。
-
-#### 6-13-7. `PATCH /api/game-sessions/:id/status`（target が2値に）
+#### 6-13-6. `PATCH /api/game-sessions/:id/status`（target が2値に）
 
 | 項目 | 内容 |
 |---|---|

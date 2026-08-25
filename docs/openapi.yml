@@ -2564,9 +2564,14 @@ components:
           description: 解決済み
         seats:
           type: array
-          description: 着席者。件数が要るなら長さを取る（v0.2 の `seatCount` を置き換えた）
+          description: |
+            着席の**参照のみ**（`GameSessionListItem.seats` と同じ理由）。
+            件数は長さ、「自分が着席しているか」は `userId` の一致で分かる。
+            着席者の表示名・キャラクター名が要る画面は
+            `GET .../game-sessions/{id}` か `GET .../seats` を取る。
+            v0.2 の `seatCount`（件数だけ）を置き換えたもの。
           items:
-            $ref: '#/components/schemas/Seat'
+            $ref: '#/components/schemas/SeatRef'
 
     GameSessionListItem:
       type: object
@@ -2605,15 +2610,21 @@ components:
           description: 解決済み
         seats:
           type: array
-          description: 着席者。件数が要るなら長さを取る（v0.2 の `memberCount` を置き換えた）
+          description: |
+            着席の**参照のみ**。一覧で要るのは「何人いるか」（長さ）と
+            「自分が着席しているか」（`userId` の一致）の2つだけなので、
+            表示名・キャラクター名・`seatedAt` は載せない。
+            完全な `Seat` が要るのは詳細（`GET .../game-sessions/{id}`）と
+            `GET .../seats` の2つで、そちらで取る。
+            v0.2 の `memberCount`（件数だけ）を置き換えたもの。
           items:
-            $ref: '#/components/schemas/Seat'
+            $ref: '#/components/schemas/SeatRef'
         hostUserId:
           type: string
           description: |
             ロビーのホスト。`hostUserId === myUserId` で自分がホストか判定する。
             v0.2 の `role`（`'host' | 'member'`）を置き換えた。
-            「自分が着席しているか」は `seats` から分かる（design-v2 §6-13）。
+            「自分が着席しているか」は `seats[].userId` から分かる（design-v2 §6-13）。
         createdAt:
           type: string
           format: date-time
@@ -2880,11 +2891,30 @@ components:
           example: アルベルト
           description: |
             character_assignments.character_name。未割り当ては null。
-            更新は `PUT /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}/character` で行う。
+            更新は `PATCH /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}` で行う。
         seatedAt:
           type: string
           format: date-time
           description: 'seats.created_at。v0.2 の `joinedAt` の改名'
+
+    SeatRef:
+      type: object
+      description: |
+        着席の軽量参照。一覧（`GameSessionListItem.seats`）で使う。
+
+        `userId` だけは落とさない。これが無いと「この開催に自分が着席しているか」が
+        判定できず、一覧が着席状態を描くために開催ごとに `GET .../seats` を
+        引き当てることになるため。ゲストは `userId` が null で、
+        一覧の文脈では誰なのかを区別しない（区別が要る画面は詳細を取る）。
+      required: [id, userId]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: seats.id
+        userId:
+          type: [string, 'null']
+          description: 由来の LobbyEntry から解決。ゲストは null
 
     CreateSeatInput:
       type: object

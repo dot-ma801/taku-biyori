@@ -1269,12 +1269,25 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `userId` | string \| null | 由来の `LobbyEntry` から解決。ゲストは `null` |
 | `userName` | string \| null | 同上 |
 | `guestName` | string \| null | 同上 |
-| `characterName` | string \| null | `character_assignments.character_name`。未割り当ては `null`（§9-4） |
+| `characterName` | string \| null | `character_assignments.character_name`。未割り当ては `null`（§9-4）。更新は `PATCH .../seats/:seatId` |
 | `seatedAt` | date-time | `seats.created_at` |
 
 `seats` から `user_id` / `guest_name` / `character_name` カラムは消えるが（§3-8）、
 **レスポンスには JOIN 済みの解決値として現れる。** フロントが着席者を描くのに毎回
 `entries` を引き当てる必要をなくすため。
+
+**`SeatRef`** — 着席の軽量参照（一覧・埋め込みで使う）
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `id` | uuid | `seats.id` |
+| `userId` | string \| null | 由来の `LobbyEntry` から解決。ゲストは `null` |
+
+一覧・埋め込みで着席に対して要るのは「何人いるか」（長さ）と
+「自分が着席しているか」（`userId` の一致）の2つだけなので、完全な `Seat` は返さない。
+`userId` を落とさないのは、これが無いと着席状態を描くために
+開催ごとに `GET .../seats` を引き当てることになるため。
+表示名・キャラクター名が要る画面（セッション詳細）は完全な `Seat` を取る。
 
 **`GameSessionSummary`** — ロビー詳細に埋める開催の軽量表現
 
@@ -1285,7 +1298,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `status` | `GameSessionStatus` | |
 | `title` | string | **解決済み**（未設定ならロビーの `title`） |
 | `timeLabel` | string \| null | 解決済み |
-| `seats` | `Seat[]` | 着席者。件数が要るなら長さを取る |
+| `seats` | `SeatRef[]` | 着席の参照。件数は長さ、自分の着席は `userId` で判定 |
 
 #### 入力の上限値
 
@@ -1420,7 +1433,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `status` | `GameSessionStatus` | |
 | `scheduledAt` | date | |
 | `timeLabel` | string \| null | 解決済み |
-| `seats` | `Seat[]` | 着席者。件数が要るなら長さを取る |
+| `seats` | `SeatRef[]` | 着席の参照（`{ id, userId }`）。件数は長さ、自分の着席は `userId` で判定 |
 | `hostUserId` | string | ロビーのホスト。`hostUserId === myUserId` で自分がホストか判定する |
 | `createdAt` / `updatedAt` | date-time | |
 
@@ -1429,7 +1442,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 
 `role` を `hostUserId` に置き換えるのは、`role` が導出値でありながら**元の情報を捨てていた**ため。
 「自分がホストか」は `hostUserId` から判定でき、加えて「**誰がホストか**」も表示できる。
-「自分が着席しているか」は `seats` から分かる。将来ホストが複数になったりロールが増えても、
+「自分が着席しているか」は `seats[].userId` から分かる。将来ホストが複数になったりロールが増えても、
 そのとき `role` を足せばよい。
 
 | エラー | 条件 |
@@ -1437,7 +1450,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `401` / `403` | ロビーの閲覧可否に従う |
 | `404` | ロビーが存在しない |
 
-#### 6-12-6. `PUT /api/game-sessions/:id/seats/:seatId/character`（キャラ割り当て）
+#### 6-12-6. `PATCH /api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId`（キャラ名の割り当て・解除）
 
 | 項目 | 内容 |
 |---|---|
@@ -1771,7 +1784,7 @@ v0.2 の `PATCH /api/game-sessions/:id/members/:memberId` と同じ位置に戻�
 | `members`（配列名） | `entries` | ロビー詳細 |
 | `members`（配列名） | `seats` | セッション詳細 |
 | `memberCount` | `entries` 配列 | ロビー一覧 |
-| `memberCount` | `seats` 配列 | セッション一覧 |
+| `memberCount` | `seats` 配列（`SeatRef[]`） | セッション一覧 |
 | `dateNote` | `timeLabel` | 候補日（§2-3） |
 | `dates`（一括更新のボディ） | `candidateDates` | 候補日の一括更新 |
 | `responses` | `answers` | パスの末尾 |

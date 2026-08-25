@@ -969,9 +969,8 @@ frontend から /api/join の呼び出し  → 無し
 |---|---|---|---|
 | GET | `/api/lobbies/:lobbyId/game-sessions/:id/seats` | ログイン任意 | 着席者一覧（表示名・キャラ名を含む） |
 | POST | `/api/lobbies/:lobbyId/game-sessions/:id/seats` | ホストのみ | `{ entryId }` **必須**。選出して着席させる |
+| PATCH | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId` | ログイン必須 | `{ characterName }` の割り当て・解除（`null`）。本人またはホスト |
 | DELETE | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId` | ログイン必須 | 離席。本人またはホスト。`204` |
-| PUT | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId/character` | ログイン必須 | `{ characterName }` を割り当て |
-| DELETE | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId/character` | ログイン必須 | 割り当て解除。`204` |
 
 **廃止**: `POST .../guest-seats`（ゲストの「参加 + 着席」）。
 
@@ -1015,15 +1014,15 @@ frontend から /api/join の呼び出し  → 無し
 | `POST /api/game-sessions` | **廃止** | ロビー配下へ |
 | `/api/game-sessions/:id` ほか個別操作 | `/api/lobbies/:lobbyId/game-sessions/:id` ほか | すべてロビー配下に入れ子化 |
 | `/api/game-sessions/:id/members[/:memberId]` | `/api/lobbies/:lobbyId/game-sessions/:id/seats[/:seatId]` | |
-| `PATCH .../members/:memberId`（キャラ名） | `PUT .../seats/:seatId/character` | |
+| `PATCH .../members/:memberId`（キャラ名） | `PATCH .../seats/:seatId` | 入れ子化と改名のみ。キャラ名の更新経路はメソッドも位置も据え置き |
 | `/api/game-sessions/:id/guest-link`, `/guest-members` | **廃止** | トークンはロビーに1本化 |
 | `GET /api/join/:token` | **廃止** | 招待リンクが `lobbyId` を含むため不要（§6-5-1） |
 | Play Memo 4本 | パスのみ入れ子化。**形は変更なし** | 等価性の基準点（§6-15） |
 
 ### 6-9. レビュー用: エンドポイント差分サマリ
 
-現行の実装 **31 パス / 44 オペレーション** → v2 も **31 パス / 44 オペレーション**。
-偶然同数だが中身は大きく入れ替わる。
+現行の実装 **31 パス / 44 オペレーション** → v2 は **30 パス / 43 オペレーション**。
+数はほぼ変わらないが中身は大きく入れ替わる。
 
 > 現行を「30 パス / 43 オペレーション」ではなく 31 / 44 と数えるのは、
 > `GET /api/join/{token}` が backend に実装されているのに `openapi.yml` から
@@ -1034,10 +1033,10 @@ frontend から /api/join の呼び出し  → 無し
 ```
 両方に存在（そのまま）  12 パス   ← Health 1 / Auth 6 / Profile 1 / Lobbies 4
 v0.2 のみ               19 パス   ← 廃止 + 改名元
-v2 のみ                 19 パス   ← 新規 + 改名先
+v2 のみ                 18 パス   ← 新規 4 + 改名先 14
 ```
 
-#### 完全に新規（5パス / 7オペレーション）
+#### 完全に新規（4パス / 5オペレーション）
 
 前身となる現行エンドポイントが存在しないもの。
 
@@ -1048,13 +1047,11 @@ v2 のみ                 19 パス   ← 新規 + 改名先
 | GET | `/api/lobbies/:id/schedule-polls` | 日程調整の履歴一覧 |
 | POST | `/api/lobbies/:id/schedule-polls` | 新しい日程調整を始める（リスケの起点） |
 | GET | `/api/lobbies/:id/schedule-polls/:pollId` | 指定した調整（候補日 + 回答） |
-| PUT | `/api/lobbies/:lobbyId/game-sessions/:id/seats/:seatId/character` | キャラ割り当て |
-| DELETE | 同上 | キャラ割り当ての解除 |
 
 `POST /api/lobbies/:id/guest-link`（トークン再発行）は既存パスへのメソッド追加なので
 パス数には現れないが、新規オペレーションとして数える。
 
-#### 廃止（8パス / 10オペレーション）
+#### 廃止（7パス / 9オペレーション）
 
 | Method | Path | 理由 |
 |---|---|---|
@@ -1064,7 +1061,6 @@ v2 のみ                 19 パス   ← 新規 + 改名先
 | POST | `/api/game-sessions` | セッションは必ずロビー配下に作る（§9-3） |
 | GET | `/api/game-sessions/:id/guest-link` | トークンはロビーに1本化 |
 | POST | `/api/game-sessions/:id/guest-members` | 同上 |
-| PATCH | `/api/game-sessions/:id/members/:memberId` | キャラ名更新は `PUT .../seats/:seatId/character` へ |
 | GET | `/api/join/:token` | 招待リンクが `lobbyId` を含むため不要（§6-5-1） |
 
 #### 改名 / 入れ子化（14パス）
@@ -1440,10 +1436,14 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 
 | フィールド | 型 | 必須 | 制約 |
 |---|---|---|---|
-| `characterName` | string | ✅ | 1〜100文字。空文字は不可（解除は `DELETE`） |
+| `characterName` | string \| null | ✅ | 1〜100文字、または `null`（解除）。空文字は不可 |
 
-- `character_assignments` への **upsert**。衝突キーは `seat_id`（UNIQUE、§3-9）
-- `PUT` なので冪等。同じ名前を2回送っても結果は同じ
+- 文字列なら `character_assignments` への **upsert**。衝突キーは `seat_id`（UNIQUE、§3-9）
+- `null` なら `character_assignments` の行を**ハード削除**。従属概念であり、
+  「誰がいつキャラを外したか」を語る現実が無いのでソフト削除にしない
+- **冪等**。同じ名前を2回送っても、すでに未割り当てで `null` を送っても結果は同じ
+- `characterName` を必須にしているのは、キーの有無で「変更しない」と「解除する」を
+  区別させないため。`null` は明示的な解除であって未指定ではない
 
 | エラー | 条件 |
 |---|---|
@@ -1453,21 +1453,21 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `404` | セッションが無い、または `seatId` が**このセッションの**席でない |
 | `422` | セッションが `cancelled`（§4-3）。`completed` では**許可する**（後からキャラ名を埋める運用があるため） |
 
-#### 6-12-7. `DELETE /api/game-sessions/:id/seats/:seatId/character`（割り当て解除）
+##### `.../seats/:seatId/character` というサブリソースにしない
 
-| 項目 | 内容 |
-|---|---|
-| 認証 | ログイン必須。ホストまたは本人 |
-| リクエスト | ボディなし |
-| レスポンス | `204`（ボディなし） |
+`character_assignments` はテーブルとしては独立している（§3-9）が、
+**API から見た更新対象は着席（Seat）**である。理由は3つ。
 
-- `character_assignments` の行を**ハード削除**する。従属概念であり、
-  「誰がいつキャラを外したか」を語る現実が無いのでソフト削除にしない
-- **冪等**。すでに未割り当てでも `204`（`404` にしない）
+1. `Seat` の表現に `characterName` が現れる（§6-11）。親で読めるフィールドが
+   子でしか書けないのは読み書きの相手がずれていて、実際「割り当て」の
+   レスポンスも `CharacterAssignment` ではなく `Seat` を返していた
+2. 解除が `null` で表せるので、`PUT` + `DELETE` の2オペレーションが `PATCH` 1本になる
+3. 権限（ホストまたは本人）もステータス条件も、離席（`DELETE .../seats/:seatId`）と
+   同じ「その席に対する操作」として並ぶ
 
-| エラー | 条件 |
-|---|---|
-| `401` / `403` / `404` / `422` | `PUT` と同じ |
+Seat の他のフィールド（`entryId` / `userId` / `seatedAt`）は着席というファクトそのもので
+更新できないため、`PATCH` で触れるのは実質 `characterName` だけになる。
+v0.2 の `PATCH /api/game-sessions/:id/members/:memberId` と同じ位置に戻ることになる。
 
 ### 6-13. フィールド定義 — 仕様が変わるエンドポイント
 
@@ -1775,7 +1775,6 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | 消えるもの | 理由 |
 |---|---|
 | `GameSessionMember.lobbyMemberId` | 選出＝Seat の有無になり突合が不要（§1-4） |
-| `GameSessionMember.characterName` の**更新経路** | `PATCH .../members/:memberId` は廃止。`PUT .../seats/:seatId/character` へ（表示用の `Seat.characterName` は残る） |
 
 **増えるフィールド**:
 
@@ -1811,7 +1810,7 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 
 **3. `/api/game-sessions/:id/members` → `/api/lobbies/:lobbyId/game-sessions/:id/seats`**（タスク5・6）
 
-入れ子化に加えて、`characterName` が別リソース（`.../seats/:seatId/character`）へ分離され、
+入れ子化に加えて、`characterName` の実体が `character_assignments` へ分離され、
 表示名が `LobbyEntry` 由来の解決値になる。
 
 ### 6-15. プレイメモ4本の扱い（等価性の基準点）

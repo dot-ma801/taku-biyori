@@ -1389,61 +1389,35 @@ paths:
       - $ref: '#/components/parameters/GameSessionId'
       - $ref: '#/components/parameters/SeatId'
 
-    delete:
+    patch:
       tags: [Seats]
-      summary: 離席
+      summary: 着席を更新（キャラクター名の割り当て・解除）
       description: |
-        セッションから離席する。**本人またはホスト**が操作可能。
-        Seat の行はハード削除する（着席は「選ばれた」というファクトそのものなので、
-        取り消しは行を消すことで表す。LobbyEntry のソフト脱退とは扱いが違う）。
+        着席のキャラクター名を更新する。**ホストまたはその席の本人**が操作可能。
 
-        Seat を消すと、その席のキャラクター割り当てとプレイメモも cascade で消える。
-
-        v0.2 の `DELETE /api/game-sessions/{id}/members/{memberId}` の改名。
-      operationId: deleteSeat
-      responses:
-        '204':
-          description: 離席成功
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          description: セッションが `completed` / `cancelled`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/lobbies/{lobbyId}/game-sessions/{id}/seats/{seatId}/character:
-    parameters:
-      - $ref: '#/components/parameters/LobbyIdAsLobbyId'
-      - $ref: '#/components/parameters/GameSessionId'
-      - $ref: '#/components/parameters/SeatId'
-
-    put:
-      tags: [Seats]
-      summary: キャラクターを割り当て
-      description: |
-        着席にキャラクター名を割り当てる。**ホストまたはその席の本人**が操作可能。
-        `character_assignments` への upsert で、衝突キーは `seat_id`（UNIQUE。1着席1割り当て）。
-        `PUT` なので冪等。
+        - `characterName` に文字列を渡すと割り当て（`character_assignments` への upsert。
+          衝突キーは `seat_id`。UNIQUE なので1着席1割り当て）
+        - `characterName` に `null` を渡すと解除（`character_assignments` の行をハード削除）。
+          **冪等**で、もともと未割り当てでも `200` を返す
 
         v0.2 の `PATCH /api/game-sessions/{id}/members/{memberId}` の後継。
-        キャラクター名が `seats` のカラムではなく別テーブルになったため
-        （design-v2 §9-4）、専用のサブリソースにした。
+        キャラクター名の実体は `seats` のカラムではなく `character_assignments` に移るが
+        （design-v2 §9-4）、**API から見た更新対象は着席（Seat）のまま**にする。
+        `Seat` の表現に `characterName` が現れる以上、読み書きの相手を揃えるべきで、
+        親で読めて子でしか書けない形にはしない（レスポンスが `Seat` なのもそのため）。
 
-        セッションが `completed` でも割り当てられる（後からキャラ名を埋める運用があるため）。
+        Seat の他のフィールド（`entryId` / `userId` / `seatedAt` 等）は
+        着席というファクトそのものなので変更できない。更新可能なのは `characterName` だけ。
+
+        セッションが `completed` でも更新できる（後からキャラ名を埋める運用があるため）。
         `cancelled` は `422`。
-      operationId: assignCharacter
+      operationId: updateSeat
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignCharacterInput'
+              $ref: '#/components/schemas/UpdateSeatInput'
       responses:
         '200':
           description: 更新後の Seat
@@ -1472,37 +1446,44 @@ paths:
 
     delete:
       tags: [Seats]
-      summary: キャラクターの割り当てを解除
+      summary: 離席
       description: |
-        `character_assignments` の行をハード削除する。ホストまたは本人が操作可能。
-        従属概念であり「誰がいつキャラを外したか」を語る現実が無いのでソフト削除にしない。
+        セッションから離席する。**本人またはホスト**が操作可能。
+        Seat の行はハード削除する（着席は「選ばれた」というファクトそのものなので、
+        取り消しは行を消すことで表す。LobbyEntry のソフト脱退とは扱いが違う）。
 
-        **冪等**。すでに未割り当てでも `204` を返す（`404` にしない）。
-      operationId: unassignCharacter
+        Seat を消すと、その席のキャラクター割り当てとプレイメモも cascade で消える。
+
+        v0.2 の `DELETE /api/game-sessions/{id}/members/{memberId}` の改名。
+      operationId: deleteSeat
       responses:
         '204':
-          description: 解除成功（もともと未割り当てだった場合も含む）
+          description: 離席成功
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
-          description: セッションが無い、または `seatId` がこのセッションの席でない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/NotFound'
         '422':
-          description: セッションが `cancelled`
+          description: セッションが `completed` / `cancelled`
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
   # ========== Play Memos ==========
-  # design-v2 §6-15: パス・リクエスト・レスポンスを一切変えない。
+  # design-v2 §6-15: リクエスト・レスポンスの形を一切変えない。
   # 内部の紐付けが play_memos.member_id → seat_id に変わるだけで、
   # 移行の等価性検証の基準点として使うため意図的に固定する。
+  #
+  # パスだけは他のセッション配下リソース（seats / status / …）と同じく
+  # /api/lobbies/{lobbyId}/game-sessions/{id}/... へ入れ子化する。
+  # セッションを指すパスを v2 で1本に統一する（横断一覧の /api/me/game-sessions だけが例外。
+  # design-v2 §6-1）方針の対象であり、ここだけ /api/game-sessions/{id}/... を残すと
+  # 「セッション配下のリソースはロビー配下にある」という規則に穴が開くため。
+  # 末尾の /me は「この文脈での自分のもの」で、/api/me/lobbies の /me
+  # （＝自分の持ち物の横断一覧）とは別物なので前方には出さない。
 
   /api/lobbies/{lobbyId}/game-sessions/{id}/play-memos/me:
     parameters:
@@ -2901,18 +2882,22 @@ components:
             一致しない場合は `422`。単純な FK では表現できない不変条件なので
             アプリケーション層で検証する（design-v2 §3-8）。
 
-    AssignCharacterInput:
+    UpdateSeatInput:
       type: object
       required: [characterName]
+      description: |
+        着席の更新入力。更新できるのはキャラクター名だけ（それ以外は着席というファクトそのもの）。
+        `required` にしているのは、キーの有無で「変更しない」と「解除する」を
+        区別させないため（`null` は明示的な解除であって未指定ではない）。
       properties:
         characterName:
-          type: string
+          type: [string, 'null']
           minLength: 1
           maxLength: 100
           example: アルベルト
           description: |
-            割り当てるキャラクター名。空文字は不可
-            （解除は `DELETE .../character` を使う）。
+            割り当てるキャラクター名。`null` で割り当てを解除する。
+            空文字は不可（解除の意図は `null` で表す）。
 
     # ---------- GuestLink ----------
 

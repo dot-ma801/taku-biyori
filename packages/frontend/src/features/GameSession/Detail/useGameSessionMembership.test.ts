@@ -93,6 +93,24 @@ describe('canJoin', () => {
     },
   );
 
+  // 卓側のゲスト参加を廃止したため、未ログインでは参加導線を出さない。
+  // 出してしまうと押した先の POST が 401 になる。
+  it('未ログインの場合は false', () => {
+    // Arrange
+    vi.mocked(useAuthStore).mockReturnValue({
+      currentUser: null,
+    } as unknown as ReturnType<typeof useAuthStore>);
+    const gameSession = ref(
+      makeGameSession({ status: GameSessionStatus.confirmed, members: [] }),
+    );
+
+    // Act
+    const { canJoin } = setup(gameSession);
+
+    // Assert
+    expect(canJoin.value).toBe(false);
+  });
+
   it('すでにメンバーの場合は false', () => {
     const gameSession = ref(
       makeGameSession({

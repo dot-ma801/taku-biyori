@@ -30,9 +30,12 @@ export const useGameSessionMembership = (
   const isMember = computed(() => !!myMember.value);
 
   /**
-   * 参加ボタンを表示できるか。未参加かつ shared の ACTION_POLICIES が
+   * 参加ボタンを表示できるか。ログイン済みで・未参加で、shared の ACTION_POLICIES が
    * joinSession を許可するステータス（confirmed / today）のときのみ true。
    * 判定は API 契約（canPerform）に委譲し、参加 API のバリデーションと同じ表を使う。
+   *
+   * 卓側のゲスト参加は廃止したため、参加 API はログインを要求する。未ログインでも
+   * 公開中の卓は閲覧できるので、ログインの有無を見ないと押した先で 401 になる導線が出る。
    */
   const canJoin = computed(() => {
     const status = toValue(gameSession)?.status;
@@ -40,6 +43,7 @@ export const useGameSessionMembership = (
       return false;
     }
     return (
+      !!authStore.currentUser &&
       !isMember.value &&
       canPerform(GameSessionAction.joinSession, status, 'member')
     );

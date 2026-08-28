@@ -17,7 +17,6 @@ const baseSession: GameSession = {
   scheduledAt: '2025-05-30',
   completedAt: null,
   cancelledAt: null,
-  lobbyId: null,
   maxMembers: null,
   createdBy: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',

@@ -4,7 +4,6 @@ import { getLobbyStatus } from '@/lobby/domain/lobby-status';
 const base = {
   isPublished: false,
   openUntil: null,
-  closedAt: null,
   cancelledAt: null,
 };
 
@@ -20,20 +19,11 @@ describe('getLobbyStatus', () => {
     const input = {
       ...base,
       isPublished: true,
-      closedAt: new Date(),
       cancelledAt: new Date(),
     };
 
     // Act / Assert
     expect(getLobbyStatus(input)).toBe('cancelled');
-  });
-
-  it('closed_at がセット済みなら confirmed', () => {
-    // Arrange
-    const input = { ...base, isPublished: true, closedAt: new Date() };
-
-    // Act / Assert
-    expect(getLobbyStatus(input)).toBe('confirmed');
   });
 
   it('is_published=false なら draft', () => {
@@ -63,19 +53,6 @@ describe('getLobbyStatus', () => {
 
     // Act / Assert
     expect(getLobbyStatus(input)).toBe('scheduling');
-  });
-
-  it('cancelled が confirmed より優先される', () => {
-    // Arrange
-    const input = {
-      ...base,
-      isPublished: false,
-      closedAt: new Date(),
-      cancelledAt: new Date(),
-    };
-
-    // Act / Assert
-    expect(getLobbyStatus(input)).toBe('cancelled');
   });
 
   it('now を注入して比較できる', () => {

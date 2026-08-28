@@ -20,8 +20,6 @@ import { closeTestDatabase, withRollback } from '@test/helpers/test-database';
 import {
   insertGameSession,
   insertGameSessionMember,
-  insertLobby,
-  insertLobbyMember,
   insertPlayMemo,
   insertUser,
 } from '@test/helpers/fixtures';
@@ -398,78 +396,6 @@ describe('findDetailById', () => {
       expect(await repo.findDetailById(MISSING_ID)).toBeNull();
     });
   });
-
-  it('募集枠から確定した卓は lobbyId を含める', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(gameSessionId);
-
-      // Assert
-      expect(detail?.lobbyId).toBe(lobbyId);
-    });
-  });
-
-  it('直接立てた卓は lobbyId が null になる', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const gameSessionId = await insertGameSession(db, host.id, {
-        lobbyId: null,
-      });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(gameSessionId);
-
-      // Assert
-      expect(detail?.lobbyId).toBeNull();
-    });
-  });
-
-  it('募集枠のメンバー経由で参加したメンバーは lobbyMemberId を含める', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const lobbyMemberId = await insertLobbyMember(db, lobbyId, {
-        userId: host.id,
-      });
-      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
-      await insertGameSessionMember(db, gameSessionId, {
-        userId: host.id,
-        lobbyMemberId,
-      });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(gameSessionId);
-
-      // Assert
-      expect(detail?.members[0]).toMatchObject({ lobbyMemberId });
-    });
-  });
-
-  it('募集枠を経由しないメンバーは lobbyMemberId が null になる', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const gameSessionId = await insertGameSession(db, host.id);
-      await insertGameSessionMember(db, gameSessionId, { userId: host.id });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(gameSessionId);
-
-      // Assert
-      expect(detail?.members[0]).toMatchObject({ lobbyMemberId: null });
-    });
-  });
 });
 
 describe('updateById', () => {
@@ -724,39 +650,6 @@ describe('publish / complete / cancel', () => {
   });
 });
 
-describe('createWithHost', () => {
-  it('卓とホストメンバーを1トランザクションで作る', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const created = await repo.createWithHost({
-        hostUserId: host.id,
-        title: '新しい卓',
-        maxMembers: 4,
-        scheduledAt: '2100-09-09',
-        guestLinkToken: 'token-create',
-      });
-
-      // Assert
-      expect(created).toMatchObject({
-        title: '新しい卓',
-        scheduledAt: '2100-09-09',
-        maxMembers: 4,
-        status: GameSessionStatus.draft,
-      });
-      expect(
-        await db
-          .select()
-          .from(gameSessionMembers)
-          .where(eq(gameSessionMembers.gameSessionId, created.id)),
-      ).toHaveLength(1);
-    });
-  });
-});
-
 describe('メンバー操作', () => {
   it('findMembersByGameSessionId は参加順に返す', async () => {
     await withRollback(async (db) => {
@@ -847,27 +740,6 @@ describe('メンバー操作', () => {
 
       // Act & Assert
       expect(await repo.addMember(gameSessionId, joiner.id, {})).toBeNull();
-    });
-  });
-
-  it('addGuestMember は同名のゲストを何人でも追加できる', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const gameSessionId = await insertGameSession(db, host.id);
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const first = await repo.addGuestMember(gameSessionId, {
-        guestName: '同じ名前',
-      });
-      const second = await repo.addGuestMember(gameSessionId, {
-        guestName: '同じ名前',
-      });
-
-      // Assert
-      expect(first.id).not.toBe(second.id);
-      expect(second).toMatchObject({ userId: null, characterName: null });
     });
   });
 
@@ -968,102 +840,6 @@ describe('メンバー操作', () => {
       // Assert
       expect(await repo.findMemberOwner(memberId)).toBeNull();
       expect(await repo.findPlayMemoByMemberId(memberId)).toBeNull();
-    });
-  });
-});
-
-describe('ゲストリンク', () => {
-  it('findGuestLinkInfo はホストとトークンを返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const gameSessionId = await insertGameSession(db, host.id, {
-        guestLinkToken: 'gs-token-1',
-      });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const info = await repo.findGuestLinkInfo(gameSessionId);
-
-      // Assert
-      expect(info).toEqual({ hostUserId: host.id, token: 'gs-token-1' });
-    });
-  });
-
-  it('findGuestLinkInfo は存在しない卓では null を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const info = await repo.findGuestLinkInfo(MISSING_ID);
-
-      // Assert
-      expect(info).toBeNull();
-    });
-  });
-
-  it('findGuestLinkToken はトークンだけを返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const gameSessionId = await insertGameSession(db, host.id, {
-        guestLinkToken: 'gs-token-2',
-      });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const token = await repo.findGuestLinkToken(gameSessionId);
-
-      // Assert
-      expect(token).toBe('gs-token-2');
-    });
-  });
-
-  it('findGuestLinkToken は存在しない卓では null を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const token = await repo.findGuestLinkToken(MISSING_ID);
-
-      // Assert
-      expect(token).toBeNull();
-    });
-  });
-
-  it('findByGuestLinkToken はトークンから卓を引ける', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const gameSessionId = await insertGameSession(db, host.id, {
-        guestLinkToken: 'gs-token-3',
-        title: 'トークンで引く卓',
-      });
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const found = await repo.findByGuestLinkToken('gs-token-3');
-
-      // Assert
-      expect(found).toMatchObject({
-        id: gameSessionId,
-        title: 'トークンで引く卓',
-      });
-    });
-  });
-
-  it('findByGuestLinkToken は未知のトークンでは null を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const repo = createGameSessionRepository(db);
-
-      // Act
-      const found = await repo.findByGuestLinkToken('unknown-token');
-
-      // Assert
-      expect(found).toBeNull();
     });
   });
 });

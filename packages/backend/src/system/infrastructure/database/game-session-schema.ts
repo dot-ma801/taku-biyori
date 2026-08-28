@@ -17,31 +17,28 @@ import { user } from '@/system/infrastructure/database/schema';
  */
 export const gameSessionSchema = pgSchema('game_session');
 
-export const gameSessions = gameSessionSchema.table(
-  'game_sessions',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    hostUserId: text('host_user_id')
-      .notNull()
-      .references(() => user.id),
-    title: text('title').notNull(),
-    scenarioName: text('scenario_name'),
-    description: text('description'),
-    location: text('location'),
-    maxPlayers: integer('max_players'),
-    guestLinkToken: text('guest_link_token').notNull(),
-    isPublished: boolean('is_published').notNull().default(false),
-    // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
-    scheduledAt: date('scheduled_at').notNull(),
-    completedAt: timestamp('completed_at'),
-    cancelledAt: timestamp('cancelled_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-);
+export const gameSessions = gameSessionSchema.table('game_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  hostUserId: text('host_user_id')
+    .notNull()
+    .references(() => user.id),
+  title: text('title').notNull(),
+  scenarioName: text('scenario_name'),
+  description: text('description'),
+  location: text('location'),
+  maxPlayers: integer('max_players'),
+  guestLinkToken: text('guest_link_token').notNull(),
+  isPublished: boolean('is_published').notNull().default(false),
+  // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+  scheduledAt: date('scheduled_at').notNull(),
+  completedAt: timestamp('completed_at'),
+  cancelledAt: timestamp('cancelled_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const gameSessionMembers = gameSessionSchema.table(
   'game_session_members',

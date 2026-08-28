@@ -1,6 +1,5 @@
 import type { Hono } from 'hono';
 import type {
-  GameSession,
   GameSessionListItem,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,

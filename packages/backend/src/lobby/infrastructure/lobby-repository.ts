@@ -320,12 +320,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     const result = await db
       .update(lobbies)
       .set({ cancelledAt: new Date() })
-      .where(
-        and(
-          eq(lobbies.id, id),
-          isNull(lobbies.cancelledAt),
-        ),
-      )
+      .where(and(eq(lobbies.id, id), isNull(lobbies.cancelledAt)))
       .returning();
 
     const row = result[0];

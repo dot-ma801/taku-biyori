@@ -45,7 +45,37 @@
 - backend は TDD（Red → Green → Refactor）。契約型は実装より先に `shared` へ定義する（CLAUDE.md）
 - コミットは細かく、日本語、プレフィックス付き（CLAUDE.md のコミット規則）
 
-### 1-4. 全体像
+### 1-4. フロントエンドは DTO と model を分ける
+
+**v2 のレスポンスは、そのまま画面に流せる形ではない。**
+
+- セッションの表示値は上書きの生値（`overrides`）とロビーの既定値（`lobby`）の**両方**が返り、
+  解決はクライアントが行う（design-v2 §5-5）
+- ロビー・セッションのステータスはレスポンスのタイムスタンプから導出する（design-v2 §4-5）
+- 日程調整の回答は候補日ごとの配列で返るが、UI は「メンバー × 候補日」のセルで引く
+- 脱退した参加者（`left_at IS NOT NULL`）は行として返りうる（design-v2 §9-5）
+
+これらを DTO のまま composable / component へ持ち回ると、`??` 解決・導出・線形探索・キャストが
+**画面ごとに書かれて散る。** v1 の `useScheduleView.getAnswer()` がすでにその状態にある。
+
+そこで本移行では、**`@taku-biyori/shared` の型は API との通信契約（DTO）と位置づけ、
+FE 内部で扱う model 型へ `src/api/*.ts` の中で変換する。** 変換より内側は DTO を見ない。
+
+- model 型と変換関数は `packages/frontend/src/models/{機能名}.ts` に置く（`Model` サフィックス／`toXxxModel()`）
+- `src/api/*.ts` は `Promise<XxxModel>` を返す。DTO 型は `apiRequest<T>` の型引数の中だけに現れる
+- 変換で吸収するのは「日付の型・導出値の確定・ルックアップ用 `Map`・union へのキャスト・
+  脱退行の除去」。`'未設定'` のような表示文言のフォールバックは**入れない**
+- `overrides` の生値は解決済みの値と**別に** model へ残す。捨てると編集フォームが壊れる（design-v2 §5-5）
+- **逆方向（model → リクエスト）は今回のスコープ外。** リクエストは従来どおり shared の `*Input` 型を組み立てる
+- 変換関数は純粋関数なので**テストを先に書く**（`src/models/{機能名}.test.ts`）。
+  「上書きが無ければロビーの値になる」「脱退済みの entry が落ちる」といった期待値をここへ集約する
+
+規約の詳細と実例は **CLAUDE.md「API の型（DTO）と FE の model を分ける」を正**とする。
+
+**適用範囲は本移行で新規に書く／書き換える FE に限る**（タスク3〜6）。
+Profile・auth など v2 で触らない箇所は現状のまま残し、タスク7 でも統一しない。
+
+### 1-5. 全体像
 
 ```text
 main ────────────────────────────────────────────────────────────▶ (Go/No-Go 後に1回だけマージ)
@@ -135,9 +165,9 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **DDL**: `lobbies.cancelled_at` → `disbanded_at` に改名、`lobby_members` → `lobby_entries` に改名 + `left_at` 追加（`lobby_answers.member_id` の FK 参照も付け替え）。**shared**: `lobby/status.ts`（enum `draft`/`open`/`closed`/`disbanded` + **導出関数 `getLobbyStatus()` を backend から移設**）、`lobby/permissions.ts` を design-v2 §4-3 の表どおりに書き直し、`Lobby` / `LobbyListItem` / `LobbyDetail` / `LobbyEntry` 契約、`GUEST_TOKEN_HEADER` を `game-session.ts` → `lobby.ts` へ移設。**backend**: `lobby/domain/lobby-status.ts` を**削除**して shared の導出関数を使う、ロビー CRUD・status・参加/脱退/ゲスト参加・guest-link（再発行含む）、`GET /api/join/:token` をロビー側へ移設。**frontend**: `api/lobby.ts`、`features/Lobby/List/`、`Lobby/Edit/`、`Lobby/Detail/` のヘッダ・ActionBar・StatusDisplay・参加者一覧・各ダイアログ、`LobbyStatusBadge` |
+| スコープ | **DDL**: `lobbies.cancelled_at` → `disbanded_at` に改名、`lobby_members` → `lobby_entries` に改名 + `left_at` 追加（`lobby_answers.member_id` の FK 参照も付け替え）。**shared**: `lobby/status.ts`（enum `draft`/`open`/`closed`/`disbanded` + **導出関数 `getLobbyStatus()` を backend から移設**）、`lobby/permissions.ts` を design-v2 §4-3 の表どおりに書き直し、`Lobby` / `LobbyListItem` / `LobbyDetail` / `LobbyEntry` 契約、`GUEST_TOKEN_HEADER` を `game-session.ts` → `lobby.ts` へ移設。**backend**: `lobby/domain/lobby-status.ts` を**削除**して shared の導出関数を使う、ロビー CRUD・status・参加/脱退/ゲスト参加・guest-link（再発行含む）、`GET /api/join/:token` をロビー側へ移設。**frontend**: `models/lobby.ts` を新設し（`LobbyModel` / `LobbyDetailModel` / `LobbyEntryModel` と `toXxxModel()`。status を `getLobbyStatus()` で解決済みにする、`leftAt !== null` の entry を落とす、タイムスタンプを `Date` にする）、`api/lobby.ts` は DTO ではなく model を返す（§1-4）。`features/Lobby/List/`、`Lobby/Edit/`、`Lobby/Detail/` のヘッダ・ActionBar・StatusDisplay・参加者一覧・各ダイアログ、`LobbyStatusBadge` |
 | 既存への影響 | ロビー機能の挙動が変わる（受付の開閉が往復可能に、脱退がソフト化）。セッション側は無変更 |
-| 完了条件 | 全テスト green / 脱退が `left_at` セットであること、再参加で `left_at` が NULL に戻ること、`open ⇄ closed` の往復、`disbanded` からの遷移不可のテストがある / 参加者一覧・回答表・着席候補のクエリがすべて `left_at IS NULL` で絞られている |
+| 完了条件 | 全テスト green / `src/models/lobby.test.ts` があり、composable / component が shared の Lobby 系レスポンス型を import していない / 脱退が `left_at` セットであること、再参加で `left_at` が NULL に戻ること、`open ⇄ closed` の往復、`disbanded` からの遷移不可のテストがある / 参加者一覧・回答表・着席候補のクエリがすべて `left_at IS NULL` で絞られている |
 | 検証 | 作成 → 公開 → 招待リンク発行 → ゲスト参加 → 脱退 → 再参加（過去の回答が残っている）→ 受付を閉じる → 追加募集で開き直す → 解散、が UI から通る |
 
 ---
@@ -146,10 +176,10 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **DDL**: `schedule_polls` 新設、`lobby_candidates` → `candidate_dates`（`lobby_id` → `poll_id`、`date_note` → `time_label`）、`lobby_answers` → `schedule_answers`（`member_id` → `lobby_entry_id`）、enum `lobby_answer` → `schedule_answer`。**shared**: `SchedulePoll` / `CandidateDate` / `ScheduleAnswer` 契約、`date-note.ts` → `time-label.ts`。**backend**: `candidate-date-diff.ts` を `poll_id` ベースへ、履歴一覧・最新取得・新規調整の開始・候補日一括更新・回答 upsert・ゲスト回答、`schedule-poll-route.ts`。**frontend**: `Lobby/Detail/Schedule/` を poll ベースに改修、「日程調整をやり直す」導線、過去の調整の折りたたみ表示 |
+| スコープ | **DDL**: `schedule_polls` 新設、`lobby_candidates` → `candidate_dates`（`lobby_id` → `poll_id`、`date_note` → `time_label`）、`lobby_answers` → `schedule_answers`（`member_id` → `lobby_entry_id`）、enum `lobby_answer` → `schedule_answer`。**shared**: `SchedulePoll` / `CandidateDate` / `ScheduleAnswer` 契約、`date-note.ts` → `time-label.ts`。**backend**: `candidate-date-diff.ts` を `poll_id` ベースへ、履歴一覧・最新取得・新規調整の開始・候補日一括更新・回答 upsert・ゲスト回答、`schedule-poll-route.ts`。**frontend**: `models/schedule-poll.ts` を新設し（`CandidateDateModel` は回答を `answersByEntryId: Map<string, ScheduleAnswer>` で持つ。`useScheduleView.getAnswer()` の `find()` + `as Answer` をここへ移す。§1-4）、`Lobby/Detail/Schedule/` を poll ベースに改修、「日程調整をやり直す」導線、過去の調整の折りたたみ表示 |
 | 移植元 | `list-availability-dates` / `bulk-update-availability-dates` / `update-availability-date-response` / `update-guest-availability-date-response` のロジックをほぼそのまま移植。差分は `poll_id` が1階層挟まる点と `memberId` → `entryId` の付け替え |
 | 既存への影響 | 日程調整の URL とレスポンス形が変わる。ロビー本体とセッションは無変更 |
-| 完了条件 | 全テスト green / 最新以外の poll への書き込みが 409 になるテストがある / 「最新」の判定が `created_at DESC, id DESC` で決定的であることのテストがある |
+| 完了条件 | 全テスト green / `src/models/schedule-poll.test.ts` があり、回答の参照が `Map.get()` になっている（`answers.find()` が `src/models/` の外に無い） / 最新以外の poll への書き込みが 409 になるテストがある / 「最新」の判定が `created_at DESC, id DESC` で決定的であることのテストがある |
 | 検証 | 候補日を登録 → 3人が◯△×で回答 → 「日程調整をやり直す」→ 新しい調整に切り替わり、古い調整が読み取り専用の履歴として残る。古い調整への回答が 409 |
 
 ---
@@ -160,9 +190,9 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **DDL**: `game_sessions` から `host_user_id` / `guest_link_token` / `is_published` / `max_players` を DROP、`lobby_id` を NOT NULL で追加、`time_label` 追加。`game_session_members` → `seats`（2 FK まで削ぎ落とし、`character_name` は一旦保持してタスク6 で移す）。**shared**: `game-session/status.ts`（enum `scheduled`/`today`/`completed`/`cancelled` + **導出関数 `getGameSessionStatus()` を backend から移設**）、`permissions.ts` を design-v2 §4-3 の表どおりに書き直し、`GameSession` / `GameSessionDetail` / `Seat` 契約、上書き値の二重表現（design-v2 §5-5 の `overrides`）。**backend**: `game-session/domain/game-session-status.ts` を**削除**して shared の導出関数を使う、`POST /api/lobbies/:id/game-sessions`、一覧/詳細/更新/削除/ステータス、着席・離席・参加+着席の一体操作・ゲスト着席、表示値の導出を application 層に実装。**frontend**: `api/game-session.ts`、`GameSession/List/`・`Detail/`、「開催を追加する」フロー（旧 ConfirmFlow の設計を流用して新規実装）、ロビー詳細への開催一覧セクション |
+| スコープ | **DDL**: `game_sessions` から `host_user_id` / `guest_link_token` / `is_published` / `max_players` を DROP、`lobby_id` を NOT NULL で追加、`time_label` 追加。`game_session_members` → `seats`（2 FK まで削ぎ落とし、`character_name` は一旦保持してタスク6 で移す）。**shared**: `game-session/status.ts`（enum `scheduled`/`today`/`completed`/`cancelled` + **導出関数 `getGameSessionStatus()` を backend から移設**）、`permissions.ts` を design-v2 §4-3 の表どおりに書き直し、`GameSession` / `GameSessionDetail` / `Seat` 契約、上書き値の二重表現（design-v2 §5-5 の `overrides`）。**backend**: `game-session/domain/game-session-status.ts` を**削除**して shared の導出関数を使う、`POST /api/lobbies/:id/game-sessions`、一覧/詳細/更新/削除/ステータス、着席・離席・参加+着席の一体操作・ゲスト着席、表示値の導出を application 層に実装。**frontend**: `models/game-session.ts` を新設し（`GameSessionDetailModel` は `resolveGameSessionDisplay()` で解決した表示値と、編集フォーム用の `overrides` の生値を**両方**持つ。status も導出済みにする。§1-4 / design-v2 §5-5）、`api/game-session.ts` は model を返す、`GameSession/List/`・`Detail/`、「開催を追加する」フロー（旧 ConfirmFlow の設計を流用して新規実装）、ロビー詳細への開催一覧セクション |
 | 既存への影響 | セッション機能が全面的に置き換わる。プレイメモは `seats.id` への付け替えが必要なため、このタスクで最小限の追従を行う（本格対応はタスク6） |
-| 完了条件 | 全テスト green / `seats.lobby_entry_id` のロビーと `game_sessions.lobby_id` の不一致を 422 で弾くテストがある / セッション作成のロック（`FOR UPDATE` + `FOR KEY SHARE`）が実 DB のテストで検証されている / 表示値の導出（未設定ならロビー参照）のテストがある |
+| 完了条件 | 全テスト green / `src/models/game-session.test.ts` に「上書きが無ければロビーの値になる」「`overrides` の生値が残る」のテストがある / `seats.lobby_entry_id` のロビーと `game_sessions.lobby_id` の不一致を 422 で弾くテストがある / セッション作成のロック（`FOR UPDATE` + `FOR KEY SHARE`）が実 DB のテストで検証されている / 表示値の導出（未設定ならロビー参照）のテストがある |
 | 検証 | 1つのロビーから2つのセッションを開く → 片方を中止 → 日程調整をやり直す → 3つ目を開く。ロビーの title を変更すると上書きしていないセッションの表示名が追随する。直接卓立てが1画面で完結する |
 
 ---
@@ -171,7 +201,7 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **DDL**: `character_assignments` 新設、`seats.character_name` を DROP、`game_session_play_memos` → `play_memos`（`member_id` → `seat_id`）。**shared**: `CharacterAssignment` 契約、`play-memo.ts` を `seatId` ベースへ、`canViewSharedPlayMemos` の入力を v2 のステータス値に合わせる。**backend**: キャラ割り当ての PUT / DELETE、プレイメモ4ユースケースの `seat_id` 付け替え。**frontend**: `useMemberEdit` をキャラ割り当て API へ、`GameSession/PlayMemo/`（13ファイル）の seat 対応、`MemberDisplay.vue` |
+| スコープ | **DDL**: `character_assignments` 新設、`seats.character_name` を DROP、`game_session_play_memos` → `play_memos`（`member_id` → `seat_id`）。**shared**: `CharacterAssignment` 契約、`play-memo.ts` を `seatId` ベースへ、`canViewSharedPlayMemos` の入力を v2 のステータス値に合わせる。**backend**: キャラ割り当ての PUT / DELETE、プレイメモ4ユースケースの `seat_id` 付け替え。**frontend**: `models/play-memo.ts` とキャラ割り当ての model を追加（§1-4）、`useMemberEdit` をキャラ割り当て API へ、`GameSession/PlayMemo/`（13ファイル）の seat 対応、`MemberDisplay.vue` |
 | 移植元 | プレイメモは design-v1.2 の設計を維持する。**パスもレスポンス形も不変**なので、既存の31ケースは紐付け先だけ変えて 1:1 で移植できる。移行の等価性検証の基準点として使える |
 | 既存への影響 | キャラ名の更新経路が `PATCH .../members/:memberId` から `PUT .../seats/:seatId/character` に変わる |
 | 完了条件 | 全テスト green / プレイメモの31ケースが `seat_id` ベースで移植済み / ゲストがプレイメモを持てないこと（`lobby_entries.user_id IS NULL` で構造的に排除）のテストがある |
@@ -185,7 +215,7 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 |---|---|
 | スコープ | **frontend**: ダッシュボードを design-v2 §7-5 の4セクションに再編、`GameSessionStatusBadge` / `LobbyStatusBadge` のラベル更新、日本語ラベルの一斉置換（「募集枠」→「ロビー」、「卓」→「開催 / セッション」、「参加メンバー」→「着席者」、「募集中止」→「解散」、「確定」系文言の削除）、**画面ルートの入れ子化**（design-v2 §7-1。`/game-sessions/*` を廃止し `/lobbies/:lobbyId/game-sessions/:gameSessionId/*` へ、`/lobbies/edit/:lobbyId` を `/lobbies/:lobbyId/edit` へ。旧パスからのリダイレクトは作らない）。**docs**: `openapi.yml` は**残差の突き合わせのみ**（全面改訂はタスク1 で完了済み）、`design-v1.md` / `v1.1` / `v1.2` に supersede 注記、`game-session-status.md` を更新、ADR 0006 を `Superseded` に、`db:seed` の生成データを新モデルに追従、CLAUDE.md の用語とディレクトリ例を更新 |
 | 既存への影響 | 表示文言とドキュメントのみ |
-| 完了条件 | badge の2テストが新ラベルで green / `募集枠` `卓確定` `confirmed` `closedAt` `lobbyMemberId` `dateNote` `availability` `game_session_members` で全体を grep して0件（`features/Landing/` の「卓」のみ除外） / `openapi.yml` と実装のルートが一致 |
+| 完了条件 | badge の2テストが新ラベルで green / `src/api/` `src/models/` 以外のフロントエンドから shared のレスポンス型が import されていない（タスク3〜6 で触った範囲。Profile・auth は対象外） / `募集枠` `卓確定` `confirmed` `closedAt` `lobbyMemberId` `dateNote` `availability` `game_session_members` で全体を grep して0件（`features/Landing/` の「卓」のみ除外） / `openapi.yml` と実装のルートが一致 |
 | 検証 | ダッシュボードの4セクションがそれぞれ正しい対象を出す。UI 上に「確定」「募集枠」という語が残っていない |
 
 ---

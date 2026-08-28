@@ -27,7 +27,6 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       title="非公開の卓"
       :statuses="[GameSessionStatus.draft]"
       hide-when-empty
-      hide-create-button
     />
     <!--
       履歴。他人の終了した卓は出しても仕方がないので自分の分だけに絞る。
@@ -37,7 +36,6 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       title="終了した卓"
       :statuses="[GameSessionStatus.completed, GameSessionStatus.cancelled]"
       hide-when-empty
-      hide-create-button
       hide-public
     />
   </div>

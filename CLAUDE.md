@@ -370,9 +370,102 @@ export const useEdit = (
 **例外**: composable がその状態の所有者自身（自分で `ref()` を宣言している）の場合のみ、
 内部で `.value =` してよい。props 境界をまたいで受け取った値は書き換えない。
 
+### API の型（DTO）と FE の model を分ける
+
+**`@taku-biyori/shared` の型は API との通信契約（DTO）であり、FE 内部で扱うデータ構造ではない。**
+両者を同一視しない。API のレスポンス形は「サーバが持っている事実をそのまま素直に返した形」であって、
+画面が使いたい形とは一致しない。
+
+DTO をそのまま composable / component まで持ち回ると、次のような加工が**表示のたび・画面ごとに**書かれる。
+
+- `overrides.title ?? lobby.title` のような既定値の解決（`GameSessionDetail`）
+- タイムスタンプからのステータス導出（`getLobbyStatus()` / `getGameSessionStatus()`）
+- `answers.find((a) => a.entryId === id)` のような配列からの線形探索
+- ISO 文字列を `new Date()` する、`as Answer` で union に狭める、といったキャスト
+
+これを **`src/api/*.ts` の中で1回だけ済ませ、それより内側は DTO を見ない。**
+
+#### 置き場所と責務
+
+| 層 | 型 | 置き場所 |
+|---|---|---|
+| API レスポンス（DTO） | `LobbyDetail` / `GameSessionDetail` など | `@taku-biyori/shared`（既存） |
+| FE 内部 model | `LobbyDetailModel` / `GameSessionDetailModel` | `src/models/{機能名}.ts` |
+| DTO → model の変換 | `toLobbyDetailModel(dto)` | `src/models/{機能名}.ts` |
+| 変換の呼び出し | — | `src/api/{機能名}.ts`（**唯一の境界**） |
+
+- model 型は DTO と名前が衝突するため **`Model` サフィックス**を付ける
+- 変換関数は `toXxxModel(dto)` と命名する
+- `src/api/*.ts` は `Promise<Model>` を返す。DTO 型は `apiRequest<T>` の型引数の中だけに現れる
+- **composable・component・`src/models/` 以外は、shared から「レスポンス型」を import しない**
+  （リクエストの `*Input` 型・enum・権限関数・`getXxxStatus()` 等はこれまで通り import してよい）
+
+```ts
+// packages/frontend/src/api/lobby.ts
+export async function getLobby(id: string): Promise<LobbyDetailModel> {
+  const dto = (await apiRequest<LobbyDetail>(`/api/lobbies/${id}`))!;
+  return toLobbyDetailModel(dto);
+}
+```
+
+#### 変換で吸収すること
+
+1. **日付・時刻を `Date` にする。** ISO 文字列のまま持ち回らない（候補日のような日付のみの値は
+   タイムゾーンでずれるため、`'2026-06-10'` の文字列のまま持つ。どちらなのかを model の型で明示する）
+2. **導出値を確定させる。** `getLobbyStatus()` や design-v2 §5-5 の表示値解決は変換時に1回だけ呼び、
+   model には解決済みの値を持たせる
+3. **ルックアップ用の `Map` を作る。** 配列から毎回 `find()` する形を model に残さない
+4. **union へのキャストを変換関数の中に閉じ込める。** model の型は最初から `Answer` などの union にする
+5. **構造上のノイズを落とす。** 脱退済み（`leftAt !== null`）の entry を除くなど、
+   全画面で同じように無視する行はここで落とす
+
+#### 変換でやらないこと
+
+- **表示文言のフォールバックを入れない**（`'未設定'` など）。既存ルール
+  「表示用のフォールバック値は composable ではなくコンポーネントに置く」に従う。
+  `overrides ?? lobby` の解決は「どちらがサーバ上の事実か」の解決なので変換の仕事、
+  `?? '未設定'` は UI の仕事、と切り分ける
+- **編集フォームの初期値に必要な生値を捨てない。** `overrides` は解決済みの値とは**別に**
+  model へ残す。捨てると「ロビーと同じ値」と「明示的な上書き」が区別できなくなる（design-v2 §5-5）
+- **model → リクエストの逆変換はしない。** リクエストは従来どおり shared の `*Input` 型を
+  組み立てて `src/api/*.ts` に渡す
+
+```ts
+// packages/frontend/src/models/game-session.ts
+export type GameSessionDetailModel = {
+  id: string;
+  lobbyId: string;
+  scheduledAt: Date;
+  /** 導出済み。DTO のタイムスタンプからは復元しない */
+  status: GameSessionStatus;
+  /** 解決済みの表示値（上書きが無ければロビーの値） */
+  title: string;
+  scenarioName: string | null;
+  location: string | null;
+  /** 編集フォームの初期値用。null＝上書きしていない */
+  overrides: GameSessionOverrides;
+  seats: SeatModel[];
+};
+```
+
+```ts
+// ❌ NG — DTO のまま持ち回るので、表示のたびに探索とキャストが要る
+const found = date.answers.find((a) => a.entryId === entryId);
+return (found?.answer as Answer) ?? null;
+
+// ✅ OK — 変換時に Map にしてあるので composable は引くだけ
+return candidateDate.answersByEntryId.get(entryId) ?? null;
+```
+
+#### テスト
+
+変換関数は入力と出力しかない純粋関数なので、**テストを先に書く**（`src/models/{機能名}.test.ts`）。
+「上書きが無ければロビーの値になる」「脱退済みの entry が落ちる」といった、
+これまで各 composable のテストに散っていた期待値をここへ集約する。
+
 ### 「サーバ値」と「編集ドラフト」は別物として管理する
 
-API 由来の値（＝真実）と、UI で編集中の値（＝ドラフト）を**同一の状態にしない**。
+API 由来の値（＝真実。model に変換済みのもの）と、UI で編集中の値（＝ドラフト）を**同一の状態にしない**。
 同一視すると「元の値」が残らず変更検知ができず、キャンセルで戻す処理も複雑になる。
 （Pinia などのグローバルストアは使わない方針。下記のコンポーネント所有で完結させる）
 

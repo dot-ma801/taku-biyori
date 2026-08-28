@@ -4,27 +4,19 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/Lobby/Detail/Schedule/ScheduleTable.vue';
 import ScheduleCardList from '@/features/Lobby/Detail/Schedule/ScheduleCardList.vue';
-import ConfirmFlowDialog from '@/features/Lobby/Detail/Schedule/ConfirmFlow/ConfirmFlowDialog.vue';
 import { useSchedule } from '@/features/Lobby/Detail/Schedule/useSchedule';
 import type { LobbyDetail } from '@taku-biyori/shared';
 import { isGuestMember } from '@taku-biyori/shared';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { CalendarCheck, SquarePen, Check, RotateCcw } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSchedule';
 import { useMyLobbyMemberId } from '@/features/Lobby/Detail/composables/useMyLobbyMemberId';
-import { useScheduleConfirm } from '@/features/Lobby/Detail/Schedule/useScheduleConfirm';
 
 const props = defineProps<{
   lobby: LobbyDetail;
 }>();
-
-const emit = defineEmits<{
-  'lobby-changed': [];
-}>();
-
-const confirmFlowDialogModel = ref(false);
 
 const { myMemberId } = useMyLobbyMemberId(() => props.lobby.members);
 
@@ -62,11 +54,6 @@ const {
   availabilityDates,
   () => props.lobby.status,
   refetchSchedule,
-);
-
-const { canConfirm } = useScheduleConfirm(
-  () => props.lobby.hostUserId,
-  () => props.lobby.status,
 );
 
 // ===== 表（ScheduleTable）への入力をモードに応じて組み立てる =====
@@ -198,24 +185,10 @@ const canEditSchedule = computed(
           >
             回答を編集する
           </BaseButton>
-          <BaseButton
-            v-if="canConfirm"
-            :left-icon="CalendarCheck"
-            @click="confirmFlowDialogModel = true"
-          >
-            卓を確定する
-          </BaseButton>
         </template>
       </div>
     </template>
   </BaseCard>
-
-  <ConfirmFlowDialog
-    v-model="confirmFlowDialogModel"
-    :lobby="lobby"
-    :availability-dates="availabilityDates"
-    @lobby-changed="emit('lobby-changed')"
-  />
 </template>
 
 <style scoped>

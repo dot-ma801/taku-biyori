@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { getLobby } from '@/lobby/application/get-lobby';
 import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
 import type { LobbyDetail } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const mockDetail: LobbyDetail = {
   id: 'lobby-1',
   title: 'テスト募集',
-  status: 'open',
+  status: LobbyStatus.open,
   isPublished: true,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',

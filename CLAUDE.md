@@ -155,6 +155,7 @@ pnpm --filter @taku-biyori/backend test:integration
 | 変数名 | 必須 | 既定値 |
 |---|---|---|
 | `DATABASE_URL` | ✅ | — |
+| `TEST_DATABASE_URL` | ✅（テスト実行時） | — |
 | `BETTER_AUTH_SECRET` | ✅ | — |
 | `PORT` | — | `3000` |
 | `FRONTEND_URL` | — | `http://localhost:5173` |

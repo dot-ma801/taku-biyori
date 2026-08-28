@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import {
   confirmLobby,
   type ConfirmLobbyRepository,
@@ -10,7 +11,7 @@ const now = new Date('2026-07-11T10:00:00.000Z');
 const mockGameSession: GameSession = {
   id: 'game-session-1',
   title: 'テスト募集',
-  status: 'confirmed',
+  status: GameSessionStatus.confirmed,
   isPublished: true,
   scheduledAt: '2026-07-20',
   lobbyId: 'lobby-1',

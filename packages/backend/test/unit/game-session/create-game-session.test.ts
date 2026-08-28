@@ -2,15 +2,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGameSession } from '@/game-session/application/create-game-session';
 import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
 import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const mockGameSession: GameSession = {
   id: 'session-1',
-  hostUserId: 'user-1',
   title: 'テスト卓',
   scenarioName: null,
   description: null,
   maxMembers: null,
-  status: 'confirmed',
+  status: GameSessionStatus.confirmed,
   isPublished: true,
   scheduledAt: '2025-09-10',
   completedAt: null,

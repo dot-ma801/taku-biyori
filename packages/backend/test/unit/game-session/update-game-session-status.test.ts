@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { updateGameSessionStatus } from '@/game-session/application/update-game-session-status';
 import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
 import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 // getGameSessionStatus の isToday はローカル日時（getFullYear/getMonth/getDate）で
 // 比較するため、today 判定に関わる now・scheduled_at のフィクスチャは UTC 文字列では
@@ -11,7 +12,7 @@ const baseSession: GameSession = {
   title: 'テスト卓',
   description: null,
   scenarioName: null,
-  status: 'draft',
+  status: GameSessionStatus.draft,
   isPublished: false,
   scheduledAt: '2025-05-30',
   completedAt: null,

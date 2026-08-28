@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { getGuestLinkPreview } from '@/game-session/application/get-guest-link-preview';
 import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
 import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const mockGameSession: GameSession = {
   id: 'session-1',
@@ -9,7 +10,7 @@ const mockGameSession: GameSession = {
   description: null,
   scenarioName: null,
   location: null,
-  status: 'open',
+  status: GameSessionStatus.open,
   isPublished: true,
   scheduledAt: '2025-05-30',
   completedAt: null,

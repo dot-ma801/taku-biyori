@@ -7,7 +7,7 @@ import type { Lobby } from '@taku-biyori/shared';
 const mockLobby: Lobby = {
   id: 'lobby-1',
   title: '更新後',
-  status: 'draft',
+  status: LobbyStatus.draft,
   isPublished: false,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',

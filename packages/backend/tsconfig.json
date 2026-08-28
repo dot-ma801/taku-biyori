@@ -11,6 +11,7 @@
     "jsxImportSource": "hono/jsx",
     "paths": {
       "@/*": ["./src/*"],
+      "@test/*": ["./test/*"],
       "@shared/*": ["../shared/src/*"]
     },
     "rootDir": "./src",
@@ -20,6 +21,7 @@
   "exclude": [
     "node_modules",
     "test",
+    "scripts",
     "drizzle.config.ts",
     "vite.config.ts",
     "vite.config.vercel.ts"

@@ -64,7 +64,7 @@ export const useLobbyStatus = (
 
   /**
    * 編集ボタンを表示できるか。ホストかつ status が draft / open / scheduling のときのみ true。
-   * confirmed（卓確定済み）・cancelled（中止済み）は編集不可（shared の LOBBY_ACTION_POLICIES）。
+   * cancelled（中止済み）は編集不可（shared の LOBBY_ACTION_POLICIES）。
    */
   const canEdit = computed(() => {
     const current = toValue(lobby);

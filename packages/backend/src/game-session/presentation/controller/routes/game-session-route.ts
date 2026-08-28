@@ -2,12 +2,10 @@ import type { Hono } from 'hono';
 import type {
   GameSession,
   GameSessionListItem,
-  CreateGameSessionInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
 } from '@taku-biyori/shared';
 import {
-  CreateGameSessionInputSchema,
   UpdateGameSessionInputSchema,
   UpdateGameSessionStatusInputSchema,
 } from '@taku-biyori/shared';
@@ -19,10 +17,6 @@ import type { UpdateGameSessionStatusResult } from '@/game-session/application/u
 export interface RegisterGameSessionRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
   listGameSessions: (userId: string) => Promise<GameSessionListItem[]>;
-  createGameSession: (
-    userId: string,
-    input: CreateGameSessionInput,
-  ) => Promise<GameSession>;
   getGameSession: (
     id: string,
     userId: string | null,
@@ -54,31 +48,6 @@ export const registerGameSessionRoute = (
     }
     const sessions = await options.listGameSessions(authSession.user.id);
     return c.json(sessions);
-  });
-
-  app.post('/api/game-sessions', async (c) => {
-    const authSession = await options.getSession(c.req.raw.headers);
-    if (!authSession) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ error: 'Invalid JSON' }, 400);
-    }
-
-    const parsed = CreateGameSessionInputSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: parsed.error.issues }, 400);
-    }
-
-    const gameSession = await options.createGameSession(
-      authSession.user.id,
-      parsed.data,
-    );
-    return c.json(gameSession, 201);
   });
 
   app.get('/api/game-sessions/:id', async (c) => {

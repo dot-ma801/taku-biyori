@@ -1,8 +1,6 @@
-import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
 
 export interface DeleteLobbyRepository extends LobbyHostRepository {
-  findLobbyStatus(id: string): Promise<LobbyStatus | null>;
   countOtherMembers(id: string, hostUserId: string): Promise<number>;
   deleteById(id: string): Promise<void>;
   /**
@@ -21,7 +19,6 @@ export type DeleteLobbyResult =
   | { type: 'ok' }
   | { type: 'notFound' }
   | { type: 'forbidden' }
-  | { type: 'invalidStatus' }
   | { type: 'hasMember' };
 
 export const deleteLobby = async (
@@ -36,16 +33,6 @@ export const deleteLobby = async (
     }
     if (hostUserId !== userId) {
       return { type: 'forbidden' };
-    }
-
-    const status = await lockedRepo.findLobbyStatus(id);
-    if (status === null) {
-      return { type: 'notFound' };
-    }
-    // 確定済み（closed_at あり）の募集枠は削除不可（卓の出自リンクを保持するため）。
-    // 中止済み（cancelled）は削除可能。
-    if (status === LobbyStatus.confirmed) {
-      return { type: 'invalidStatus' };
     }
 
     const otherMemberCount = await lockedRepo.countOtherMembers(id, userId);

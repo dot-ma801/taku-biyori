@@ -44,14 +44,9 @@ import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkRepository } from '@/lobby/application/get-guest-link';
 import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-availability-dates';
-import type { AddAvailabilityDateRepository } from '@/lobby/application/add-availability-date';
 import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
-import type { DeleteAvailabilityDateRepository } from '@/lobby/application/delete-availability-date';
 import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
-import type { ConfirmLobbyRepository } from '@/lobby/application/confirm-lobby';
-import { insertGameSessionWithMembers } from '@/game-session/infrastructure/insert-game-session-with-members';
-import { findConfirmedGameSessionByLobbyId } from '@/game-session/infrastructure/find-confirmed-game-session-by-lobby-id';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -65,12 +60,9 @@ export type LobbyRepository = ListLobbiesRepository &
   LeaveLobbyRepository &
   GetGuestLinkRepository &
   ListAvailabilityDatesRepository &
-  AddAvailabilityDateRepository &
   BulkUpdateAvailabilityDatesRepository &
-  DeleteAvailabilityDateRepository &
   UpdateAvailabilityDateResponseRepository &
-  UpdateGuestAvailabilityDateResponseRepository &
-  ConfirmLobbyRepository;
+  UpdateGuestAvailabilityDateResponseRepository;
 
 type LobbyRow = {
   id: string;
@@ -82,7 +74,6 @@ type LobbyRow = {
   maxPlayers: number | null;
   isPublished: boolean;
   openUntil: string | null;
-  closedAt: Date | null;
   cancelledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -105,13 +96,11 @@ const toLobby = (row: LobbyRow): Lobby => ({
   status: getLobbyStatus({
     isPublished: row.isPublished,
     openUntil: toDateOrNull(row.openUntil),
-    closedAt: row.closedAt,
     cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
   maxPlayers: row.maxPlayers,
   openUntil: row.openUntil,
-  closedAt: row.closedAt?.toISOString() ?? null,
   cancelledAt: row.cancelledAt?.toISOString() ?? null,
   hostUserId: row.hostUserId,
   createdAt: row.createdAt.toISOString(),
@@ -125,7 +114,6 @@ const toListItem = (row: ListRow, userId: string): LobbyListItem => ({
   status: getLobbyStatus({
     isPublished: row.isPublished,
     openUntil: toDateOrNull(row.openUntil),
-    closedAt: row.closedAt,
     cancelledAt: row.cancelledAt,
   }),
   isPublished: row.isPublished,
@@ -232,18 +220,7 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         joinedAt: r.memberCreatedAt!.toISOString(),
       }));
 
-    if (first.closedAt === null) {
-      return { ...lobby, members };
-    }
-
-    // 確定済みの場合、作成された卓と選出メンバーの lobbyMemberId を取得する
-    // （卓のテーブルには触れず、卓機能側の関数に委譲する）
-    const confirmedGameSession = await findConfirmedGameSessionByLobbyId(
-      db,
-      id,
-    );
-
-    return { ...lobby, members, confirmedGameSession };
+    return { ...lobby, members };
   },
 
   async updateById(id: string, input: UpdateLobbyInput): Promise<Lobby | null> {
@@ -310,7 +287,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .select({
         isPublished: lobbies.isPublished,
         openUntil: lobbies.openUntil,
-        closedAt: lobbies.closedAt,
         cancelledAt: lobbies.cancelledAt,
       })
       .from(lobbies)
@@ -322,7 +298,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return {
       isPublished: r.isPublished,
       openUntil: toDateOrNull(r.openUntil),
-      closedAt: r.closedAt,
       cancelledAt: r.cancelledAt,
     };
   },
@@ -340,10 +315,8 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
   },
 
   async cancel(id: string): Promise<Lobby | null> {
-    // 確定（closed_at）と中止（cancelled_at）は排他ガードにより共存しない
-    // （design-v1.1 意思決定ログ）。application 層のステータスチェックだけでは
-    // confirm との並行実行で confirmed + cancelled が共存し得るため、
-    // 条件付き UPDATE で DB レベルでも排他を担保する。
+    // 中止（cancelled_at）は一度きり。application 層のステータスチェックだけでは
+    // 並行実行で二重に中止され得るため、条件付き UPDATE で DB レベルでも排他を担保する。
     const result = await db
       .update(lobbies)
       .set({ cancelledAt: new Date() })
@@ -351,7 +324,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         and(
           eq(lobbies.id, id),
           isNull(lobbies.cancelledAt),
-          isNull(lobbies.closedAt),
         ),
       )
       .returning();
@@ -569,26 +541,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return [...map.values()];
   },
 
-  async addDate(
-    lobbyId: string,
-    date: string,
-    dateNote: string | null,
-  ): Promise<LobbyAvailabilityDate> {
-    const result = await db
-      .insert(lobbyCandidates)
-      .values({ lobbyId, date, dateNote })
-      .returning();
-
-    const row = result[0];
-    if (!row) throw new Error('候補日の追加に失敗しました');
-    return {
-      id: row.id,
-      date: row.date,
-      dateNote: row.dateNote,
-      answers: [],
-    };
-  },
-
   async findCandidateOwner(
     dateId: string,
   ): Promise<{ lobbyId: string; date: string } | null> {
@@ -601,10 +553,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .where(eq(lobbyCandidates.id, dateId))
       .limit(1);
     return row[0] ?? null;
-  },
-
-  async deleteDateById(dateId: string): Promise<void> {
-    await db.delete(lobbyCandidates).where(eq(lobbyCandidates.id, dateId));
   },
 
   async applyDateChanges(
@@ -721,72 +669,5 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       answer: answerValue,
       comment: row.comment,
     };
-  },
-
-  async findLobbyCore(id: string) {
-    const row = await db
-      .select({
-        hostUserId: lobbies.hostUserId,
-        title: lobbies.title,
-        scenarioName: lobbies.scenarioName,
-        description: lobbies.description,
-        location: lobbies.location,
-        maxPlayers: lobbies.maxPlayers,
-      })
-      .from(lobbies)
-      .where(eq(lobbies.id, id))
-      .limit(1);
-    return row[0] ?? null;
-  },
-
-  async findMemberCoresByIds(lobbyId: string, memberIds: string[]) {
-    if (memberIds.length === 0) return [];
-
-    // FOR KEY SHARE で選出メンバー行をロックする。
-    // executeWithLock のロビー行ロックだけでは lobby_members はロックされず、
-    // このメソッドの読み取り〜卓確定（game_session_members INSERT）の間に
-    // leave-lobby 等による選出メンバーの DELETE がコミットされると
-    // FK 違反（23503）で確定処理が失敗しうる。
-    // FOR KEY SHARE を取ることで、同じ行を消そうとする DELETE をこのトランザクションの
-    // コミットまでブロックし、確定処理と退出の競合を防ぐ。
-    const rows = await db
-      .select({
-        id: lobbyMembers.id,
-        userId: lobbyMembers.userId,
-        guestName: lobbyMembers.guestName,
-      })
-      .from(lobbyMembers)
-      .where(
-        and(
-          eq(lobbyMembers.lobbyId, lobbyId),
-          inArray(lobbyMembers.id, memberIds),
-        ),
-      )
-      .for('key share');
-
-    return rows;
-  },
-
-  async closeLobby(id: string, closedAt: Date): Promise<boolean> {
-    // closed_at・cancelled_at の両方が NULL の行だけを更新する
-    // （二重確定・確定と中止の並行実行を排他する。design-v1.1 §5・意思決定ログ）
-    const result = await db
-      .update(lobbies)
-      .set({ closedAt })
-      .where(
-        and(
-          eq(lobbies.id, id),
-          isNull(lobbies.closedAt),
-          isNull(lobbies.cancelledAt),
-        ),
-      )
-      .returning();
-
-    return result.length > 0;
-  },
-
-  // 卓の生成は卓機能側の責務なので、テーブル定義や行の変換には触れず委譲する
-  async createGameSessionFromLobby(params) {
-    return insertGameSessionWithMembers(db, params);
   },
 });

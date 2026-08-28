@@ -126,7 +126,6 @@ const insertLobby = async (
     guestLinkToken: string;
     isPublished?: boolean;
     openUntil?: string | null;
-    closedAt?: Date | null;
   },
 ): Promise<string> => {
   const rows = await database
@@ -141,7 +140,6 @@ const insertLobby = async (
       guestLinkToken: values.guestLinkToken,
       isPublished: values.isPublished ?? false,
       openUntil: values.openUntil ?? null,
-      closedAt: values.closedAt ?? null,
     })
     .returning({ id: lobbies.id });
 
@@ -250,17 +248,17 @@ const main = async (): Promise<void> => {
   ]);
   console.log('公開・募集中のロビーを作成しました（候補日3件・回答9件）');
 
-  // --- ロビー2: 確定済み。卓が1つぶら下がる ---
+  // --- ロビー2: 募集締め切り済み（日程調整中） ---
   const closedLobbyId = await insertLobby(db, {
     hostUserId: haruId,
     title: 'TRPG「はじめての探索」',
     scenarioName: 'はじめての探索',
-    description: '日程が決まったので卓を立てました。',
+    description: '募集は締め切り、日程を詰めているところです。',
     location: 'オンライン',
     maxPlayers: 4,
     guestLinkToken: 'seed-lobby-closed',
     isPublished: true,
-    closedAt: daysAgo(3),
+    openUntil: dateFromToday(-3),
   });
   const closedHostMemberId = await addLobbyMember(db, closedLobbyId, {
     userId: haruId,
@@ -283,7 +281,7 @@ const main = async (): Promise<void> => {
     { candidateId: closedDateId, memberId: closedAkiMemberId, answer: 'ok' },
   ]);
 
-  const confirmedSessionRows = await db
+  const scheduledSessionRows = await db
     .insert(gameSessions)
     .values({
       hostUserId: haruId,
@@ -295,41 +293,37 @@ const main = async (): Promise<void> => {
       guestLinkToken: 'seed-session-confirmed',
       isPublished: true,
       scheduledAt: dateFromToday(3),
-      lobbyId: closedLobbyId,
     })
     .returning({ id: gameSessions.id });
-  const confirmedSessionId = firstRow(
-    confirmedSessionRows,
-    '確定済み卓の作成',
+  const scheduledSessionId = firstRow(
+    scheduledSessionRows,
+    '開催予定の卓の作成',
   ).id;
 
-  const confirmedMemberRows = await db
+  const scheduledMemberRows = await db
     .insert(gameSessionMembers)
     .values([
       {
-        gameSessionId: confirmedSessionId,
+        gameSessionId: scheduledSessionId,
         userId: haruId,
         characterName: null,
-        lobbyMemberId: closedHostMemberId,
       },
       {
-        gameSessionId: confirmedSessionId,
+        gameSessionId: scheduledSessionId,
         userId: yukiId,
         characterName: '探索者A',
-        lobbyMemberId: closedYukiMemberId,
       },
       {
-        gameSessionId: confirmedSessionId,
+        gameSessionId: scheduledSessionId,
         userId: akiId,
         characterName: '探索者B',
-        lobbyMemberId: closedAkiMemberId,
       },
     ])
     .returning({
       id: gameSessionMembers.id,
       userId: gameSessionMembers.userId,
     });
-  console.log('確定済みロビーと、そこから作られた卓を作成しました');
+  console.log('締め切り済みのロビーと、開催予定の卓を作成しました');
 
   // --- 完了済みの卓（プレイメモつき） ---
   const completedSessionRows = await db
@@ -395,7 +389,7 @@ const main = async (): Promise<void> => {
   ]);
   console.log('完了済みの卓とプレイメモを作成しました');
 
-  // --- 直接卓立て（ロビーなし） ---
+  // --- ロビーに紐づかない単独の卓 ---
   const directSessionRows = await db
     .insert(gameSessions)
     .values({
@@ -410,12 +404,12 @@ const main = async (): Promise<void> => {
       scheduledAt: dateFromToday(30),
     })
     .returning({ id: gameSessions.id });
-  const directSessionId = firstRow(directSessionRows, '直接卓立ての作成').id;
+  const directSessionId = firstRow(directSessionRows, '単独の卓の作成').id;
   await db.insert(gameSessionMembers).values([
     { gameSessionId: directSessionId, userId: natsuId },
     { gameSessionId: directSessionId, userId: akiId, characterName: 'PC2' },
   ]);
-  console.log('直接卓立ての卓を作成しました');
+  console.log('単独の卓を作成しました');
 
   // --- ロビー3: 下書き（ホストにしか見えない） ---
   const draftLobbyId = await insertLobby(db, {
@@ -433,13 +427,13 @@ const main = async (): Promise<void> => {
   console.log('下書きのロビーを作成しました');
 
   // 集計を出しておくと、スキーマ変更でシードが壊れたときに気づきやすい
-  const seededMemberIds = confirmedMemberRows.map((row) => row.id);
+  const seededMemberIds = scheduledMemberRows.map((row) => row.id);
   const memberCheck = await db
     .select({ id: gameSessionMembers.id })
     .from(gameSessionMembers)
     .where(
       and(
-        eq(gameSessionMembers.gameSessionId, confirmedSessionId),
+        eq(gameSessionMembers.gameSessionId, scheduledSessionId),
         inArray(gameSessionMembers.id, seededMemberIds),
       ),
     );
@@ -448,9 +442,9 @@ const main = async (): Promise<void> => {
   console.log('シード完了');
   console.log(`  ユーザー: 4（パスワードはすべて ${SEED_PASSWORD}）`);
   console.log('    ユーザー名でログインできます: yuki / haru / natsu / aki');
-  console.log('  ロビー: 3（公開・募集中 / 確定済み / 下書き）');
-  console.log('  卓: 3（確定済み / 完了済み / 直接卓立て）');
-  console.log(`  確定済み卓のメンバー: ${memberCheck.length}`);
+  console.log('  ロビー: 3（公開・募集中 / 日程調整中 / 下書き）');
+  console.log('  卓: 3（開催予定 / 完了済み / 単独作成）');
+  console.log(`  開催予定の卓のメンバー: ${memberCheck.length}`);
   console.log('');
   console.log(
     '公開中のロビー・卓は role: null で誰の一覧にも出るため、Google ログインでも確認できます',

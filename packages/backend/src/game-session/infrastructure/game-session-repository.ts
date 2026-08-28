@@ -16,7 +16,6 @@ import type {
   GameSessionMember,
   GameSessionPlayMemo,
   SharedGameSessionPlayMemo,
-  JoinAsGuestInput,
   JoinGameSessionInput,
   UpdateGameSessionInput,
   UpdateMemberInput,
@@ -31,36 +30,28 @@ import {
 import { user } from '@/system/infrastructure/database/schema';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
-import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
 import type { GetGameSessionRepository } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
 import type { ListMembersRepository } from '@/game-session/application/list-members';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
-import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
 import type { UpdateMemberRepository } from '@/game-session/application/update-member';
 import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
-import type { GetGuestLinkRepository } from '@/game-session/application/get-guest-link';
-import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
 import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
 import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 
 export type GameSessionRepository = ListGameSessionsRepository &
-  CreateGameSessionRepository &
   GetGameSessionRepository &
   UpdateGameSessionRepository &
   DeleteGameSessionRepository &
   UpdateGameSessionStatusRepository &
   ListMembersRepository &
   JoinGameSessionRepository &
-  JoinAsGuestRepository &
   UpdateMemberRepository &
   LeaveGameSessionRepository &
-  GetGuestLinkRepository &
-  GetGuestLinkPreviewRepository &
   GetMyPlayMemoRepository &
   UpsertMyPlayMemoRepository &
   UpdateMyPlayMemoVisibilityRepository &
@@ -78,7 +69,6 @@ export type GameSessionRow = {
   scheduledAt: string;
   completedAt: Date | null;
   cancelledAt: Date | null;
-  lobbyId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -104,7 +94,6 @@ export const toGameSession = (row: GameSessionRow): GameSession => ({
   scheduledAt: row.scheduledAt,
   completedAt: row.completedAt?.toISOString() ?? null,
   cancelledAt: row.cancelledAt?.toISOString() ?? null,
-  lobbyId: row.lobbyId,
   maxMembers: row.maxPlayers,
   createdBy: row.hostUserId,
   createdAt: row.createdAt.toISOString(),
@@ -226,7 +215,6 @@ export const createGameSessionRepository = (
         memberUserName: user.name,
         memberGuestName: gameSessionMembers.guestName,
         memberCharacterName: gameSessionMembers.characterName,
-        memberLobbyMemberId: gameSessionMembers.lobbyMemberId,
         memberCreatedAt: gameSessionMembers.createdAt,
       })
       .from(gameSessions)
@@ -250,7 +238,6 @@ export const createGameSessionRepository = (
         userName: r.memberUserName ?? null,
         guestName: r.memberGuestName,
         characterName: r.memberCharacterName,
-        lobbyMemberId: r.memberLobbyMemberId,
         joinedAt: r.memberCreatedAt!.toISOString(),
       }));
 
@@ -407,36 +394,6 @@ export const createGameSessionRepository = (
     return toGameSession(session);
   },
 
-  async createWithHost(params): Promise<GameSession> {
-    return db.transaction(async (tx) => {
-      const result = await tx
-        .insert(gameSessions)
-        .values({
-          hostUserId: params.hostUserId,
-          title: params.title,
-          description: params.description ?? null,
-          scenarioName: params.scenarioName ?? null,
-          location: params.location ?? null,
-          maxPlayers: params.maxMembers ?? null,
-          // 卓は日程が確定した状態でのみ作られるため scheduledAt は必須（フォールバック不要）
-          scheduledAt: params.scheduledAt,
-          guestLinkToken: params.guestLinkToken,
-          isPublished: false,
-        })
-        .returning();
-
-      const session = result[0];
-      if (!session) throw new Error('セッションの作成に失敗しました');
-
-      await tx.insert(gameSessionMembers).values({
-        gameSessionId: session.id,
-        userId: params.hostUserId,
-      });
-
-      return toGameSession(session);
-    });
-  },
-
   async gameSessionExists(id: string): Promise<boolean> {
     const row = await db
       .select({ id: gameSessions.id })
@@ -473,7 +430,6 @@ export const createGameSessionRepository = (
         userName: user.name,
         guestName: gameSessionMembers.guestName,
         characterName: gameSessionMembers.characterName,
-        lobbyMemberId: gameSessionMembers.lobbyMemberId,
         createdAt: gameSessionMembers.createdAt,
       })
       .from(gameSessionMembers)
@@ -487,7 +443,6 @@ export const createGameSessionRepository = (
       userName: r.userName ?? null,
       guestName: r.guestName,
       characterName: r.characterName,
-      lobbyMemberId: r.lobbyMemberId,
       joinedAt: r.createdAt.toISOString(),
     }));
   },
@@ -523,35 +478,6 @@ export const createGameSessionRepository = (
       userName: userRow[0]?.name ?? null,
       guestName: row.guestName,
       characterName: row.characterName,
-      lobbyMemberId: row.lobbyMemberId,
-      joinedAt: row.createdAt.toISOString(),
-    };
-  },
-
-  async addGuestMember(
-    gameSessionId: string,
-    input: JoinAsGuestInput,
-  ): Promise<GameSessionMember> {
-    const result = await db
-      .insert(gameSessionMembers)
-      .values({
-        gameSessionId,
-        userId: null,
-        guestName: input.guestName,
-        characterName: null,
-      })
-      .returning();
-
-    const row = result[0];
-    if (!row) throw new Error('ゲストメンバーの追加に失敗しました');
-
-    return {
-      id: row.id,
-      userId: null,
-      userName: null,
-      guestName: row.guestName,
-      characterName: row.characterName,
-      lobbyMemberId: row.lobbyMemberId,
       joinedAt: row.createdAt.toISOString(),
     };
   },
@@ -601,7 +527,6 @@ export const createGameSessionRepository = (
       userName: userRow[0]?.name ?? null,
       guestName: row.guestName,
       characterName: row.characterName,
-      lobbyMemberId: row.lobbyMemberId,
       joinedAt: row.createdAt.toISOString(),
     };
   },
@@ -610,30 +535,6 @@ export const createGameSessionRepository = (
     await db
       .delete(gameSessionMembers)
       .where(eq(gameSessionMembers.id, memberId));
-  },
-
-  async findGuestLinkInfo(
-    id: string,
-  ): Promise<{ hostUserId: string; token: string } | null> {
-    const row = await db
-      .select({
-        hostUserId: gameSessions.hostUserId,
-        guestLinkToken: gameSessions.guestLinkToken,
-      })
-      .from(gameSessions)
-      .where(eq(gameSessions.id, id))
-      .limit(1);
-    if (!row[0]) return null;
-    return { hostUserId: row[0].hostUserId, token: row[0].guestLinkToken };
-  },
-
-  async findGuestLinkToken(id: string): Promise<string | null> {
-    const row = await db
-      .select({ guestLinkToken: gameSessions.guestLinkToken })
-      .from(gameSessions)
-      .where(eq(gameSessions.id, id))
-      .limit(1);
-    return row[0]?.guestLinkToken ?? null;
   },
 
   async findPlayMemoByMemberId(
@@ -732,15 +633,5 @@ export const createGameSessionRepository = (
         (playMemo): playMemo is SharedGameSessionPlayMemo =>
           playMemo.sharedAt !== null,
       );
-  },
-
-  async findByGuestLinkToken(token: string): Promise<GameSession | null> {
-    const row = await db
-      .select()
-      .from(gameSessions)
-      .where(eq(gameSessions.guestLinkToken, token))
-      .limit(1);
-    if (!row[0]) return null;
-    return toGameSession(row[0]);
   },
 });

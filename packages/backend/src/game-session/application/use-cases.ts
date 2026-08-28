@@ -1,11 +1,8 @@
 import type {
-  GameSession,
   GameSessionListItem,
-  CreateGameSessionInput,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
   JoinGameSessionInput,
-  JoinAsGuestInput,
   UpdateMemberInput,
   UpsertGameSessionPlayMemoInput,
   UpdateGameSessionPlayMemoVisibilityInput,
@@ -16,63 +13,48 @@ import type { DeleteGameSessionResult } from '@/game-session/application/delete-
 import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
 import type { ListMembersResult } from '@/game-session/application/list-members';
 import type { JoinGameSessionResult } from '@/game-session/application/join-game-session';
-import type { JoinAsGuestResult } from '@/game-session/application/join-as-guest';
 import type { UpdateMemberResult } from '@/game-session/application/update-member';
 import type { LeaveGameSessionResult } from '@/game-session/application/leave-game-session';
-import type { GetGuestLinkResult } from '@/game-session/application/get-guest-link';
-import type { GetGuestLinkPreviewResult } from '@/game-session/application/get-guest-link-preview';
 import type { GetMyPlayMemoResult } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoResult } from '@/game-session/application/upsert-my-play-memo';
 import type { UpdateMyPlayMemoVisibilityResult } from '@/game-session/application/update-my-play-memo-visibility';
 import type { ListSharedPlayMemosResult } from '@/game-session/application/list-shared-play-memos';
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
-import type { CreateGameSessionRepository } from '@/game-session/application/create-game-session';
 import type { GetGameSessionRepository } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
 import type { ListMembersRepository } from '@/game-session/application/list-members';
 import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
-import type { JoinAsGuestRepository } from '@/game-session/application/join-as-guest';
 import type { UpdateMemberRepository } from '@/game-session/application/update-member';
 import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
-import type { GetGuestLinkRepository } from '@/game-session/application/get-guest-link';
-import type { GetGuestLinkPreviewRepository } from '@/game-session/application/get-guest-link-preview';
 import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
 import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 import { listGameSessions } from '@/game-session/application/list-game-sessions';
-import { createGameSession } from '@/game-session/application/create-game-session';
 import { getGameSession } from '@/game-session/application/get-game-session';
 import { updateGameSession } from '@/game-session/application/update-game-session';
 import { deleteGameSession } from '@/game-session/application/delete-game-session';
 import { updateGameSessionStatus } from '@/game-session/application/update-game-session-status';
 import { listMembers } from '@/game-session/application/list-members';
 import { joinGameSession } from '@/game-session/application/join-game-session';
-import { joinAsGuest } from '@/game-session/application/join-as-guest';
 import { updateMember } from '@/game-session/application/update-member';
 import { leaveGameSession } from '@/game-session/application/leave-game-session';
-import { getGuestLink } from '@/game-session/application/get-guest-link';
-import { getGuestLinkPreview } from '@/game-session/application/get-guest-link-preview';
 import { getMyPlayMemo } from '@/game-session/application/get-my-play-memo';
 import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo';
 import { updateMyPlayMemoVisibility } from '@/game-session/application/update-my-play-memo-visibility';
 import { listSharedPlayMemos } from '@/game-session/application/list-shared-play-memos';
 
 type GameSessionRepo = ListGameSessionsRepository &
-  CreateGameSessionRepository &
   GetGameSessionRepository &
   UpdateGameSessionRepository &
   DeleteGameSessionRepository &
   UpdateGameSessionStatusRepository &
   ListMembersRepository &
   JoinGameSessionRepository &
-  JoinAsGuestRepository &
   UpdateMemberRepository &
   LeaveGameSessionRepository &
-  GetGuestLinkRepository &
-  GetGuestLinkPreviewRepository &
   GetMyPlayMemoRepository &
   UpsertMyPlayMemoRepository &
   UpdateMyPlayMemoVisibilityRepository &
@@ -80,10 +62,6 @@ type GameSessionRepo = ListGameSessionsRepository &
 
 export interface GameSessionUseCases {
   listGameSessions(userId: string): Promise<GameSessionListItem[]>;
-  createGameSession(
-    userId: string,
-    input: CreateGameSessionInput,
-  ): Promise<GameSession>;
   getGameSession(
     id: string,
     userId: string | null,
@@ -108,11 +86,6 @@ export interface GameSessionUseCases {
     userId: string,
     input: JoinGameSessionInput,
   ): Promise<JoinGameSessionResult>;
-  joinAsGuest(
-    gameSessionId: string,
-    token: string,
-    input: JoinAsGuestInput,
-  ): Promise<JoinAsGuestResult>;
   updateMember(
     gameSessionId: string,
     memberId: string,
@@ -124,8 +97,6 @@ export interface GameSessionUseCases {
     memberId: string,
     userId: string,
   ): Promise<LeaveGameSessionResult>;
-  getGuestLink(id: string, userId: string): Promise<GetGuestLinkResult>;
-  getGuestLinkPreview(token: string): Promise<GetGuestLinkPreviewResult>;
   getMyPlayMemo(
     gameSessionId: string,
     userId: string,
@@ -151,10 +122,6 @@ export const createGameSessionUseCases = (
 ): GameSessionUseCases => ({
   listGameSessions: (userId: string): Promise<GameSessionListItem[]> =>
     listGameSessions(repo, userId),
-  createGameSession: (
-    userId: string,
-    input: CreateGameSessionInput,
-  ): Promise<GameSession> => createGameSession(repo, userId, input),
   getGameSession: (
     id: string,
     userId: string | null,
@@ -183,12 +150,6 @@ export const createGameSessionUseCases = (
     input: JoinGameSessionInput,
   ): Promise<JoinGameSessionResult> =>
     joinGameSession(repo, gameSessionId, userId, input),
-  joinAsGuest: (
-    gameSessionId: string,
-    token: string,
-    input: JoinAsGuestInput,
-  ): Promise<JoinAsGuestResult> =>
-    joinAsGuest(repo, gameSessionId, token, input),
   updateMember: (
     gameSessionId: string,
     memberId: string,
@@ -202,10 +163,6 @@ export const createGameSessionUseCases = (
     userId: string,
   ): Promise<LeaveGameSessionResult> =>
     leaveGameSession(repo, gameSessionId, memberId, userId),
-  getGuestLink: (id: string, userId: string): Promise<GetGuestLinkResult> =>
-    getGuestLink(repo, id, userId),
-  getGuestLinkPreview: (token: string): Promise<GetGuestLinkPreviewResult> =>
-    getGuestLinkPreview(repo, token),
   getMyPlayMemo: (
     gameSessionId: string,
     userId: string,

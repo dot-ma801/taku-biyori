@@ -66,7 +66,6 @@ function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
     isPublished: true,
     maxPlayers: null,
     openUntil: null,
-    closedAt: null,
     cancelledAt: null,
     hostUserId: HOST_ID,
     createdAt: '2024-01-01T00:00:00Z',
@@ -328,7 +327,7 @@ describe('canLeave', () => {
     // Arrange
     const lobby = ref(
       makeLobby({
-        status: LobbyStatus.confirmed,
+        status: LobbyStatus.cancelled,
         hostUserId: HOST_ID,
         members: [makeMember()],
       }),
@@ -402,7 +401,7 @@ describe('canRemoveMember', () => {
   it('open / scheduling 以外のステータスの場合は false', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.confirmed, hostUserId: USER_ID }),
+      makeLobby({ status: LobbyStatus.cancelled, hostUserId: USER_ID }),
     );
 
     // Act

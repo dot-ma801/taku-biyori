@@ -106,7 +106,6 @@ describe('canPublish', () => {
     { status: LobbyStatus.draft, expected: true },
     { status: LobbyStatus.open, expected: false },
     { status: LobbyStatus.scheduling, expected: false },
-    { status: LobbyStatus.confirmed, expected: false },
     { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
@@ -154,7 +153,6 @@ describe('canCancel', () => {
     { status: LobbyStatus.draft, expected: false },
     { status: LobbyStatus.open, expected: true },
     { status: LobbyStatus.scheduling, expected: true },
-    { status: LobbyStatus.confirmed, expected: false },
     { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
@@ -200,7 +198,6 @@ describe('canEdit', () => {
     { status: LobbyStatus.draft, expected: true },
     { status: LobbyStatus.open, expected: true },
     { status: LobbyStatus.scheduling, expected: true },
-    { status: LobbyStatus.confirmed, expected: false },
     { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
@@ -456,19 +453,6 @@ describe('cancelLobby', () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
-
-    // Act
-    await cancelLobby();
-
-    // Assert
-    expect(updateLobbyStatus).not.toHaveBeenCalled();
-  });
-
-  it('status が confirmed のときは API を呼ばない', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const lobby = ref(makeLobby({ status: LobbyStatus.confirmed }));
     const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act

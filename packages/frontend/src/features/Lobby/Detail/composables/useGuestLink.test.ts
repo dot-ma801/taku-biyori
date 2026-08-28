@@ -86,17 +86,16 @@ describe('canIssueGuestLink', () => {
     expect(canIssueGuestLink.value).toBe(true);
   });
 
-  it.each([
-    { status: LobbyStatus.draft },
-    { status: LobbyStatus.confirmed },
-    { status: LobbyStatus.cancelled },
-  ])('status が $status のとき false', ({ status }) => {
-    // Act
-    const { canIssueGuestLink } = useGuestLink(LOBBY_ID, HOST_ID, status);
+  it.each([{ status: LobbyStatus.draft }, { status: LobbyStatus.cancelled }])(
+    'status が $status のとき false',
+    ({ status }) => {
+      // Act
+      const { canIssueGuestLink } = useGuestLink(LOBBY_ID, HOST_ID, status);
 
-    // Assert
-    expect(canIssueGuestLink.value).toBe(false);
-  });
+      // Assert
+      expect(canIssueGuestLink.value).toBe(false);
+    },
+  );
 
   it('未ログインのとき false', () => {
     // Arrange

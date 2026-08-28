@@ -12,13 +12,11 @@ import type {
   LobbyAvailabilityDateAnswer,
   CreateLobbyInput,
   UpdateLobbyStatusInput,
-  GameSession,
 } from '@taku-biyori/shared';
 import {
   DATE_NOTE_MAX_LENGTH,
   GUEST_TOKEN_HEADER,
   LobbyStatus,
-  GameSessionStatus,
 } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { ListMembersResult } from '@/lobby/application/list-members';
@@ -27,12 +25,9 @@ import type { JoinAsGuestResult } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyResult } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkResult } from '@/lobby/application/get-guest-link';
 import type { ListAvailabilityDatesResult } from '@/lobby/application/list-availability-dates';
-import type { AddAvailabilityDateResult } from '@/lobby/application/add-availability-date';
 import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk-update-availability-dates';
-import type { DeleteAvailabilityDateResult } from '@/lobby/application/delete-availability-date';
 import type { UpdateAvailabilityDateResponseResult } from '@/lobby/application/update-availability-date-response';
 import type { UpdateGuestAvailabilityDateResponseResult } from '@/lobby/application/update-guest-availability-date-response';
-import type { ConfirmLobbyResult } from '@/lobby/application/confirm-lobby';
 import type { UpdateLobbyStatusResult } from '@/lobby/application/update-lobby-status';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -98,18 +93,6 @@ const mockAnswer: LobbyAvailabilityDateAnswer = {
   comment: null,
 };
 
-const mockGameSession: GameSession = {
-  id: 'game-session-1',
-  title: '新規募集',
-  status: GameSessionStatus.confirmed,
-  isPublished: true,
-  scheduledAt: '2099-09-01',
-  lobbyId: mockLobby.id,
-  createdBy: 'user-1',
-  createdAt: '2025-01-01T00:00:00.000Z',
-  updatedAt: '2025-01-01T00:00:00.000Z',
-};
-
 const stubProfile = {} as unknown as ProfileUseCases;
 const stubGameSession = {} as unknown as GameSessionUseCases;
 
@@ -148,24 +131,15 @@ const makeApp = (
     listAvailabilityDates:
       overrides.listAvailabilityDates ??
       vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
-    addAvailabilityDate:
-      overrides.addAvailabilityDate ??
-      vi.fn().mockResolvedValue({ type: 'ok', date: mockAvailabilityDate }),
     bulkUpdateAvailabilityDates:
       overrides.bulkUpdateAvailabilityDates ??
       vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
-    deleteAvailabilityDate:
-      overrides.deleteAvailabilityDate ??
-      vi.fn().mockResolvedValue({ type: 'ok' }),
     updateAvailabilityDateResponse:
       overrides.updateAvailabilityDateResponse ??
       vi.fn().mockResolvedValue({ type: 'ok', answer: mockAnswer }),
     updateGuestAvailabilityDateResponse:
       overrides.updateGuestAvailabilityDateResponse ??
       vi.fn().mockResolvedValue({ type: 'ok', answer: mockAnswer }),
-    confirmLobby:
-      overrides.confirmLobby ??
-      vi.fn().mockResolvedValue({ type: 'ok', gameSession: mockGameSession }),
   };
 
   return createApp({
@@ -498,7 +472,7 @@ describe('PATCH /api/lobbies/:id', () => {
     expect(response.status).toBe(404);
   });
 
-  it('confirmed/cancelled の募集枠は 409 を返す', async () => {
+  it('cancelled の募集枠は 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateLobby: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
@@ -586,21 +560,6 @@ describe('DELETE /api/lobbies/:id', () => {
 
     // Assert
     expect(response.status).toBe(404);
-  });
-
-  it('確定済み募集枠は 409 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      deleteLobby: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1', {
-      method: 'DELETE',
-    });
-
-    // Assert
-    expect(response.status).toBe(409);
   });
 
   it('ホスト以外のメンバーがいる募集枠は 409 を返す', async () => {
@@ -728,7 +687,7 @@ describe('PATCH /api/lobbies/:id/status', () => {
     const response = await app.request('/api/lobbies/lobby-1/status', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ status: 'confirmed' }),
+      body: JSON.stringify({ status: 'scheduling' }),
     });
 
     // Assert
@@ -752,253 +711,6 @@ describe('PATCH /api/lobbies/:id/status', () => {
     // Assert
     expect(updateLobbyStatus).toHaveBeenCalledWith('lobby-1', 'user-1', {
       status: 'open',
-    });
-  });
-});
-
-describe('POST /api/lobbies/:id/confirm', () => {
-  const candidateId = 'cccccccc-0000-4000-8000-000000000001';
-  const memberId1 = 'aaaaaaaa-0000-4000-8000-000000000001';
-  const memberId2 = 'aaaaaaaa-0000-4000-8000-000000000002';
-
-  it('ホストが有効なボディで確定すると 201 と作成された卓を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-    const body = await response.json();
-
-    // Assert
-    expect(response.status).toBe(201);
-    expect(body).toEqual(mockGameSession);
-  });
-
-  it('未認証なら 401 を返す', async () => {
-    // Arrange
-    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(401);
-  });
-
-  it('ホスト以外は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      confirmLobby: vi.fn().mockResolvedValue({ type: 'forbidden' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('存在しない募集枠なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      confirmLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/nonexistent/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  it('draft・cancelled 状態の募集枠は 422 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      confirmLobby: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(422);
-  });
-
-  it('candidateId がこの募集枠の候補日でない場合は 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      confirmLobby: vi.fn().mockResolvedValue({ type: 'candidateNotFound' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  it('memberIds にこの募集枠のメンバーでない ID を含む場合は 422 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      confirmLobby: vi.fn().mockResolvedValue({ type: 'invalidMembers' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId2] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(422);
-  });
-
-  it('確定済み・並行確定に敗北した場合は 409 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      confirmLobby: vi.fn().mockResolvedValue({ type: 'conflict' }),
-    });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [memberId1] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(409);
-  });
-
-  it('memberIds が空配列なら 422 を返す（選出は必須）', async () => {
-    // Arrange
-    const confirmLobby: (
-      lobbyId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<ConfirmLobbyResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', gameSession: mockGameSession });
-    const app = makeApp({ confirmLobby });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId, memberIds: [] }),
-    });
-
-    // Assert
-    expect(response.status).toBe(422);
-    expect(confirmLobby).not.toHaveBeenCalled();
-  });
-
-  it('memberIds が未指定なら 422 を返す（選出は必須）', async () => {
-    // Arrange
-    const confirmLobby: (
-      lobbyId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<ConfirmLobbyResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', gameSession: mockGameSession });
-    const app = makeApp({ confirmLobby });
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ candidateId }),
-    });
-
-    // Assert
-    expect(response.status).toBe(422);
-    expect(confirmLobby).not.toHaveBeenCalled();
-  });
-
-  it('不正な JSON なら 400 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: '{invalid',
-    });
-
-    // Assert
-    expect(response.status).toBe(400);
-  });
-
-  it('candidateId が不正な形式（uuid でない）なら 400 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        candidateId: 'not-a-uuid',
-        memberIds: [memberId1],
-      }),
-    });
-
-    // Assert
-    expect(response.status).toBe(400);
-  });
-
-  it('ユースケースに lobbyId・userId・input を渡す', async () => {
-    // Arrange
-    const confirmLobby: (
-      lobbyId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<ConfirmLobbyResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', gameSession: mockGameSession });
-    const app = makeApp({ confirmLobby });
-
-    // Act
-    await app.request('/api/lobbies/lobby-1/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        candidateId,
-        memberIds: [memberId1, memberId2],
-      }),
-    });
-
-    // Assert
-    expect(confirmLobby).toHaveBeenCalledWith('lobby-1', 'user-1', {
-      candidateId,
-      memberIds: [memberId1, memberId2],
     });
   });
 });
@@ -1638,148 +1350,6 @@ describe('GET /api/lobbies/:id/availability-dates', () => {
   });
 });
 
-describe('POST /api/lobbies/:id/availability-dates', () => {
-  it('ホストが有効なボディで追加すると 201 と候補日を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2099-09-01' }),
-      },
-    );
-    const body = await response.json();
-
-    // Assert
-    expect(response.status).toBe(201);
-    expect(body).toEqual(mockAvailabilityDate);
-  });
-
-  it('未認証なら 401 を返す', async () => {
-    // Arrange
-    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2099-09-01' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(401);
-  });
-
-  it('ホスト以外は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2099-09-01' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('存在しない募集枠なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/nonexistent/availability-dates',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2099-09-01' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      addAvailabilityDate: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2099-09-01' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(409);
-  });
-
-  it('過去日なら 400 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: '2000-01-01' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(400);
-  });
-
-  it('ユースケースに lobbyId・userId・input を渡す', async () => {
-    // Arrange
-    const addAvailabilityDate: (
-      lobbyId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<AddAvailabilityDateResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', date: mockAvailabilityDate });
-    const app = makeApp({ addAvailabilityDate });
-
-    // Act
-    await app.request('/api/lobbies/lobby-1/availability-dates', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ date: '2099-09-01' }),
-    });
-
-    // Assert
-    expect(addAvailabilityDate).toHaveBeenCalledWith('lobby-1', 'user-1', {
-      date: '2099-09-01',
-    });
-  });
-});
-
 describe('PUT /api/lobbies/:id/availability-dates', () => {
   it('ホストが有効なボディで一括更新すると 200 と候補日一覧を返す', async () => {
     // Arrange
@@ -1997,110 +1567,6 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
       'lobby-1',
       'user-1',
       { dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }] },
-    );
-  });
-});
-
-describe('DELETE /api/lobbies/:id/availability-dates/:dateId', () => {
-  it('ホストが削除すると 204 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1',
-      { method: 'DELETE' },
-    );
-
-    // Assert
-    expect(response.status).toBe(204);
-  });
-
-  it('未認証なら 401 を返す', async () => {
-    // Arrange
-    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1',
-      { method: 'DELETE' },
-    );
-
-    // Assert
-    expect(response.status).toBe(401);
-  });
-
-  it('ホスト以外は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'forbidden' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1',
-      { method: 'DELETE' },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('存在しない候補日なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      deleteAvailabilityDate: vi.fn().mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/nonexistent',
-      { method: 'DELETE' },
-    );
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      deleteAvailabilityDate: vi
-        .fn()
-        .mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1',
-      { method: 'DELETE' },
-    );
-
-    // Assert
-    expect(response.status).toBe(409);
-  });
-
-  it('ユースケースに lobbyId・dateId・userId を渡す', async () => {
-    // Arrange
-    const deleteAvailabilityDate: (
-      lobbyId: string,
-      dateId: string,
-      userId: string,
-    ) => Promise<DeleteAvailabilityDateResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok' });
-    const app = makeApp({ deleteAvailabilityDate });
-
-    // Act
-    await app.request('/api/lobbies/lobby-1/availability-dates/date-1', {
-      method: 'DELETE',
-    });
-
-    // Assert
-    expect(deleteAvailabilityDate).toHaveBeenCalledWith(
-      'lobby-1',
-      'date-1',
-      'user-1',
     );
   });
 });

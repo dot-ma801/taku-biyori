@@ -46,12 +46,7 @@ describe('joinLobby', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it.each([
-    LobbyStatus.draft,
-    LobbyStatus.scheduling,
-    LobbyStatus.confirmed,
-    LobbyStatus.cancelled,
-  ])(
+  it.each([LobbyStatus.draft, LobbyStatus.scheduling, LobbyStatus.cancelled])(
     'status が %s（open でない）場合は lobbyNotOpen を返す',
     async (status) => {
       // Arrange

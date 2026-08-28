@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { deleteLobby } from '@/lobby/application/delete-lobby';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
-import { LobbyStatus } from '@taku-biyori/shared';
 
 // makeRepo:
 // `executeWithLock` のモックは「コールバックを同期的にそのまま実行する」スタブを既定とする。
@@ -13,7 +12,6 @@ function makeRepo(
 ): DeleteLobbyRepository {
   const repo: DeleteLobbyRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
-    findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.draft),
     countOtherMembers: vi.fn().mockResolvedValue(0),
     deleteById: vi.fn().mockResolvedValue(undefined),
     executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
@@ -62,60 +60,6 @@ describe('deleteLobby', () => {
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
 
-  it('status が open のときも ok を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.open),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
-  it('status が scheduling のときも ok を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.scheduling),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
-  it('status が cancelled のときも ok を返す（中止済みは削除可）', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.cancelled),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
-  it('status が confirmed のとき invalidStatus を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.confirmed),
-      deleteById: vi.fn(),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'invalidStatus' });
-    expect(repo.deleteById).not.toHaveBeenCalled();
-  });
-
   it('自分以外のメンバーが存在するとき hasMember を返す', async () => {
     // Arrange
     const repo = makeRepo({
@@ -161,7 +105,6 @@ describe('deleteLobby', () => {
       // Assert
       expect(result).toEqual({ type: 'notFound' });
       expect(repo.findHostUserId).not.toHaveBeenCalled();
-      expect(repo.findLobbyStatus).not.toHaveBeenCalled();
       expect(repo.countOtherMembers).not.toHaveBeenCalled();
       expect(repo.deleteById).not.toHaveBeenCalled();
     });

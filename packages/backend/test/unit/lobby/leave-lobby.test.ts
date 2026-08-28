@@ -92,7 +92,7 @@ describe('leaveLobby', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it.each([LobbyStatus.confirmed, LobbyStatus.cancelled])(
+  it.each([LobbyStatus.cancelled])(
     'status が %s の募集枠は invalidStatus を返す',
     async (status) => {
       // Arrange

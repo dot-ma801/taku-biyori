@@ -1,19 +1,15 @@
 import type { Hono } from 'hono';
 import type {
   GameSessionMember,
-  JoinAsGuestInput,
   JoinGameSessionInput,
   UpdateMemberInput,
 } from '@taku-biyori/shared';
 import {
-  GUEST_TOKEN_HEADER,
-  JoinAsGuestInputSchema,
   JoinGameSessionInputSchema,
   UpdateMemberInputSchema,
 } from '@taku-biyori/shared';
 import type { ListMembersResult } from '@/game-session/application/list-members';
 import type { JoinGameSessionResult } from '@/game-session/application/join-game-session';
-import type { JoinAsGuestResult } from '@/game-session/application/join-as-guest';
 import type { UpdateMemberResult } from '@/game-session/application/update-member';
 import type { LeaveGameSessionResult } from '@/game-session/application/leave-game-session';
 
@@ -25,11 +21,6 @@ export interface RegisterMemberRouteOptions {
     userId: string,
     input: JoinGameSessionInput,
   ) => Promise<JoinGameSessionResult>;
-  joinAsGuest: (
-    gameSessionId: string,
-    token: string,
-    input: JoinAsGuestInput,
-  ) => Promise<JoinAsGuestResult>;
   updateMember: (
     gameSessionId: string,
     memberId: string,
@@ -84,38 +75,6 @@ export const registerMemberRoute = (
     }
     if (result.type === 'alreadyJoined') {
       return c.json({ error: 'Already joined' }, 409);
-    }
-    return c.json(result.member satisfies GameSessionMember, 201);
-  });
-
-  // ゲスト参加は完全匿名。認証は不要で、Guest-Token ヘッダーで認可する。
-  app.post('/api/game-sessions/:id/guest-members', async (c) => {
-    const token = c.req.header(GUEST_TOKEN_HEADER) ?? '';
-
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ error: 'Invalid JSON' }, 400);
-    }
-
-    const parsed = JoinAsGuestInputSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: parsed.error.issues }, 400);
-    }
-
-    const result = await options.joinAsGuest(
-      c.req.param('id'),
-      token,
-      parsed.data,
-    );
-
-    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
-    if (result.type === 'invalidToken') {
-      return c.json({ error: 'Invalid guest token' }, 403);
-    }
-    if (result.type === 'sessionNotOpen') {
-      return c.json({ error: 'Session is not open for joining' }, 422);
     }
     return c.json(result.member satisfies GameSessionMember, 201);
   });

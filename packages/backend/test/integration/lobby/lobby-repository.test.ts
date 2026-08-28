@@ -17,13 +17,10 @@ import {
   lobbyCandidates,
   lobbyMembers,
 } from '@/system/infrastructure/database/lobby-schema';
-import { gameSessions } from '@/system/infrastructure/database/game-session-schema';
 import { closeTestDatabase, withRollback } from '@test/helpers/test-database';
 import {
   insertAnswer,
   insertCandidateDate,
-  insertGameSession,
-  insertGameSessionMember,
   insertLobby,
   insertLobbyMember,
   insertUser,
@@ -151,10 +148,7 @@ describe('findByUserId', () => {
         isPublished: true,
         cancelledAt: new Date(),
       });
-      const confirmedId = await insertLobby(db, host.id, {
-        isPublished: true,
-        closedAt: new Date(),
-      });
+      const draftId = await insertLobby(db, host.id, { isPublished: false });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -164,8 +158,8 @@ describe('findByUserId', () => {
       expect(rows.find((row) => row.id === cancelledId)?.status).toBe(
         LobbyStatus.cancelled,
       );
-      expect(rows.find((row) => row.id === confirmedId)?.status).toBe(
-        LobbyStatus.confirmed,
+      expect(rows.find((row) => row.id === draftId)?.status).toBe(
+        LobbyStatus.draft,
       );
     });
   });
@@ -321,93 +315,6 @@ describe('findDetailById', () => {
 
       // Assert
       expect(detail).toBeNull();
-    });
-  });
-
-  it('未確定なら confirmedGameSession を含めない', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { closedAt: null });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(lobbyId);
-
-      // Assert
-      expect(detail).not.toHaveProperty('confirmedGameSession');
-    });
-  });
-
-  it('確定済みなら作成された卓と選出メンバーの出自を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { closedAt: new Date() });
-      const memberId = await insertLobbyMember(db, lobbyId, {
-        userId: host.id,
-      });
-      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
-      await insertGameSessionMember(db, gameSessionId, {
-        userId: host.id,
-        lobbyMemberId: memberId,
-      });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(lobbyId);
-
-      // Assert
-      expect(detail?.confirmedGameSession).toEqual({
-        id: gameSessionId,
-        selectedLobbyMemberIds: [memberId],
-      });
-    });
-  });
-
-  it('募集枠を経由しないメンバーは selectedLobbyMemberIds から除外される', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { closedAt: new Date() });
-      const memberId = await insertLobbyMember(db, lobbyId, {
-        userId: host.id,
-      });
-      const gameSessionId = await insertGameSession(db, host.id, { lobbyId });
-      // 選出メンバーの引き継ぎ（lobbyMemberId あり）
-      await insertGameSessionMember(db, gameSessionId, {
-        userId: host.id,
-        lobbyMemberId: memberId,
-      });
-      // 確定後に直接参加したメンバー（lobbyMemberId なし）
-      await insertGameSessionMember(db, gameSessionId, {
-        guestName: '後から参加',
-      });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(lobbyId);
-
-      // Assert
-      expect(detail?.confirmedGameSession).toEqual({
-        id: gameSessionId,
-        selectedLobbyMemberIds: [memberId],
-      });
-    });
-  });
-
-  it('closedAt があっても卓が見つからなければ confirmedGameSession は null', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { closedAt: new Date() });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const detail = await repo.findDetailById(lobbyId);
-
-      // Assert
-      expect(detail?.confirmedGameSession).toBeNull();
     });
   });
 });
@@ -586,24 +493,6 @@ describe('cancel', () => {
       // Assert
       expect(cancelled?.status).toBe(LobbyStatus.cancelled);
       expect(cancelled?.cancelledAt).not.toBeNull();
-    });
-  });
-
-  it('確定済み（closed_at あり）は中止できない', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
-        closedAt: new Date(),
-      });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const cancelled = await repo.cancel(lobbyId);
-
-      // Assert
-      expect(cancelled).toBeNull();
     });
   });
 
@@ -910,38 +799,6 @@ describe('メンバー操作', () => {
       expect(await repo.isGuestMember(lobbyId, guestId)).toBe(false);
     });
   });
-
-  it('findMemberCoresByIds は指定 ID のメンバーだけを返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const target = await insertLobbyMember(db, lobbyId, { userId: host.id });
-      await insertLobbyMember(db, lobbyId, { guestName: '選ばれない人' });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const cores = await repo.findMemberCoresByIds(lobbyId, [target]);
-
-      // Assert
-      expect(cores).toEqual([{ id: target, userId: host.id, guestName: null }]);
-    });
-  });
-
-  it('findMemberCoresByIds は空配列ならクエリせず空配列を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const cores = await repo.findMemberCoresByIds(lobbyId, []);
-
-      // Assert
-      expect(cores).toEqual([]);
-    });
-  });
 });
 
 describe('候補日と回答', () => {
@@ -999,38 +856,6 @@ describe('候補日と回答', () => {
     });
   });
 
-  it('addDate は候補日を追加する', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const added = await repo.addDate(lobbyId, '2100-03-03', '夜');
-
-      // Assert
-      expect(added).toMatchObject({
-        date: '2100-03-03',
-        dateNote: '夜',
-        answers: [],
-      });
-    });
-  });
-
-  it('addDate は同じ募集枠の同じ日付を重複登録できない', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      await insertCandidateDate(db, lobbyId, '2100-03-03');
-      const repo = createLobbyRepository(db);
-
-      // Act & Assert
-      await expect(repo.addDate(lobbyId, '2100-03-03', null)).rejects.toThrow();
-    });
-  });
-
   it('findCandidateOwner は所属募集枠と日付を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
@@ -1044,32 +869,6 @@ describe('候補日と回答', () => {
 
       // Assert
       expect(owner).toEqual({ lobbyId, date: '2100-04-04' });
-    });
-  });
-
-  it('deleteDateById は候補日と回答を削除する', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
-        userId: host.id,
-      });
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-05-05');
-      await insertAnswer(db, candidateId, memberId, 'ng');
-      const repo = createLobbyRepository(db);
-
-      // Act
-      await repo.deleteDateById(candidateId);
-
-      // Assert
-      expect(await repo.findCandidateOwner(candidateId)).toBeNull();
-      expect(
-        await db
-          .select()
-          .from(lobbyAnswers)
-          .where(eq(lobbyAnswers.candidateId, candidateId)),
-      ).toHaveLength(0);
     });
   });
 
@@ -1216,112 +1015,6 @@ describe('ゲストリンク', () => {
       expect(
         await repo.findGuestLinkToken('00000000-0000-0000-0000-000000000000'),
       ).toBeNull();
-    });
-  });
-});
-
-describe('確定（closeLobby / createGameSessionFromLobby）', () => {
-  it('findLobbyCore は卓へ引き継ぐ項目を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, {
-        title: '引き継ぎ元',
-        scenarioName: 'シナリオ',
-        location: 'オンライン',
-        maxPlayers: 5,
-      });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const core = await repo.findLobbyCore(lobbyId);
-
-      // Assert
-      expect(core).toEqual({
-        hostUserId: host.id,
-        title: '引き継ぎ元',
-        scenarioName: 'シナリオ',
-        description: null,
-        location: 'オンライン',
-        maxPlayers: 5,
-      });
-    });
-  });
-
-  it('findLobbyCore は募集枠が存在しなければ null を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const repo = createLobbyRepository(db);
-
-      // Act & Assert
-      expect(
-        await repo.findLobbyCore('00000000-0000-0000-0000-000000000000'),
-      ).toBeNull();
-    });
-  });
-
-  it('closeLobby は未確定・未中止のときだけ true を返す', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const openId = await insertLobby(db, host.id, { isPublished: true });
-      const cancelledId = await insertLobby(db, host.id, {
-        cancelledAt: new Date(),
-      });
-      const repo = createLobbyRepository(db);
-
-      // Act & Assert
-      expect(await repo.closeLobby(openId, new Date())).toBe(true);
-      expect(await repo.closeLobby(openId, new Date())).toBe(false);
-      expect(await repo.closeLobby(cancelledId, new Date())).toBe(false);
-    });
-  });
-
-  it('createGameSessionFromLobby は卓とメンバーを作り、出自を記録する', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
-        userId: host.id,
-      });
-      const guestMemberId = await insertLobbyMember(db, lobbyId, {
-        guestName: 'ゲスト',
-      });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const created = await repo.createGameSessionFromLobby({
-        lobbyId,
-        hostUserId: host.id,
-        title: '確定した卓',
-        scenarioName: null,
-        description: null,
-        location: null,
-        maxPlayers: null,
-        scheduledAt: '2100-07-07',
-        guestLinkToken: 'session-token',
-        members: [
-          { id: memberId, userId: host.id, guestName: null },
-          { id: guestMemberId, userId: null, guestName: 'ゲスト' },
-        ],
-      });
-
-      // Assert
-      expect(created).toMatchObject({
-        title: '確定した卓',
-        scheduledAt: '2100-07-07',
-        lobbyId,
-        isPublished: true,
-      });
-      const confirmed = await repo.findDetailById(lobbyId);
-      expect(confirmed?.members).toHaveLength(2);
-      expect(
-        await db
-          .select()
-          .from(gameSessions)
-          .where(eq(gameSessions.lobbyId, lobbyId)),
-      ).toHaveLength(1);
     });
   });
 });

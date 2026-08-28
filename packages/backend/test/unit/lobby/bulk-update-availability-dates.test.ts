@@ -28,7 +28,6 @@ const makeRepo = (
     findStatusFields: vi.fn().mockResolvedValue({
       isPublished: true,
       openUntil: null,
-      closedAt: null,
       cancelledAt: null,
     }),
     findByLobbyId: vi.fn().mockResolvedValue(existingDates),
@@ -239,36 +238,12 @@ describe('bulkUpdateAvailabilityDates', () => {
     expect(applyDateChanges).not.toHaveBeenCalled();
   });
 
-  it('募集枠が確定済みの場合は invalidStatus を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        openUntil: new Date('2026-01-01'),
-        closedAt: new Date('2026-06-30'),
-        cancelledAt: null,
-      }),
-    });
-
-    // Act
-    const result = await bulkUpdateAvailabilityDates(
-      repo,
-      'lobby-1',
-      'user-1',
-      { dates: [{ date: '2026-07-01' }] },
-    );
-
-    // Assert
-    expect(result).toEqual({ type: 'invalidStatus' });
-  });
-
   it('募集枠が中止済みの場合は invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: true,
         openUntil: null,
-        closedAt: null,
         cancelledAt: new Date('2026-01-01'),
       }),
     });

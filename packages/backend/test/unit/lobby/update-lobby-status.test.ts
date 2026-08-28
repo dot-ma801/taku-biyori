@@ -21,7 +21,6 @@ const makeRepo = (
   findStatusFields: vi.fn().mockResolvedValue({
     isPublished: false,
     openUntil: null,
-    closedAt: null,
     cancelledAt: null,
   }),
   publish: vi
@@ -70,28 +69,6 @@ describe('updateLobbyStatus', () => {
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
           openUntil: null,
-          closedAt: null,
-          cancelledAt: null,
-        }),
-      });
-
-      // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'open',
-      });
-
-      // Assert
-      expect(result).toEqual({ type: 'invalidTransition' });
-      expect(repo.publish).not.toHaveBeenCalled();
-    });
-
-    it('confirmed から open に遷移しようとすると invalidTransition を返す', async () => {
-      // Arrange
-      const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: true,
-          openUntil: null,
-          closedAt: new Date('2025-01-01'),
           cancelledAt: null,
         }),
       });
@@ -114,7 +91,6 @@ describe('updateLobbyStatus', () => {
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: false,
           openUntil: null,
-          closedAt: null,
           cancelledAt: null,
         }),
       });
@@ -138,7 +114,6 @@ describe('updateLobbyStatus', () => {
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
           openUntil: null,
-          closedAt: null,
           cancelledAt: null,
         }),
       });
@@ -158,7 +133,6 @@ describe('updateLobbyStatus', () => {
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
           openUntil: new Date('2000-01-01'),
-          closedAt: null,
           cancelledAt: null,
         }),
       });
@@ -172,35 +146,12 @@ describe('updateLobbyStatus', () => {
       expect(result.type).toBe('ok');
     });
 
-    it('confirmed から中止しようとすると invalidTransition を返す', async () => {
-      // Arrange
-      const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: true,
-          openUntil: null,
-          closedAt: new Date('2025-01-01'),
-          cancelledAt: null,
-        }),
-        cancel: vi.fn(),
-      });
-
-      // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
-      });
-
-      // Assert
-      expect(result).toEqual({ type: 'invalidTransition' });
-      expect(repo.cancel).not.toHaveBeenCalled();
-    });
-
     it('既に cancelled の場合（二重中止）は invalidTransition を返す', async () => {
       // Arrange
       const repo = makeRepo({
         findStatusFields: vi.fn().mockResolvedValue({
           isPublished: true,
           openUntil: null,
-          closedAt: null,
           cancelledAt: new Date('2025-01-01'),
         }),
         cancel: vi.fn(),

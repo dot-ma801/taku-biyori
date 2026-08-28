@@ -416,8 +416,10 @@ export async function getLobby(id: string): Promise<LobbyDetailModel> {
    model には解決済みの値を持たせる
 3. **ルックアップ用の `Map` を作る。** 配列から毎回 `find()` する形を model に残さない
 4. **union へのキャストを変換関数の中に閉じ込める。** model の型は最初から `Answer` などの union にする
-5. **構造上のノイズを落とす。** 脱退済み（`leftAt !== null`）の entry を除くなど、
-   全画面で同じように無視する行はここで落とす
+5. **絞り込み済みの集合を用意する。** ただし**画面によって出し分けるものは捨てない。**
+   例: 脱退した参加者は回答表・着席候補では無視するが、ロビー詳細の参加者一覧では
+   グレー表示で出す。model は `entries`（全件・`leftAt` 付き）と
+   `activeEntries`（`leftAt === null`）の**両方**を持ち、画面はどちらを使うか選ぶだけにする
 
 #### 変換でやらないこと
 
@@ -460,7 +462,7 @@ return candidateDate.answersByEntryId.get(entryId) ?? null;
 #### テスト
 
 変換関数は入力と出力しかない純粋関数なので、**テストを先に書く**（`src/models/{機能名}.test.ts`）。
-「上書きが無ければロビーの値になる」「脱退済みの entry が落ちる」といった、
+「上書きが無ければロビーの値になる」「脱退済みの entry が `activeEntries` から落ちる」といった、
 これまで各 composable のテストに散っていた期待値をここへ集約する。
 
 ### 「サーバ値」と「編集ドラフト」は別物として管理する

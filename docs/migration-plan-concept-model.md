@@ -64,11 +64,14 @@ FE 内部で扱う model 型へ `src/api/*.ts` の中で変換する。** 変換
 - model 型と変換関数は `packages/frontend/src/models/{機能名}.ts` に置く（`Model` サフィックス／`toXxxModel()`）
 - `src/api/*.ts` は `Promise<XxxModel>` を返す。DTO 型は `apiRequest<T>` の型引数の中だけに現れる
 - 変換で吸収するのは「日付の型・導出値の確定・ルックアップ用 `Map`・union へのキャスト・
-  脱退行の除去」。`'未設定'` のような表示文言のフォールバックは**入れない**
+  絞り込み済みの集合」。`'未設定'` のような表示文言のフォールバックは**入れない**
+- **画面によって出し分けるものは捨てない。** 脱退者は回答表・着席候補では無視するが
+  ロビー詳細の参加者一覧ではグレー表示で出すため、`entries`（全件）と `activeEntries`
+  （`leftAt === null`）の**両方**を持たせる（§4 のリスク表「`left_at` を無視した集計」への対処）
 - `overrides` の生値は解決済みの値と**別に** model へ残す。捨てると編集フォームが壊れる（design-v2 §5-5）
 - **逆方向（model → リクエスト）は今回のスコープ外。** リクエストは従来どおり shared の `*Input` 型を組み立てる
 - 変換関数は純粋関数なので**テストを先に書く**（`src/models/{機能名}.test.ts`）。
-  「上書きが無ければロビーの値になる」「脱退済みの entry が落ちる」といった期待値をここへ集約する
+  「上書きが無ければロビーの値になる」「脱退済みの entry が `activeEntries` から落ちる」といった期待値をここへ集約する
 
 規約の詳細と実例は **CLAUDE.md「API の型（DTO）と FE の model を分ける」を正**とする。
 
@@ -165,7 +168,7 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **DDL**: `lobbies.cancelled_at` → `disbanded_at` に改名、`lobby_members` → `lobby_entries` に改名 + `left_at` 追加（`lobby_answers.member_id` の FK 参照も付け替え）。**shared**: `lobby/status.ts`（enum `draft`/`open`/`closed`/`disbanded` + **導出関数 `getLobbyStatus()` を backend から移設**）、`lobby/permissions.ts` を design-v2 §4-3 の表どおりに書き直し、`Lobby` / `LobbyListItem` / `LobbyDetail` / `LobbyEntry` 契約、`GUEST_TOKEN_HEADER` を `game-session.ts` → `lobby.ts` へ移設。**backend**: `lobby/domain/lobby-status.ts` を**削除**して shared の導出関数を使う、ロビー CRUD・status・参加/脱退/ゲスト参加・guest-link（再発行含む）、`GET /api/join/:token` をロビー側へ移設。**frontend**: `models/lobby.ts` を新設し（`LobbyModel` / `LobbyDetailModel` / `LobbyEntryModel` と `toXxxModel()`。status を `getLobbyStatus()` で解決済みにする、`leftAt !== null` の entry を落とす、タイムスタンプを `Date` にする）、`api/lobby.ts` は DTO ではなく model を返す（§1-4）。`features/Lobby/List/`、`Lobby/Edit/`、`Lobby/Detail/` のヘッダ・ActionBar・StatusDisplay・参加者一覧・各ダイアログ、`LobbyStatusBadge` |
+| スコープ | **DDL**: `lobbies.cancelled_at` → `disbanded_at` に改名、`lobby_members` → `lobby_entries` に改名 + `left_at` 追加（`lobby_answers.member_id` の FK 参照も付け替え）。**shared**: `lobby/status.ts`（enum `draft`/`open`/`closed`/`disbanded` + **導出関数 `getLobbyStatus()` を backend から移設**）、`lobby/permissions.ts` を design-v2 §4-3 の表どおりに書き直し、`Lobby` / `LobbyListItem` / `LobbyDetail` / `LobbyEntry` 契約、`GUEST_TOKEN_HEADER` を `game-session.ts` → `lobby.ts` へ移設。**backend**: `lobby/domain/lobby-status.ts` を**削除**して shared の導出関数を使う、ロビー CRUD・status・参加/脱退/ゲスト参加・guest-link（再発行含む）、`GET /api/join/:token` をロビー側へ移設。**frontend**: `models/lobby.ts` を新設し（`LobbyModel` / `LobbyDetailModel` / `LobbyEntryModel` と `toXxxModel()`。status を `getLobbyStatus()` で解決済みにする、`entries`（全件）と `activeEntries`（`leftAt === null`）を両方持たせる、タイムスタンプを `Date` にする）、`api/lobby.ts` は DTO ではなく model を返す（§1-4）。`features/Lobby/List/`、`Lobby/Edit/`、`Lobby/Detail/` のヘッダ・ActionBar・StatusDisplay・参加者一覧・各ダイアログ、`LobbyStatusBadge` |
 | 既存への影響 | ロビー機能の挙動が変わる（受付の開閉が往復可能に、脱退がソフト化）。セッション側は無変更 |
 | 完了条件 | 全テスト green / `src/models/lobby.test.ts` があり、composable / component が shared の Lobby 系レスポンス型を import していない / 脱退が `left_at` セットであること、再参加で `left_at` が NULL に戻ること、`open ⇄ closed` の往復、`disbanded` からの遷移不可のテストがある / 参加者一覧・回答表・着席候補のクエリがすべて `left_at IS NULL` で絞られている |
 | 検証 | 作成 → 公開 → 招待リンク発行 → ゲスト参加 → 脱退 → 再参加（過去の回答が残っている）→ 受付を閉じる → 追加募集で開き直す → 解散、が UI から通る |

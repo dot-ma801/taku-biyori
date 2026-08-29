@@ -263,6 +263,35 @@ pnpm --filter @taku-biyori/backend dev
 
 ## フロントエンド実装方針
 
+### API の型（DTO）と FE の model を分ける
+
+`@taku-biyori/shared` の型は **API との通信契約（DTO）** であって、フロントエンド内部で扱う
+データ構造ではない。DTO を見てよいのは `src/api/` と `src/models/` だけで、
+composable / component は model だけを受け取る。
+
+```ts
+// ❌ NG — composable が DTO をそのまま持つ
+import type { LobbyDetail } from '@taku-biyori/shared';
+const lobby = ref<LobbyDetail | null>(null);
+
+// ✅ OK — api 層で model に変換し、内側は model だけを見る
+import type { LobbyDetailModel } from '@/models/lobby';
+const lobby = ref<LobbyDetailModel | null>(null);
+```
+
+model 側で引き受けること。
+
+| 関心事 | 例 |
+|---|---|
+| タイムスタンプを `Date` にする | `createdAt: string` → `Date`（画面ごとに `new Date()` しない） |
+| `undefined` を `null` に正規化する | `scenarioName?: string \| null` → `string \| null` |
+| 導出値をあらかじめ持たせる | `entries` から `activeEntries`（`leftAt === null`）を作る |
+
+- 日付のみの値（`YYYY-MM-DD`）は `Date` にしない。タイムゾーンで日付がずれるため文字列のまま持つ
+- 表示用のフォールバック文言（`'未設定'` など）は UI の関心事なので model に入れない
+- 変換関数（`toXxxModel()`）には**テストを先に書く**
+- 参考: `src/models/lobby.ts` / `src/models/lobby.test.ts`
+
 ### template 内の式は computed に切り出す
 
 `<template>` 内に `??` や三項演算子などの式を直接書かない。

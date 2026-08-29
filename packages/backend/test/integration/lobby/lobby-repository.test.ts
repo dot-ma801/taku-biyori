@@ -486,6 +486,104 @@ describe('publish', () => {
   });
 });
 
+describe('closeReception / reopenReception', () => {
+  it('closeReception は reception_closed_at をセットして受付終了にする', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const closed = await repo.closeReception(lobbyId);
+
+      // Assert
+      expect(closed?.status).toBe(LobbyStatus.closed);
+      expect(closed?.receptionClosedAt).not.toBeNull();
+    });
+  });
+
+  it('closeReception は受付終了済みなら null を返す（二重クローズの排他）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const closed = await repo.closeReception(lobbyId);
+
+      // Assert
+      expect(closed).toBeNull();
+    });
+  });
+
+  it('reopenReception は reception_closed_at を消して受付中に戻す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const reopened = await repo.reopenReception(lobbyId);
+
+      // Assert
+      expect(reopened?.receptionClosedAt).toBeNull();
+      expect(reopened?.status).toBe(LobbyStatus.open);
+    });
+  });
+
+  // CASE 式は実 DB でしか検証できない（モックの単体テストでは式の誤りを検出できない）
+  it('reopenReception は過去日の open_until を NULL に戻す', async () => {
+    await withRollback(async (db) => {
+      // Arrange — 締め切り日が過ぎたまま再開すると closed のままになってしまう
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        openUntil: '2020-01-01',
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const reopened = await repo.reopenReception(lobbyId);
+
+      // Assert
+      expect(reopened?.openUntil).toBeNull();
+      expect(reopened?.status).toBe(LobbyStatus.open);
+    });
+  });
+
+  it('reopenReception は未来日の open_until を保持する', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        openUntil: '2099-12-31',
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const reopened = await repo.reopenReception(lobbyId);
+
+      // Assert
+      expect(reopened?.openUntil).toBe('2099-12-31');
+      expect(reopened?.status).toBe(LobbyStatus.open);
+    });
+  });
+});
+
 describe('disband', () => {
   it('disbanded_at をセットして解散にする', async () => {
     await withRollback(async (db) => {
@@ -621,7 +719,7 @@ describe('findLobbyVisibility', () => {
   });
 });
 
-describe('メンバー操作', () => {
+describe('エントリー操作', () => {
   it('findEntriesByLobbyId は参加順に返す', async () => {
     await withRollback(async (db) => {
       // Arrange
@@ -634,12 +732,12 @@ describe('メンバー操作', () => {
       const repo = createLobbyRepository(db);
 
       // Act
-      const members = await repo.findEntriesByLobbyId(lobbyId);
+      const entries = await repo.findEntriesByLobbyId(lobbyId);
 
       // Assert
-      expect(members.map((m) => m.id)).toEqual([first, second]);
-      expect(members[0]?.userName).toBe('ホスト');
-      expect(members[1]?.guestName).toBe('あとから');
+      expect(entries.map((e) => e.id)).toEqual([first, second]);
+      expect(entries[0]?.userName).toBe('ホスト');
+      expect(entries[1]?.guestName).toBe('あとから');
     });
   });
 
@@ -651,14 +749,14 @@ describe('メンバー操作', () => {
       const repo = createLobbyRepository(db);
 
       // Act
-      const members = await repo.findEntriesByLobbyId(lobbyId);
+      const entries = await repo.findEntriesByLobbyId(lobbyId);
 
       // Assert
-      expect(members).toEqual([]);
+      expect(entries).toEqual([]);
     });
   });
 
-  it('findActiveEntryByUserId は参加していれば member id を返す', async () => {
+  it('findActiveEntryByUserId は参加していれば entry id を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -677,7 +775,7 @@ describe('メンバー操作', () => {
     });
   });
 
-  it('addMember は参加者を追加してユーザー名つきで返す', async () => {
+  it('addEntry は参加者を追加してユーザー名つきで返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -697,7 +795,7 @@ describe('メンバー操作', () => {
     });
   });
 
-  it('addMember は同じユーザーの二重参加で null を返す（partial unique index）', async () => {
+  it('addEntry は同じユーザーの二重参加で null を返す（partial unique index）', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);

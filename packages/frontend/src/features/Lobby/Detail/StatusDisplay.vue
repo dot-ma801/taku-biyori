@@ -39,6 +39,18 @@ const STATUS_APPEARANCE: Record<LobbyStatus, StatusAppearance> = {
     variant: 'warning',
     icon: CalendarClock,
   },
+  [LobbyStatus.closed]: {
+    label: '受付終了',
+    text: '新しい参加の受付を終了しています。追加募集で開き直せます。',
+    variant: 'warning',
+    icon: CalendarClock,
+  },
+  [LobbyStatus.disbanded]: {
+    label: '解散',
+    text: 'この企画は解散しました。',
+    variant: 'error',
+    icon: Ban,
+  },
   [LobbyStatus.cancelled]: {
     label: '中止',
     text: 'この卓は中止になりました。',

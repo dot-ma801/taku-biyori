@@ -23,6 +23,8 @@ describe('LobbyStatusBadge', () => {
     it.each([
       [LobbyStatus.draft, '非公開'],
       [LobbyStatus.open, '募集中'],
+      [LobbyStatus.closed, '受付終了'],
+      [LobbyStatus.disbanded, '解散'],
       [LobbyStatus.scheduling, '日程調整中'],
       [LobbyStatus.cancelled, '中止'],
     ] as const)(
@@ -41,6 +43,8 @@ describe('LobbyStatusBadge', () => {
     it.each([
       [LobbyStatus.draft, 'status-badge--muted'],
       [LobbyStatus.open, 'status-badge--primary'],
+      [LobbyStatus.closed, 'status-badge--warning'],
+      [LobbyStatus.disbanded, 'status-badge--error'],
       [LobbyStatus.scheduling, 'status-badge--warning'],
       [LobbyStatus.cancelled, 'status-badge--error'],
     ] as const)(

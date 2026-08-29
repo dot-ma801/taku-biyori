@@ -23,8 +23,13 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 | ------------ | ---------- | ------------------- |
 | `draft`      | 非公開     | muted（グレー）     |
 | `open`       | 募集中     | primary（ティール） |
+| `closed`     | 受付終了   | warning（オレンジ） |
+| `disbanded`  | 解散       | error（レッド）     |
 | `scheduling` | 日程調整中 | warning（オレンジ） |
 | `cancelled`  | 中止       | error（レッド）     |
+
+`scheduling` / `cancelled` は v0.2 の値で、v2 では導出されない（design-v2 §4-1）。
+移行タスク3 の frontend PR で削除する。
 
 ## Design Notes
 
@@ -43,6 +48,8 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 - `draft` のとき「非公開」と表示されること
 - `open` のとき「募集中」と表示されること
+- `closed` のとき「受付終了」と表示されること
+- `disbanded` のとき「解散」と表示されること
 - `scheduling` のとき「日程調整中」と表示されること
 - `cancelled` のとき「中止」と表示されること
 
@@ -50,5 +57,7 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 - `draft` のとき `status-badge--muted` クラスが付与されること
 - `open` のとき `status-badge--primary` クラスが付与されること
+- `closed` のとき `status-badge--warning` クラスが付与されること
+- `disbanded` のとき `status-badge--error` クラスが付与されること
 - `scheduling` のとき `status-badge--warning` クラスが付与されること
 - `cancelled` のとき `status-badge--error` クラスが付与されること

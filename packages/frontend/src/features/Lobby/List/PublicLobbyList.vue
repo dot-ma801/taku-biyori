@@ -14,8 +14,11 @@ const formattedPublicLobbies = computed(() => {
   return [...props.publicLobbies].map((item) => ({
     ...item,
     formattedMaxPlayers: item.maxPlayers ?? '-',
+    activeEntryCount: item.activeEntries.length,
     formattedRemainingMembers:
-      item.maxPlayers != null ? item.maxPlayers - item.memberCount : null,
+      item.maxPlayers != null
+        ? item.maxPlayers - item.activeEntries.length
+        : null,
   }));
 });
 
@@ -57,7 +60,7 @@ const lobbyLink = (item: { id: string; title: string }) => ({
       <div class="lobby-meta">
         <span class="meta-group">
           <UsersRound :size="16" />
-          <p>{{ item.memberCount }}/{{ item.formattedMaxPlayers }}</p>
+          <p>{{ item.activeEntryCount }}/{{ item.formattedMaxPlayers }}</p>
         </span>
       </div>
     </div>

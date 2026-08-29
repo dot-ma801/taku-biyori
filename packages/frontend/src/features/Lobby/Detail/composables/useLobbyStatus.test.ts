@@ -46,7 +46,10 @@ function makeUpdatedLobby(status: LobbyStatus): LobbyModel {
     location: null,
     status,
     maxPlayers: null,
+    publishedAt: null,
     openUntil: null,
+    receptionClosedAt: null,
+    disbandedAt: null,
     hostUserId: HOST_USER_ID,
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -149,13 +152,13 @@ describe('canPublish', () => {
   });
 });
 
-describe('canCancel', () => {
+describe('canDisband', () => {
   // UI 仕様: 未公開（draft）の募集枠に「募集中止」ボタンは出さない。
   // API 上は draft からの中止も許可される（shared の LOBBY_ACTION_POLICIES 参照）
   describe.each([
     { status: LobbyStatus.draft, expected: false },
     { status: LobbyStatus.open, expected: true },
-    { status: LobbyStatus.scheduling, expected: true },
+    { status: LobbyStatus.closed, expected: true },
     { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
@@ -164,10 +167,10 @@ describe('canCancel', () => {
       const lobby = ref(makeLobby({ status }));
 
       // Act
-      const { canCancel } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+      const { canDisband } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
       // Assert
-      expect(canCancel.value).toBe(expected);
+      expect(canDisband.value).toBe(expected);
     });
   });
 
@@ -177,10 +180,10 @@ describe('canCancel', () => {
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
 
     // Act
-    const { canCancel } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { canDisband } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Assert
-    expect(canCancel.value).toBe(false);
+    expect(canDisband.value).toBe(false);
   });
 
   it('lobby が null のとき false を返す', () => {
@@ -189,10 +192,10 @@ describe('canCancel', () => {
     const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
-    const { canCancel } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { canDisband } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Assert
-    expect(canCancel.value).toBe(false);
+    expect(canDisband.value).toBe(false);
   });
 });
 
@@ -374,22 +377,22 @@ describe('publishLobby', () => {
   });
 });
 
-describe('cancelLobby', () => {
-  it('updateLobbyStatus を status: cancelled で呼び出す', async () => {
+describe('disbandLobby', () => {
+  it('updateLobbyStatus を status: disbanded で呼び出す', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateLobbyStatus).mockResolvedValue(
       makeUpdatedLobby(LobbyStatus.cancelled),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
     expect(updateLobbyStatus).toHaveBeenCalledWith(LOBBY_ID, {
-      status: 'cancelled',
+      status: 'disbanded',
     });
   });
 
@@ -400,10 +403,10 @@ describe('cancelLobby', () => {
     vi.mocked(updateLobbyStatus).mockResolvedValue(updatedLobby);
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
     const onUpdated = vi.fn();
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, onUpdated);
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, onUpdated);
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
     expect(onUpdated).toHaveBeenCalledWith(updatedLobby);
@@ -416,13 +419,13 @@ describe('cancelLobby', () => {
       makeUpdatedLobby(LobbyStatus.cancelled),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
-    expect(mockToastSuccess).toHaveBeenCalledWith('募集を中止しました');
+    expect(mockToastSuccess).toHaveBeenCalledWith('企画を解散しました');
   });
 
   it('成功後に loading が false に戻る', async () => {
@@ -432,10 +435,10 @@ describe('cancelLobby', () => {
       makeUpdatedLobby(LobbyStatus.cancelled),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby, loading } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby, loading } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
     expect(loading.value).toBe(false);
@@ -446,23 +449,23 @@ describe('cancelLobby', () => {
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateLobbyStatus).mockRejectedValue(new Error('サーバーエラー'));
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
-    expect(mockToastError).toHaveBeenCalledWith('募集の中止に失敗しました');
+    expect(mockToastError).toHaveBeenCalledWith('解散に失敗しました');
   });
 
   it('ホスト以外は API を呼ばない', async () => {
     // Arrange
     setupAuthAs(OTHER_USER_ID);
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
     expect(updateLobbyStatus).not.toHaveBeenCalled();
@@ -472,10 +475,10 @@ describe('cancelLobby', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    await cancelLobby();
+    await disbandLobby();
 
     // Assert
     expect(updateLobbyStatus).not.toHaveBeenCalled();
@@ -491,11 +494,11 @@ describe('cancelLobby', () => {
       }),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
-    const { cancelLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+    const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
 
     // Act
-    const first = cancelLobby();
-    await cancelLobby();
+    const first = disbandLobby();
+    await disbandLobby();
     resolve(makeUpdatedLobby(LobbyStatus.cancelled));
     await first;
 

@@ -33,6 +33,7 @@ const formattedMyLobbies = computed(() =>
     .map((item) => ({
       ...item,
       formattedMaxPlayers: item.maxPlayers ?? '-',
+      activeEntryCount: item.activeEntries.length,
     })),
 );
 
@@ -73,7 +74,7 @@ const onClickOpen = (id: string) => {
         <div class="lobby-meta">
           <span class="meta-group">
             <UsersRound :size="16" />
-            <p>{{ item.memberCount }}/{{ item.formattedMaxPlayers }}</p>
+            <p>{{ item.activeEntryCount }}/{{ item.formattedMaxPlayers }}</p>
           </span>
         </div>
       </div>

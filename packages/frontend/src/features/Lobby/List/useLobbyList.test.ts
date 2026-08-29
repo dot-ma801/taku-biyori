@@ -6,10 +6,54 @@ vi.mock('@/api/lobby', () => ({
   listLobbies: vi.fn(),
 }));
 
+// useSession（nanostores の Atom）のモック。ログイン中のユーザーを固定する
+type SessionValue = { data: { user?: { id?: string | null } } | null };
+const currentSessionValue: SessionValue = { data: { user: { id: 'my-user' } } };
+
+vi.mock('@/lib/auth', () => ({
+  useSession: {
+    get: vi.fn(() => currentSessionValue),
+    subscribe: vi.fn(() => () => {}),
+  },
+}));
+
 import { listLobbies } from '@/api/lobby';
 import { useLobbyList } from '@/features/Lobby/List/useLobbyList';
 
 const mockListLobbies = vi.mocked(listLobbies);
+
+const MY_USER_ID = 'my-user';
+const OTHER_USER_ID = 'other-user';
+
+/** 自分がホストのロビー（v0.2 の ...hostedByMe() に相当） */
+const hostedByMe = (): Partial<LobbyListItemModel> => ({
+  hostUserId: MY_USER_ID,
+});
+
+/** 自分が参加しているロビー（v0.2 の ...joinedByMe() に相当） */
+const joinedByMe = (): Partial<LobbyListItemModel> => ({
+  hostUserId: OTHER_USER_ID,
+  entries: [
+    {
+      id: 'entry-1',
+      userId: MY_USER_ID,
+      userName: 'わたし',
+      guestName: null,
+      joinedAt: new Date('2026-01-01T00:00:00Z'),
+      leftAt: null,
+    },
+  ],
+  activeEntries: [
+    {
+      id: 'entry-1',
+      userId: MY_USER_ID,
+      userName: 'わたし',
+      guestName: null,
+      joinedAt: new Date('2026-01-01T00:00:00Z'),
+      leftAt: null,
+    },
+  ],
+});
 
 function makeLobby(
   overrides: Partial<LobbyListItemModel> = {},
@@ -19,10 +63,13 @@ function makeLobby(
     title: 'テスト募集枠',
     scenarioName: null,
     status: LobbyStatus.draft,
+    publishedAt: null,
     openUntil: null,
-    memberCount: 1,
+    receptionClosedAt: null,
     maxPlayers: null,
-    role: null,
+    entries: [],
+    activeEntries: [],
+    hostUserId: OTHER_USER_ID,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -111,8 +158,8 @@ describe('useLobbyList', () => {
   describe('publicLobbies（自分が関わっていない募集枠）', () => {
     it('role=null の募集枠のみ含む', async () => {
       // Arrange
-      const publicLobby = makeLobby({ role: null });
-      const myLobby = makeLobby({ role: 'host' });
+      const publicLobby = makeLobby();
+      const myLobby = makeLobby({ ...hostedByMe() });
       mockListLobbies.mockResolvedValue([publicLobby, myLobby]);
 
       // Act
@@ -125,7 +172,7 @@ describe('useLobbyList', () => {
 
     it('該当募集枠がない場合は空配列になる', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([makeLobby({ role: 'host' })]);
+      mockListLobbies.mockResolvedValue([makeLobby({ ...hostedByMe() })]);
 
       // Act
       const { publicLobbies, fetch } = useLobbyList();
@@ -139,7 +186,7 @@ describe('useLobbyList', () => {
   describe('myLobbies（自分が関わる募集枠）', () => {
     it('role=host の募集枠を含む', async () => {
       // Arrange
-      const myLobby = makeLobby({ role: 'host' });
+      const myLobby = makeLobby({ ...hostedByMe() });
       mockListLobbies.mockResolvedValue([myLobby]);
 
       // Act
@@ -152,7 +199,7 @@ describe('useLobbyList', () => {
 
     it('role=member の募集枠を含む', async () => {
       // Arrange
-      const myLobby = makeLobby({ role: 'member' });
+      const myLobby = makeLobby({ ...joinedByMe() });
       mockListLobbies.mockResolvedValue([myLobby]);
 
       // Act
@@ -165,7 +212,7 @@ describe('useLobbyList', () => {
 
     it('role=null の募集枠は含まない', async () => {
       // Arrange
-      const publicLobby = makeLobby({ role: null });
+      const publicLobby = makeLobby();
       mockListLobbies.mockResolvedValue([publicLobby]);
 
       // Act
@@ -180,8 +227,8 @@ describe('useLobbyList', () => {
   describe('filteredMyLobbies（自分のロビーを statuses で絞り込む）', () => {
     it('statuses を指定しない場合は myLobbies をそのまま返す', async () => {
       // Arrange
-      const myLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
-      const publicLobby = makeLobby({ role: null, status: LobbyStatus.open });
+      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
       mockListLobbies.mockResolvedValue([myLobby, publicLobby]);
 
       // Act
@@ -194,13 +241,15 @@ describe('useLobbyList', () => {
 
     it('statuses を指定した場合は自分のロビーのうち該当ステータスのみ返す', async () => {
       // Arrange
-      const myOpenLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
+      const myOpenLobby = makeLobby({
+        ...hostedByMe(),
+        status: LobbyStatus.open,
+      });
       const myDraftLobby = makeLobby({
-        role: 'host',
+        ...hostedByMe(),
         status: LobbyStatus.draft,
       });
       const publicOpenLobby = makeLobby({
-        role: null,
         status: LobbyStatus.open,
       });
       mockListLobbies.mockResolvedValue([
@@ -221,8 +270,8 @@ describe('useLobbyList', () => {
   describe('filteredPublicLobbies（公開ロビーを statuses で絞り込む）', () => {
     it('statuses を指定しない場合は publicLobbies をそのまま返す', async () => {
       // Arrange
-      const myLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
-      const publicLobby = makeLobby({ role: null, status: LobbyStatus.open });
+      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
       mockListLobbies.mockResolvedValue([myLobby, publicLobby]);
 
       // Act
@@ -236,14 +285,15 @@ describe('useLobbyList', () => {
     it('statuses を指定した場合は公開ロビーのうち該当ステータスのみ返す', async () => {
       // Arrange
       const publicOpenLobby = makeLobby({
-        role: null,
         status: LobbyStatus.open,
       });
       const publicDraftLobby = makeLobby({
-        role: null,
         status: LobbyStatus.draft,
       });
-      const myOpenLobby = makeLobby({ role: 'host', status: LobbyStatus.open });
+      const myOpenLobby = makeLobby({
+        ...hostedByMe(),
+        status: LobbyStatus.open,
+      });
       mockListLobbies.mockResolvedValue([
         publicOpenLobby,
         publicDraftLobby,
@@ -275,7 +325,7 @@ describe('useLobbyList', () => {
     it('該当ステータスの自分の募集枠がある場合は true になる', async () => {
       // Arrange
       mockListLobbies.mockResolvedValue([
-        makeLobby({ role: 'host', status: LobbyStatus.draft }),
+        makeLobby({ ...hostedByMe(), status: LobbyStatus.draft }),
       ]);
 
       // Act
@@ -289,7 +339,7 @@ describe('useLobbyList', () => {
     it('該当ステータスの公開募集枠がある場合は true になる', async () => {
       // Arrange
       mockListLobbies.mockResolvedValue([
-        makeLobby({ role: null, status: LobbyStatus.open }),
+        makeLobby({ status: LobbyStatus.open }),
       ]);
 
       // Act
@@ -303,8 +353,8 @@ describe('useLobbyList', () => {
     it('statuses に該当する募集枠が無い場合は false になる', async () => {
       // Arrange
       mockListLobbies.mockResolvedValue([
-        makeLobby({ role: 'host', status: LobbyStatus.open }),
-        makeLobby({ role: null, status: LobbyStatus.cancelled }),
+        makeLobby({ ...hostedByMe(), status: LobbyStatus.open }),
+        makeLobby({ status: LobbyStatus.disbanded }),
       ]);
 
       // Act
@@ -318,7 +368,7 @@ describe('useLobbyList', () => {
     it('statuses 未指定の場合は募集枠が1件でもあれば true になる', async () => {
       // Arrange
       mockListLobbies.mockResolvedValue([
-        makeLobby({ role: null, status: LobbyStatus.cancelled }),
+        makeLobby({ status: LobbyStatus.disbanded }),
       ]);
 
       // Act

@@ -11,21 +11,21 @@ import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
 /**
- * 中止ボタンを表示するステータス（UI 仕様）。
- * API 上は draft からの中止も許可される（shared の LOBBY_ACTION_POLICIES 参照）が、
- * 未公開の募集枠に「募集中止」は不自然なため UI では提供しない。
+ * 解散ボタンを表示するステータス（UI 仕様）。
+ * API 上は draft からの解散も許可される（shared の LOBBY_ACTION_POLICIES 参照）が、
+ * 誰も参加していない下書きに「解散」は不自然なため UI では提供しない。
  */
-const CANCEL_VISIBLE_STATUSES: LobbyStatus[] = [
+const DISBAND_VISIBLE_STATUSES: LobbyStatus[] = [
   LobbyStatus.open,
-  LobbyStatus.scheduling,
+  LobbyStatus.closed,
 ];
 
 /**
- * ホストが募集枠のステータスを遷移させる（公開・募集中止）ための composable。
+ * ホストがロビーのステータスを遷移させる（公開・解散）ための composable。
  * 既存の useGameSessionStatus と同じ構成。
  * canXxx の判定は shared の canPerformLobbyAction（API 契約）に委譲し、
- * canCancel のみ UI 仕様で表示ステータスを絞る。
- * 公開・中止は同じステータス遷移 API の呼び出しのため、loading を共有して並行リクエストを防ぐ。
+ * canDisband のみ UI 仕様で表示ステータスを絞る。
+ * 公開・解散は同じステータス遷移 API の呼び出しのため、loading を共有して並行リクエストを防ぐ。
  * 確認ダイアログの表示は UI（.vue）側の責務なので、この composable には持たせない。
  */
 export const useLobbyStatus = (
@@ -37,7 +37,7 @@ export const useLobbyStatus = (
   const authStore = useAuthStore();
   const toast = useToast();
 
-  /** ステータス遷移（公開・募集中止）処理中かどうか */
+  /** ステータス遷移（公開・解散）処理中かどうか */
   const loading = ref(false);
 
   /** ログインユーザーがこの募集枠のホストか */
@@ -62,8 +62,8 @@ export const useLobbyStatus = (
   });
 
   /**
-   * 編集ボタンを表示できるか。ホストかつ status が draft / open / scheduling のときのみ true。
-   * cancelled（中止済み）は編集不可（shared の LOBBY_ACTION_POLICIES）。
+   * 編集ボタンを表示できるか。ホストかつ status が draft / open / closed のときのみ true。
+   * disbanded（解散済み）は編集不可（shared の LOBBY_ACTION_POLICIES）。
    */
   const canEdit = computed(() => {
     const current = toValue(lobby);
@@ -77,15 +77,15 @@ export const useLobbyStatus = (
   });
 
   /**
-   * 中止ボタンを表示できるか。ホストかつ status が open / scheduling のときのみ true。
-   * draft は API 上中止可能だが UI では提供しない（CANCEL_VISIBLE_STATUSES 参照）。
+   * 解散ボタンを表示できるか。ホストかつ status が open / closed のときのみ true。
+   * draft は API 上解散可能だが UI では提供しない（DISBAND_VISIBLE_STATUSES 参照）。
    */
-  const canCancel = computed(() => {
+  const canDisband = computed(() => {
     const current = toValue(lobby);
     if (!current) {
       return false;
     }
-    return isHost.value && CANCEL_VISIBLE_STATUSES.includes(current.status);
+    return isHost.value && DISBAND_VISIBLE_STATUSES.includes(current.status);
   });
 
   /**
@@ -112,23 +112,23 @@ export const useLobbyStatus = (
   }
 
   /**
-   * 募集を中止する（status → cancelled）。
+   * 企画を解散する（status → disbanded）。
    * 成功後に onUpdated で更新後の Lobby を呼び出し元へ返す。
-   * 中止不可・loading 中の重複呼び出しは無視する。
+   * 解散不可・loading 中の重複呼び出しは無視する。
    */
-  async function cancelLobby() {
-    if (loading.value || !canCancel.value) {
+  async function disbandLobby() {
+    if (loading.value || !canDisband.value) {
       return;
     }
     loading.value = true;
     try {
       const updated = await updateLobbyStatus(lobbyId, {
-        status: 'cancelled',
+        status: 'disbanded',
       });
       onUpdated(updated);
-      toast.success('募集を中止しました');
+      toast.success('企画を解散しました');
     } catch {
-      toast.error('募集の中止に失敗しました');
+      toast.error('解散に失敗しました');
     } finally {
       loading.value = false;
     }
@@ -138,9 +138,9 @@ export const useLobbyStatus = (
     isHost,
     canPublish,
     canEdit,
-    canCancel,
+    canDisband,
     loading,
     publishLobby,
-    cancelLobby,
+    disbandLobby,
   };
 };

@@ -3,9 +3,9 @@ import type {
   LobbyDetail,
   LobbyEntry,
   LobbyListItem,
-  LobbyMember,
   LobbyStatus,
 } from '@taku-biyori/shared';
+import { getLobbyStatus } from '@taku-biyori/shared';
 
 /**
  * ロビー系の model と、DTO（`@taku-biyori/shared` の契約型）からの変換関数。
@@ -39,10 +39,17 @@ export type LobbyModel = {
   description: string | null;
   scenarioName: string | null;
   location: string | null;
+  /** ファクトから導出済みのステータス。画面側でタイムスタンプから導出しない */
   status: LobbyStatus;
   maxPlayers: number | null;
+  /** 下書きを抜けて動き出した時点。null なら下書き */
+  publishedAt: Date | null;
   /** 受付締め切り日（`YYYY-MM-DD`）。null なら無期限受付 */
   openUntil: string | null;
+  /** ホストが受付を手動で閉じた時点。null なら閉じていない */
+  receptionClosedAt: Date | null;
+  /** 企画そのものを畳んだ日時。null なら継続中 */
+  disbandedAt: Date | null;
   hostUserId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -60,24 +67,30 @@ export type LobbyListItemModel = {
   title: string;
   scenarioName: string | null;
   status: LobbyStatus;
+  publishedAt: Date | null;
   openUntil: string | null;
-  memberCount: number;
+  receptionClosedAt: Date | null;
   maxPlayers: number | null;
-  role: 'host' | 'member' | null;
+  /** 参加者。**脱退者も含む全件** */
+  entries: LobbyEntryModel[];
+  /** 在籍中の参加者だけ。人数の表示にはこちらを使う */
+  activeEntries: LobbyEntryModel[];
+  /**
+   * ホストの userId。`hostUserId === myUserId` で自分がホストか判定する。
+   * v0.2 の `role` を置き換えた（role は導出値でありながら誰がホストかを捨てていた）
+   */
+  hostUserId: string;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export const toLobbyEntryModel = (
-  dto: LobbyMember | LobbyEntry,
-): LobbyEntryModel => ({
+export const toLobbyEntryModel = (dto: LobbyEntry): LobbyEntryModel => ({
   id: dto.id,
   userId: dto.userId,
   userName: dto.userName,
   guestName: dto.guestName,
   joinedAt: new Date(dto.joinedAt),
-  // leftAt は移行タスク3 の backend PR で契約に入る。それまでは全員が在籍中
-  leftAt: 'leftAt' in dto && dto.leftAt ? new Date(dto.leftAt) : null,
+  leftAt: dto.leftAt ? new Date(dto.leftAt) : null,
 });
 
 export const toLobbyModel = (dto: Lobby): LobbyModel => ({
@@ -86,16 +99,28 @@ export const toLobbyModel = (dto: Lobby): LobbyModel => ({
   description: dto.description ?? null,
   scenarioName: dto.scenarioName ?? null,
   location: dto.location ?? null,
-  status: dto.status,
+  // レスポンスの status をそのまま使わず、ファクトから導出し直す。
+  // 日付をまたいで開いたままのページでも締め切りの経過が反映される（design-v2 §4-5）
+  status: getLobbyStatus({
+    publishedAt: dto.publishedAt,
+    openUntil: dto.openUntil ?? null,
+    receptionClosedAt: dto.receptionClosedAt,
+    disbandedAt: dto.disbandedAt ?? null,
+  }),
   maxPlayers: dto.maxPlayers ?? null,
+  publishedAt: dto.publishedAt ? new Date(dto.publishedAt) : null,
   openUntil: dto.openUntil ?? null,
+  receptionClosedAt: dto.receptionClosedAt
+    ? new Date(dto.receptionClosedAt)
+    : null,
+  disbandedAt: dto.disbandedAt ? new Date(dto.disbandedAt) : null,
   hostUserId: dto.hostUserId,
   createdAt: new Date(dto.createdAt),
   updatedAt: new Date(dto.updatedAt),
 });
 
 export const toLobbyDetailModel = (dto: LobbyDetail): LobbyDetailModel => {
-  const entries = dto.members.map(toLobbyEntryModel);
+  const entries = dto.entries.map(toLobbyEntryModel);
 
   return {
     ...toLobbyModel(dto),
@@ -117,15 +142,27 @@ export const withEntries = (
 
 export const toLobbyListItemModel = (
   dto: LobbyListItem,
-): LobbyListItemModel => ({
-  id: dto.id,
-  title: dto.title,
-  scenarioName: dto.scenarioName ?? null,
-  status: dto.status,
-  openUntil: dto.openUntil ?? null,
-  memberCount: dto.memberCount,
-  maxPlayers: dto.maxPlayers ?? null,
-  role: dto.role,
-  createdAt: new Date(dto.createdAt),
-  updatedAt: new Date(dto.updatedAt),
-});
+): LobbyListItemModel => {
+  const entries = dto.entries.map(toLobbyEntryModel);
+
+  return {
+    id: dto.id,
+    title: dto.title,
+    scenarioName: dto.scenarioName ?? null,
+    // 一覧の契約には disbandedAt が無い（openapi.yml の LobbyListItem）ため、
+    // ここだけはサーバが導出した status をそのまま使う。
+    // ファクトから導出し直せるのは全ファクトが揃う詳細（LobbyModel）のほう
+    status: dto.status,
+    publishedAt: dto.publishedAt ? new Date(dto.publishedAt) : null,
+    openUntil: dto.openUntil ?? null,
+    receptionClosedAt: dto.receptionClosedAt
+      ? new Date(dto.receptionClosedAt)
+      : null,
+    maxPlayers: dto.maxPlayers ?? null,
+    entries,
+    activeEntries: entries.filter((entry) => entry.leftAt === null),
+    hostUserId: dto.hostUserId,
+    createdAt: new Date(dto.createdAt),
+    updatedAt: new Date(dto.updatedAt),
+  };
+};

@@ -81,7 +81,7 @@ describe('CreateLobbyInputSchema', () => {
     });
   });
 
-  it('candidateDates が空配列なら失敗する', () => {
+  it('candidateDates が空配列でも成功する（v2 で任意になった）', () => {
     // Arrange
     const input = { title: '募集', candidateDates: [] };
 
@@ -89,7 +89,18 @@ describe('CreateLobbyInputSchema', () => {
     const result = CreateLobbyInputSchema.safeParse(input);
 
     // Assert
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+  });
+
+  it('candidateDates 未指定でも成功する（直接卓立ての経路）', () => {
+    // Arrange
+    const input = { title: '募集' };
+
+    // Act
+    const result = CreateLobbyInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
   });
 
   describe('candidateDates の件数上限', () => {

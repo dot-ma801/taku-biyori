@@ -147,7 +147,8 @@ git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" c
 
 ## 8. PR
 
-**PR を作るのはユーザーが依頼したときだけ。マージ・approve はしない**（ユーザーの判断）。
+**PR は作業がまとまった時点で作ってよい。都度の確認は不要。**
+ただし**マージと approve はしない**（タスク間の直列依存を切る判断はユーザーのもの）。
 
 タイトルは日本語＋プレフィックス。本文には次を入れる。
 
@@ -159,7 +160,7 @@ git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" c
 - DDL の内容（SQL を貼る）
 - 検証結果（typecheck / lint / format / test の件数、実 DB での確認内容）
 
-作成後、ユーザーに **PR のウォッチ（`subscribe_pr_activity`）を提案する**。
+作成したら **PR をウォッチする（`subscribe_pr_activity`）**。CI とレビューコメントを拾い、マージ / クローズまで面倒を見る。
 
 ---
 

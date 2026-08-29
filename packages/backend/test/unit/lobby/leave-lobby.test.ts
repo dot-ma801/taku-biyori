@@ -54,13 +54,11 @@ describe('leaveLobby', () => {
   it('ホスト自身は脱退できない', async () => {
     // Arrange
     const repo = makeRepo({
-      findEntryOwner: vi
-        .fn()
-        .mockResolvedValue({
-          lobbyId: 'lobby-1',
-          userId: 'user-1',
-          leftAt: null,
-        }),
+      findEntryOwner: vi.fn().mockResolvedValue({
+        lobbyId: 'lobby-1',
+        userId: 'user-1',
+        leftAt: null,
+      }),
     });
 
     // Act
@@ -84,13 +82,11 @@ describe('leaveLobby', () => {
   it('他募集枠のメンバーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findEntryOwner: vi
-        .fn()
-        .mockResolvedValue({
-          lobbyId: 'other-lobby',
-          userId: 'user-2',
-          leftAt: null,
-        }),
+      findEntryOwner: vi.fn().mockResolvedValue({
+        lobbyId: 'other-lobby',
+        userId: 'user-2',
+        leftAt: null,
+      }),
     });
 
     // Act

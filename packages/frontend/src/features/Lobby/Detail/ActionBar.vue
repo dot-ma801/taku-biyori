@@ -8,7 +8,11 @@ import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
 import { useGuestJoin } from '@/features/Lobby/Detail/composables/useGuestJoin';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { useAuthStore } from '@/stores/auth';
-import type { Lobby, LobbyDetail, LobbyMember } from '@taku-biyori/shared';
+import type {
+  LobbyDetailModel,
+  LobbyEntryModel,
+  LobbyModel,
+} from '@/models/lobby';
 import {
   Share2,
   SquarePen,
@@ -20,10 +24,10 @@ import {
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
-const props = defineProps<{ lobby: LobbyDetail }>();
+const props = defineProps<{ lobby: LobbyDetailModel }>();
 const emit = defineEmits<{
-  updated: [updated: Lobby];
-  'member-added': [member: LobbyMember];
+  updated: [updated: LobbyModel];
+  'member-added': [member: LobbyEntryModel];
   'member-removed': [memberId: string];
 }>();
 
@@ -83,7 +87,7 @@ const onJoinClick = () => {
   }
 };
 
-const onGuestJoined = (member: LobbyMember) => {
+const onGuestJoined = (member: LobbyEntryModel) => {
   guestJoinDialogModel.value = false;
   emit('member-added', member);
 };

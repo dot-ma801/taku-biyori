@@ -1,7 +1,7 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyMember } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { joinLobbyAsGuest } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
 
@@ -15,7 +15,7 @@ export const useGuestJoin = (
   token: MaybeRefOrGetter<string | null>,
   status: MaybeRefOrGetter<LobbyStatus | undefined>,
   // NOTE: 作成されたメンバーの反映（addMember 等）を呼び出し元に委譲する。
-  onJoined: (member: LobbyMember) => void,
+  onJoined: (member: LobbyEntryModel) => void,
 ) => {
   const toast = useToast();
   const loading = ref(false);

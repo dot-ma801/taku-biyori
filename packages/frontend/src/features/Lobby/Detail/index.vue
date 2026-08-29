@@ -13,7 +13,7 @@ import { Album, UsersRound, MapPin } from '@lucide/vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
-const { lobby, patchLobby, addMember, removeMember, memberCount } =
+const { lobby, patchLobby, addEntry, removeEntry, activeEntryCount } =
   useGetLobbyDetail(props.lobbyId);
 
 const scenarioName = computed(() => lobby.value?.scenarioName ?? '未設定');
@@ -21,8 +21,8 @@ const scenarioName = computed(() => lobby.value?.scenarioName ?? '未設定');
 const capacityText = computed(() => {
   const max = lobby.value?.maxPlayers;
   return max != null
-    ? `${memberCount.value} / 定員${max}`
-    : `${memberCount.value} / 定員未設定`;
+    ? `${activeEntryCount.value} / 定員${max}`
+    : `${activeEntryCount.value} / 定員未設定`;
 });
 
 const location = computed(() => lobby.value?.location ?? '未設定');
@@ -48,8 +48,8 @@ const location = computed(() => lobby.value?.location ?? '未設定');
         <ActionBar
           :lobby="lobby"
           @updated="patchLobby"
-          @member-added="addMember"
-          @member-removed="removeMember"
+          @member-added="addEntry"
+          @member-removed="removeEntry"
         />
       </div>
     </div>
@@ -60,7 +60,7 @@ const location = computed(() => lobby.value?.location ?? '未設定');
       :text="lobby.description ?? undefined"
     />
     <ScheduleDisplay :lobby="lobby" />
-    <MemberDisplay :lobby="lobby" @member-removed="removeMember" />
+    <MemberDisplay :lobby="lobby" @member-removed="removeEntry" />
   </div>
 </template>
 

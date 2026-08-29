@@ -3,11 +3,11 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import LobbyStatusBadge from '@/components/common/LobbyStatusBadge/LobbyStatusBadge.vue';
 import { UsersRound } from '@lucide/vue';
-import type { LobbyListItem } from '@taku-biyori/shared';
+import type { LobbyListItemModel } from '@/models/lobby';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  publicLobbies: LobbyListItem[];
+  publicLobbies: LobbyListItemModel[];
 }>();
 
 const formattedPublicLobbies = computed(() => {

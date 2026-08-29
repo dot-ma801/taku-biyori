@@ -4,13 +4,13 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import LobbyStatusBadge from '@/components/common/LobbyStatusBadge/LobbyStatusBadge.vue';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyListItem } from '@taku-biyori/shared';
+import type { LobbyListItemModel } from '@/models/lobby';
 import { Bookmark, ChevronDown, ChevronUp, UsersRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const props = defineProps<{
-  myLobbies: LobbyListItem[];
+  myLobbies: LobbyListItemModel[];
 }>();
 
 const router = useRouter();

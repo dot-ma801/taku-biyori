@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nextTick } from 'vue';
 import { useCreateLobby } from '@/features/Lobby/Edit/composables/useCreateLobby';
-import type { Lobby } from '@taku-biyori/shared';
+import type { LobbyModel } from '@/models/lobby';
 import { LobbyStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/lobby', () => ({
@@ -16,20 +16,18 @@ vi.mock('vue-router', () => ({
 
 import { createLobby } from '@/api/lobby';
 
-const mockLobby: Lobby = {
+const mockLobby: LobbyModel = {
   id: 'lobby-1',
   title: 'テスト募集枠',
   description: null,
   scenarioName: null,
   location: null,
   status: LobbyStatus.draft,
-  isPublished: false,
   maxPlayers: null,
   openUntil: null,
-  cancelledAt: null,
   hostUserId: 'user-1',
-  createdAt: '2025-01-01T00:00:00.000Z',
-  updatedAt: '2025-01-01T00:00:00.000Z',
+  createdAt: new Date('2025-01-01T00:00:00.000Z'),
+  updatedAt: new Date('2025-01-01T00:00:00.000Z'),
 };
 
 beforeEach(() => {

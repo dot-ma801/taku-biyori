@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
+import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useScheduleEditHint';
@@ -10,7 +11,7 @@ import { computed, toRef } from 'vue';
 
 const props = defineProps<{
   availabilityDates: LobbyAvailabilityDate[];
-  members: LobbyMember[];
+  members: LobbyEntryModel[];
   myMemberId: string | null;
   // いま編集可能なメンバー列の id 一覧
   editableMemberIds: string[];
@@ -40,27 +41,31 @@ const emptyRowColspan = computed(
 );
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
-function isMe(member: LobbyMember): boolean {
+function isMe(member: LobbyEntryModel): boolean {
   return member.id === props.myMemberId;
 }
 
 // このメンバー列のセルがいま編集可能か
-function isCellEditable(member: LobbyMember): boolean {
+function isCellEditable(member: LobbyEntryModel): boolean {
   return props.editableMemberIds.includes(member.id);
 }
 
 // 編集可能なセルに付与するアクセシビリティ属性
-function editableCellAttrs(member: LobbyMember) {
+function editableCellAttrs(member: LobbyEntryModel) {
   return isCellEditable(member) ? { role: 'button', tabindex: 0 } : {};
 }
 
 // セルクリック時（編集可能なセルのみ cellClick を発火）
-function onCellClick(member: LobbyMember, dateId: string) {
+function onCellClick(member: LobbyEntryModel, dateId: string) {
   if (isCellEditable(member)) emit('cellClick', member.id, dateId);
 }
 
 // キーボード操作でセルを選択（Enter・Space で cellClick を発火）
-function onCellKeydown(e: KeyboardEvent, member: LobbyMember, dateId: string) {
+function onCellKeydown(
+  e: KeyboardEvent,
+  member: LobbyEntryModel,
+  dateId: string,
+) {
   if (!isCellEditable(member)) return;
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();

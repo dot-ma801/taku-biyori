@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyDetail } from '@taku-biyori/shared';
+import type { LobbyDetailModel, LobbyEntryModel } from '@/models/lobby';
 
 vi.mock('@/api/lobby', () => ({
   joinLobby: vi.fn(),
@@ -45,17 +45,20 @@ const USER_ID = 'user-1';
 const HOST_ID = 'host-1';
 const MEMBER_ID = 'member-1';
 
-function makeMember(userId: string | null = USER_ID) {
+function makeMember(userId: string | null = USER_ID): LobbyEntryModel {
   return {
     id: MEMBER_ID,
     userId,
     userName: 'テストユーザー',
     guestName: null,
-    joinedAt: '2024-01-01T00:00:00Z',
+    joinedAt: new Date('2024-01-01T00:00:00Z'),
+    leftAt: null,
   };
 }
 
-function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
+function makeLobby(
+  overrides: Partial<LobbyDetailModel> = {},
+): LobbyDetailModel {
   return {
     id: LOBBY_ID,
     title: 'テストロビー',
@@ -63,19 +66,20 @@ function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
     scenarioName: null,
     location: null,
     status: LobbyStatus.open,
-    isPublished: true,
     maxPlayers: null,
     openUntil: null,
-    cancelledAt: null,
     hostUserId: HOST_ID,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [],
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    updatedAt: new Date('2024-01-01T00:00:00Z'),
+    entries: [],
     ...overrides,
+    activeEntries: (overrides.entries ?? []).filter(
+      (entry) => entry.leftAt === null,
+    ),
   };
 }
 
-function setup(lobby: MaybeRefOrGetter<LobbyDetail | null>) {
+function setup(lobby: MaybeRefOrGetter<LobbyDetailModel | null>) {
   const onMemberAdded = vi.fn();
   const onMemberRemoved = vi.fn();
   return {
@@ -119,7 +123,7 @@ describe('isHost', () => {
 
   it('lobby が null の場合は false', () => {
     // Arrange
-    const lobby = ref<LobbyDetail | null>(null);
+    const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
     const { isHost } = setup(lobby);
@@ -132,7 +136,7 @@ describe('isHost', () => {
 describe('isMember / myMember', () => {
   it('members に自分の userId を持つメンバーがいる場合 isMember は true', () => {
     // Arrange
-    const lobby = ref(makeLobby({ members: [makeMember()] }));
+    const lobby = ref(makeLobby({ entries: [makeMember()] }));
 
     // Act
     const { isMember, myMember } = setup(lobby);
@@ -144,7 +148,7 @@ describe('isMember / myMember', () => {
 
   it('members に自分がいない場合 isMember は false', () => {
     // Arrange
-    const lobby = ref(makeLobby({ members: [] }));
+    const lobby = ref(makeLobby({ entries: [] }));
 
     // Act
     const { isMember, myMember } = setup(lobby);
@@ -157,7 +161,7 @@ describe('isMember / myMember', () => {
   it('参加直後に members が更新されると isMember / canJoin が追従する', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, members: [] }),
+      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, entries: [] }),
     );
 
     // Act
@@ -168,7 +172,7 @@ describe('isMember / myMember', () => {
     expect(canJoin.value).toBe(true);
 
     // Act（members に自分が追加される）
-    lobby.value = { ...lobby.value, members: [makeMember()] };
+    lobby.value = makeLobby({ ...lobby.value, entries: [makeMember()] });
 
     // Assert（参加後）
     expect(isMember.value).toBe(true);
@@ -182,7 +186,7 @@ describe('isMember / myMember', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: HOST_ID,
-        members: [makeMember(USER_ID)],
+        entries: [makeMember(USER_ID)],
       }),
     );
 
@@ -206,7 +210,7 @@ describe('canJoin', () => {
   it('非ホストかつ未参加かつ open ステータスの場合は true', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, members: [] }),
+      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, entries: [] }),
     );
 
     // Act
@@ -219,7 +223,7 @@ describe('canJoin', () => {
   it('自分がホストの場合は false', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.open, hostUserId: USER_ID, members: [] }),
+      makeLobby({ status: LobbyStatus.open, hostUserId: USER_ID, entries: [] }),
     );
 
     // Act
@@ -235,7 +239,7 @@ describe('canJoin', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: HOST_ID,
-        members: [makeMember()],
+        entries: [makeMember()],
       }),
     );
 
@@ -252,7 +256,7 @@ describe('canJoin', () => {
       makeLobby({
         status: LobbyStatus.draft,
         hostUserId: HOST_ID,
-        members: [],
+        entries: [],
       }),
     );
 
@@ -265,7 +269,7 @@ describe('canJoin', () => {
 
   it('lobby が null の場合は false', () => {
     // Arrange
-    const lobby = ref<LobbyDetail | null>(null);
+    const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
     const { canJoin } = setup(lobby);
@@ -282,7 +286,7 @@ describe('canLeave', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: HOST_ID,
-        members: [makeMember()],
+        entries: [makeMember()],
       }),
     );
 
@@ -299,7 +303,7 @@ describe('canLeave', () => {
       makeLobby({
         status: LobbyStatus.scheduling,
         hostUserId: HOST_ID,
-        members: [makeMember()],
+        entries: [makeMember()],
       }),
     );
 
@@ -313,7 +317,7 @@ describe('canLeave', () => {
   it('自分がメンバーでない場合は false', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, members: [] }),
+      makeLobby({ status: LobbyStatus.open, hostUserId: HOST_ID, entries: [] }),
     );
 
     // Act
@@ -329,7 +333,7 @@ describe('canLeave', () => {
       makeLobby({
         status: LobbyStatus.cancelled,
         hostUserId: HOST_ID,
-        members: [makeMember()],
+        entries: [makeMember()],
       }),
     );
 
@@ -346,7 +350,7 @@ describe('canLeave', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: USER_ID,
-        members: [makeMember()],
+        entries: [makeMember()],
       }),
     );
 
@@ -417,7 +421,7 @@ describe('join', () => {
     // Arrange
     const member = makeMember();
     vi.mocked(joinLobby).mockResolvedValue(member);
-    const lobby = ref(makeLobby({ members: [] }));
+    const lobby = ref(makeLobby({ entries: [] }));
 
     // Act
     const { join, onMemberAdded } = setup(lobby);
@@ -436,7 +440,7 @@ describe('join', () => {
         resolveJoin = () => resolve(makeMember());
       }),
     );
-    const lobby = ref(makeLobby({ members: [] }));
+    const lobby = ref(makeLobby({ entries: [] }));
     const { join, loading } = setup(lobby);
 
     // Act
@@ -456,7 +460,7 @@ describe('join', () => {
       error: toastError,
     } as unknown as ReturnType<typeof useToast>);
     vi.mocked(joinLobby).mockRejectedValue(new Error('API error'));
-    const lobby = ref(makeLobby({ members: [] }));
+    const lobby = ref(makeLobby({ entries: [] }));
 
     // Act
     const { join, onMemberAdded } = setup(lobby);
@@ -475,7 +479,7 @@ describe('join', () => {
         resolveJoin = () => resolve(makeMember());
       }),
     );
-    const lobby = ref(makeLobby({ members: [] }));
+    const lobby = ref(makeLobby({ entries: [] }));
     const { join } = setup(lobby);
 
     // Act
@@ -493,7 +497,7 @@ describe('leave', () => {
   it('API を myMember の id で呼び出して onMemberRemoved に memberId を渡す', async () => {
     // Arrange
     vi.mocked(leaveLobby).mockResolvedValue(undefined);
-    const lobby = ref(makeLobby({ members: [makeMember()] }));
+    const lobby = ref(makeLobby({ entries: [makeMember()] }));
 
     // Act
     const { leave, onMemberRemoved } = setup(lobby);
@@ -506,7 +510,7 @@ describe('leave', () => {
 
   it('自分がメンバーでない場合は API を呼び出さない', async () => {
     // Arrange
-    const lobby = ref(makeLobby({ members: [] }));
+    const lobby = ref(makeLobby({ entries: [] }));
 
     // Act
     const { leave, onMemberRemoved } = setup(lobby);
@@ -524,7 +528,7 @@ describe('leave', () => {
       error: toastError,
     } as unknown as ReturnType<typeof useToast>);
     vi.mocked(leaveLobby).mockRejectedValue(new Error('API error'));
-    const lobby = ref(makeLobby({ members: [makeMember()] }));
+    const lobby = ref(makeLobby({ entries: [makeMember()] }));
 
     // Act
     const { leave, onMemberRemoved } = setup(lobby);
@@ -543,7 +547,7 @@ describe('leave', () => {
         resolveLeave = () => resolve(undefined);
       }),
     );
-    const lobby = ref(makeLobby({ members: [makeMember()] }));
+    const lobby = ref(makeLobby({ entries: [makeMember()] }));
     const { leave } = setup(lobby);
 
     // Act
@@ -565,7 +569,7 @@ describe('removeMember', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: USER_ID,
-        members: [makeMember('other-user')],
+        entries: [makeMember('other-user')],
       }),
     );
 
@@ -584,7 +588,7 @@ describe('removeMember', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: HOST_ID,
-        members: [makeMember()],
+        entries: [makeMember()],
       }),
     );
 
@@ -608,7 +612,7 @@ describe('removeMember', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: USER_ID,
-        members: [makeMember('other-user')],
+        entries: [makeMember('other-user')],
       }),
     );
 
@@ -633,7 +637,7 @@ describe('removeMember', () => {
       makeLobby({
         status: LobbyStatus.open,
         hostUserId: USER_ID,
-        members: [makeMember('other-user')],
+        entries: [makeMember('other-user')],
       }),
     );
     const { removeMember } = setup(lobby);

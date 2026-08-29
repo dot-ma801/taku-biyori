@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
+import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
@@ -11,7 +12,7 @@ import { computed, toRef } from 'vue';
 
 const props = defineProps<{
   availabilityDates: LobbyAvailabilityDate[];
-  members: LobbyMember[];
+  members: LobbyEntryModel[];
   myMemberId: string | null;
   // いま編集可能なメンバー列の id 一覧
   editableMemberIds: string[];

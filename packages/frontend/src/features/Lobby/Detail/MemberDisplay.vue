@@ -6,12 +6,12 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import RemoveMemberDialog from '@/features/Lobby/Detail/Dialog/RemoveMemberDialog.vue';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
 import { UsersRound, UserRoundX } from '@lucide/vue';
-import type { LobbyDetail } from '@taku-biyori/shared';
+import type { LobbyDetailModel } from '@/models/lobby';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
-  lobby: LobbyDetail;
+  lobby: LobbyDetailModel;
 }>();
 
 const emit = defineEmits<{
@@ -27,7 +27,7 @@ const { canRemoveMember, removeMember, loading } = useLobbyMembership(
 );
 
 const displayMembers = computed(() => {
-  return props.lobby.members.map((member) => ({
+  return props.lobby.entries.map((member) => ({
     id: member.id,
     userName: memberDisplayName(member),
     // アバターの種。id を持つメンバーは userId を優先し、

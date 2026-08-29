@@ -1,5 +1,4 @@
 import {
-  boolean,
   date,
   index,
   pgSchema,
@@ -30,9 +29,17 @@ export const lobbies = lobbySchema.table('lobbies', {
   location: text('location'),
   maxPlayers: integer('max_players'),
   guestLinkToken: text('guest_link_token').notNull(),
-  isPublished: boolean('is_published').notNull().default(false),
+  // 下書きを抜けて動き出した時点。NULL なら下書き（design-v2 §3-2）。
+  // boolean の is_published から変更した。他のファクト列と形を揃え、
+  // 「全ユーザーに公開」という別軸を後から足せるようにするため
+  publishedAt: timestamp('published_at'),
+  // 受付締め切り日。NULL は無期限受付
   openUntil: date('open_until'),
-  cancelledAt: timestamp('cancelled_at'),
+  // ホストが受付を手動で閉じた時点。追加募集で NULL に戻す。
+  // open_until（締め切り日を決めた）とは別の出来事なので列を分けている（design-v2 §3-2）
+  receptionClosedAt: timestamp('reception_closed_at'),
+  // 企画そのものの解散。cancelled_at の改名（design-v2 §1-2）
+  disbandedAt: timestamp('disbanded_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at')
     .notNull()
@@ -40,8 +47,8 @@ export const lobbies = lobbySchema.table('lobbies', {
     .$onUpdate(() => new Date()),
 });
 
-export const lobbyMembers = lobbySchema.table(
-  'lobby_members',
+export const lobbyEntries = lobbySchema.table(
+  'lobby_entries',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     lobbyId: uuid('lobby_id')
@@ -49,6 +56,8 @@ export const lobbyMembers = lobbySchema.table(
       .references(() => lobbies.id, { onDelete: 'cascade' }),
     userId: text('user_id').references(() => user.id),
     guestName: text('guest_name'),
+    // 脱退。**行は削除しない**（Seat・回答・メモが参照しているため。design-v2 §9-5）
+    leftAt: timestamp('left_at'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()
@@ -56,8 +65,9 @@ export const lobbyMembers = lobbySchema.table(
       .$onUpdate(() => new Date()),
   },
   (table) => ({
-    // ログインユーザーの重複参加を防ぐ partial unique index（user_id が NULL のゲストは対象外）
-    userUniqueIdx: uniqueIndex('lobby_members_lobby_id_user_id_unique')
+    // ログインユーザーの重複参加を防ぐ partial unique index（user_id が NULL のゲストは対象外）。
+    // left_at は条件に含めない。再参加は新しい行を作らず left_at を NULL に戻すため
+    userUniqueIdx: uniqueIndex('lobby_entries_lobby_id_user_id_unique')
       .on(table.lobbyId, table.userId)
       .where(sql`${table.userId} IS NOT NULL`),
   }),
@@ -105,7 +115,7 @@ export const lobbyAnswers = lobbySchema.table(
       .references(() => lobbyCandidates.id, { onDelete: 'cascade' }),
     memberId: uuid('member_id')
       .notNull()
-      .references(() => lobbyMembers.id, { onDelete: 'cascade' }),
+      .references(() => lobbyEntries.id, { onDelete: 'cascade' }),
     answer: lobbyAnswerEnum('answer').notNull(),
     comment: text('comment'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -131,19 +141,19 @@ export const lobbiesRelations = relations(lobbies, ({ one, many }) => ({
     fields: [lobbies.hostUserId],
     references: [user.id],
   }),
-  members: many(lobbyMembers),
+  entries: many(lobbyEntries),
   candidates: many(lobbyCandidates),
 }));
 
-export const lobbyMembersRelations = relations(
-  lobbyMembers,
+export const lobbyEntriesRelations = relations(
+  lobbyEntries,
   ({ one, many }) => ({
     lobby: one(lobbies, {
-      fields: [lobbyMembers.lobbyId],
+      fields: [lobbyEntries.lobbyId],
       references: [lobbies.id],
     }),
     user: one(user, {
-      fields: [lobbyMembers.userId],
+      fields: [lobbyEntries.userId],
       references: [user.id],
     }),
     answers: many(lobbyAnswers),
@@ -166,8 +176,8 @@ export const lobbyAnswersRelations = relations(lobbyAnswers, ({ one }) => ({
     fields: [lobbyAnswers.candidateId],
     references: [lobbyCandidates.id],
   }),
-  member: one(lobbyMembers, {
+  entry: one(lobbyEntries, {
     fields: [lobbyAnswers.memberId],
-    references: [lobbyMembers.id],
+    references: [lobbyEntries.id],
   }),
 }));

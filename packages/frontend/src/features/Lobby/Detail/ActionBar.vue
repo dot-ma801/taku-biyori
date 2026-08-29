@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/Lobby/Detail/Dialog/GuestJoinDialog.vue';
-import CancelDialog from '@/features/Lobby/Detail/Dialog/CancelDialog.vue';
+import DisbandDialog from '@/features/Lobby/Detail/Dialog/DisbandDialog.vue';
 import LeaveDialog from '@/features/Lobby/Detail/Dialog/LeaveDialog.vue';
 import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStatus';
 import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
@@ -20,6 +20,9 @@ import {
   Globe,
   UserRoundPlus,
   UserRoundMinus,
+  DoorClosed,
+  Megaphone,
+  RefreshCw,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -36,17 +39,32 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const guestJoinDialogModel = ref(false);
-const cancelDialogModel = ref(false);
+const disbandDialogModel = ref(false);
 const leaveDialogModel = ref(false);
 
-const { canPublish, canEdit, canDisband, loading, publishLobby, disbandLobby } =
-  useLobbyStatus(
-    props.lobby.id,
-    () => props.lobby,
-    (updated) => emit('updated', updated),
-  );
+const {
+  canPublish,
+  canEdit,
+  canCloseReception,
+  canReopenReception,
+  canDisband,
+  loading,
+  publishLobby,
+  closeReception,
+  reopenReception,
+  disbandLobby,
+} = useLobbyStatus(
+  props.lobby.id,
+  () => props.lobby,
+  (updated) => emit('updated', updated),
+);
 
-const { canIssueGuestLink, copyGuestLink } = useGuestLink(
+const {
+  canIssueGuestLink,
+  copyGuestLink,
+  canRegenerateGuestLink,
+  regenerateGuestLink,
+} = useGuestLink(
   props.lobby.id,
   () => props.lobby.hostUserId,
   () => props.lobby.status,
@@ -92,8 +110,8 @@ const onGuestJoined = (member: LobbyEntryModel) => {
   emit('member-added', member);
 };
 
-const onConfirmCancel = () => {
-  cancelDialogModel.value = false;
+const onConfirmDisband = () => {
+  disbandDialogModel.value = false;
   disbandLobby();
 };
 </script>
@@ -147,13 +165,41 @@ const onConfirmCancel = () => {
     </BaseButton>
 
     <BaseButton
+      v-if="canRegenerateGuestLink"
+      :left-icon="RefreshCw"
+      variant="secondary"
+      @click="regenerateGuestLink"
+    >
+      招待リンクを再発行
+    </BaseButton>
+
+    <BaseButton
+      v-if="canCloseReception"
+      :loading="loading"
+      variant="secondary"
+      :left-icon="DoorClosed"
+      @click="closeReception"
+    >
+      受付を閉じる
+    </BaseButton>
+
+    <BaseButton
+      v-if="canReopenReception"
+      :loading="loading"
+      :left-icon="Megaphone"
+      @click="reopenReception"
+    >
+      追加募集
+    </BaseButton>
+
+    <BaseButton
       v-if="canDisband"
       :loading="loading"
       variant="danger"
       :left-icon="Ban"
-      @click="cancelDialogModel = true"
+      @click="disbandDialogModel = true"
     >
-      募集中止
+      解散
     </BaseButton>
   </div>
 
@@ -163,7 +209,7 @@ const onConfirmCancel = () => {
     :lobby-status="lobby.status"
     @joined="onGuestJoined"
   />
-  <CancelDialog v-model="cancelDialogModel" @confirm="onConfirmCancel" />
+  <DisbandDialog v-model="disbandDialogModel" @confirm="onConfirmDisband" />
   <LeaveDialog v-model="leaveDialogModel" @confirm="leave" />
 </template>
 

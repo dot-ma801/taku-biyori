@@ -64,6 +64,7 @@ const {
   copyGuestLink,
   canRegenerateGuestLink,
   regenerateGuestLink,
+  uncopiedLink,
 } = useGuestLink(
   props.lobby.id,
   () => props.lobby.hostUserId,
@@ -203,6 +204,17 @@ const onConfirmDisband = () => {
     </BaseButton>
   </div>
 
+  <!--
+    コピーできなかった招待リンク。再発行は旧トークンを即座に無効にするため、
+    ここに出さないとホストが誰にもリンクを渡せなくなる
+  -->
+  <p v-if="uncopiedLink" class="uncopied-link">
+    <span class="uncopied-link__label"
+      >コピーできませんでした。以下のリンクを手動でコピーしてください。</span
+    >
+    <code class="uncopied-link__value">{{ uncopiedLink }}</code>
+  </p>
+
   <GuestJoinDialog
     v-model="guestJoinDialogModel"
     :lobby-id="lobby.id"
@@ -222,5 +234,31 @@ const onConfirmDisband = () => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.uncopied-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+
+  background: var(--color-surface-muted, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  font-size: var(--font-size-sm);
+}
+
+.uncopied-link__label {
+  color: var(--color-text-muted);
+}
+
+/* リンクは長いので折り返す。選択してコピーできる必要がある */
+.uncopied-link__value {
+  overflow-wrap: anywhere;
+  user-select: all;
+  font-family: var(--font-mono, monospace);
 }
 </style>

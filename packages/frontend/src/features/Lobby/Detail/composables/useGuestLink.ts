@@ -32,6 +32,37 @@ export const useGuestLink = (
   /** API 取得・コピー処理中かどうか */
   const loading = ref(false);
 
+  /**
+   * コピーできなかった招待リンク。コピーに成功したら null に戻る。
+   *
+   * 再発行は旧トークンを即座に無効にするため、コピーに失敗したまま黙ると
+   * 旧リンクも新リンクも共有できなくなる。clipboard 未対応の環境や権限拒否でも
+   * リンク自体は手で拾えるよう、ここに残して画面に出す。
+   */
+  const uncopiedLink = ref<string | null>(null);
+
+  /**
+   * リンクをクリップボードにコピーする。成功したら true。
+   * 失敗しても投げず、`uncopiedLink` に残して呼び出し側の判断に委ねる。
+   */
+  async function copyToClipboard(link: string): Promise<boolean> {
+    try {
+      if (!navigator.clipboard) {
+        console.error(
+          'navigator.clipboard は未対応の環境です。クリップボードへのコピーをスキップします。',
+        );
+        uncopiedLink.value = link;
+        return false;
+      }
+      await navigator.clipboard.writeText(link);
+      uncopiedLink.value = null;
+      return true;
+    } catch {
+      uncopiedLink.value = link;
+      return false;
+    }
+  }
+
   /** ログインユーザーがこの募集枠のホストか */
   const isHost = computed(() => {
     const hostId = toValue(hostUserId);
@@ -65,7 +96,8 @@ export const useGuestLink = (
   /**
    * ゲスト招待用トークンを取得し、招待リンクを組み立ててクリップボードにコピーする。
    * 発行条件を満たさない場合・loading 中の重複呼び出しは無視する。
-   * navigator.clipboard が未対応の環境ではエラーログを出す。
+   * コピーに失敗したときはリンクを `uncopiedLink` に残す
+   * （clipboard 未対応の環境では押し直しても永久にコピーできないため）。
    */
   async function copyGuestLink() {
     if (loading.value || !canIssueGuestLink.value) {
@@ -74,16 +106,14 @@ export const useGuestLink = (
     loading.value = true;
     try {
       const { token } = await getLobbyGuestLink(lobbyId);
-      const link = buildLink(token);
-      if (!navigator.clipboard) {
-        console.error(
-          'navigator.clipboard は未対応の環境です。クリップボードへのコピーをスキップします。',
+      const copied = await copyToClipboard(buildLink(token));
+      if (copied) {
+        toast.success('ゲストリンクをコピーしました');
+      } else {
+        toast.error(
+          'ゲストリンクのコピーに失敗しました。表示されたリンクをコピーしてください',
         );
-        toast.error('ゲストリンクの取得に失敗しました');
-        return;
       }
-      await navigator.clipboard.writeText(link);
-      toast.success('ゲストリンクをコピーしました');
     } catch {
       toast.error('ゲストリンクの取得に失敗しました');
     } finally {
@@ -116,16 +146,15 @@ export const useGuestLink = (
     loading.value = true;
     try {
       const { token } = await regenerateLobbyGuestLink(lobbyId);
-      const link = buildLink(token);
-      if (!navigator.clipboard) {
-        console.error(
-          'navigator.clipboard は未対応の環境です。クリップボードへのコピーをスキップします。',
+      // ここから先、旧トークンはすでに無効。再発行の成否とコピーの成否を混ぜない
+      const copied = await copyToClipboard(buildLink(token));
+      if (copied) {
+        toast.success('招待リンクを再発行してコピーしました');
+      } else {
+        toast.error(
+          '招待リンクを再発行しましたが、コピーに失敗しました。表示されたリンクをコピーしてください',
         );
-        toast.error('招待リンクの再発行に失敗しました');
-        return;
       }
-      await navigator.clipboard.writeText(link);
-      toast.success('招待リンクを再発行してコピーしました');
     } catch {
       toast.error('招待リンクの再発行に失敗しました');
     } finally {
@@ -135,6 +164,7 @@ export const useGuestLink = (
 
   return {
     loading,
+    uncopiedLink,
     canIssueGuestLink,
     copyGuestLink,
     canRegenerateGuestLink,

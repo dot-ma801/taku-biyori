@@ -1,7 +1,11 @@
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
 
 export interface DeleteLobbyRepository extends LobbyHostRepository {
-  countOtherMembers(id: string, hostUserId: string): Promise<number>;
+  /**
+   * ホスト以外の参加の件数。**脱退済みも数える**（design-v2 §6-13-3）。
+   * 「他人が居た痕跡」があるロビーは削除させない。
+   */
+  countOtherEntries(id: string, hostUserId: string): Promise<number>;
   deleteById(id: string): Promise<void>;
   /**
    * 削除対象の募集枠行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
@@ -35,8 +39,8 @@ export const deleteLobby = async (
       return { type: 'forbidden' };
     }
 
-    const otherMemberCount = await lockedRepo.countOtherMembers(id, userId);
-    if (otherMemberCount > 0) {
+    const otherEntryCount = await lockedRepo.countOtherEntries(id, userId);
+    if (otherEntryCount > 0) {
       return { type: 'hasMember' };
     }
 

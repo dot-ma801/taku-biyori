@@ -26,7 +26,7 @@ import {
   lobbies,
   lobbyAnswers,
   lobbyCandidates,
-  lobbyMembers,
+  lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
   gameSessionMembers,
@@ -138,7 +138,8 @@ const insertLobby = async (
       location: values.location ?? null,
       maxPlayers: values.maxPlayers ?? null,
       guestLinkToken: values.guestLinkToken,
-      isPublished: values.isPublished ?? false,
+      // 公開のファクトは nullable timestamp。シードでは作成時刻で代用する
+      publishedAt: values.isPublished ? new Date() : null,
       openUntil: values.openUntil ?? null,
     })
     .returning({ id: lobbies.id });
@@ -152,13 +153,13 @@ const addLobbyMember = async (
   member: { userId?: string | null; guestName?: string | null },
 ): Promise<string> => {
   const rows = await database
-    .insert(lobbyMembers)
+    .insert(lobbyEntries)
     .values({
       lobbyId,
       userId: member.userId ?? null,
       guestName: member.guestName ?? null,
     })
-    .returning({ id: lobbyMembers.id });
+    .returning({ id: lobbyEntries.id });
 
   return firstRow(rows, 'addLobbyMember').id;
 };

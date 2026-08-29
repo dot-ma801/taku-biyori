@@ -3,7 +3,7 @@ import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
 export interface ListAvailabilityDatesRepository {
   findLobbyVisibility(
     id: string,
-  ): Promise<{ isPublished: boolean; hostUserId: string } | null>;
+  ): Promise<{ publishedAt: Date | null; hostUserId: string } | null>;
   findByLobbyId(lobbyId: string): Promise<LobbyAvailabilityDate[]>;
 }
 
@@ -24,7 +24,7 @@ export const listAvailabilityDates = async (
   const visibility = await repo.findLobbyVisibility(lobbyId);
   if (!visibility) return { type: 'notFound' };
 
-  if (!visibility.isPublished && visibility.hostUserId !== userId) {
+  if (visibility.publishedAt === null && visibility.hostUserId !== userId) {
     return { type: 'forbidden' };
   }
 

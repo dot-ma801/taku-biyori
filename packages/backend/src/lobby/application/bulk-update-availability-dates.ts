@@ -2,18 +2,19 @@ import type {
   LobbyAvailabilityDate,
   BulkUpdateLobbyAvailabilityDatesInput,
 } from '@taku-biyori/shared';
-import { normalizeDateNote } from '@taku-biyori/shared';
+import {
+  LobbyAction,
+  canPerformLobbyAction,
+  getLobbyStatus,
+  normalizeDateNote,
+  type LobbyStatusFacts,
+} from '@taku-biyori/shared';
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
-import type { LobbyStatusInput } from '@/lobby/domain/lobby-status';
 import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
 import { diffCandidateDates } from '@/lobby/domain/candidate-date-diff';
-import {
-  EDITABLE_CANDIDATE_STATUSES,
-  getLobbyStatus,
-} from '@/lobby/domain/lobby-status';
 
 export interface BulkUpdateAvailabilityDatesRepository extends LobbyHostRepository {
-  findStatusFields(id: string): Promise<LobbyStatusInput | null>;
+  findStatusFields(id: string): Promise<LobbyStatusFacts | null>;
   findByLobbyId(lobbyId: string): Promise<LobbyAvailabilityDate[]>;
   /** 差分を1トランザクションで適用する（追加・削除と、残る行のひとこと更新） */
   applyDateChanges(lobbyId: string, diff: CandidateDateDiff): Promise<void>;
@@ -57,7 +58,8 @@ export const bulkUpdateAvailabilityDates = async (
 
     const fields = await locked.findStatusFields(lobbyId);
     if (!fields) return { type: 'notFound' };
-    if (!EDITABLE_CANDIDATE_STATUSES.has(getLobbyStatus(fields)))
+    const status = getLobbyStatus(fields);
+    if (!canPerformLobbyAction(LobbyAction.editCandidateDates, status, 'host'))
       return { type: 'invalidStatus' };
 
     const existing = await locked.findByLobbyId(lobbyId);

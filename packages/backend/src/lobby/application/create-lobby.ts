@@ -32,7 +32,7 @@ export const createLobby = async (
     maxPlayers: input.maxPlayers,
     openUntil: input.openUntil,
     // ひとことは空白のみを null に寄せてから渡す（DB に空文字を残さない）
-    candidateDates: input.candidateDates.map((entry) => ({
+    candidateDates: (input.candidateDates ?? []).map((entry) => ({
       date: entry.date,
       dateNote: normalizeDateNote(entry.dateNote),
     })),

@@ -1,19 +1,23 @@
-import type { LobbyMember, JoinLobbyAsGuestInput } from '@taku-biyori/shared';
-import { LobbyStatus } from '@taku-biyori/shared';
+import type { LobbyEntry, JoinLobbyAsGuestInput } from '@taku-biyori/shared';
+import {
+  LobbyAction,
+  LobbyStatus,
+  canPerformLobbyAction,
+} from '@taku-biyori/shared';
 
 export interface JoinAsGuestRepository {
   // null は募集枠が存在しないことを表す
   findLobbyStatus(id: string): Promise<LobbyStatus | null>;
   // 募集枠の guest_link_token。null は募集枠非存在（またはトークン未設定）
   findGuestLinkToken(id: string): Promise<string | null>;
-  addGuestMember(
+  addGuestEntry(
     lobbyId: string,
     input: JoinLobbyAsGuestInput,
-  ): Promise<LobbyMember>;
+  ): Promise<LobbyEntry>;
 }
 
 export type JoinAsGuestResult =
-  | { type: 'ok'; member: LobbyMember }
+  | { type: 'ok'; entry: LobbyEntry }
   | { type: 'notFound' }
   | { type: 'invalidToken' }
   | { type: 'lobbyNotOpen' };
@@ -21,7 +25,7 @@ export type JoinAsGuestResult =
 /**
  * ゲスト（完全匿名）として募集枠に参加する。
  * - トークンが募集枠の guest_link_token と一致しなければ invalidToken（403 相当）
- * - status が open でなければ lobbyNotOpen（422 相当・通常参加と同条件）
+ * - 参加を許すステータス（open）でなければ lobbyNotOpen（422 相当・通常参加と同条件）
  * 本人確認手段がないため重複参加は許容する（dup チェックを行わない）。
  * status 取得とトークン取得を並列化してレイテンシを削減する。
  */
@@ -42,8 +46,10 @@ export const joinAsGuest = async (
     return { type: 'invalidToken' };
   }
 
-  if (status !== LobbyStatus.open) return { type: 'lobbyNotOpen' };
+  if (!canPerformLobbyAction(LobbyAction.joinLobby, status, 'guest')) {
+    return { type: 'lobbyNotOpen' };
+  }
 
-  const member = await repo.addGuestMember(lobbyId, input);
-  return { type: 'ok', member };
+  const entry = await repo.addGuestEntry(lobbyId, input);
+  return { type: 'ok', entry };
 };

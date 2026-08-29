@@ -14,14 +14,15 @@ const makeRepo = (
   overrides: Partial<UpdateAvailabilityDateResponseRepository> = {},
 ): UpdateAvailabilityDateResponseRepository => ({
   findStatusFields: vi.fn().mockResolvedValue({
-    isPublished: true,
+    publishedAt: new Date('2026-08-01T00:00:00.000Z'),
     openUntil: null,
-    cancelledAt: null,
+    receptionClosedAt: null,
+    disbandedAt: null,
   }),
   findCandidateOwner: vi
     .fn()
     .mockResolvedValue({ lobbyId: 'lobby-1', date: '2025-10-01' }),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
+  findActiveEntryByUserId: vi.fn().mockResolvedValue('member-1'),
   upsertAnswer: vi.fn().mockResolvedValue(mockAnswer),
   ...overrides,
 });
@@ -107,7 +108,7 @@ describe('updateAvailabilityDateResponse', () => {
   it('募集枠のメンバーでないユーザーは forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findActiveEntryByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -127,9 +128,10 @@ describe('updateAvailabilityDateResponse', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
+        publishedAt: null,
         openUntil: null,
-        cancelledAt: null,
+        receptionClosedAt: null,
+        disbandedAt: null,
       }),
     });
 
@@ -146,13 +148,14 @@ describe('updateAvailabilityDateResponse', () => {
     expect(result).toEqual({ type: 'notPublished' });
   });
 
-  it('scheduling の募集枠は回答できる', async () => {
+  it('closed（受付終了）のロビーでも回答できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        openUntil: new Date('2020-01-01'),
-        cancelledAt: null,
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+        openUntil: '2020-01-01',
+        receptionClosedAt: null,
+        disbandedAt: null,
       }),
     });
 
@@ -169,13 +172,14 @@ describe('updateAvailabilityDateResponse', () => {
     expect(result).toEqual({ type: 'ok', answer: mockAnswer });
   });
 
-  it('cancelled の募集枠は invalidStatus を返す', async () => {
+  it('disbanded のロビーは invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
         openUntil: null,
-        cancelledAt: new Date('2025-01-01'),
+        receptionClosedAt: null,
+        disbandedAt: new Date('2025-01-01'),
       }),
     });
 

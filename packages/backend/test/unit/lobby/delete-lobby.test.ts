@@ -12,7 +12,7 @@ function makeRepo(
 ): DeleteLobbyRepository {
   const repo: DeleteLobbyRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
-    countOtherMembers: vi.fn().mockResolvedValue(0),
+    countOtherEntries: vi.fn().mockResolvedValue(0),
     deleteById: vi.fn().mockResolvedValue(undefined),
     executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
     ...overrides,
@@ -63,7 +63,7 @@ describe('deleteLobby', () => {
   it('自分以外のメンバーが存在するとき hasMember を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      countOtherMembers: vi.fn().mockResolvedValue(1),
+      countOtherEntries: vi.fn().mockResolvedValue(1),
       deleteById: vi.fn(),
     });
 
@@ -105,7 +105,7 @@ describe('deleteLobby', () => {
       // Assert
       expect(result).toEqual({ type: 'notFound' });
       expect(repo.findHostUserId).not.toHaveBeenCalled();
-      expect(repo.countOtherMembers).not.toHaveBeenCalled();
+      expect(repo.countOtherEntries).not.toHaveBeenCalled();
       expect(repo.deleteById).not.toHaveBeenCalled();
     });
   });

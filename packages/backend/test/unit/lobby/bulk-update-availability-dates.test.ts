@@ -26,9 +26,10 @@ const makeRepo = (
   const repo: BulkUpdateAvailabilityDatesRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
     findStatusFields: vi.fn().mockResolvedValue({
-      isPublished: true,
+      publishedAt: new Date('2026-08-01T00:00:00.000Z'),
       openUntil: null,
-      cancelledAt: null,
+      receptionClosedAt: null,
+      disbandedAt: null,
     }),
     findByLobbyId: vi.fn().mockResolvedValue(existingDates),
     applyDateChanges: vi.fn().mockResolvedValue(undefined),
@@ -242,9 +243,10 @@ describe('bulkUpdateAvailabilityDates', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
         openUntil: null,
-        cancelledAt: new Date('2026-01-01'),
+        receptionClosedAt: null,
+        disbandedAt: new Date('2026-01-01'),
       }),
     });
 

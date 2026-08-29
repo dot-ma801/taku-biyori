@@ -1,36 +1,40 @@
 import { describe, expect, it, vi } from 'vitest';
-import { listMembers } from '@/lobby/application/list-members';
-import type { ListMembersRepository } from '@/lobby/application/list-members';
-import type { LobbyMember } from '@taku-biyori/shared';
+import { listEntries } from '@/lobby/application/list-entries';
+import type { ListEntriesRepository } from '@/lobby/application/list-entries';
+import type { LobbyEntry } from '@taku-biyori/shared';
 
-const mockMember: LobbyMember = {
+const mockMember: LobbyEntry = {
   id: 'member-1',
   userId: 'user-1',
   userName: 'テストユーザー',
   guestName: null,
   joinedAt: '2025-01-01T00:00:00.000Z',
+  leftAt: null,
 };
 
 const makeRepo = (
-  overrides: Partial<ListMembersRepository> = {},
-): ListMembersRepository => ({
+  overrides: Partial<ListEntriesRepository> = {},
+): ListEntriesRepository => ({
   findLobbyVisibility: vi
     .fn()
-    .mockResolvedValue({ isPublished: true, hostUserId: 'user-1' }),
-  findMembersByLobbyId: vi.fn().mockResolvedValue([mockMember]),
+    .mockResolvedValue({
+      publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+      hostUserId: 'user-1',
+    }),
+  findEntriesByLobbyId: vi.fn().mockResolvedValue([mockMember]),
   ...overrides,
 });
 
-describe('listMembers', () => {
-  it('公開済み募集枠は未認証でもメンバー一覧を返す', async () => {
+describe('listEntries', () => {
+  it('公開済みロビーは未認証でも参加者一覧を返す', async () => {
     // Arrange
     const repo = makeRepo();
 
     // Act
-    const result = await listMembers(repo, 'lobby-1', null);
+    const result = await listEntries(repo, 'lobby-1', null);
 
     // Assert
-    expect(result).toEqual({ type: 'ok', members: [mockMember] });
+    expect(result).toEqual({ type: 'ok', entries: [mockMember] });
   });
 
   it('存在しない募集枠IDは notFound を返す', async () => {
@@ -40,50 +44,50 @@ describe('listMembers', () => {
     });
 
     // Act
-    const result = await listMembers(repo, 'nonexistent', null);
+    const result = await listEntries(repo, 'nonexistent', null);
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('メンバーがいない場合は空配列を返す', async () => {
+  it('参加者がいない場合は空配列を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMembersByLobbyId: vi.fn().mockResolvedValue([]),
+      findEntriesByLobbyId: vi.fn().mockResolvedValue([]),
     });
 
     // Act
-    const result = await listMembers(repo, 'lobby-1', 'user-1');
+    const result = await listEntries(repo, 'lobby-1', 'user-1');
 
     // Assert
-    expect(result).toEqual({ type: 'ok', members: [] });
+    expect(result).toEqual({ type: 'ok', entries: [] });
   });
 
-  it('非公開募集枠にホストがアクセスするとメンバー一覧を返す', async () => {
+  it('未公開ロビーにホストがアクセスすると参加者一覧を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi
         .fn()
-        .mockResolvedValue({ isPublished: false, hostUserId: 'user-1' }),
+        .mockResolvedValue({ publishedAt: null, hostUserId: 'user-1' }),
     });
 
     // Act
-    const result = await listMembers(repo, 'lobby-1', 'user-1');
+    const result = await listEntries(repo, 'lobby-1', 'user-1');
 
     // Assert
-    expect(result).toEqual({ type: 'ok', members: [mockMember] });
+    expect(result).toEqual({ type: 'ok', entries: [mockMember] });
   });
 
-  it('非公開募集枠にホスト以外がアクセスすると forbidden を返す', async () => {
+  it('未公開ロビーにホスト以外がアクセスすると forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi
         .fn()
-        .mockResolvedValue({ isPublished: false, hostUserId: 'user-1' }),
+        .mockResolvedValue({ publishedAt: null, hostUserId: 'user-1' }),
     });
 
     // Act
-    const result = await listMembers(repo, 'lobby-1', 'other-user');
+    const result = await listEntries(repo, 'lobby-1', 'other-user');
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -94,11 +98,11 @@ describe('listMembers', () => {
     const repo = makeRepo({
       findLobbyVisibility: vi
         .fn()
-        .mockResolvedValue({ isPublished: false, hostUserId: 'user-1' }),
+        .mockResolvedValue({ publishedAt: null, hostUserId: 'user-1' }),
     });
 
     // Act
-    const result = await listMembers(repo, 'lobby-1', null);
+    const result = await listEntries(repo, 'lobby-1', null);
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });

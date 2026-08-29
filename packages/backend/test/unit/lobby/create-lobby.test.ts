@@ -12,9 +12,10 @@ const mockLobby: Lobby = {
   location: null,
   maxPlayers: null,
   status: LobbyStatus.draft,
-  isPublished: false,
+  publishedAt: null,
+  receptionClosedAt: null,
   openUntil: null,
-  cancelledAt: null,
+  disbandedAt: null,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
@@ -38,7 +39,8 @@ describe('createLobby', () => {
       id: 'lobby-1',
       title: 'テスト募集',
       status: 'draft',
-      isPublished: false,
+      publishedAt: null,
+      receptionClosedAt: null,
       hostUserId: 'user-1',
     });
   });

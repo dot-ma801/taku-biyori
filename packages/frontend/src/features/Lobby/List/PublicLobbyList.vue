@@ -4,23 +4,16 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import LobbyStatusBadge from '@/components/common/LobbyStatusBadge/LobbyStatusBadge.vue';
 import { UsersRound } from '@lucide/vue';
 import type { LobbyListItemModel } from '@/models/lobby';
-import { computed } from 'vue';
+import { toRef } from 'vue';
+import { useLobbyListItemView } from '@/features/Lobby/List/useLobbyListItemView';
 
 const props = defineProps<{
   publicLobbies: LobbyListItemModel[];
 }>();
 
-const formattedPublicLobbies = computed(() => {
-  return [...props.publicLobbies].map((item) => ({
-    ...item,
-    formattedMaxPlayers: item.maxPlayers ?? '-',
-    activeEntryCount: item.activeEntries.length,
-    formattedRemainingMembers:
-      item.maxPlayers != null
-        ? item.maxPlayers - item.activeEntries.length
-        : null,
-  }));
-});
+const { items: formattedPublicLobbies } = useLobbyListItemView(
+  toRef(props, 'publicLobbies'),
+);
 
 const lobbyLink = (item: { id: string; title: string }) => ({
   to: { name: 'lobbies-detail', params: { lobbyId: item.id } },
@@ -47,10 +40,10 @@ const lobbyLink = (item: { id: string; title: string }) => ({
         <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
       </div>
 
-      <p v-if="item.formattedRemainingMembers != null" class="remaining">
+      <p v-if="item.remainingCount != null" class="remaining">
         残り
         <span class="remaining-member-number">
-          {{ item.formattedRemainingMembers }}
+          {{ item.remainingCount }}
         </span>
         枠
       </p>

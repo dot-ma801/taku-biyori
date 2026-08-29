@@ -6,8 +6,9 @@ import LobbyStatusBadge from '@/components/common/LobbyStatusBadge/LobbyStatusBa
 import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 import { Bookmark, ChevronDown, ChevronUp, UsersRound } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, toRef } from 'vue';
 import { useRouter } from 'vue-router';
+import { useLobbyListItemView } from '@/features/Lobby/List/useLobbyListItemView';
 
 const props = defineProps<{
   myLobbies: LobbyListItemModel[];
@@ -27,14 +28,12 @@ const STATUS_ORDER: Record<LobbyStatus, number> = {
 const INITIAL_VISIBLE_COUNT = 3;
 const isExpanded = ref(false);
 
+const { items } = useLobbyListItemView(toRef(props, 'myLobbies'));
+
 const formattedMyLobbies = computed(() =>
-  [...props.myLobbies]
-    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
-    .map((item) => ({
-      ...item,
-      formattedMaxPlayers: item.maxPlayers ?? '-',
-      activeEntryCount: item.activeEntries.length,
-    })),
+  [...items.value].sort(
+    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
+  ),
 );
 
 const visibleLobbies = computed(() =>

@@ -1,29 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
+import { useLobbyStatusBadge } from '@/components/common/LobbyStatusBadge/useLobbyStatusBadge';
 
 const props = defineProps<{
   status: LobbyStatus;
 }>();
 
-type Variant = 'muted' | 'primary' | 'warning' | 'success' | 'error';
-
-const LABEL_MAP: Record<LobbyStatus, string> = {
-  [LobbyStatus.draft]: '非公開',
-  [LobbyStatus.open]: '募集中',
-  [LobbyStatus.closed]: '受付終了',
-  [LobbyStatus.disbanded]: '解散',
-};
-
-const VARIANT_MAP: Record<LobbyStatus, Variant> = {
-  [LobbyStatus.draft]: 'muted',
-  [LobbyStatus.open]: 'primary',
-  [LobbyStatus.closed]: 'warning',
-  [LobbyStatus.disbanded]: 'error',
-};
-
-const label = computed(() => LABEL_MAP[props.status]);
-const variant = computed(() => VARIANT_MAP[props.status]);
+const { label, variant } = useLobbyStatusBadge(() => props.status);
 </script>
 
 <template>

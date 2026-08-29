@@ -2,52 +2,11 @@
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import { LobbyStatus } from '@taku-biyori/shared';
-import {
-  type LucideIcon,
-  EyeOff,
-  Megaphone,
-  CalendarClock,
-  Ban,
-} from '@lucide/vue';
-import { computed } from 'vue';
+import { useLobbyStatusAppearance } from '@/features/Lobby/Detail/composables/useLobbyStatusAppearance';
 
 const props = defineProps<{ lobbyStatus: LobbyStatus }>();
 
-type StatusAppearance = {
-  label: string;
-  text: string;
-  variant: 'default' | 'primary' | 'success' | 'warning' | 'error';
-  icon: LucideIcon;
-};
-
-const STATUS_APPEARANCE: Record<LobbyStatus, StatusAppearance> = {
-  [LobbyStatus.draft]: {
-    label: '非公開',
-    text: 'まだ公開していません。準備ができたら公開しましょう。',
-    variant: 'default',
-    icon: EyeOff,
-  },
-  [LobbyStatus.open]: {
-    label: '募集中',
-    text: '参加者を募集しています。',
-    variant: 'primary',
-    icon: Megaphone,
-  },
-  [LobbyStatus.closed]: {
-    label: '受付終了',
-    text: '新しい参加の受付を終了しています。追加募集で開き直せます。',
-    variant: 'warning',
-    icon: CalendarClock,
-  },
-  [LobbyStatus.disbanded]: {
-    label: '解散',
-    text: 'この企画は解散しました。',
-    variant: 'error',
-    icon: Ban,
-  },
-};
-
-const appearance = computed(() => STATUS_APPEARANCE[props.lobbyStatus]);
+const { appearance } = useLobbyStatusAppearance(() => props.lobbyStatus);
 </script>
 
 <template>

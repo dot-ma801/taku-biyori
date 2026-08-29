@@ -33,12 +33,6 @@ const STATUS_APPEARANCE: Record<LobbyStatus, StatusAppearance> = {
     variant: 'primary',
     icon: Megaphone,
   },
-  [LobbyStatus.scheduling]: {
-    label: '日程調整中',
-    text: '募集を終了し、開催日を調整しています。',
-    variant: 'warning',
-    icon: CalendarClock,
-  },
   [LobbyStatus.closed]: {
     label: '受付終了',
     text: '新しい参加の受付を終了しています。追加募集で開き直せます。',
@@ -48,12 +42,6 @@ const STATUS_APPEARANCE: Record<LobbyStatus, StatusAppearance> = {
   [LobbyStatus.disbanded]: {
     label: '解散',
     text: 'この企画は解散しました。',
-    variant: 'error',
-    icon: Ban,
-  },
-  [LobbyStatus.cancelled]: {
-    label: '中止',
-    text: 'この卓は中止になりました。',
     variant: 'error',
     icon: Ban,
   },

@@ -13,8 +13,6 @@ const LABEL_MAP: Record<LobbyStatus, string> = {
   [LobbyStatus.open]: '募集中',
   [LobbyStatus.closed]: '受付終了',
   [LobbyStatus.disbanded]: '解散',
-  [LobbyStatus.scheduling]: '日程調整中',
-  [LobbyStatus.cancelled]: '中止',
 };
 
 const VARIANT_MAP: Record<LobbyStatus, Variant> = {
@@ -22,8 +20,6 @@ const VARIANT_MAP: Record<LobbyStatus, Variant> = {
   [LobbyStatus.open]: 'primary',
   [LobbyStatus.closed]: 'warning',
   [LobbyStatus.disbanded]: 'error',
-  [LobbyStatus.scheduling]: 'warning',
-  [LobbyStatus.cancelled]: 'error',
 };
 
 const label = computed(() => LABEL_MAP[props.status]);

@@ -8,8 +8,8 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
 <template>
   <div class="dashboard">
     <LobbyList
-      title="募集・調整中"
-      :statuses="[LobbyStatus.open, LobbyStatus.scheduling]"
+      title="受付中・調整中"
+      :statuses="[LobbyStatus.open, LobbyStatus.closed]"
     />
     <GameSessionList
       title="開催予定の卓"

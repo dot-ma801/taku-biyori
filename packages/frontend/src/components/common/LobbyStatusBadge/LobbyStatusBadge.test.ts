@@ -25,8 +25,6 @@ describe('LobbyStatusBadge', () => {
       [LobbyStatus.open, '募集中'],
       [LobbyStatus.closed, '受付終了'],
       [LobbyStatus.disbanded, '解散'],
-      [LobbyStatus.scheduling, '日程調整中'],
-      [LobbyStatus.cancelled, '中止'],
     ] as const)(
       'status="%s" のとき "%s" と表示される',
       (status, expectedLabel) => {
@@ -45,8 +43,6 @@ describe('LobbyStatusBadge', () => {
       [LobbyStatus.open, 'status-badge--primary'],
       [LobbyStatus.closed, 'status-badge--warning'],
       [LobbyStatus.disbanded, 'status-badge--error'],
-      [LobbyStatus.scheduling, 'status-badge--warning'],
-      [LobbyStatus.cancelled, 'status-badge--error'],
     ] as const)(
       'status="%s" のとき %s クラスが付与される',
       (status, className) => {

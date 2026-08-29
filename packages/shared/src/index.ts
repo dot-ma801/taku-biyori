@@ -27,7 +27,6 @@ export {
   type JoinGameSessionInput,
   UpdateMemberInputSchema,
   type UpdateMemberInput,
-  GUEST_TOKEN_HEADER,
 } from './game-session.js';
 export {
   type GameSessionRole,
@@ -74,6 +73,9 @@ export {
   type UpdateLobbyStatusInput,
   LobbyMemberSchema,
   type LobbyMember,
+  LobbyEntrySchema,
+  type LobbyEntry,
+  GUEST_TOKEN_HEADER,
   LobbyDetailSchema,
   type LobbyDetail,
   JoinLobbyInputSchema,
@@ -95,6 +97,7 @@ export {
   GuestUpdateLobbyAvailabilityDateResponseInputSchema,
   type GuestUpdateLobbyAvailabilityDateResponseInput,
 } from './lobby.js';
+export { getLobbyStatus, type LobbyStatusFacts } from './lobby/status.js';
 export {
   type LobbyRole,
   LobbyAction,

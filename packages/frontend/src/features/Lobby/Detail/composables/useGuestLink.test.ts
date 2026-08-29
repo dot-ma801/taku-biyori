@@ -5,6 +5,7 @@ import { LobbyStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/lobby', () => ({
   getLobbyGuestLink: vi.fn(),
+  regenerateLobbyGuestLink: vi.fn(),
 }));
 
 vi.mock('@/stores/auth', () => ({
@@ -17,7 +18,7 @@ vi.mock('@/composables/useToast', () => ({
   useToast: () => ({ success: mockToastSuccess, error: mockToastError }),
 }));
 
-import { getLobbyGuestLink } from '@/api/lobby';
+import { getLobbyGuestLink, regenerateLobbyGuestLink } from '@/api/lobby';
 import { useAuthStore } from '@/stores/auth';
 
 const LOBBY_ID = 'lobby-1';
@@ -74,19 +75,19 @@ describe('canIssueGuestLink', () => {
     expect(canIssueGuestLink.value).toBe(false);
   });
 
-  it('ホストかつ status が scheduling のとき true', () => {
+  it('ホストかつ status が closed（受付終了）のとき true', () => {
     // Act
     const { canIssueGuestLink } = useGuestLink(
       LOBBY_ID,
       HOST_ID,
-      LobbyStatus.scheduling,
+      LobbyStatus.closed,
     );
 
     // Assert
     expect(canIssueGuestLink.value).toBe(true);
   });
 
-  it.each([{ status: LobbyStatus.draft }, { status: LobbyStatus.cancelled }])(
+  it.each([{ status: LobbyStatus.draft }, { status: LobbyStatus.disbanded }])(
     'status が $status のとき false',
     ({ status }) => {
       // Act
@@ -213,5 +214,77 @@ describe('copyGuestLink', () => {
 
     // Assert
     expect(getLobbyGuestLink).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('regenerateGuestLink', () => {
+  it('再発行 API を呼び、新しいリンクをコピーする', async () => {
+    // Arrange
+    setupAuthAs(HOST_ID);
+    vi.mocked(regenerateLobbyGuestLink).mockResolvedValue({ token: 'new-tok' });
+    const { regenerateGuestLink } = useGuestLink(
+      LOBBY_ID,
+      () => HOST_ID,
+      () => LobbyStatus.open,
+    );
+
+    // Act
+    await regenerateGuestLink();
+
+    // Assert
+    expect(regenerateLobbyGuestLink).toHaveBeenCalledWith(LOBBY_ID);
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('token=new-tok'),
+    );
+    expect(mockToastSuccess).toHaveBeenCalled();
+  });
+
+  it('ホスト以外は API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(OTHER_ID);
+    const { regenerateGuestLink } = useGuestLink(
+      LOBBY_ID,
+      () => HOST_ID,
+      () => LobbyStatus.open,
+    );
+
+    // Act
+    await regenerateGuestLink();
+
+    // Assert
+    expect(regenerateLobbyGuestLink).not.toHaveBeenCalled();
+  });
+
+  it('解散済みのロビーでは API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(HOST_ID);
+    const { regenerateGuestLink } = useGuestLink(
+      LOBBY_ID,
+      () => HOST_ID,
+      () => LobbyStatus.disbanded,
+    );
+
+    // Act
+    await regenerateGuestLink();
+
+    // Assert
+    expect(regenerateLobbyGuestLink).not.toHaveBeenCalled();
+  });
+
+  it('API エラー時に error トーストを表示する', async () => {
+    // Arrange
+    setupAuthAs(HOST_ID);
+    vi.mocked(regenerateLobbyGuestLink).mockRejectedValue(new Error('failed'));
+    const { regenerateGuestLink } = useGuestLink(
+      LOBBY_ID,
+      () => HOST_ID,
+      () => LobbyStatus.open,
+    );
+
+    // Act
+    await regenerateGuestLink();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalled();
   });
 });

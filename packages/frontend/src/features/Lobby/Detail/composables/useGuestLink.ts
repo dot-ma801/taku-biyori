@@ -1,14 +1,18 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import { LobbyStatus } from '@taku-biyori/shared';
-import { getLobbyGuestLink } from '@/api/lobby';
+import {
+  LobbyAction,
+  LobbyStatus,
+  canPerformLobbyAction,
+} from '@taku-biyori/shared';
+import { getLobbyGuestLink, regenerateLobbyGuestLink } from '@/api/lobby';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
 /** 招待リンクボタンを表示するステータス（UI 仕様） */
 const GUEST_LINK_VISIBLE_STATUSES: LobbyStatus[] = [
   LobbyStatus.open,
-  LobbyStatus.scheduling,
+  LobbyStatus.closed,
 ];
 
 /**
@@ -40,9 +44,9 @@ export const useGuestLink = (
 
   /**
    * ゲスト招待リンクを発行できるか。ボタンの出し分けに使う。
-   * トークン取得 API がホスト限定のため、ホストかつ status が open / scheduling のときのみ true。
-   * 参加自体は open のみ API 許可（scheduling では 422）だが、
-   * scheduling では参加済みゲストへのリンク再共有（閲覧・日程回答）用途で発行を許す。
+   * トークン取得 API がホスト限定のため、ホストかつ status が open / closed のときのみ true。
+   * 参加自体は open のみ API 許可（closed では 422）だが、
+   * closed では参加済みゲストへのリンク再共有（閲覧・日程回答）用途で発行を許す。
    */
   const canIssueGuestLink = computed(() => {
     const current = toValue(status);
@@ -87,5 +91,53 @@ export const useGuestLink = (
     }
   }
 
-  return { loading, canIssueGuestLink, copyGuestLink };
+  /**
+   * トークンを再発行できるか。ホストかつ解散済みでないときのみ true。
+   * 配ってしまったリンクを失効させる手段なので、受付を閉じていても行える。
+   */
+  const canRegenerateGuestLink = computed(() => {
+    const current = toValue(status);
+    return (
+      isHost.value &&
+      current !== undefined &&
+      canPerformLobbyAction(LobbyAction.regenerateGuestLink, current, 'host')
+    );
+  });
+
+  /**
+   * トークンを再発行し、新しい招待リンクをクリップボードにコピーする。
+   * **旧トークンは即座に無効になる。**
+   * 再発行不可・loading 中の重複呼び出しは無視する。
+   */
+  async function regenerateGuestLink() {
+    if (loading.value || !canRegenerateGuestLink.value) {
+      return;
+    }
+    loading.value = true;
+    try {
+      const { token } = await regenerateLobbyGuestLink(lobbyId);
+      const link = buildLink(token);
+      if (!navigator.clipboard) {
+        console.error(
+          'navigator.clipboard は未対応の環境です。クリップボードへのコピーをスキップします。',
+        );
+        toast.error('招待リンクの再発行に失敗しました');
+        return;
+      }
+      await navigator.clipboard.writeText(link);
+      toast.success('招待リンクを再発行してコピーしました');
+    } catch {
+      toast.error('招待リンクの再発行に失敗しました');
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return {
+    loading,
+    canIssueGuestLink,
+    copyGuestLink,
+    canRegenerateGuestLink,
+    regenerateGuestLink,
+  };
 };

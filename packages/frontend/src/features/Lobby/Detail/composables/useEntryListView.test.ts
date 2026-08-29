@@ -97,3 +97,58 @@ describe('useEntryListView', () => {
     expect(displayEntries.value[0]?.hasLeft).toBe(true);
   });
 });
+
+describe('displayNameOf', () => {
+  it('id に対応する表示名を返す', () => {
+    // Arrange
+    const entries = ref<LobbyEntryModel[]>([
+      makeEntry({ id: 'a', userName: 'あさひ' }),
+      makeEntry({ id: 'b', userName: 'ゆうひ' }),
+    ]);
+
+    // Act
+    const { displayNameOf } = useEntryListView(() => entries.value);
+
+    // Assert
+    expect(displayNameOf('b')).toBe('ゆうひ');
+  });
+
+  it('ゲストにはサフィックス付きの表示名を返す', () => {
+    // Arrange
+    const entries = ref<LobbyEntryModel[]>([
+      makeEntry({ id: 'g', userId: null, userName: null, guestName: 'そら' }),
+    ]);
+
+    // Act
+    const { displayNameOf } = useEntryListView(() => entries.value);
+
+    // Assert
+    expect(displayNameOf('g')).toBe('そら（ゲスト）');
+  });
+
+  it('該当がなければ空文字を返す', () => {
+    // Arrange — ダイアログを閉じたあと（id が null）でも落ちないこと
+    const entries = ref<LobbyEntryModel[]>([makeEntry({ id: 'a' })]);
+
+    // Act
+    const { displayNameOf } = useEntryListView(() => entries.value);
+
+    // Assert
+    expect(displayNameOf('missing')).toBe('');
+    expect(displayNameOf(null)).toBe('');
+  });
+
+  it('entries の変化に追従する', () => {
+    // Arrange
+    const entries = ref<LobbyEntryModel[]>([
+      makeEntry({ id: 'a', userName: 'あさひ' }),
+    ]);
+    const { displayNameOf } = useEntryListView(() => entries.value);
+
+    // Act
+    entries.value = [makeEntry({ id: 'a', userName: 'かすみ' })];
+
+    // Assert
+    expect(displayNameOf('a')).toBe('かすみ');
+  });
+});

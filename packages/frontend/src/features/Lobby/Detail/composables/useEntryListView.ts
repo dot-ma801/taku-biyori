@@ -37,5 +37,20 @@ export const useEntryListView = (
     })),
   );
 
-  return { displayEntries };
+  /**
+   * id → 表示名の索引。Record のインデックスアクセスと違い `.get()` が
+   * `undefined` を返しうることが型から明らかになる（CLAUDE.md の方針）
+   */
+  const displayNameById = computed(
+    () => new Map(displayEntries.value.map((e) => [e.id, e.userName])),
+  );
+
+  /**
+   * id に対応する表示名。該当がなければ空文字。
+   * 取り消し確認ダイアログのように「選択中の1件の名前」が要る箇所で使う。
+   */
+  const displayNameOf = (id: string | null): string =>
+    id === null ? '' : (displayNameById.value.get(id) ?? '');
+
+  return { displayEntries, displayNameOf };
 };

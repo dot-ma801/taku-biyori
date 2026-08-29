@@ -27,7 +27,9 @@ const { canRemoveMember, removeMember, loading } = useLobbyMembership(
 );
 
 // 参加者一覧は脱退者も含めて全件出す（グレー表示にする）
-const { displayEntries } = useEntryListView(() => props.lobby.entries);
+const { displayEntries, displayNameOf } = useEntryListView(
+  () => props.lobby.entries,
+);
 
 /** 取り消し確認ダイアログの対象メンバー ID（null のときダイアログ非表示） */
 const pendingRemoveMemberId = ref<string | null>(null);
@@ -39,12 +41,9 @@ const removeDialogOpen = computed({
   },
 });
 
-const pendingMemberName = computed(() => {
-  const found = displayEntries.value.find(
-    (e) => e.id === pendingRemoveMemberId.value,
-  );
-  return found?.userName ?? '';
-});
+const pendingMemberName = computed(() =>
+  displayNameOf(pendingRemoveMemberId.value),
+);
 
 const onConfirmRemove = () => {
   if (pendingRemoveMemberId.value) {

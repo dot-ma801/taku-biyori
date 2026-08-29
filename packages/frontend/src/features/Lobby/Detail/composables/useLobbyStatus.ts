@@ -21,7 +21,7 @@ const DISBAND_VISIBLE_STATUSES: LobbyStatus[] = [
 ];
 
 /**
- * ホストがロビーのステータスを遷移させる（公開・解散）ための composable。
+ * ホストがロビーのステータスを遷移させる（公開・受付の開閉・解散）ための composable。
  * 既存の useGameSessionStatus と同じ構成。
  * canXxx の判定は shared の canPerformLobbyAction（API 契約）に委譲し、
  * canDisband のみ UI 仕様で表示ステータスを絞る。
@@ -89,6 +89,73 @@ export const useLobbyStatus = (
   });
 
   /**
+   * 受付を閉じるボタンを表示できるか。ホストかつ status が open のときのみ true。
+   */
+  const canCloseReception = computed(() => {
+    const current = toValue(lobby);
+    if (!current) {
+      return false;
+    }
+    return (
+      isHost.value &&
+      canPerformLobbyAction(LobbyAction.closeReception, current.status, 'host')
+    );
+  });
+
+  /**
+   * 追加募集（受付を開き直す）ボタンを表示できるか。ホストかつ status が closed のときのみ true。
+   */
+  const canReopenReception = computed(() => {
+    const current = toValue(lobby);
+    if (!current) {
+      return false;
+    }
+    return (
+      isHost.value &&
+      canPerformLobbyAction(LobbyAction.reopenReception, current.status, 'host')
+    );
+  });
+
+  /**
+   * 新しい参加の受付を閉じる（status → closed）。企画自体は続くので、
+   * すでに参加している人は日程回答も開催もできる。
+   */
+  async function closeReception() {
+    if (loading.value || !canCloseReception.value) {
+      return;
+    }
+    loading.value = true;
+    try {
+      const updated = await updateLobbyStatus(lobbyId, { status: 'closed' });
+      onUpdated(updated);
+      toast.success('受付を終了しました');
+    } catch {
+      toast.error('受付の終了に失敗しました');
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * 追加募集する（status → open）。締め切り日が過ぎていればサーバ側でクリアされる。
+   */
+  async function reopenReception() {
+    if (loading.value || !canReopenReception.value) {
+      return;
+    }
+    loading.value = true;
+    try {
+      const updated = await updateLobbyStatus(lobbyId, { status: 'open' });
+      onUpdated(updated);
+      toast.success('受付を再開しました');
+    } catch {
+      toast.error('受付の再開に失敗しました');
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
    * 募集を公開する（status → open）。
    * 成功後に onUpdated で更新後の Lobby を呼び出し元へ返す。
    * 公開不可・loading 中の重複呼び出しは無視する。
@@ -138,9 +205,13 @@ export const useLobbyStatus = (
     isHost,
     canPublish,
     canEdit,
+    canCloseReception,
+    canReopenReception,
     canDisband,
     loading,
     publishLobby,
+    closeReception,
+    reopenReception,
     disbandLobby,
   };
 };

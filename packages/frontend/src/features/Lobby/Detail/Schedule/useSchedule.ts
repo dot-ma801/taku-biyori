@@ -1,7 +1,11 @@
 import { ref, computed, onMounted, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
-import { LobbyStatus } from '@taku-biyori/shared';
+import {
+  LobbyAction,
+  LobbyStatus,
+  canPerformLobbyAction,
+} from '@taku-biyori/shared';
 import {
   listLobbyAvailabilityDates,
   updateLobbyAvailabilityDateResponse,
@@ -40,10 +44,16 @@ export const useSchedule = (
 
   onMounted(fetch);
 
-  /** 日程回答の入力が可能かどうか。status が open または scheduling のときのみ true */
+  /**
+   * 日程回答の入力が可能かどうか。公開済み（open / closed）のときのみ true。
+   * 受付を閉じていても、すでに参加している人は回答できる（design-v2 §3-2）。
+   */
   const canInputSchedule = computed(() => {
     const s = toValue(status);
-    return s === LobbyStatus.open || s === LobbyStatus.scheduling;
+    return (
+      s !== undefined &&
+      canPerformLobbyAction(LobbyAction.answerSchedule, s, 'member')
+    );
   });
 
   /** 編集モード中かどうか */

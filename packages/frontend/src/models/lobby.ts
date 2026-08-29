@@ -99,8 +99,11 @@ export const toLobbyModel = (dto: Lobby): LobbyModel => ({
   description: dto.description ?? null,
   scenarioName: dto.scenarioName ?? null,
   location: dto.location ?? null,
-  // レスポンスの status をそのまま使わず、ファクトから導出し直す。
-  // 日付をまたいで開いたままのページでも締め切りの経過が反映される（design-v2 §4-5）
+  // レスポンスの status をそのまま使わず、ファクトから導出し直す（design-v2 §4-5）。
+  // 締め切りの判定に閲覧者のローカル日付を使えるため、サーバのタイムゾーンや
+  // レスポンス時刻に引きずられない。
+  // 導出はこの変換のとき1回だけ。日付をまたいで開いたままのページに反映するには
+  // 再取得が要る（日付境界での再取得はこの層ではなく詳細を保持する composable の責務）
   status: getLobbyStatus({
     publishedAt: dto.publishedAt,
     openUntil: dto.openUntil ?? null,

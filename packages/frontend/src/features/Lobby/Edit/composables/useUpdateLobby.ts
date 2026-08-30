@@ -11,11 +11,11 @@ import {
   getMaxMembersError,
   parseMaxMembers,
 } from '@/features/Lobby/Edit/composables/maxMembersValidation';
-import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
 import {
   getPendingTimeLabelErrors,
   toCandidateDateInputs,
-} from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+} from '@/utils/pendingCandidateDates';
 
 export const useUpdateLobby = (id: string) => {
   const router = useRouter();

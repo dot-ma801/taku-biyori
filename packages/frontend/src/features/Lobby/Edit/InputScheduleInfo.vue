@@ -6,12 +6,12 @@ import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
-import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
 import {
   getTimeLabelCounter,
   getTimeLabelError,
   syncPendingDates,
-} from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+} from '@/utils/pendingCandidateDates';
 import { computed } from 'vue';
 
 const openUntil = defineModel<string>('openUntil', { default: '' });

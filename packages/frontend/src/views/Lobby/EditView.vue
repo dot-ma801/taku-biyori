@@ -16,7 +16,6 @@ const {
   description,
   openUntil,
   location,
-  pendingDates,
   loading,
   errorMessages,
   fetchError,
@@ -52,7 +51,7 @@ const {
       v-model:description="description"
       v-model:openUntil="openUntil"
       v-model:location="location"
-      v-model:pendingDates="pendingDates"
+      :show-candidate-dates="false"
       :loading="loading"
       :error-messages="errorMessages"
       :has-schedule-poll="hasSchedulePoll"

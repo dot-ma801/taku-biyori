@@ -8,7 +8,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { lobbies, lobbyEntries } from '@/system/infrastructure/database/lobby-schema';
+import {
+  lobbies,
+  lobbyEntries,
+} from '@/system/infrastructure/database/lobby-schema';
 
 /**
  * セッション（ゲームセッション）機能用の PostgreSQL スキーマです。

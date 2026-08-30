@@ -60,7 +60,10 @@ describe('listLobbyGameSessions', () => {
     const repo = makeRepo({
       findLobbyForViewing: vi
         .fn()
-        .mockResolvedValue({ hostUserId: 'user-host', status: LobbyStatus.draft }),
+        .mockResolvedValue({
+          hostUserId: 'user-host',
+          status: LobbyStatus.draft,
+        }),
     });
 
     // Act
@@ -75,7 +78,10 @@ describe('listLobbyGameSessions', () => {
     const repo = makeRepo({
       findLobbyForViewing: vi
         .fn()
-        .mockResolvedValue({ hostUserId: 'user-host', status: LobbyStatus.draft }),
+        .mockResolvedValue({
+          hostUserId: 'user-host',
+          status: LobbyStatus.draft,
+        }),
     });
 
     // Act

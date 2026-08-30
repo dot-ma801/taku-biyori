@@ -1,4 +1,13 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from 'drizzle-orm';
 import type {
   GameSession,
   LobbyStatus,
@@ -730,8 +739,10 @@ export const createGameSessionRepository = (
           await tx
             .select({ id: lobbyEntries.id })
             .from(lobbyEntries)
-            .where(inArray(lobbyEntries.id, entryIds))
-            .for('share', { of: lobbyEntries });
+            // `OF` は付けない。drizzle がスキーマ修飾名を出すが PostgreSQL は
+            // `FOR ... OF` に非修飾のリレーション名しか許さない。
+            // このクエリは lobby_entries しか読まないので `OF` 無しで同じ行が対象になる
+            .for('key share');
         }
 
         return fn(createGameSessionRepository(tx as unknown as Database));

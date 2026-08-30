@@ -3,10 +3,7 @@ import type {
   GameSession,
   LobbyStatus,
 } from '@taku-biyori/shared';
-import {
-  LobbyAction,
-  canPerformLobbyAction,
-} from '@taku-biyori/shared';
+import { LobbyAction, canPerformLobbyAction } from '@taku-biyori/shared';
 
 export interface CreateGameSessionRepository {
   findLobbyForHost(

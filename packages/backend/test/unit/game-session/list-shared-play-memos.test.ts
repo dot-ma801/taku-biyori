@@ -49,7 +49,12 @@ describe('listSharedPlayMemos', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'user-9',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
@@ -67,7 +72,12 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'user-9',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
@@ -105,7 +115,12 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'user-9',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -164,7 +179,12 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'host-1', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'host-1',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
@@ -182,7 +202,12 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-1', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'user-1',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: [] });
@@ -200,7 +225,12 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-1', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'user-1',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: [] });
@@ -218,7 +248,12 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'host-1', today);
+    const result = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'host-1',
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: [] });
@@ -230,14 +265,24 @@ describe('listSharedPlayMemos', () => {
     const repo = makeRepo();
 
     // Act
-    const asHost = await listSharedPlayMemos(repo, 'session-1', 'host-1', today);
+    const asHost = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      'host-1',
+      today,
+    );
     const asMember = await listSharedPlayMemos(
       repo,
       'session-1',
       'member-user-1',
       today,
     );
-    const asAnonymous = await listSharedPlayMemos(repo, 'session-1', null, today);
+    const asAnonymous = await listSharedPlayMemos(
+      repo,
+      'session-1',
+      null,
+      today,
+    );
 
     // Assert
     expect(asHost).toEqual(asMember);

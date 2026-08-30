@@ -1,20 +1,21 @@
+import type { GameSessionStatusFacts } from '@taku-biyori/shared';
 import {
-  LegacyGameSessionAction,
-  GameSessionStatus,
-  canPerformLegacy,
+  GameSessionAction,
+  canPerform,
+  getGameSessionStatus,
 } from '@taku-biyori/shared';
-import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 
-export interface DeleteGameSessionRepository extends GameSessionHostRepository {
-  findGameSessionStatus(id: string): Promise<GameSessionStatus | null>;
-  countOtherMembers(id: string, hostUserId: string): Promise<number>;
+export interface DeleteGameSessionRepository {
+  findLobbyId(id: string): Promise<string | null>;
+  findHostUserId(id: string): Promise<string | null>;
+  findStatusFields(id: string): Promise<GameSessionStatusFacts | null>;
+  /** ホスト以外の着席者数。ゲストの着席は user_id が NULL なのでここに数える */
+  countOtherSeats(id: string, hostUserId: string): Promise<number>;
   deleteById(id: string): Promise<void>;
   /**
-   * 削除対象のセッション行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
-   * 「条件チェック → 削除」を別々のクエリに分けると、両者の間に他リクエストが
-   * メンバー追加・状態変更・先行削除を行った場合、古い読み取りを根拠に削除してしまう
-   * race condition（TOCTOU）が起きる。これを防ぐためにロック付きトランザクション境界を
-   * application 層から明示的に開く。
+   * 対象セッション行に排他ロックを取り、コールバック内のクエリを1トランザクションで実行する。
+   * 「条件チェック → 削除」を別クエリに分けると、その間に着席や状態変更が入った場合に
+   * 古い読み取りを根拠に削除してしまう（TOCTOU）。
    */
   executeWithLock<T>(
     id: string,
@@ -26,39 +27,46 @@ export type DeleteGameSessionResult =
   | { type: 'ok' }
   | { type: 'notFound' }
   | { type: 'forbidden' }
-  | { type: 'invalidStatus' }
-  | { type: 'hasMember' };
+  | { type: 'hasSeat' };
 
+/**
+ * セッションを削除する（design-v2 §6-5）。
+ *
+ * 削除できるのは「`cancelled`」**または**「着席者がホスト本人のみ」のとき（§4-3）。
+ * 前半はステータス条件なのでポリシー表が持ち、後半は件数条件なのでここで判定する（§4-5）。
+ *
+ * 中止した開催は通常「中止」として残すため、削除は間違って作った開催の後始末に使う。
+ */
 export const deleteGameSession = async (
   repo: DeleteGameSessionRepository,
+  lobbyId: string,
   id: string,
   userId: string,
 ): Promise<DeleteGameSessionResult> => {
-  return repo.executeWithLock(id, async (lockedRepo) => {
-    const hostUserId = await lockedRepo.findHostUserId(id);
-    if (hostUserId === null) {
-      return { type: 'notFound' };
-    }
-    if (hostUserId !== userId) {
-      return { type: 'forbidden' };
+  return repo.executeWithLock(id, async (locked) => {
+    const actualLobbyId = await locked.findLobbyId(id);
+    if (actualLobbyId === null) return { type: 'notFound' };
+    if (actualLobbyId !== lobbyId) return { type: 'notFound' };
+
+    const hostUserId = await locked.findHostUserId(id);
+    if (hostUserId !== userId) return { type: 'forbidden' };
+
+    const facts = await locked.findStatusFields(id);
+    if (!facts) return { type: 'notFound' };
+
+    const status = getGameSessionStatus(facts);
+    const deletableByStatus = canPerform(
+      GameSessionAction.deleteGameSession,
+      status,
+      'host',
+    );
+
+    if (!deletableByStatus) {
+      const otherSeats = await locked.countOtherSeats(id, hostUserId);
+      if (otherSeats > 0) return { type: 'hasSeat' };
     }
 
-    const status = await lockedRepo.findGameSessionStatus(id);
-    if (status === null) {
-      return { type: 'notFound' };
-    }
-    if (
-      !canPerformLegacy(LegacyGameSessionAction.deleteSession, status, 'host')
-    ) {
-      return { type: 'invalidStatus' };
-    }
-
-    const otherMemberCount = await lockedRepo.countOtherMembers(id, userId);
-    if (otherMemberCount > 0) {
-      return { type: 'hasMember' };
-    }
-
-    await lockedRepo.deleteById(id);
+    await locked.deleteById(id);
     return { type: 'ok' };
   });
 };

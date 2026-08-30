@@ -1,102 +1,101 @@
 import type {
-  LegacyGameSessionListItem,
-  LegacyUpdateGameSessionInput,
-  LegacyUpdateGameSessionStatusInput,
-  JoinGameSessionInput,
-  UpdateMemberInput,
-  UpsertGameSessionPlayMemoInput,
+  CreateGameSessionInput,
+  CreateSeatInput,
+  GameSessionListItem,
+  UpdateGameSessionInput,
   UpdateGameSessionPlayMemoVisibilityInput,
+  UpdateGameSessionStatusInput,
+  UpdateSeatInput,
+  UpsertGameSessionPlayMemoInput,
 } from '@taku-biyori/shared';
+import type { GameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
+import type { ListLobbyGameSessionsResult } from '@/game-session/application/list-lobby-game-sessions';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
+import type { CreateGameSessionResult } from '@/game-session/application/create-game-session';
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
 import type { DeleteGameSessionResult } from '@/game-session/application/delete-game-session';
 import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
-import type { ListMembersResult } from '@/game-session/application/list-members';
-import type { JoinGameSessionResult } from '@/game-session/application/join-game-session';
-import type { UpdateMemberResult } from '@/game-session/application/update-member';
-import type { LeaveGameSessionResult } from '@/game-session/application/leave-game-session';
+import type { ListSeatsResult } from '@/game-session/application/list-seats';
+import type { CreateSeatResult } from '@/game-session/application/create-seat';
+import type { UpdateSeatResult } from '@/game-session/application/update-seat';
+import type { DeleteSeatResult } from '@/game-session/application/delete-seat';
 import type { GetMyPlayMemoResult } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoResult } from '@/game-session/application/upsert-my-play-memo';
 import type { UpdateMyPlayMemoVisibilityResult } from '@/game-session/application/update-my-play-memo-visibility';
 import type { ListSharedPlayMemosResult } from '@/game-session/application/list-shared-play-memos';
-import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
-import type { GetGameSessionRepository } from '@/game-session/application/get-game-session';
-import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
-import type { DeleteGameSessionRepository } from '@/game-session/application/delete-game-session';
-import type { UpdateGameSessionStatusRepository } from '@/game-session/application/update-game-session-status';
-import type { ListMembersRepository } from '@/game-session/application/list-members';
-import type { JoinGameSessionRepository } from '@/game-session/application/join-game-session';
-import type { UpdateMemberRepository } from '@/game-session/application/update-member';
-import type { LeaveGameSessionRepository } from '@/game-session/application/leave-game-session';
-import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
-import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
-import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
-import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 import { listGameSessions } from '@/game-session/application/list-game-sessions';
+import { listLobbyGameSessions } from '@/game-session/application/list-lobby-game-sessions';
 import { getGameSession } from '@/game-session/application/get-game-session';
+import { createGameSession } from '@/game-session/application/create-game-session';
 import { updateGameSession } from '@/game-session/application/update-game-session';
 import { deleteGameSession } from '@/game-session/application/delete-game-session';
 import { updateGameSessionStatus } from '@/game-session/application/update-game-session-status';
-import { listMembers } from '@/game-session/application/list-members';
-import { joinGameSession } from '@/game-session/application/join-game-session';
-import { updateMember } from '@/game-session/application/update-member';
-import { leaveGameSession } from '@/game-session/application/leave-game-session';
+import { listSeats } from '@/game-session/application/list-seats';
+import { createSeat } from '@/game-session/application/create-seat';
+import { updateSeat } from '@/game-session/application/update-seat';
+import { deleteSeat } from '@/game-session/application/delete-seat';
 import { getMyPlayMemo } from '@/game-session/application/get-my-play-memo';
 import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo';
 import { updateMyPlayMemoVisibility } from '@/game-session/application/update-my-play-memo-visibility';
 import { listSharedPlayMemos } from '@/game-session/application/list-shared-play-memos';
 
-type GameSessionRepo = ListGameSessionsRepository &
-  GetGameSessionRepository &
-  UpdateGameSessionRepository &
-  DeleteGameSessionRepository &
-  UpdateGameSessionStatusRepository &
-  ListMembersRepository &
-  JoinGameSessionRepository &
-  UpdateMemberRepository &
-  LeaveGameSessionRepository &
-  GetMyPlayMemoRepository &
-  UpsertMyPlayMemoRepository &
-  UpdateMyPlayMemoVisibilityRepository &
-  ListSharedPlayMemosRepository;
-
 export interface GameSessionUseCases {
-  listGameSessions(userId: string): Promise<LegacyGameSessionListItem[]>;
+  listGameSessions(userId: string): Promise<GameSessionListItem[]>;
+  listLobbyGameSessions(
+    lobbyId: string,
+    userId: string | null,
+  ): Promise<ListLobbyGameSessionsResult>;
   getGameSession(
+    lobbyId: string,
     id: string,
     userId: string | null,
   ): Promise<GetGameSessionResult>;
+  createGameSession(
+    lobbyId: string,
+    userId: string,
+    input: CreateGameSessionInput,
+  ): Promise<CreateGameSessionResult>;
   updateGameSession(
+    lobbyId: string,
     id: string,
     userId: string,
-    input: LegacyUpdateGameSessionInput,
+    input: UpdateGameSessionInput,
   ): Promise<UpdateGameSessionResult>;
   deleteGameSession(
+    lobbyId: string,
     id: string,
     userId: string,
   ): Promise<DeleteGameSessionResult>;
   updateGameSessionStatus(
+    lobbyId: string,
     id: string,
     userId: string,
-    input: LegacyUpdateGameSessionStatusInput,
+    input: UpdateGameSessionStatusInput,
   ): Promise<UpdateGameSessionStatusResult>;
-  listMembers(gameSessionId: string): Promise<ListMembersResult>;
-  joinGameSession(
+  listSeats(
+    lobbyId: string,
+    gameSessionId: string,
+    userId: string | null,
+  ): Promise<ListSeatsResult>;
+  createSeat(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
-    input: JoinGameSessionInput,
-  ): Promise<JoinGameSessionResult>;
-  updateMember(
+    input: CreateSeatInput,
+  ): Promise<CreateSeatResult>;
+  updateSeat(
+    lobbyId: string,
     gameSessionId: string,
-    memberId: string,
+    seatId: string,
     userId: string,
-    input: UpdateMemberInput,
-  ): Promise<UpdateMemberResult>;
-  leaveGameSession(
+    input: UpdateSeatInput,
+  ): Promise<UpdateSeatResult>;
+  deleteSeat(
+    lobbyId: string,
     gameSessionId: string,
-    memberId: string,
+    seatId: string,
     userId: string,
-  ): Promise<LeaveGameSessionResult>;
+  ): Promise<DeleteSeatResult>;
   getMyPlayMemo(
     gameSessionId: string,
     userId: string,
@@ -118,70 +117,35 @@ export interface GameSessionUseCases {
 }
 
 export const createGameSessionUseCases = (
-  repo: GameSessionRepo,
+  repo: GameSessionRepository,
 ): GameSessionUseCases => ({
-  listGameSessions: (userId: string): Promise<LegacyGameSessionListItem[]> =>
-    listGameSessions(repo, userId),
-  getGameSession: (
-    id: string,
-    userId: string | null,
-  ): Promise<GetGameSessionResult> => getGameSession(repo, id, userId),
-  updateGameSession: (
-    id: string,
-    userId: string,
-    input: LegacyUpdateGameSessionInput,
-  ): Promise<UpdateGameSessionResult> =>
-    updateGameSession(repo, id, userId, input),
-  deleteGameSession: (
-    id: string,
-    userId: string,
-  ): Promise<DeleteGameSessionResult> => deleteGameSession(repo, id, userId),
-  updateGameSessionStatus: (
-    id: string,
-    userId: string,
-    input: LegacyUpdateGameSessionStatusInput,
-  ): Promise<UpdateGameSessionStatusResult> =>
-    updateGameSessionStatus(repo, id, userId, input),
-  listMembers: (gameSessionId: string): Promise<ListMembersResult> =>
-    listMembers(repo, gameSessionId),
-  joinGameSession: (
-    gameSessionId: string,
-    userId: string,
-    input: JoinGameSessionInput,
-  ): Promise<JoinGameSessionResult> =>
-    joinGameSession(repo, gameSessionId, userId, input),
-  updateMember: (
-    gameSessionId: string,
-    memberId: string,
-    userId: string,
-    input: UpdateMemberInput,
-  ): Promise<UpdateMemberResult> =>
-    updateMember(repo, gameSessionId, memberId, userId, input),
-  leaveGameSession: (
-    gameSessionId: string,
-    memberId: string,
-    userId: string,
-  ): Promise<LeaveGameSessionResult> =>
-    leaveGameSession(repo, gameSessionId, memberId, userId),
-  getMyPlayMemo: (
-    gameSessionId: string,
-    userId: string,
-  ): Promise<GetMyPlayMemoResult> => getMyPlayMemo(repo, gameSessionId, userId),
-  upsertMyPlayMemo: (
-    gameSessionId: string,
-    userId: string,
-    input: UpsertGameSessionPlayMemoInput,
-  ): Promise<UpsertMyPlayMemoResult> =>
+  listGameSessions: (userId) => listGameSessions(repo, userId),
+  listLobbyGameSessions: (lobbyId, userId) =>
+    listLobbyGameSessions(repo, lobbyId, userId),
+  getGameSession: (lobbyId, id, userId) =>
+    getGameSession(repo, lobbyId, id, userId),
+  createGameSession: (lobbyId, userId, input) =>
+    createGameSession(repo, lobbyId, userId, input),
+  updateGameSession: (lobbyId, id, userId, input) =>
+    updateGameSession(repo, lobbyId, id, userId, input),
+  deleteGameSession: (lobbyId, id, userId) =>
+    deleteGameSession(repo, lobbyId, id, userId),
+  updateGameSessionStatus: (lobbyId, id, userId, input) =>
+    updateGameSessionStatus(repo, lobbyId, id, userId, input),
+  listSeats: (lobbyId, gameSessionId, userId) =>
+    listSeats(repo, lobbyId, gameSessionId, userId),
+  createSeat: (lobbyId, gameSessionId, userId, input) =>
+    createSeat(repo, lobbyId, gameSessionId, userId, input),
+  updateSeat: (lobbyId, gameSessionId, seatId, userId, input) =>
+    updateSeat(repo, lobbyId, gameSessionId, seatId, userId, input),
+  deleteSeat: (lobbyId, gameSessionId, seatId, userId) =>
+    deleteSeat(repo, lobbyId, gameSessionId, seatId, userId),
+  getMyPlayMemo: (gameSessionId, userId) =>
+    getMyPlayMemo(repo, gameSessionId, userId),
+  upsertMyPlayMemo: (gameSessionId, userId, input) =>
     upsertMyPlayMemo(repo, gameSessionId, userId, input),
-  updateMyPlayMemoVisibility: (
-    gameSessionId: string,
-    userId: string,
-    input: UpdateGameSessionPlayMemoVisibilityInput,
-  ): Promise<UpdateMyPlayMemoVisibilityResult> =>
+  updateMyPlayMemoVisibility: (gameSessionId, userId, input) =>
     updateMyPlayMemoVisibility(repo, gameSessionId, userId, input),
-  listSharedPlayMemos: (
-    gameSessionId: string,
-    userId: string | null,
-  ): Promise<ListSharedPlayMemosResult> =>
+  listSharedPlayMemos: (gameSessionId, userId) =>
     listSharedPlayMemos(repo, gameSessionId, userId),
 });

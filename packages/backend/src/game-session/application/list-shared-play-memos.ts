@@ -1,11 +1,21 @@
-import type { SharedGameSessionPlayMemo } from '@taku-biyori/shared';
-import { canViewSharedPlayMemos } from '@taku-biyori/shared';
-import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
-import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
-import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
+import type {
+  GameSessionStatusFacts,
+  LobbyStatus,
+  SharedGameSessionPlayMemo,
+} from '@taku-biyori/shared';
+import {
+  LobbyStatus as LobbyStatusEnum,
+  canViewSharedPlayMemos,
+  getGameSessionStatus,
+  todayDateString,
+} from '@taku-biyori/shared';
 
-export interface ListSharedPlayMemosRepository extends GameSessionHostRepository {
-  findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
+export interface ListSharedPlayMemosRepository {
+  findLobbyId(id: string): Promise<string | null>;
+  findLobbyForViewing(
+    lobbyId: string,
+  ): Promise<{ hostUserId: string; status: LobbyStatus } | null>;
+  findStatusFields(id: string): Promise<GameSessionStatusFacts | null>;
   findSharedPlayMemos(
     gameSessionId: string,
   ): Promise<SharedGameSessionPlayMemo[]>;
@@ -23,29 +33,36 @@ export type ListSharedPlayMemosResult =
  * 閲覧者自身の公開メモも含めて返す（分岐のある権限フィルタは漏洩バグの温床になるため、
  * 「自分のを除く」のような閲覧者による分岐を作らない）。
  *
- * ⚠️ 卓そのものの公開制御を先に噛ませる点が要。非公開のまま中止された卓は
- * `cancelled_at` が `draft` より優先されるため `cancelled` に導出される。
- * 素朴に「完了・中止ならメモを返す」と書くと、非公開卓のメモが第三者に読める。
+ * ⚠️ **ロビーの公開制御を先に噛ませる点が要。** 公開はロビーの関心事に移ったので
+ * 判定材料は lobby.status になった（design-v2 §4-2）。下書きのまま中止された開催は
+ * セッション側では `cancelled` に導出されるため、素朴に「完了・中止ならメモを返す」と
+ * 書くと下書きロビーのメモが第三者に読めてしまう。
  */
 export const listSharedPlayMemos = async (
   repo: ListSharedPlayMemosRepository,
   gameSessionId: string,
   userId: string | null,
-  now: Date = new Date(),
+  today: string = todayDateString(),
 ): Promise<ListSharedPlayMemosResult> => {
   const fields = await repo.findStatusFields(gameSessionId);
   if (!fields) return { type: 'notFound' };
 
-  // 卓の閲覧制御は既存の getGameSession と同一にする（design-v1.2 §4 手順2）
-  if (!fields.isPublished) {
-    const hostUserId = await repo.findHostUserId(gameSessionId);
+  const lobbyId = await repo.findLobbyId(gameSessionId);
+  if (lobbyId === null) return { type: 'notFound' };
+
+  // 閲覧制御は getGameSession と同一に保つ（design-v1.2 §4 手順2）
+  const lobby = await repo.findLobbyForViewing(lobbyId);
+  if (!lobby) return { type: 'notFound' };
+
+  if (lobby.status === LobbyStatusEnum.draft) {
     // 未ログイン（userId === null）は決してホストになりえない。
-    // findHostUserId の戻り値は型上 null になりうるため、userId === null を先に弾かないと
-    // 「未ログイン同士の null 一致」で `hostUserId !== userId` が false になり素通りしてしまう
-    if (userId === null || hostUserId !== userId) return { type: 'forbidden' };
+    // userId === null を先に弾かないと「未ログイン同士の null 一致」で素通りしてしまう
+    if (userId === null || lobby.hostUserId !== userId) {
+      return { type: 'forbidden' };
+    }
   }
 
-  const status = getGameSessionStatus(fields, now);
+  const status = getGameSessionStatus(fields, today);
   if (!canViewSharedPlayMemos(status)) return { type: 'ok', playMemos: [] };
 
   const playMemos = await repo.findSharedPlayMemos(gameSessionId);

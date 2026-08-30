@@ -5,12 +5,12 @@ import type {
 
 export interface UpdateMyPlayMemoVisibilityRepository {
   gameSessionExists(id: string): Promise<boolean>;
-  findMemberByUserId(
+  findSeatByUserId(
     gameSessionId: string,
     userId: string,
   ): Promise<string | null>;
   updatePlayMemoVisibility(
-    memberId: string,
+    seatId: string,
     sharedAt: Date | null,
   ): Promise<GameSessionPlayMemo | null>;
 }
@@ -37,13 +37,13 @@ export const updateMyPlayMemoVisibility = async (
   const exists = await repo.gameSessionExists(gameSessionId);
   if (!exists) return { type: 'notFound' };
 
-  // 認証ユーザー ID でメンバー行を引く。ゲストは user_id = null のため
+  // 認証ユーザー ID で着席を引く。ゲストは LobbyEntry の user_id = null のため
   // 構造上ヒットせず、ゲスト除外の専用分岐は不要（design-v1.2 §4）
-  const memberId = await repo.findMemberByUserId(gameSessionId, userId);
-  if (memberId === null) return { type: 'forbidden' };
+  const seatId = await repo.findSeatByUserId(gameSessionId, userId);
+  if (seatId === null) return { type: 'forbidden' };
 
   const playMemo = await repo.updatePlayMemoVisibility(
-    memberId,
+    seatId,
     input.shared ? now : null,
   );
   // 本文を一度も保存していないメモを公開する意味がないため 404 にする（design-v1.2 §5）

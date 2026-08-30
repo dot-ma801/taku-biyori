@@ -2,18 +2,22 @@ import type {
   GameSessionPlayMemo,
   UpsertGameSessionPlayMemoInput,
 } from '@taku-biyori/shared';
-import { LegacyGameSessionAction, canPerformLegacy } from '@taku-biyori/shared';
+import type { GameSessionStatusFacts } from '@taku-biyori/shared';
+import {
+  GameSessionAction,
+  canPerform,
+  getGameSessionStatus,
+  todayDateString,
+} from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
-import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
-import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
 
 export interface UpsertMyPlayMemoRepository extends GameSessionHostRepository {
-  findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
-  findMemberByUserId(
+  findStatusFields(id: string): Promise<GameSessionStatusFacts | null>;
+  findSeatByUserId(
     gameSessionId: string,
     userId: string,
   ): Promise<string | null>;
-  upsertPlayMemo(memberId: string, body: string): Promise<GameSessionPlayMemo>;
+  upsertPlayMemo(seatId: string, body: string): Promise<GameSessionPlayMemo>;
 }
 
 export type UpsertMyPlayMemoResult =
@@ -32,25 +36,25 @@ export const upsertMyPlayMemo = async (
   gameSessionId: string,
   userId: string,
   input: UpsertGameSessionPlayMemoInput,
-  now: Date = new Date(),
+  today: string = todayDateString(),
 ): Promise<UpsertMyPlayMemoResult> => {
   const fields = await repo.findStatusFields(gameSessionId);
   if (!fields) return { type: 'notFound' };
 
-  // 認証ユーザー ID でメンバー行を引く。ゲストは user_id = null のため
+  // 認証ユーザー ID で着席を引く。ゲストは LobbyEntry の user_id = null のため
   // 構造上ヒットせず、ゲスト除外の専用分岐は不要（design-v1.2 §4）。
-  // ステータス判定より先に置き、非メンバーに卓の状態を推測させない
-  const memberId = await repo.findMemberByUserId(gameSessionId, userId);
-  if (memberId === null) return { type: 'forbidden' };
+  // ステータス判定より先に置き、着席していない人に開催の状態を推測させない
+  const seatId = await repo.findSeatByUserId(gameSessionId, userId);
+  if (seatId === null) return { type: 'forbidden' };
 
   const hostUserId = await repo.findHostUserId(gameSessionId);
   const role = hostUserId === userId ? 'host' : 'member';
-  const status = getGameSessionStatus(fields, now);
+  const status = getGameSessionStatus(fields, today);
 
-  if (!canPerformLegacy(LegacyGameSessionAction.editPlayMemo, status, role)) {
+  if (!canPerform(GameSessionAction.editSeatPlayMemo, status, role)) {
     return { type: 'statusLocked' };
   }
 
-  const playMemo = await repo.upsertPlayMemo(memberId, input.body);
+  const playMemo = await repo.upsertPlayMemo(seatId, input.body);
   return { type: 'ok', playMemo };
 };

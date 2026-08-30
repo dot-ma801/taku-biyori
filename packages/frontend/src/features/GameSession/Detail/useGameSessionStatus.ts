@@ -1,113 +1,75 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
-import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
-import {
-  GameSessionStatus,
-  LegacyGameSessionAction,
-  canPerformLegacy,
-} from '@taku-biyori/shared';
-import {
-  deleteGameSession,
-  updateGameSessionStatus,
-} from '@/api/legacy-game-session';
+import { GameSessionAction, canPerform } from '@taku-biyori/shared';
+import type { GameSessionDetailModel } from '@/models/game-session';
+import { deleteGameSession, updateGameSessionStatus } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
+/**
+ * 開催のステータス操作（完了・中止・削除）。
+ *
+ * 可否の判定は shared のポリシー表に委ねる。ここに条件をハードコードしない
+ * （backend のバリデーションと同じ表を使う。design-v2 §4-5）。
+ * 表で表せない条件（削除の「着席者がホストのみ」）だけをここで足す。
+ */
 export const useGameSessionStatus = (
+  lobbyId: string,
   gameSessionId: string,
-  gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>,
-  // NOTE: 変更後の再取得を呼び出し元に委譲する。
+  gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
+  // 変更後の再取得は呼び出し元に委譲する
   onRefresh: () => void,
 ) => {
   const authStore = useAuthStore();
   const toast = useToast();
   const router = useRouter();
 
-  /** ステータス遷移（公開・完了）処理中かどうか */
+  /** ステータス遷移の処理中かどうか */
   const loading = ref(false);
   /** 削除処理中かどうか。ステータス遷移とは独立して扱う */
   const loadingDelete = ref(false);
 
-  /** ログインユーザーがこのセッションのホストか */
+  /** ログインユーザーがこの開催のホストか。ホストはロビーが持つ（design-v2 §3-7） */
   const isHost = computed(() => {
     const session = toValue(gameSession);
-    return !!session && session.createdBy === authStore.currentUser?.id;
+    return !!session && session.lobby.hostUserId === authStore.currentUser?.id;
   });
 
-  /** 公開可能か。ホストかつ status が draft のときのみ true */
-  const canPublish = computed(
-    () =>
-      isHost.value && toValue(gameSession)?.status === GameSessionStatus.draft,
-  );
+  const allows = (action: GameSessionAction): boolean => {
+    const session = toValue(gameSession);
+    if (!session || !isHost.value) return false;
+    return canPerform(action, session.status, 'host');
+  };
 
-  /** 完了可能か。ホストかつ status が today のときのみ true */
-  const canComplete = computed(
-    () =>
-      isHost.value && toValue(gameSession)?.status === GameSessionStatus.today,
+  const canComplete = computed(() =>
+    allows(GameSessionAction.completeGameSession),
   );
+  const canCancel = computed(() => allows(GameSessionAction.cancelGameSession));
 
   /**
-   * 削除可能か。次の全条件を満たすときのみ true。
-   * - ホストである（削除 API がホスト限定）
-   * - ステータスが LEGACY_ACTION_POLICIES の deleteSession に含まれる
-   *   （draft のみ。confirmed 以降は参加者の予定が確定しているため不可）
-   * - 自分以外のメンバーがいない（参加者がいる卓を勝手に消さない）
+   * 削除可能か。「`cancelled`」**または**「着席者がホスト本人のみ」（design-v2 §4-3）。
+   * 前半はポリシー表が持ち、後半は件数条件なのでここで足す（§4-5）。
    */
   const canDelete = computed(() => {
     const session = toValue(gameSession);
-    if (!session) {
-      return false;
-    }
-    if (!isHost.value) {
-      return false;
-    }
-    if (
-      !canPerformLegacy(
-        LegacyGameSessionAction.deleteSession,
-        session.status,
-        'host',
-      )
-    ) {
-      return false;
-    }
+    if (!session || !isHost.value) return false;
+    if (allows(GameSessionAction.deleteGameSession)) return true;
+
     const myUserId = authStore.currentUser?.id;
-    const others = session.members.filter((m) => m.userId !== myUserId);
+    const others = session.seats.filter((seat) => seat.userId !== myUserId);
     return others.length === 0;
   });
 
-  /**
-   * 卓を公開する（draft → open）。
-   * 成功後に onRefresh で再取得を依頼する。
-   * loading 中の重複呼び出しは無視する。
-   */
-  async function publishSession() {
-    if (loading.value || loadingDelete.value) {
-      return;
-    }
-    loading.value = true;
-    try {
-      await updateGameSessionStatus(gameSessionId, { status: 'open' });
-      onRefresh();
-    } catch {
-      toast.error('公開に失敗しました');
-    } finally {
-      loading.value = false;
-    }
-  }
+  const isBusy = (): boolean => loading.value || loadingDelete.value;
 
-  /**
-   * 卓を完了する（today → completed）。
-   * 成功後に onRefresh で再取得を依頼する。
-   * loading 中の重複呼び出しは無視する。
-   */
-  async function completeSession() {
-    if (loading.value || loadingDelete.value) {
-      return;
-    }
+  async function completeGameSession() {
+    if (isBusy() || !canComplete.value) return;
     loading.value = true;
     try {
-      await updateGameSessionStatus(gameSessionId, { status: 'completed' });
+      await updateGameSessionStatus(lobbyId, gameSessionId, {
+        status: 'completed',
+      });
       onRefresh();
     } catch {
       toast.error('完了への変更に失敗しました');
@@ -116,21 +78,13 @@ export const useGameSessionStatus = (
     }
   }
 
-  /** キャンセル可能か。ホストかつ status が confirmed または today のときのみ true */
-  const canCancel = computed(
-    () =>
-      isHost.value &&
-      (toValue(gameSession)?.status === GameSessionStatus.confirmed ||
-        toValue(gameSession)?.status === GameSessionStatus.today),
-  );
-
-  async function cancelSession() {
-    if (loading.value || loadingDelete.value || !canCancel.value) {
-      return;
-    }
+  async function cancelGameSession() {
+    if (isBusy() || !canCancel.value) return;
     loading.value = true;
     try {
-      await updateGameSessionStatus(gameSessionId, { status: 'cancelled' });
+      await updateGameSessionStatus(lobbyId, gameSessionId, {
+        status: 'cancelled',
+      });
       onRefresh();
     } catch {
       toast.error('開催の中止に失敗しました');
@@ -139,38 +93,31 @@ export const useGameSessionStatus = (
     }
   }
 
-  /**
-   * 卓を削除する。成功後はダッシュボードへ遷移する。
-   * 削除可否を満たさない場合・loadingDelete 中の重複呼び出しは無視する。
-   */
-  async function deleteSession() {
-    if (loading.value || loadingDelete.value || !canDelete.value) {
-      return;
-    }
+  /** 削除後はロビー詳細へ戻る。開催はロビーに属するので一覧はそちらにある */
+  async function removeGameSession() {
+    if (isBusy() || !canDelete.value) return;
     loadingDelete.value = true;
     try {
-      await deleteGameSession(gameSessionId);
+      await deleteGameSession(lobbyId, gameSessionId);
     } catch {
-      toast.error('卓の削除に失敗しました');
+      toast.error('開催の削除に失敗しました');
       return;
     } finally {
       loadingDelete.value = false;
     }
-    toast.success('卓を削除しました');
-    await router.push({ name: 'dashboard' });
+    toast.success('開催を削除しました');
+    await router.push({ name: 'lobbies-detail', params: { lobbyId } });
   }
 
   return {
     isHost,
-    canPublish,
     canComplete,
     canCancel,
     canDelete,
     loading,
     loadingDelete,
-    publishSession,
-    completeSession,
-    cancelSession,
-    deleteSession,
+    completeGameSession,
+    cancelGameSession,
+    removeGameSession,
   };
 };

@@ -2,13 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
-import { GameSessionStatus } from '@taku-biyori/shared';
-import type {
-  LegacyGameSessionDetail,
-  GameSessionMember,
-} from '@taku-biyori/shared';
+import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
 
-vi.mock('@/api/legacy-game-session', () => ({
+vi.mock('@/api/game-session', () => ({
   updateGameSessionStatus: vi.fn(),
   deleteGameSession: vi.fn(),
 }));
@@ -28,60 +25,80 @@ vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({ push: mockRouterPush })),
 }));
 
-import {
-  updateGameSessionStatus,
-  deleteGameSession,
-} from '@/api/legacy-game-session';
+import { updateGameSessionStatus, deleteGameSession } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 const HOST_USER_ID = 'host-user-id';
 const OTHER_USER_ID = 'other-user-id';
-const SESSION_ID = 'session-id';
+const LOBBY_ID = 'lobby-1';
+const SESSION_ID = 'session-1';
 
-function makeMember(
-  overrides: Partial<GameSessionMember> = {},
-): GameSessionMember {
-  return {
-    id: 'member-id',
-    userId: null,
-    userName: null,
-    guestName: 'ゲスト',
-    characterName: null,
-    joinedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
+const makeSeat = (userId: string | null): SeatModel => ({
+  id: `seat-${userId ?? 'guest'}`,
+  entryId: `entry-${userId ?? 'guest'}`,
+  userId,
+  userName: userId ? 'ユーザー' : null,
+  guestName: userId ? null : 'ゲスト',
+  characterName: null,
+  seatedAt: new Date('2026-08-30T10:00:00.000Z'),
+  isGuest: userId === null,
+});
 
-function hostMember(): GameSessionMember {
-  return makeMember({
-    id: 'host-member',
-    userId: HOST_USER_ID,
-    userName: 'host',
-  });
-}
+const makeGameSession = (
+  overrides: Partial<GameSessionDetailModel> = {},
+): GameSessionDetailModel => ({
+  id: SESSION_ID,
+  lobbyId: LOBBY_ID,
+  scheduledAt: '2999-12-31',
+  status: GameSessionStatus.scheduled,
+  description: null,
+  title: 'ロビーの題名',
+  scenarioName: null,
+  location: null,
+  timeLabel: null,
+  overrides: {
+    title: null,
+    scenarioName: null,
+    location: null,
+    timeLabel: null,
+  },
+  lobby: {
+    id: LOBBY_ID,
+    title: 'ロビーの題名',
+    scenarioName: null,
+    location: null,
+    maxPlayers: null,
+    hostUserId: HOST_USER_ID,
+    status: LobbyStatus.open,
+  },
+  completedAt: null,
+  cancelledAt: null,
+  createdAt: new Date('2026-08-01T00:00:00.000Z'),
+  updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+  seats: [],
+  ...overrides,
+});
 
-function makeGameSession(
-  overrides: Partial<LegacyGameSessionDetail> = {},
-): LegacyGameSessionDetail {
-  return {
-    id: SESSION_ID,
-    title: 'テストセッション',
-    status: GameSessionStatus.draft,
-    isPublished: false,
-    scheduledAt: '2026-08-01',
-    createdBy: HOST_USER_ID,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    members: [hostMember()],
-    ...overrides,
-  };
-}
-
-function setupAuthAs(userId: string) {
+const asUser = (id: string | null) => {
   vi.mocked(useAuthStore).mockReturnValue({
-    currentUser: { id: userId },
-  } as ReturnType<typeof useAuthStore>);
-}
+    currentUser: id ? { id } : null,
+  } as unknown as ReturnType<typeof useAuthStore>);
+};
+
+const setup = (
+  session: GameSessionDetailModel | null,
+  userId = HOST_USER_ID,
+) => {
+  asUser(userId);
+  const onRefresh = vi.fn();
+  const composable = useGameSessionStatus(
+    LOBBY_ID,
+    SESSION_ID,
+    ref(session),
+    onRefresh,
+  );
+  return { ...composable, onRefresh };
+};
 
 beforeEach(() => {
   setActivePinia(createPinia());
@@ -89,781 +106,235 @@ beforeEach(() => {
 });
 
 describe('isHost', () => {
-  it('currentUser.id が createdBy と一致するとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession());
-
-    // Act
-    const { isHost } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+  it('ロビーのホストなら true（ホストはロビーが持つ）', () => {
+    // Arrange / Act
+    const { isHost } = setup(makeGameSession());
 
     // Assert
     expect(isHost.value).toBe(true);
   });
 
-  it('currentUser.id が createdBy と異なるとき false を返す', () => {
-    // Arrange
-    setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(makeGameSession());
-
-    // Act
-    const { isHost } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
-
-    // Assert
-    expect(isHost.value).toBe(false);
-  });
-
-  it('gameSession が null のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref<LegacyGameSessionDetail | null>(null);
-
-    // Act
-    const { isHost } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
+  it('ホスト以外なら false', () => {
+    // Arrange / Act
+    const { isHost } = setup(makeGameSession(), OTHER_USER_ID);
 
     // Assert
     expect(isHost.value).toBe(false);
   });
 });
 
-describe('canPublish', () => {
-  it('ホストかつ status が draft のとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.draft }),
-    );
+describe('canComplete / canCancel', () => {
+  it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
+    '%s のときホストは完了も中止もできる',
+    (status) => {
+      // Arrange / Act
+      const { canComplete, canCancel } = setup(makeGameSession({ status }));
 
-    // Act
-    const { canPublish } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
+      // Assert
+      expect(canComplete.value).toBe(true);
+      expect(canCancel.value).toBe(true);
+    },
+  );
 
-    // Assert
-    expect(canPublish.value).toBe(true);
-  });
+  it.each([GameSessionStatus.completed, GameSessionStatus.cancelled])(
+    '%s のときは完了も中止もできない（終端）',
+    (status) => {
+      // Arrange / Act
+      const { canComplete, canCancel } = setup(makeGameSession({ status }));
 
-  it('ホストでも status が draft 以外のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.open }),
-    );
+      // Assert
+      expect(canComplete.value).toBe(false);
+      expect(canCancel.value).toBe(false);
+    },
+  );
 
-    // Act
-    const { canPublish } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canPublish.value).toBe(false);
-  });
-
-  it('ホスト以外は status が draft でも false を返す', () => {
-    // Arrange
-    setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.draft }),
-    );
-
-    // Act
-    const { canPublish } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canPublish.value).toBe(false);
-  });
-});
-
-describe('canComplete', () => {
-  it('ホストかつ status が today のとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-
-    // Act
-    const { canComplete } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canComplete.value).toBe(true);
-  });
-
-  it('ホストでも status が today 以外のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
-    );
-
-    // Act
-    const { canComplete } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
+  it('ホスト以外はできない', () => {
+    // Arrange / Act
+    const { canComplete, canCancel } = setup(makeGameSession(), OTHER_USER_ID);
 
     // Assert
     expect(canComplete.value).toBe(false);
+    expect(canCancel.value).toBe(false);
   });
 
-  it('ホスト以外は status が today でも false を返す', () => {
-    // Arrange
-    setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-
-    // Act
-    const { canComplete } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
+  it('未取得なら false', () => {
+    // Arrange / Act
+    const { canComplete, canCancel } = setup(null);
 
     // Assert
     expect(canComplete.value).toBe(false);
-  });
-});
-
-describe('publishSession', () => {
-  it('updateGameSessionStatus を status: open で呼び出す', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.open,
-      isPublished: true,
-      scheduledAt: '2026-08-01',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.draft }),
-    );
-    const { publishSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await publishSession();
-
-    // Assert
-    expect(updateGameSessionStatus).toHaveBeenCalledWith(SESSION_ID, {
-      status: 'open',
-    });
-  });
-
-  it('成功後に onRefresh を呼び出す', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.open,
-      isPublished: true,
-      scheduledAt: '2026-08-01',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(makeGameSession());
-    const onRefresh = vi.fn();
-    const { publishSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      onRefresh,
-    );
-
-    // Act
-    await publishSession();
-
-    // Assert
-    expect(onRefresh).toHaveBeenCalled();
-  });
-
-  it('成功後に loading が false に戻る', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.open,
-      isPublished: true,
-      scheduledAt: '2026-08-01',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(makeGameSession());
-    const { publishSession, loading } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await publishSession();
-
-    // Assert
-    expect(loading.value).toBe(false);
-  });
-
-  it('API エラー時に toast.error が呼ばれる', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockRejectedValue(
-      new Error('サーバーエラー'),
-    );
-    const gameSession = ref(makeGameSession());
-    const { publishSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await publishSession();
-
-    // Assert
-    expect(mockToastError).toHaveBeenCalledWith('公開に失敗しました');
-  });
-});
-
-describe('completeSession', () => {
-  it('updateGameSessionStatus を status: completed で呼び出す', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.completed,
-      isPublished: true,
-      scheduledAt: '2026-08-01',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-    const { completeSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await completeSession();
-
-    // Assert
-    expect(updateGameSessionStatus).toHaveBeenCalledWith(SESSION_ID, {
-      status: 'completed',
-    });
-  });
-
-  it('成功後に onRefresh を呼び出す', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.completed,
-      isPublished: true,
-      scheduledAt: '2026-08-01',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-    const onRefresh = vi.fn();
-    const { completeSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      onRefresh,
-    );
-
-    // Act
-    await completeSession();
-
-    // Assert
-    expect(onRefresh).toHaveBeenCalled();
-  });
-
-  it('成功後に loading が false に戻る', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({
-      id: SESSION_ID,
-      title: 'テストセッション',
-      status: GameSessionStatus.completed,
-      isPublished: true,
-      scheduledAt: '2026-08-01',
-      createdBy: HOST_USER_ID,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-    const { completeSession, loading } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await completeSession();
-
-    // Assert
-    expect(loading.value).toBe(false);
-  });
-
-  it('API エラー時に toast.error が呼ばれる', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockRejectedValue(
-      new Error('サーバーエラー'),
-    );
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.today }),
-    );
-    const { completeSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await completeSession();
-
-    // Assert
-    expect(mockToastError).toHaveBeenCalledWith('完了への変更に失敗しました');
+    expect(canCancel.value).toBe(false);
   });
 });
 
 describe('canDelete', () => {
-  describe.each([
-    { status: GameSessionStatus.draft, expected: true },
-    { status: GameSessionStatus.confirmed, expected: false },
-    { status: GameSessionStatus.today, expected: false },
-    { status: GameSessionStatus.completed, expected: false },
-  ])('ステータス policy (status=$status)', ({ status, expected }) => {
-    it(`ホストかつ自分以外のメンバーがいないとき ${expected} を返す`, () => {
-      // Arrange
-      setupAuthAs(HOST_USER_ID);
-      const gameSession = ref(
-        makeGameSession({
-          status,
-          members: [hostMember()],
-        }),
-      );
-
-      // Act
-      const { canDelete } = useGameSessionStatus(
-        SESSION_ID,
-        gameSession,
-        vi.fn(),
-      );
-
-      // Assert
-      expect(canDelete.value).toBe(expected);
-    });
-  });
-
-  describe('他メンバーの存在 (status=open, ホスト)', () => {
-    it('自分以外のログインメンバーがいるとき false を返す', () => {
-      // Arrange
-      setupAuthAs(HOST_USER_ID);
-      const gameSession = ref(
-        makeGameSession({
-          members: [
-            hostMember(),
-            makeMember({ id: 'm2', userId: 'other-user' }),
-          ],
-        }),
-      );
-
-      // Act
-      const { canDelete } = useGameSessionStatus(
-        SESSION_ID,
-        gameSession,
-        vi.fn(),
-      );
-
-      // Assert
-      expect(canDelete.value).toBe(false);
-    });
-
-    it('ゲストメンバーがいるとき false を返す', () => {
-      // Arrange
-      setupAuthAs(HOST_USER_ID);
-      const gameSession = ref(
-        makeGameSession({
-          members: [hostMember(), makeMember({ id: 'g1', userId: null })],
-        }),
-      );
-
-      // Act
-      const { canDelete } = useGameSessionStatus(
-        SESSION_ID,
-        gameSession,
-        vi.fn(),
-      );
-
-      // Assert
-      expect(canDelete.value).toBe(false);
-    });
-  });
-
-  it('ホスト以外のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(makeGameSession());
-
-    // Act
-    const { canDelete } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-
-  it('gameSession が null のとき false を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref<LegacyGameSessionDetail | null>(null);
-
-    // Act
-    const { canDelete } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canDelete.value).toBe(false);
-  });
-});
-
-describe('deleteSession', () => {
-  it('deleteGameSession を gameSessionId で呼び出す', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(deleteGameSession).toHaveBeenCalledWith(SESSION_ID);
-  });
-
-  it('成功時に一覧ページへ遷移する', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(mockRouterPush).toHaveBeenCalledWith({
-      name: 'dashboard',
-    });
-  });
-
-  it('成功時に success トーストを表示する', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(mockToastSuccess).toHaveBeenCalledWith('卓を削除しました');
-  });
-
-  it('成功後に loadingDelete が false に戻る', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
-    const gameSession = ref(makeGameSession());
-    const { deleteSession, loadingDelete } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(loadingDelete.value).toBe(false);
-  });
-
-  it('API エラー時に error トーストを表示する', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(deleteGameSession).mockRejectedValue(new Error('サーバーエラー'));
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(mockToastError).toHaveBeenCalledWith('卓の削除に失敗しました');
-  });
-
-  it('API エラー時に遷移しない', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(deleteGameSession).mockRejectedValue(new Error('サーバーエラー'));
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(mockRouterPush).not.toHaveBeenCalled();
-  });
-
-  it('ホスト以外は API を呼ばない', async () => {
-    // Arrange
-    setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
-
-    // Assert
-    expect(deleteGameSession).not.toHaveBeenCalled();
-  });
-
-  it('自分以外のメンバーがいるときは API を呼ばない', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
+  it('中止した開催は着席者がいても削除できる', () => {
+    // Arrange / Act
+    const { canDelete } = setup(
       makeGameSession({
-        members: [hostMember(), makeMember({ id: 'm2', userId: 'other-user' })],
+        status: GameSessionStatus.cancelled,
+        seats: [makeSeat(OTHER_USER_ID)],
       }),
     );
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    await deleteSession();
 
     // Assert
-    expect(deleteGameSession).not.toHaveBeenCalled();
+    expect(canDelete.value).toBe(true);
   });
 
-  it('loadingDelete 中の重複呼び出しは無視する', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    let resolve!: () => void;
-    vi.mocked(deleteGameSession).mockReturnValue(
-      new Promise<void>((r) => {
-        resolve = r;
-      }),
+  it('中止していなくても着席者がホストだけなら削除できる', () => {
+    // Arrange / Act
+    // 件数条件はポリシー表で表せないのでここで足している（design-v2 §4-5）
+    const { canDelete } = setup(
+      makeGameSession({ seats: [makeSeat(HOST_USER_ID)] }),
     );
-    const gameSession = ref(makeGameSession());
-    const { deleteSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Act
-    const first = deleteSession();
-    await deleteSession();
-    resolve();
-    await first;
 
     // Assert
-    expect(deleteGameSession).toHaveBeenCalledTimes(1);
-    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(canDelete.value).toBe(true);
+  });
+
+  it('中止しておらず他の着席者がいれば削除できない', () => {
+    // Arrange / Act
+    const { canDelete } = setup(
+      makeGameSession({
+        seats: [makeSeat(HOST_USER_ID), makeSeat(OTHER_USER_ID)],
+      }),
+    );
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('ゲストが着席していれば削除できない', () => {
+    // Arrange / Act
+    const { canDelete } = setup(makeGameSession({ seats: [makeSeat(null)] }));
+
+    // Assert
+    expect(canDelete.value).toBe(false);
+  });
+
+  it('ホスト以外は削除できない', () => {
+    // Arrange / Act
+    const { canDelete } = setup(
+      makeGameSession({ status: GameSessionStatus.cancelled }),
+      OTHER_USER_ID,
+    );
+
+    // Assert
+    expect(canDelete.value).toBe(false);
   });
 });
 
-describe('canCancel', () => {
-  it('ホストかつ status が confirmed のとき true を返す', () => {
+describe('completeGameSession', () => {
+  it('API を呼んで onRefresh を実行する', async () => {
     // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
+    vi.mocked(updateGameSessionStatus).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof updateGameSessionStatus>>,
     );
-
-    // Act
-    const { canCancel } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canCancel.value).toBe(true);
-  });
-
-  it('ホストかつ status が today のとき true を返す', () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(
+    const { completeGameSession, onRefresh } = setup(
       makeGameSession({ status: GameSessionStatus.today }),
     );
 
     // Act
-    const { canCancel } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
+    await completeGameSession();
 
     // Assert
-    expect(canCancel.value).toBe(true);
-  });
-
-  it('ホスト以外は false を返す', () => {
-    // Arrange
-    setupAuthAs(OTHER_USER_ID);
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
-    );
-
-    // Act
-    const { canCancel } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canCancel.value).toBe(false);
-  });
-
-  it.each([
-    ['draft', GameSessionStatus.draft],
-    ['open', GameSessionStatus.open],
-    ['completed', GameSessionStatus.completed],
-    ['cancelled', GameSessionStatus.cancelled],
-  ])('ホストでも status が %s のとき false を返す', (_label, status) => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    const gameSession = ref(makeGameSession({ status }));
-
-    // Act
-    const { canCancel } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
-    );
-
-    // Assert
-    expect(canCancel.value).toBe(false);
-  });
-});
-
-describe('cancelSession', () => {
-  it('updateGameSessionStatus に cancelled を渡して呼び出す', async () => {
-    // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockResolvedValue({} as never);
-    const onRefresh = vi.fn();
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
-    );
-    const { cancelSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      onRefresh,
-    );
-
-    // Act
-    await cancelSession();
-
-    // Assert
-    expect(updateGameSessionStatus).toHaveBeenCalledWith(SESSION_ID, {
-      status: 'cancelled',
+    expect(updateGameSessionStatus).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, {
+      status: 'completed',
     });
     expect(onRefresh).toHaveBeenCalled();
   });
 
-  it('失敗したら toast.error を呼び出す', async () => {
+  it('できない状態では API を呼ばない', async () => {
     // Arrange
-    setupAuthAs(HOST_USER_ID);
-    vi.mocked(updateGameSessionStatus).mockRejectedValue(new Error('fail'));
-    const gameSession = ref(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
-    );
-    const { cancelSession } = useGameSessionStatus(
-      SESSION_ID,
-      gameSession,
-      vi.fn(),
+    const { completeGameSession } = setup(
+      makeGameSession({ status: GameSessionStatus.completed }),
     );
 
     // Act
-    await cancelSession();
+    await completeGameSession();
 
     // Assert
-    expect(mockToastError).toHaveBeenCalled();
+    expect(updateGameSessionStatus).not.toHaveBeenCalled();
+  });
+
+  it('失敗すると toast.error を出す', async () => {
+    // Arrange
+    vi.mocked(updateGameSessionStatus).mockRejectedValue(new Error('boom'));
+    const { completeGameSession, onRefresh } = setup(makeGameSession());
+
+    // Act
+    await completeGameSession();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalledWith('完了への変更に失敗しました');
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('cancelGameSession', () => {
+  it('API を呼んで onRefresh を実行する', async () => {
+    // Arrange
+    vi.mocked(updateGameSessionStatus).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof updateGameSessionStatus>>,
+    );
+    const { cancelGameSession, onRefresh } = setup(makeGameSession());
+
+    // Act
+    await cancelGameSession();
+
+    // Assert
+    expect(updateGameSessionStatus).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, {
+      status: 'cancelled',
+    });
+    expect(onRefresh).toHaveBeenCalled();
+  });
+});
+
+describe('removeGameSession', () => {
+  it('削除に成功するとロビー詳細へ戻る', async () => {
+    // Arrange
+    vi.mocked(deleteGameSession).mockResolvedValue(undefined);
+    const { removeGameSession } = setup(
+      makeGameSession({ status: GameSessionStatus.cancelled }),
+    );
+
+    // Act
+    await removeGameSession();
+
+    // Assert
+    expect(deleteGameSession).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
+    expect(mockToastSuccess).toHaveBeenCalledWith('開催を削除しました');
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      name: 'lobbies-detail',
+      params: { lobbyId: LOBBY_ID },
+    });
+  });
+
+  it('削除できない状態では API を呼ばない', async () => {
+    // Arrange
+    const { removeGameSession } = setup(
+      makeGameSession({ seats: [makeSeat(OTHER_USER_ID)] }),
+    );
+
+    // Act
+    await removeGameSession();
+
+    // Assert
+    expect(deleteGameSession).not.toHaveBeenCalled();
+  });
+
+  it('失敗すると toast.error を出し、遷移しない', async () => {
+    // Arrange
+    vi.mocked(deleteGameSession).mockRejectedValue(new Error('boom'));
+    const { removeGameSession } = setup(
+      makeGameSession({ status: GameSessionStatus.cancelled }),
+    );
+
+    // Act
+    await removeGameSession();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalledWith('開催の削除に失敗しました');
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 });

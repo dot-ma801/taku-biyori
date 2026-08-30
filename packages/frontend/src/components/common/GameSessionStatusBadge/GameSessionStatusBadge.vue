@@ -10,18 +10,17 @@ type Variant = 'muted' | 'success' | 'error';
 type Appearance = { label: string; variant: Variant };
 
 /**
- * 卓が取りうるステータスの表示定義。
+ * 開催が取りうるステータスの表示定義（design-v2 §4-2 / §2-2）。
  *
- * `open`（募集中）は募集枠（lobby）へ移管済みで卓では導出されず、公開遷移
- * （`draft → open`）のリクエスト値としてのみ残るため表示しない。
- * 導出されないステータスが渡ってもバッジを描画しないよう、
- * 「キーが無いことがありうる」ルックアップとして Map で持つ。
+ * v2 で導出されるのは4つだけ。`draft` / `open` / `confirmed` は公開と募集が
+ * ロビーの関心事へ移ったため導出されない。移行期間中は enum に旧値が残るので、
+ * 「キーが無いことがありうる」ルックアップとして Map で持ち、
+ * 導出されない値が渡ってもバッジを描画しない。
  */
 const APPEARANCE_MAP = new Map<GameSessionStatus, Appearance>([
-  [GameSessionStatus.draft, { label: '非公開', variant: 'muted' }],
-  [GameSessionStatus.confirmed, { label: '実施前', variant: 'success' }],
-  [GameSessionStatus.today, { label: '当日', variant: 'error' }],
-  [GameSessionStatus.completed, { label: '通過済み', variant: 'muted' }],
+  [GameSessionStatus.scheduled, { label: '開催予定', variant: 'success' }],
+  [GameSessionStatus.today, { label: '本日開催', variant: 'error' }],
+  [GameSessionStatus.completed, { label: '完了', variant: 'muted' }],
   [GameSessionStatus.cancelled, { label: '中止', variant: 'error' }],
 ]);
 

@@ -1,26 +1,18 @@
 <script setup lang="ts">
 defineOptions({ name: 'SessionActionBar' });
-import {
-  UserRoundPlus,
-  UserRoundMinus,
-  SquarePen,
-  Globe,
-  Trophy,
-  Trash,
-  XCircle,
-} from '@lucide/vue';
+import { SquarePen, Trophy, Trash, XCircle } from '@lucide/vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import BaseButton from '@/components/button/BaseButton.vue';
 import DeleteDialog from '@/features/GameSession/Detail/Dialog/DeleteDialog.vue';
 import CancelSessionDialog from '@/features/GameSession/Detail/Dialog/CancelSessionDialog.vue';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
-import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
-import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
+import type { GameSessionDetailModel } from '@/models/game-session';
 
 const props = defineProps<{
+  lobbyId: string;
   gameSessionId: string;
-  gameSession: LegacyGameSessionDetail | null;
+  gameSession: GameSessionDetailModel | null;
 }>();
 
 const emit = defineEmits<{
@@ -36,28 +28,15 @@ const onRefresh = () => emit('sessionChanged');
 
 const {
   isHost,
-  canPublish,
   canComplete,
   canCancel,
   canDelete,
   loading: loadingStatus,
-  publishSession,
-  completeSession,
-  cancelSession,
-  deleteSession,
+  completeGameSession,
+  cancelGameSession,
+  removeGameSession,
 } = useGameSessionStatus(
-  props.gameSessionId,
-  () => props.gameSession,
-  onRefresh,
-);
-
-const {
-  canJoin,
-  canLeave,
-  join: joinUser,
-  leave,
-  loading: loadingMember,
-} = useGameSessionMembership(
+  props.lobbyId,
   props.gameSessionId,
   () => props.gameSession,
   onRefresh,
@@ -66,7 +45,7 @@ const {
 function onClickEdit() {
   router.push({
     name: 'game-sessions-edit',
-    params: { gameSessionId: props.gameSessionId },
+    params: { lobbyId: props.lobbyId, gameSessionId: props.gameSessionId },
   });
 }
 </script>
@@ -87,23 +66,15 @@ function onClickEdit() {
       variant="secondary"
       @click="onClickEdit"
     >
-      セッション編集
-    </BaseButton>
-    <BaseButton
-      v-if="canPublish"
-      :left-icon="Globe"
-      :loading="loadingStatus"
-      @click="publishSession"
-    >
-      公開
+      開催を編集
     </BaseButton>
     <BaseButton
       v-if="canComplete"
       :left-icon="Trophy"
       :loading="loadingStatus"
-      @click="completeSession"
+      @click="completeGameSession"
     >
-      セッション完了！
+      開催を完了する
     </BaseButton>
     <BaseButton
       v-if="canCancel"
@@ -114,28 +85,11 @@ function onClickEdit() {
     >
       開催を中止する
     </BaseButton>
-    <BaseButton
-      v-if="canJoin"
-      :left-icon="UserRoundPlus"
-      :loading="loadingMember"
-      @click="joinUser"
-    >
-      参加する
-    </BaseButton>
-    <BaseButton
-      v-if="canLeave"
-      :left-icon="UserRoundMinus"
-      variant="secondary"
-      :loading="loadingMember"
-      @click="leave"
-    >
-      退出する
-    </BaseButton>
   </div>
-  <DeleteDialog v-model="deleteDialogModel" @delete="deleteSession" />
+  <DeleteDialog v-model="deleteDialogModel" @delete="removeGameSession" />
   <CancelSessionDialog
     v-model="cancelSessionDialogModel"
-    @cancel="cancelSession"
+    @cancel="cancelGameSession"
   />
 </template>
 

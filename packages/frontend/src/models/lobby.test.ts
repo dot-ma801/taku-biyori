@@ -141,10 +141,15 @@ describe('toLobbyModel', () => {
 });
 
 describe('toLobbyDetailModel', () => {
+  const schedulePollSummaryDto = {
+    id: '99999999-9999-9999-9999-999999999999',
+    createdAt: '2026-08-15T00:00:00.000Z',
+  };
+
   const detailDto: LobbyDetail = {
     ...lobbyDto,
     entries: [entryDto],
-    schedulePolls: [],
+    schedulePolls: [schedulePollSummaryDto],
   };
 
   it('entries をそのまま model に移す', () => {
@@ -181,6 +186,31 @@ describe('toLobbyDetailModel', () => {
     // Assert
     expect(model.title).toBe('蒼き月の夜卓');
     expect(model.createdAt).toEqual(new Date('2026-08-01T10:00:00.000Z'));
+  });
+
+  it('schedulePolls を model に変換する（createdAt は Date になる）', () => {
+    // Arrange / Act
+    const model = toLobbyDetailModel(detailDto);
+
+    // Assert
+    expect(model.schedulePolls).toHaveLength(1);
+    expect(model.schedulePolls[0]).toMatchObject({
+      id: schedulePollSummaryDto.id,
+    });
+    expect(model.schedulePolls[0]?.createdAt).toEqual(
+      new Date('2026-08-15T00:00:00.000Z'),
+    );
+  });
+
+  it('schedulePolls が空配列のロビーはそのまま空配列を持つ', () => {
+    // Arrange
+    const dto: LobbyDetail = { ...detailDto, schedulePolls: [] };
+
+    // Act
+    const model = toLobbyDetailModel(dto);
+
+    // Assert
+    expect(model.schedulePolls).toEqual([]);
   });
 });
 

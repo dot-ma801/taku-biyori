@@ -19,7 +19,6 @@ import postgres from 'postgres';
 import { assertDistinctFromDatabaseUrl } from '@/system/infrastructure/database/assert-distinct-database-url';
 import { user } from '@/system/infrastructure/database/schema';
 import { lobbies } from '@/system/infrastructure/database/lobby-schema';
-import { gameSessions } from '@/system/infrastructure/database/game-session-schema';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -100,9 +99,7 @@ const cleanupLeakedTestRows = async (): Promise<void> => {
     }
 
     await db.transaction(async (tx) => {
-      await tx
-        .delete(gameSessions)
-        .where(inArray(gameSessions.hostUserId, leakedUserIds));
+      // 開催はロビーにぶら下がるようになったため ON DELETE CASCADE で一緒に消える
       await tx
         .delete(lobbies)
         .where(inArray(lobbies.hostUserId, leakedUserIds));

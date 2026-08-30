@@ -4,6 +4,9 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/Lobby/Detail/Schedule/ScheduleTable.vue';
 import ScheduleCardList from '@/features/Lobby/Detail/Schedule/ScheduleCardList.vue';
+import RestartSchedulePoll from '@/features/Lobby/Detail/Schedule/RestartSchedulePoll.vue';
+import CandidateDateEditSection from '@/features/Lobby/Detail/Schedule/CandidateDateEditSection.vue';
+import SchedulePollHistory from '@/features/Lobby/Detail/Schedule/SchedulePollHistory.vue';
 import { useSchedulePoll } from '@/features/Lobby/Detail/Schedule/useSchedulePoll';
 import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSchedule';
 import { isGuestMember } from '@taku-biyori/shared';
@@ -21,6 +24,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   // 送信時に日程調整が最新でなくなっていた（409）とき、親にロビー詳細の再取得を依頼する
   stale: [];
+  // 新しい日程調整を開始した（やり直す）。schedulePolls が変わり最新の調整 id が
+  // 切り替わるため、親にロビー詳細の再取得を依頼する
+  restarted: [];
 }>();
 
 const { myMemberId: myEntryId } = useMyLobbyMemberId(
@@ -30,6 +36,10 @@ const { myMemberId: myEntryId } = useMyLobbyMemberId(
 // ロビー詳細が持つ最新の日程調整 id。調整が1件も無ければ null
 // （<template> に式を書かず computed に切り出す：CLAUDE.md ルール）
 const latestPollId = computed(() => props.lobby.schedulePolls[0]?.id ?? null);
+
+// 過去の調整（最新以外）。新しい順の先頭（最新）を除いた残り
+const historyPolls = computed(() => props.lobby.schedulePolls.slice(1));
+const hasHistory = computed(() => historyPolls.value.length > 0);
 
 const {
   candidateDates,
@@ -208,7 +218,33 @@ const canEditSchedule = computed(
           </BaseButton>
         </template>
       </div>
+
+      <div class="host-actions">
+        <CandidateDateEditSection
+          :lobby-id="props.lobby.id"
+          :poll-id="latestPollId"
+          :host-user-id="props.lobby.hostUserId"
+          :status="props.lobby.status"
+          :candidate-dates="candidateDates"
+          @updated="refetchPoll"
+          @stale="emit('stale')"
+        />
+        <RestartSchedulePoll
+          :lobby-id="props.lobby.id"
+          :host-user-id="props.lobby.hostUserId"
+          :status="props.lobby.status"
+          @created="emit('restarted')"
+        />
+      </div>
     </template>
+
+    <SchedulePollHistory
+      v-if="hasHistory"
+      class="history"
+      :lobby-id="props.lobby.id"
+      :history="historyPolls"
+      :entries="props.lobby.entries"
+    />
   </BaseCard>
 </template>
 
@@ -235,6 +271,20 @@ const canEditSchedule = computed(
   > * {
     margin: 0 var(--space-1);
   }
+}
+
+/* ホスト向け導線（候補日を編集・やり直す）。メンバー向けの .actions とは別に積む */
+.host-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+.history {
+  margin-top: var(--space-4);
 }
 
 /* 768px 以下ではテーブルをカード表示にフォールバックする */

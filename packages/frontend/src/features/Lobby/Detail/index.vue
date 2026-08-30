@@ -59,7 +59,7 @@ const location = computed(() => lobby.value?.location ?? '未設定');
       v-if="lobby.description"
       :text="lobby.description ?? undefined"
     />
-    <ScheduleDisplay :lobby="lobby" @stale="fetch" />
+    <ScheduleDisplay :lobby="lobby" @stale="fetch" @restarted="fetch" />
     <MemberDisplay :lobby="lobby" @member-removed="removeEntry" />
   </div>
 </template>

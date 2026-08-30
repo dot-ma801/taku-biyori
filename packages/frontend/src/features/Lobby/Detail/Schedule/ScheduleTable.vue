@@ -9,15 +9,22 @@ import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
 
-const props = defineProps<{
-  candidateDates: CandidateDateModel[];
-  members: LobbyEntryModel[];
-  myEntryId: string | null;
-  // いま編集可能なメンバー列の id 一覧
-  editableEntryIds: string[];
-  // 編集中ドラフト。`${entryId}::${dateId}` → 回答
-  draftAnswers: Map<string, Answer>;
-}>();
+const props = withDefaults(
+  defineProps<{
+    candidateDates: CandidateDateModel[];
+    members: LobbyEntryModel[];
+    myEntryId: string | null;
+    // いま編集可能なメンバー列の id 一覧
+    editableEntryIds: string[];
+    // 編集中ドラフト。`${entryId}::${dateId}` → 回答
+    draftAnswers: Map<string, Answer>;
+    // 脱退済みメンバーの id 一覧。過去の調整の履歴表示でのみ渡す
+    // （脱退者も含む全件を表示しつつ、その列だけグレー表示にするため）。
+    // 通常の表示（最新の調整）では渡さない＝既定の空配列のまま
+    leftEntryIds?: string[];
+  }>(),
+  { leftEntryIds: () => [] },
+);
 
 const emit = defineEmits<{
   cellClick: [entryId: string, dateId: string];
@@ -43,6 +50,11 @@ const emptyRowColspan = computed(
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
 function isMe(member: LobbyEntryModel): boolean {
   return member.id === props.myEntryId;
+}
+
+// 脱退済みメンバーかどうか判定（過去の調整の履歴表示で列をグレー表示するため）
+function isLeftMember(member: LobbyEntryModel): boolean {
+  return props.leftEntryIds.includes(member.id);
 }
 
 // このメンバー列のセルがいま編集可能か
@@ -89,9 +101,11 @@ function onCellKeydown(
             :key="member.id"
             scope="col"
             class="th th--member"
+            :class="{ 'th--left': isLeftMember(member) }"
           >
             {{ memberDisplayName(member) }}
             <span v-if="isMe(member)" class="you-label">（あなた）</span>
+            <span v-if="isLeftMember(member)" class="left-label">（脱退）</span>
           </th>
         </tr>
       </thead>
@@ -105,7 +119,10 @@ function onCellKeydown(
             v-for="member in members"
             :key="member.id"
             class="td td--answer"
-            :class="{ 'td--editing': isCellEditable(member) }"
+            :class="{
+              'td--editing': isCellEditable(member),
+              'td--left': isLeftMember(member),
+            }"
             v-bind="editableCellAttrs(member)"
             @click="onCellClick(member, date.id)"
             @keydown="onCellKeydown($event, member, date.id)"
@@ -211,6 +228,19 @@ function onCellKeydown(
   font-weight: 400;
   color: var(--color-text-muted);
   display: block;
+}
+
+.left-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  display: block;
+}
+
+/* 脱退済みメンバーの列は薄く表示する（過去の調整の履歴のみで使う） */
+.th--left,
+.td--left {
+  opacity: 0.5;
 }
 
 .tr {

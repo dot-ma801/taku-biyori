@@ -10,15 +10,22 @@ import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
 
-const props = defineProps<{
-  candidateDates: CandidateDateModel[];
-  members: LobbyEntryModel[];
-  myEntryId: string | null;
-  // いま編集可能なメンバー列の id 一覧
-  editableEntryIds: string[];
-  // 編集中ドラフト。`${entryId}::${dateId}` → 回答
-  draftAnswers: Map<string, Answer>;
-}>();
+const props = withDefaults(
+  defineProps<{
+    candidateDates: CandidateDateModel[];
+    members: LobbyEntryModel[];
+    myEntryId: string | null;
+    // いま編集可能なメンバー列の id 一覧
+    editableEntryIds: string[];
+    // 編集中ドラフト。`${entryId}::${dateId}` → 回答
+    draftAnswers: Map<string, Answer>;
+    // 脱退済みメンバーの id 一覧。過去の調整の履歴表示でのみ渡す
+    // （脱退者も含む全件を表示しつつ、そのチップだけグレー表示にするため）。
+    // 通常の表示（最新の調整）では渡さない＝既定の空配列のまま
+    leftEntryIds?: string[];
+  }>(),
+  { leftEntryIds: () => [] },
+);
 
 const emit = defineEmits<{
   cellClick: [entryId: string, dateId: string];
@@ -52,6 +59,11 @@ function myAnswer(date: CandidateDateModel): Answer | null {
 // このメンバーのチップがいま編集可能か
 function isChipEditable(entryId: string): boolean {
   return props.editableEntryIds.includes(entryId);
+}
+
+// 脱退済みメンバーかどうか判定（過去の調整の履歴表示でチップをグレー表示するため）
+function isLeftMember(entryId: string): boolean {
+  return props.leftEntryIds.includes(entryId);
 }
 
 // 編集可能なチップ・回答行に付与するアクセシビリティ属性
@@ -106,7 +118,10 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
           class="chip"
           :class="[
             chipAnswerClass(date, member.id),
-            { 'chip--editing': isChipEditable(member.id) },
+            {
+              'chip--editing': isChipEditable(member.id),
+              'chip--left': isLeftMember(member.id),
+            },
           ]"
           v-bind="editableAttrs(isChipEditable(member.id))"
           @click="onChipClick(member.id, date.id)"
@@ -120,6 +135,9 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
           <span class="chip-name" :title="memberDisplayName(member)">{{
             memberDisplayName(member)
           }}</span>
+          <span v-if="isLeftMember(member.id)" class="chip-left-label"
+            >（脱退）</span
+          >
           <AnswerCell :answer="getAnswer(date, member.id)" />
         </span>
       </div>
@@ -218,6 +236,16 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 
 .chip--none {
   opacity: 0.45;
+}
+
+/* 脱退済みメンバーのチップは薄く表示する（過去の調整の履歴のみで使う） */
+.chip--left {
+  opacity: 0.5;
+}
+
+.chip-left-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 
 .chip--editing {

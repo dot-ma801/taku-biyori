@@ -14,25 +14,21 @@ import {
 } from '@/utils/pendingCandidateDates';
 import { computed } from 'vue';
 
-defineProps<{
-  /**
-   * 候補日入力を表示するか。ロビー作成フローでは true、編集フローでは false。
-   * 候補日は日程調整（SchedulePoll）の管轄に移り、編集フローでは詳細画面の
-   * 「候補日を編集」導線（Schedule/CandidateDateEditor.vue）に一本化した
-   * （issue #114）。`PATCH /api/lobbies/{id}` も候補日を変更しない契約になっている。
-   */
-  showCandidateDates: boolean;
-}>();
-
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 /**
- * 候補日リスト。ローカル管理（pendingDates）とし、ロビー作成フローで
- * 呼び出し元が一括で API に送信する（`showCandidateDates` が false のときは未使用）。
+ * 候補日リスト。ローカル管理（pendingDates）とし、
+ * 作成・更新のいずれのフローでも呼び出し元が一括で API に送信する。
  */
 const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
+const props = withDefaults(
+  defineProps<{
+    showCandidateDates?: boolean;
+  }>(),
+  { showCandidateDates: true },
+);
 
 // 日付ピッカーは日付の配列だけを扱う。ひとこととの突き合わせは composable に委ねる。
 // 候補日への入力（ユーザー操作起点の set のみ）で開催日を破棄する。
@@ -86,6 +82,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
     <template #default>
       <div class="contents">
         <BaseDatePicker
+          v-if="props.showCandidateDates"
           v-model="openUntil"
           label="募集締め切り日"
           disable-past
@@ -93,7 +90,6 @@ function updateTimeLabel(date: string, timeLabel: string) {
         ></BaseDatePicker>
 
         <BaseDatePicker
-          v-if="showCandidateDates"
           label="候補日"
           multiple
           disable-past
@@ -102,48 +98,46 @@ function updateTimeLabel(date: string, timeLabel: string) {
         ></BaseDatePicker>
       </div>
 
-      <template v-if="showCandidateDates">
-        <ul v-if="hasDates" class="dates">
-          <li v-for="row in dateRows" :key="row.date" class="date-row">
-            <!--
-              日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
-              関連付けられるので、BaseTextBox に label を渡さなくても
-              アクセシブルネームが付く（日付をクリックで入力欄にフォーカスも入る）。
-              削除ボタンは label の外に置く（中に入れると押下で入力欄にフォーカスが移る）。
-            -->
-            <label class="date-field">
-              <span class="date-text">{{ row.dateLabel }}</span>
-              <BaseTextBox
-                class="note-input"
-                :model-value="row.timeLabel"
-                placeholder="例）19:00〜 / 午後から / 終日OK"
-                :rules="timeLabelRules"
-                @update:model-value="updateTimeLabel(row.date, $event)"
-              />
-            </label>
-            <span
-              class="counter"
-              :class="{ 'counter--over': row.counter.isOver }"
-            >
-              {{ row.counter.label }}
-            </span>
-            <!-- アイコンのみのボタン。ラベル文字列は aria-label で補う
-                 （親が渡した aria-label は BaseButton 側の指定より優先される） -->
-            <BaseButton
-              class="remove"
-              variant="ghost"
-              size="sm"
-              :left-icon="X"
-              :aria-label="`${row.dateLabel} を候補日から外す`"
-              @click="removeDate(row.date)"
+      <ul v-if="props.showCandidateDates && hasDates" class="dates">
+        <li v-for="row in dateRows" :key="row.date" class="date-row">
+          <!--
+            日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
+            関連付けられるので、BaseTextBox に label を渡さなくても
+            アクセシブルネームが付く（日付をクリックで入力欄にフォーカスも入る）。
+            削除ボタンは label の外に置く（中に入れると押下で入力欄にフォーカスが移る）。
+          -->
+          <label class="date-field">
+            <span class="date-text">{{ row.dateLabel }}</span>
+            <BaseTextBox
+              class="note-input"
+              :model-value="row.timeLabel"
+              placeholder="例）19:00〜 / 午後から / 終日OK"
+              :rules="timeLabelRules"
+              @update:model-value="updateTimeLabel(row.date, $event)"
             />
-          </li>
-        </ul>
+          </label>
+          <span
+            class="counter"
+            :class="{ 'counter--over': row.counter.isOver }"
+          >
+            {{ row.counter.label }}
+          </span>
+          <!-- アイコンのみのボタン。ラベル文字列は aria-label で補う
+               （親が渡した aria-label は BaseButton 側の指定より優先される） -->
+          <BaseButton
+            class="remove"
+            variant="ghost"
+            size="sm"
+            :left-icon="X"
+            :aria-label="`${row.dateLabel} を候補日から外す`"
+            @click="removeDate(row.date)"
+          />
+        </li>
+      </ul>
 
-        <p class="info">
-          ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
-        </p>
-      </template>
+      <p v-if="props.showCandidateDates" class="info">
+        ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
+      </p>
     </template>
   </BaseCard>
 </template>

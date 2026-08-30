@@ -19,6 +19,7 @@ const {
   loading,
   errorMessages,
   fetchError,
+  hasSchedulePoll,
   fetchInitialValues,
   submit,
   cancel,
@@ -53,6 +54,7 @@ const {
       :show-candidate-dates="false"
       :loading="loading"
       :error-messages="errorMessages"
+      :has-schedule-poll="hasSchedulePoll"
       @submit="submit"
       @cancel="cancel"
     ></LobbyEdit>

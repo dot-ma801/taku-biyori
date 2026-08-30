@@ -13,8 +13,7 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessages: string[];
-  /** 候補日入力を表示するか。ロビー作成フローでは true、編集フローでは false（issue #114） */
-  showCandidateDates: boolean;
+  hasSchedulePoll?: boolean;
 }>();
 
 const title = defineModel<string>('title', { default: '' });
@@ -56,7 +55,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:pendingDates="pendingDates"
-      :show-candidate-dates="showCandidateDates"
+      :show-candidate-dates="props.hasSchedulePoll"
     />
 
     <div v-if="hasErrors" class="error-area">

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyDetail, LobbyMember } from '@taku-biyori/shared';
+import type { LobbyDetailModel, LobbyEntryModel } from '@/models/lobby';
 
 vi.mock('@/api/lobby', () => ({
   getLobby: vi.fn(),
@@ -18,17 +18,21 @@ import { getLobby } from '@/api/lobby';
 
 const LOBBY_ID = 'lobby-1';
 
-function makeMember(id: string): LobbyMember {
+function makeEntry(id: string, leftAt: Date | null = null): LobbyEntryModel {
   return {
     id,
     userId: null,
     userName: null,
     guestName: 'ゲスト',
-    joinedAt: '2024-01-01T00:00:00Z',
+    joinedAt: new Date('2024-01-01T00:00:00Z'),
+    leftAt,
   };
 }
 
-function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
+function makeLobby(
+  overrides: Partial<LobbyDetailModel> & { entries?: LobbyEntryModel[] } = {},
+): LobbyDetailModel {
+  const entries = overrides.entries ?? [];
   return {
     id: LOBBY_ID,
     title: 'テストロビー',
@@ -36,20 +40,19 @@ function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
     scenarioName: null,
     location: null,
     status: LobbyStatus.open,
-    isPublished: true,
     maxPlayers: null,
     openUntil: null,
-    cancelledAt: null,
     hostUserId: 'host-1',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [],
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    updatedAt: new Date('2024-01-01T00:00:00Z'),
     ...overrides,
+    entries,
+    activeEntries: entries.filter((entry) => entry.leftAt === null),
   };
 }
 
 // lobby を初期ロード済みの状態にした composable を返すヘルパー
-async function setupLoaded(lobby: LobbyDetail) {
+async function setupLoaded(lobby: LobbyDetailModel) {
   vi.mocked(getLobby).mockResolvedValue(lobby);
   const detail = useGetLobbyDetail(LOBBY_ID);
   await detail.fetch();
@@ -63,7 +66,7 @@ beforeEach(() => {
 describe('fetch', () => {
   it('取得したロビーを lobby に格納する', async () => {
     // Arrange
-    const lobby = makeLobby({ members: [makeMember('m1')] });
+    const lobby = makeLobby({ entries: [makeEntry('m1')] });
 
     // Act
     const { lobby: state } = await setupLoaded(lobby);
@@ -113,103 +116,118 @@ describe('patchLobby', () => {
   });
 });
 
-describe('addMember', () => {
-  it('members の末尾に新メンバーを追加する', async () => {
+describe('addEntry', () => {
+  it('entries の末尾に新しい参加を追加する', async () => {
     // Arrange
-    const { lobby, addMember } = await setupLoaded(
-      makeLobby({ members: [makeMember('m1')] }),
+    const { lobby, addEntry } = await setupLoaded(
+      makeLobby({ entries: [makeEntry('m1')] }),
     );
-    const newMember = makeMember('m2');
+    const newMember = makeEntry('m2');
 
     // Act
-    addMember(newMember);
+    addEntry(newMember);
 
     // Assert
-    expect(lobby.value?.members.map((m) => m.id)).toEqual(['m1', 'm2']);
+    expect(lobby.value?.entries.map((m) => m.id)).toEqual(['m1', 'm2']);
   });
 
   it('既存メンバーを書き換えず新しい配列を生成する（不変更新）', async () => {
     // Arrange
-    const { lobby, addMember } = await setupLoaded(
-      makeLobby({ members: [makeMember('m1')] }),
+    const { lobby, addEntry } = await setupLoaded(
+      makeLobby({ entries: [makeEntry('m1')] }),
     );
-    const before = lobby.value!.members;
+    const before = lobby.value!.entries;
 
     // Act
-    addMember(makeMember('m2'));
+    addEntry(makeEntry('m2'));
 
     // Assert
-    expect(lobby.value?.members).not.toBe(before);
+    expect(lobby.value?.entries).not.toBe(before);
     expect(before.map((m) => m.id)).toEqual(['m1']);
   });
 
   it('lobby 未ロード時は何もしない', () => {
     // Arrange: fetch せずに呼ぶ
-    const { lobby, addMember } = useGetLobbyDetail(LOBBY_ID);
+    const { lobby, addEntry } = useGetLobbyDetail(LOBBY_ID);
 
     // Act
-    addMember(makeMember('m1'));
+    addEntry(makeEntry('m1'));
 
     // Assert
     expect(lobby.value).toBeNull();
   });
 });
 
-describe('removeMember', () => {
+describe('removeEntry', () => {
   it('指定 id のメンバーを削除する', async () => {
     // Arrange
-    const { lobby, removeMember } = await setupLoaded(
-      makeLobby({ members: [makeMember('m1'), makeMember('m2')] }),
+    const { lobby, removeEntry } = await setupLoaded(
+      makeLobby({ entries: [makeEntry('m1'), makeEntry('m2')] }),
     );
 
     // Act
-    removeMember('m1');
+    removeEntry('m1');
 
     // Assert
-    expect(lobby.value?.members.map((m) => m.id)).toEqual(['m2']);
+    expect(lobby.value?.entries.map((m) => m.id)).toEqual(['m2']);
   });
 
   it('存在しない id のときはメンバーを変更しない', async () => {
     // Arrange
-    const { lobby, removeMember } = await setupLoaded(
-      makeLobby({ members: [makeMember('m1')] }),
+    const { lobby, removeEntry } = await setupLoaded(
+      makeLobby({ entries: [makeEntry('m1')] }),
     );
 
     // Act
-    removeMember('not-exist');
+    removeEntry('not-exist');
 
     // Assert
-    expect(lobby.value?.members.map((m) => m.id)).toEqual(['m1']);
+    expect(lobby.value?.entries.map((m) => m.id)).toEqual(['m1']);
   });
 
   it('lobby 未ロード時は何もしない', () => {
     // Arrange
-    const { lobby, removeMember } = useGetLobbyDetail(LOBBY_ID);
+    const { lobby, removeEntry } = useGetLobbyDetail(LOBBY_ID);
 
     // Act
-    removeMember('m1');
+    removeEntry('m1');
 
     // Assert
     expect(lobby.value).toBeNull();
   });
 });
 
-describe('memberCount', () => {
-  it('members の件数を返す', async () => {
+describe('activeEntryCount', () => {
+  it('在籍中の参加者の件数を返す', async () => {
     // Arrange
-    const { memberCount } = await setupLoaded(
-      makeLobby({ members: [makeMember('m1'), makeMember('m2')] }),
+    const { activeEntryCount } = await setupLoaded(
+      makeLobby({ entries: [makeEntry('m1'), makeEntry('m2')] }),
     );
 
     // Act & Assert
-    expect(memberCount.value).toBe(2);
+    expect(activeEntryCount.value).toBe(2);
+  });
+
+  it('脱退済みの参加者は数えない', async () => {
+    // Arrange
+    const { activeEntryCount } = await setupLoaded(
+      makeLobby({
+        entries: [
+          makeEntry('m1'),
+          makeEntry('m2', new Date('2026-08-10T00:00:00Z')),
+        ],
+      }),
+    );
+
+    // Act & Assert
+    expect(activeEntryCount.value).toBe(1);
   });
 
   it('lobby 未ロード時は 0 を返す', () => {
     // Arrange
-    const { memberCount } = useGetLobbyDetail(LOBBY_ID);
+    const { activeEntryCount } = useGetLobbyDetail(LOBBY_ID);
 
     // Act & Assert
-    expect(memberCount.value).toBe(0);
+    expect(activeEntryCount.value).toBe(0);
   });
 });

@@ -17,30 +17,51 @@ import type {
 } from '@taku-biyori/shared';
 import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
+import type {
+  LobbyDetailModel,
+  LobbyEntryModel,
+  LobbyListItemModel,
+  LobbyModel,
+} from '@/models/lobby';
+import {
+  toLobbyDetailModel,
+  toLobbyEntryModel,
+  toLobbyListItemModel,
+  toLobbyModel,
+} from '@/models/lobby';
 
-export async function listLobbies(): Promise<LobbyListItem[]> {
-  return (await apiRequest<LobbyListItem[]>('/api/lobbies'))!;
+// この層が DTO と model の境界。ここより内側（composable / component）は
+// `@taku-biyori/shared` のレスポンス型を見ない（issue #113 の規約）。
+
+export async function listLobbies(): Promise<LobbyListItemModel[]> {
+  const dto = (await apiRequest<LobbyListItem[]>('/api/lobbies'))!;
+  return dto.map(toLobbyListItemModel);
 }
 
-export async function createLobby(input: CreateLobbyInput): Promise<Lobby> {
-  return (await apiRequest<Lobby>('/api/lobbies', {
+export async function createLobby(
+  input: CreateLobbyInput,
+): Promise<LobbyModel> {
+  const dto = (await apiRequest<Lobby>('/api/lobbies', {
     method: 'POST',
     body: input,
   }))!;
+  return toLobbyModel(dto);
 }
 
-export async function getLobby(id: string): Promise<LobbyDetail> {
-  return (await apiRequest<LobbyDetail>(`/api/lobbies/${id}`))!;
+export async function getLobby(id: string): Promise<LobbyDetailModel> {
+  const dto = (await apiRequest<LobbyDetail>(`/api/lobbies/${id}`))!;
+  return toLobbyDetailModel(dto);
 }
 
 export async function updateLobby(
   id: string,
   input: UpdateLobbyInput,
-): Promise<Lobby> {
-  return (await apiRequest<Lobby>(`/api/lobbies/${id}`, {
+): Promise<LobbyModel> {
+  const dto = (await apiRequest<Lobby>(`/api/lobbies/${id}`, {
     method: 'PATCH',
     body: input,
   }))!;
+  return toLobbyModel(dto);
 }
 
 export async function listLobbyAvailabilityDates(
@@ -75,11 +96,12 @@ export async function updateLobbyAvailabilityDateResponse(
 export async function joinLobby(
   id: string,
   input: JoinLobbyInput,
-): Promise<LobbyMember> {
-  return (await apiRequest<LobbyMember>(`/api/lobbies/${id}/members`, {
+): Promise<LobbyEntryModel> {
+  const dto = (await apiRequest<LobbyMember>(`/api/lobbies/${id}/members`, {
     method: 'POST',
     body: input,
   }))!;
+  return toLobbyEntryModel(dto);
 }
 
 export function leaveLobby(id: string, memberId: string): Promise<void> {
@@ -91,11 +113,12 @@ export function leaveLobby(id: string, memberId: string): Promise<void> {
 export async function updateLobbyStatus(
   id: string,
   input: UpdateLobbyStatusInput,
-): Promise<Lobby> {
-  return (await apiRequest<Lobby>(`/api/lobbies/${id}/status`, {
+): Promise<LobbyModel> {
+  const dto = (await apiRequest<Lobby>(`/api/lobbies/${id}/status`, {
     method: 'PATCH',
     body: input,
   }))!;
+  return toLobbyModel(dto);
 }
 
 // ---------- ゲスト（完全匿名）フロー ----------
@@ -116,12 +139,16 @@ export async function joinLobbyAsGuest(
   id: string,
   token: string,
   input: JoinLobbyAsGuestInput,
-): Promise<LobbyMember> {
-  return (await apiRequest<LobbyMember>(`/api/lobbies/${id}/guest-members`, {
-    method: 'POST',
-    body: input,
-    headers: { [GUEST_TOKEN_HEADER]: token },
-  }))!;
+): Promise<LobbyEntryModel> {
+  const dto = (await apiRequest<LobbyMember>(
+    `/api/lobbies/${id}/guest-members`,
+    {
+      method: 'POST',
+      body: input,
+      headers: { [GUEST_TOKEN_HEADER]: token },
+    },
+  ))!;
+  return toLobbyEntryModel(dto);
 }
 
 /**

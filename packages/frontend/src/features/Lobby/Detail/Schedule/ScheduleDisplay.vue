@@ -5,8 +5,8 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/Lobby/Detail/Schedule/ScheduleTable.vue';
 import ScheduleCardList from '@/features/Lobby/Detail/Schedule/ScheduleCardList.vue';
 import { useSchedule } from '@/features/Lobby/Detail/Schedule/useSchedule';
-import type { LobbyDetail } from '@taku-biyori/shared';
 import { isGuestMember } from '@taku-biyori/shared';
+import type { LobbyDetailModel } from '@/models/lobby';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { CalendarCheck, SquarePen, Check, RotateCcw } from '@lucide/vue';
 import { computed } from 'vue';
@@ -15,10 +15,10 @@ import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSched
 import { useMyLobbyMemberId } from '@/features/Lobby/Detail/composables/useMyLobbyMemberId';
 
 const props = defineProps<{
-  lobby: LobbyDetail;
+  lobby: LobbyDetailModel;
 }>();
 
-const { myMemberId } = useMyLobbyMemberId(() => props.lobby.members);
+const { myMemberId } = useMyLobbyMemberId(() => props.lobby.activeEntries);
 
 const {
   availabilityDates,
@@ -67,7 +67,9 @@ const isScheduleEditing = computed(
 const editableMemberIds = computed<string[]>(() => {
   if (isEditing.value && myMemberId.value) return [myMemberId.value];
   if (isEditingGuestSchedule.value) {
-    return props.lobby.members.filter((m) => isGuestMember(m)).map((m) => m.id);
+    return props.lobby.activeEntries
+      .filter((m) => isGuestMember(m))
+      .map((m) => m.id);
   }
   return [];
 });
@@ -141,7 +143,7 @@ const canEditSchedule = computed(
       <div class="schedule-table">
         <ScheduleTable
           :availability-dates="availabilityDates"
-          :members="props.lobby.members"
+          :members="props.lobby.activeEntries"
           :my-member-id="myMemberId"
           :editable-member-ids="editableMemberIds"
           :draft-answers="tableDraftAnswers"
@@ -151,7 +153,7 @@ const canEditSchedule = computed(
       <div class="schedule-cards">
         <ScheduleCardList
           :availability-dates="availabilityDates"
-          :members="props.lobby.members"
+          :members="props.lobby.activeEntries"
           :my-member-id="myMemberId"
           :editable-member-ids="editableMemberIds"
           :draft-answers="tableDraftAnswers"

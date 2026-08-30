@@ -1,11 +1,11 @@
 import { computed, onMounted, ref } from 'vue';
-import type { LobbyListItem } from '@taku-biyori/shared';
 import type { LobbyStatus } from '@taku-biyori/shared';
 import { listLobbies } from '@/api/lobby';
+import type { LobbyListItemModel } from '@/models/lobby';
 
 export const useLobbyList = (statuses?: LobbyStatus[]) => {
-  /** 全募集枠（APIレスポンスそのまま） */
-  const allLobbies = ref<LobbyListItem[]>([]);
+  /** 全募集枠 */
+  const allLobbies = ref<LobbyListItemModel[]>([]);
 
   /** 取得中かどうか */
   const loading = ref(false);

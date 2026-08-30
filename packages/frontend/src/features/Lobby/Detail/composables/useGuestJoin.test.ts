@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { useGuestJoin } from '@/features/Lobby/Detail/composables/useGuestJoin';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyMember } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 
 vi.mock('@/api/lobby', () => ({
   joinLobbyAsGuest: vi.fn(),
@@ -124,7 +124,8 @@ describe('join', () => {
       userId: null,
       userName: null,
       guestName: 'ゲスト太郎',
-      joinedAt: '2026-01-01T00:00:00Z',
+      joinedAt: new Date('2026-01-01T00:00:00Z'),
+      leftAt: null,
     });
     const { guestName, join } = useGuestJoin(
       LOBBY_ID,
@@ -145,12 +146,13 @@ describe('join', () => {
 
   it('成功時に作成されたメンバーを onJoined へ渡し、入力をリセットする', async () => {
     // Arrange
-    const createdMember: LobbyMember = {
+    const createdMember: LobbyEntryModel = {
       id: 'member-guest-1',
       userId: null,
       userName: null,
       guestName: 'ゲスト太郎',
-      joinedAt: '2026-01-01T00:00:00Z',
+      joinedAt: new Date('2026-01-01T00:00:00Z'),
+      leftAt: null,
     };
     vi.mocked(joinLobbyAsGuest).mockResolvedValue(createdMember);
     const onJoined = vi.fn();
@@ -250,7 +252,7 @@ describe('join', () => {
 
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
-    let resolve!: (member: LobbyMember) => void;
+    let resolve!: (member: LobbyEntryModel) => void;
     vi.mocked(joinLobbyAsGuest).mockReturnValue(
       new Promise((r) => {
         resolve = r;
@@ -272,7 +274,8 @@ describe('join', () => {
       userId: null,
       userName: null,
       guestName: 'ゲスト太郎',
-      joinedAt: '2026-01-01T00:00:00Z',
+      joinedAt: new Date('2026-01-01T00:00:00Z'),
+      leftAt: null,
     });
     await first;
 

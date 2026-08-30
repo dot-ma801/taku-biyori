@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyListItem } from '@taku-biyori/shared';
+import type { LobbyListItemModel } from '@/models/lobby';
 
 vi.mock('@/api/lobby', () => ({
   listLobbies: vi.fn(),
@@ -11,19 +11,20 @@ import { useLobbyList } from '@/features/Lobby/List/useLobbyList';
 
 const mockListLobbies = vi.mocked(listLobbies);
 
-function makeLobby(overrides: Partial<LobbyListItem> = {}): LobbyListItem {
+function makeLobby(
+  overrides: Partial<LobbyListItemModel> = {},
+): LobbyListItemModel {
   return {
     id: crypto.randomUUID(),
     title: 'テスト募集枠',
     scenarioName: null,
     status: LobbyStatus.draft,
-    isPublished: false,
     openUntil: null,
     memberCount: 1,
     maxPlayers: null,
     role: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
@@ -63,7 +64,7 @@ describe('useLobbyList', () => {
       // Arrange
       let resolveFetch!: () => void;
       mockListLobbies.mockReturnValue(
-        new Promise<LobbyListItem[]>((resolve) => {
+        new Promise<LobbyListItemModel[]>((resolve) => {
           resolveFetch = () => resolve([]);
         }),
       );

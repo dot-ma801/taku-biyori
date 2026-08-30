@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStatus';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { Lobby, LobbyDetail } from '@taku-biyori/shared';
+import type { LobbyDetailModel, LobbyModel } from '@/models/lobby';
 
 vi.mock('@/api/lobby', () => ({
   updateLobbyStatus: vi.fn(),
@@ -26,29 +26,30 @@ const HOST_USER_ID = 'host-user-id';
 const OTHER_USER_ID = 'other-user-id';
 const LOBBY_ID = 'lobby-id';
 
-function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
+function makeLobby(
+  overrides: Partial<LobbyDetailModel> = {},
+): LobbyDetailModel {
   return {
-    id: LOBBY_ID,
-    title: 'テストロビー',
-    status: LobbyStatus.draft,
-    isPublished: false,
-    hostUserId: HOST_USER_ID,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    members: [],
+    ...makeUpdatedLobby(LobbyStatus.draft),
+    entries: [],
+    activeEntries: [],
     ...overrides,
   };
 }
 
-function makeUpdatedLobby(status: LobbyStatus): Lobby {
+function makeUpdatedLobby(status: LobbyStatus): LobbyModel {
   return {
     id: LOBBY_ID,
     title: 'テストロビー',
+    description: null,
+    scenarioName: null,
+    location: null,
     status,
-    isPublished: true,
+    maxPlayers: null,
+    openUntil: null,
     hostUserId: HOST_USER_ID,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-01-01T00:00:00Z'),
   };
 }
 
@@ -91,7 +92,7 @@ describe('isHost', () => {
   it('lobby が null のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const lobby = ref<LobbyDetail | null>(null);
+    const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
     const { isHost } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -138,7 +139,7 @@ describe('canPublish', () => {
   it('lobby が null のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const lobby = ref<LobbyDetail | null>(null);
+    const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
     const { canPublish } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -185,7 +186,7 @@ describe('canCancel', () => {
   it('lobby が null のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const lobby = ref<LobbyDetail | null>(null);
+    const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
     const { canCancel } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -233,7 +234,7 @@ describe('canEdit', () => {
   it('lobby が null のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const lobby = ref<LobbyDetail | null>(null);
+    const lobby = ref<LobbyDetailModel | null>(null);
 
     // Act
     const { canEdit } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -353,7 +354,7 @@ describe('publishLobby', () => {
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    let resolve!: (v: Lobby) => void;
+    let resolve!: (v: LobbyModel) => void;
     vi.mocked(updateLobbyStatus).mockReturnValue(
       new Promise((r) => {
         resolve = r;
@@ -483,7 +484,7 @@ describe('cancelLobby', () => {
   it('loading 中の重複呼び出しは無視する', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    let resolve!: (v: Lobby) => void;
+    let resolve!: (v: LobbyModel) => void;
     vi.mocked(updateLobbyStatus).mockReturnValue(
       new Promise((r) => {
         resolve = r;

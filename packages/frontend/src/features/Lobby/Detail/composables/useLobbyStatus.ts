@@ -1,13 +1,12 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
-  type Lobby,
-  type LobbyDetail,
   LobbyAction,
   LobbyStatus,
   canPerformLobbyAction,
 } from '@taku-biyori/shared';
 import { updateLobbyStatus } from '@/api/lobby';
+import type { LobbyDetailModel, LobbyModel } from '@/models/lobby';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
@@ -31,9 +30,9 @@ const CANCEL_VISIBLE_STATUSES: LobbyStatus[] = [
  */
 export const useLobbyStatus = (
   lobbyId: string,
-  lobby: MaybeRefOrGetter<LobbyDetail | null>,
+  lobby: MaybeRefOrGetter<LobbyDetailModel | null>,
   // NOTE: 遷移成功後の更新反映を呼び出し元に委譲する。
-  onUpdated: (updated: Lobby) => void,
+  onUpdated: (updated: LobbyModel) => void,
 ) => {
   const authStore = useAuthStore();
   const toast = useToast();

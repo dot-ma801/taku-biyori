@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import type { LobbyDetail } from '@taku-biyori/shared';
+import type { LobbyDetailModel } from '@/models/lobby';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { useUpdateLobby } from '@/features/Lobby/Edit/composables/useUpdateLobby';
 import { ApiError } from '@/lib/api-client';
@@ -26,7 +26,7 @@ import {
 } from '@/api/lobby';
 
 const LOBBY_ID = 'lobby-1';
-const lobby: LobbyDetail = {
+const lobby: LobbyDetailModel = {
   id: LOBBY_ID,
   title: 'Test lobby',
   scenarioName: 'Scenario',
@@ -34,13 +34,12 @@ const lobby: LobbyDetail = {
   location: 'Tokyo',
   maxPlayers: 4,
   status: LobbyStatus.draft,
-  isPublished: false,
   openUntil: '2026-07-20',
-  cancelledAt: null,
   hostUserId: 'user-1',
-  createdAt: '2026-07-01T00:00:00.000Z',
-  updatedAt: '2026-07-01T00:00:00.000Z',
-  members: [],
+  createdAt: new Date('2026-07-01T00:00:00.000Z'),
+  updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+  entries: [],
+  activeEntries: [],
 };
 
 beforeEach(() => {

@@ -1,4 +1,4 @@
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   getLobby,
@@ -38,6 +38,7 @@ export const useUpdateLobby = (id: string) => {
    * （調整をやり直す＝新しい poll を作る導線は別 PR の担当）。
    */
   const pollId = ref<string | null>(null);
+  const hasSchedulePoll = computed(() => pollId.value !== null);
 
   // エラー表示中は送信ボタンを無効化しているため、
   // 入力の変更を修正の開始とみなしてエラーをクリアし、再送信できるようにする。
@@ -108,8 +109,9 @@ export const useUpdateLobby = (id: string) => {
       errors.push(maxMembersError);
     }
 
-    // 候補日は募集枠の存在意義であるため、更新時も1件以上必須（design-v1.1 §6）
-    if (pendingDates.value.length === 0) {
+    // 既存の日程調整がある場合だけ候補日を編集できる。
+    // 調整がないロビーでは候補日入力を表示せず、基本情報のみ更新可能にする。
+    if (hasSchedulePoll.value && pendingDates.value.length === 0) {
       errors.push('候補日を1件以上指定してください');
     }
 
@@ -169,6 +171,7 @@ export const useUpdateLobby = (id: string) => {
     loading,
     errorMessages,
     fetchError,
+    hasSchedulePoll,
     fetchInitialValues,
     submit,
     cancel,

@@ -23,6 +23,12 @@ const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
+const props = withDefaults(
+  defineProps<{
+    showCandidateDates?: boolean;
+  }>(),
+  { showCandidateDates: true },
+);
 
 // 日付ピッカーは日付の配列だけを扱う。ひとこととの突き合わせは composable に委ねる。
 // 候補日への入力（ユーザー操作起点の set のみ）で開催日を破棄する。
@@ -76,6 +82,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
     <template #default>
       <div class="contents">
         <BaseDatePicker
+          v-if="props.showCandidateDates"
           v-model="openUntil"
           label="募集締め切り日"
           disable-past
@@ -91,7 +98,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
         ></BaseDatePicker>
       </div>
 
-      <ul v-if="hasDates" class="dates">
+      <ul v-if="props.showCandidateDates && hasDates" class="dates">
         <li v-for="row in dateRows" :key="row.date" class="date-row">
           <!--
             日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
@@ -128,7 +135,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
         </li>
       </ul>
 
-      <p class="info">
+      <p v-if="props.showCandidateDates" class="info">
         ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
       </p>
     </template>

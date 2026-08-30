@@ -20,6 +20,7 @@ const {
   loading,
   errorMessages,
   fetchError,
+  hasSchedulePoll,
   fetchInitialValues,
   submit,
   cancel,
@@ -54,6 +55,7 @@ const {
       v-model:pendingDates="pendingDates"
       :loading="loading"
       :error-messages="errorMessages"
+      :has-schedule-poll="hasSchedulePoll"
       @submit="submit"
       @cancel="cancel"
     ></LobbyEdit>

@@ -115,6 +115,23 @@ describe('useUpdateLobby', () => {
     expect(pendingDates.value).toEqual([]);
   });
 
+  it('調整が1件も無いロビーでは候補日なしでも基本情報を更新できる', async () => {
+    // Arrange
+    vi.mocked(getLobby).mockResolvedValue({ ...lobby, schedulePolls: [] });
+    const { fetchInitialValues, title, pendingDates, submit } =
+      useUpdateLobby(LOBBY_ID);
+    await fetchInitialValues();
+    title.value = 'Updated lobby';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(pendingDates.value).toEqual([]);
+    expect(updateLobby).toHaveBeenCalledTimes(1);
+    expect(replaceCandidateDates).not.toHaveBeenCalled();
+  });
+
   // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
   it('ひとことが上限を超えていたら更新をブロックする', async () => {
     const { title, pendingDates, errorMessages, submit } =
@@ -162,8 +179,9 @@ describe('useUpdateLobby', () => {
 
   it('does not update when there are no pending dates', async () => {
     // Arrange
-    const { title, pendingDates, errorMessages, submit } =
+    const { fetchInitialValues, title, pendingDates, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
+    await fetchInitialValues();
     title.value = 'Test lobby';
     pendingDates.value = [];
 

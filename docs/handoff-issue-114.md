@@ -7,8 +7,8 @@
 | PR | ブランチ | ベース | 状態 |
 |---|---|---|---|
 | #131 | `codex/issue-114-shared` | `develop/v0.3` | **CI green・マージ可能**。レビュー3件のうち2件は修正済み＆resolve、1件は返信のみ（下記） |
-| #132 | `claude/issue-114-backend` | `codex/issue-114-shared` | **CI green**。CodeRabbit の指摘3件が**未対応** |
-| （未作成） | `claude/issue-114-frontend` | `claude/issue-114-backend` | フェーズ1（model + api）まで完了・push 済み。**フェーズ2（composable + UI）が未着手** |
+| #132 | `claude/issue-114-backend` | `codex/issue-114-shared` | **CI green**。CodeRabbit の指摘3件は**対応済み・resolve 済み** |
+| （未作成） | `claude/issue-114-frontend` | `claude/issue-114-backend` | フェーズ1（model + api）完了。フェーズ2（composable + UI）を作業中 |
 
 マージ順序は #131 → #132 → frontend PR。
 
@@ -27,44 +27,18 @@
 
 ---
 
-## 1. 最優先: PR #132 の CodeRabbit 指摘3件
+## 1. PR #132 の CodeRabbit 指摘（対応済み）
 
-### (a) 【Major・要修正】回答の検証〜書込みが同じロックで直列化されていない
+3件とも修正して resolve 済み。内容は次のとおり。
 
-`upsert-schedule-answers.ts` と `upsert-guest-schedule-answers.ts` は、
-「最新 poll の判定」「候補日がその poll のものか」を検証したあとに `upsertScheduleAnswers` を呼ぶが、
-その間ロックを取っていない。並行して `createSchedulePoll` が走ると古い poll に書き込めてしまい、
-`replaceCandidateDates` が走ると検証済み候補日が消えて FK 違反になる。**これは実在の不具合。**
+- **【Major】** 日程回答の「最新の調整かの判定・候補日の所属検証」と「回答の upsert」が
+  別トランザクションに分かれており、並行して新しい調整が作られると古い調整へ書き込め、
+  候補日の一括更新と重なると検証済み候補日が消えて外部キー違反になった。
+  `createSchedulePoll` / `replaceCandidateDates` と同じ `executeWithLock` の中にまとめた（357f15e）
+- **【Minor】** `replace-candidate-dates.test.ts` の候補日を `2100` 系に寄せた（3bc8eab）
+- **【Nitpick】** ゲスト回答の `entryId` 欠落テストに `GUEST_TOKEN_HEADER` を付けた（3bc8eab）
 
-修正方針: `createSchedulePoll` / `replaceCandidateDates` と同じく `repo.executeWithLock(lobbyId, ...)`
-のコールバック内で「検証 → upsert」までを実行する。
-
-- 両ユースケースの repository interface に `executeWithLock<T>(lobbyId, fn)` を足す
-  （`replace-candidate-dates.ts` の宣言をそのまま真似る）
-- `lobby-repository.ts` の `executeWithLock` は実装済みなので追加実装は不要
-- ロック取得はロビー行への `SELECT ... FOR UPDATE`。同じロビーの回答が直列化されるが、
-  ロビーの人数規模では許容できるコスト。**この判断を PR にコメントで残すこと**
-- ユニットテストのモック repo にも `executeWithLock: (_, fn) => fn(mockRepo)` を足す必要がある
-- 並行性の検証は `test/integration/row-lock-contention.test.ts` に追加すると既存の流儀に沿う
-
-### (b) 【Minor・要修正】ユニットテストの日付が時間経過で腐る
-
-`test/unit/lobby/replace-candidate-dates.test.ts` の 60 / 77 / 359 行目あたりで
-`2026-09-03` / `2026-09-05` を「新規追加する候補日」として使っている。実行日がその日を過ぎると
-`pastDateAdded` が返るようになり落ちる。`existingDates` も含めて `2100-09-01` / `2100-09-02` /
-`2100-09-03` / `2100-09-05` に寄せる（インテグレーションテストは既に 2100 系を使っている）。
-
-### (c) 【Nitpick】ゲスト回答の `entryId` 欠落テストにトークンが無い
-
-`test/integration/lobby-route.test.ts` の 2126 行目あたり。`GUEST_TOKEN_HEADER` を付けないと
-「トークン欠落で 400」でも通ってしまい、検証したい理由と違う理由で成功する。ヘッダーを足す。
-
-### PR #131 の未 resolve スレッド
-
-`LobbyDetail.schedulePolls` を必須にすべきという指摘。**#132 で必須化済み**なので、
-#132 がマージされたら resolve してよい。返信は投稿済み。
-
----
+PR #131 の `LobbyDetail.schedulePolls` 必須化の指摘は #132 で必須化済み。#132 マージ後に resolve してよい。
 
 ## 2. 残作業: frontend フェーズ2（composable + UI）
 

@@ -81,6 +81,22 @@ describe('CreateLobbyInputSchema', () => {
     });
   });
 
+  describe('candidateDates の timeLabel（時間帯）', () => {
+    it('timeLabel を添えても成功する', () => {
+      // Arrange
+      const input = {
+        title: '募集',
+        candidateDates: [{ date: '2099-09-01', timeLabel: '午後' }],
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+  });
+
   it('candidateDates が空配列でも成功する（v2 で任意になった）', () => {
     // Arrange
     const input = { title: '募集', candidateDates: [] };
@@ -172,6 +188,21 @@ describe('CreateLobbyInputSchema', () => {
   });
 
   describe('過去日の禁止', () => {
+    it('candidateDates に過去日があれば失敗する', () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const input = {
+        title: '募集',
+        candidateDates: [{ date: '2025-06-14' }],
+      };
+
+      // Act
+      const result = CreateLobbyInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+
     it('openUntil が過去日なら失敗する', () => {
       // Arrange
       vi.setSystemTime(new Date('2025-06-15T00:00:00'));

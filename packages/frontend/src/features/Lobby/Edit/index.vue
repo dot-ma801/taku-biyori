@@ -13,6 +13,7 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessages: string[];
+  hasSchedulePoll?: boolean;
 }>();
 
 const title = defineModel<string>('title', { default: '' });
@@ -54,6 +55,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:pendingDates="pendingDates"
+      :show-candidate-dates="props.hasSchedulePoll"
     />
 
     <div v-if="hasErrors" class="error-area">

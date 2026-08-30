@@ -8,8 +8,8 @@ import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import {
-  getDateNoteCounter,
-  getDateNoteError,
+  getTimeLabelCounter,
+  getTimeLabelError,
   syncPendingDates,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import { computed } from 'vue';
@@ -23,6 +23,12 @@ const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
+const props = withDefaults(
+  defineProps<{
+    showCandidateDates?: boolean;
+  }>(),
+  { showCandidateDates: true },
+);
 
 // 日付ピッカーは日付の配列だけを扱う。ひとこととの突き合わせは composable に委ねる。
 // 候補日への入力（ユーザー操作起点の set のみ）で開催日を破棄する。
@@ -45,22 +51,22 @@ const hasDates = computed(() => pendingDates.value.length > 0);
 const dateRows = computed(() =>
   pendingDates.value.map((entry) => ({
     date: entry.date,
-    dateNote: entry.dateNote,
+    timeLabel: entry.timeLabel,
     dateLabel: formatDateWithWeekday(entry.date),
-    counter: getDateNoteCounter(entry.dateNote),
+    counter: getTimeLabelCounter(entry.timeLabel),
   })),
 );
 
-const dateNoteRules = [(v: unknown) => getDateNoteError(v as string) ?? true];
+const timeLabelRules = [(v: unknown) => getTimeLabelError(v as string) ?? true];
 
 function removeDate(date: string) {
   selectedDates.value = selectedDates.value.filter((d) => d !== date);
 }
 
 // ひとことは行ごとに更新する（配列要素を直接書き換えず、新しい配列に差し替える）
-function updateDateNote(date: string, dateNote: string) {
+function updateTimeLabel(date: string, timeLabel: string) {
   pendingDates.value = pendingDates.value.map((entry) =>
-    entry.date === date ? { ...entry, dateNote } : entry,
+    entry.date === date ? { ...entry, timeLabel } : entry,
   );
 }
 </script>
@@ -76,6 +82,7 @@ function updateDateNote(date: string, dateNote: string) {
     <template #default>
       <div class="contents">
         <BaseDatePicker
+          v-if="props.showCandidateDates"
           v-model="openUntil"
           label="募集締め切り日"
           disable-past
@@ -91,7 +98,7 @@ function updateDateNote(date: string, dateNote: string) {
         ></BaseDatePicker>
       </div>
 
-      <ul v-if="hasDates" class="dates">
+      <ul v-if="props.showCandidateDates && hasDates" class="dates">
         <li v-for="row in dateRows" :key="row.date" class="date-row">
           <!--
             日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
@@ -103,10 +110,10 @@ function updateDateNote(date: string, dateNote: string) {
             <span class="date-text">{{ row.dateLabel }}</span>
             <BaseTextBox
               class="note-input"
-              :model-value="row.dateNote"
+              :model-value="row.timeLabel"
               placeholder="例）19:00〜 / 午後から / 終日OK"
-              :rules="dateNoteRules"
-              @update:model-value="updateDateNote(row.date, $event)"
+              :rules="timeLabelRules"
+              @update:model-value="updateTimeLabel(row.date, $event)"
             />
           </label>
           <span
@@ -128,7 +135,7 @@ function updateDateNote(date: string, dateNote: string) {
         </li>
       </ul>
 
-      <p class="info">
+      <p v-if="props.showCandidateDates" class="info">
         ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
       </p>
     </template>

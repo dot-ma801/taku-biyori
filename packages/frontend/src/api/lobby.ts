@@ -1,19 +1,22 @@
 import type {
-  BulkUpdateLobbyAvailabilityDatesInput,
   CreateLobbyInput,
-  GuestUpdateLobbyAvailabilityDateResponseInput,
+  CreateSchedulePollInput,
+  GuestUpsertScheduleAnswersInput,
   JoinLobbyAsGuestInput,
   JoinLobbyInput,
   Lobby,
-  LobbyAvailabilityDate,
-  LobbyAvailabilityDateAnswer,
+  LobbyCandidateDate,
   LobbyDetail,
   LobbyGuestLinkResponse,
   LobbyListItem,
   LobbyEntry,
-  UpdateLobbyAvailabilityDateResponseInput,
+  LobbyScheduleAnswer,
+  LobbySchedulePoll,
+  LobbySchedulePollSummary,
+  ReplaceCandidateDatesInput,
   UpdateLobbyInput,
   UpdateLobbyStatusInput,
+  UpsertScheduleAnswersInput,
 } from '@taku-biyori/shared';
 import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
@@ -29,6 +32,18 @@ import {
   toLobbyListItemModel,
   toLobbyModel,
 } from '@/models/lobby';
+import type {
+  CandidateDateModel,
+  ScheduleAnswerModel,
+  SchedulePollModel,
+  SchedulePollSummaryModel,
+} from '@/models/schedule-poll';
+import {
+  toReplacedCandidateDateModel,
+  toScheduleAnswerModel,
+  toSchedulePollModel,
+  toSchedulePollSummaryModel,
+} from '@/models/schedule-poll';
 
 // この層が DTO と model の境界。ここより内側（composable / component）は
 // `@taku-biyori/shared` のレスポンス型を見ない（issue #113 の規約）。
@@ -62,35 +77,6 @@ export async function updateLobby(
     body: input,
   }))!;
   return toLobbyModel(dto);
-}
-
-export async function listLobbyAvailabilityDates(
-  id: string,
-): Promise<LobbyAvailabilityDate[]> {
-  return (await apiRequest<LobbyAvailabilityDate[]>(
-    `/api/lobbies/${id}/availability-dates`,
-  ))!;
-}
-
-export async function bulkUpdateLobbyAvailabilityDates(
-  id: string,
-  input: BulkUpdateLobbyAvailabilityDatesInput,
-): Promise<LobbyAvailabilityDate[]> {
-  return (await apiRequest<LobbyAvailabilityDate[]>(
-    `/api/lobbies/${id}/availability-dates`,
-    { method: 'PUT', body: input },
-  ))!;
-}
-
-export async function updateLobbyAvailabilityDateResponse(
-  lobbyId: string,
-  dateId: string,
-  input: UpdateLobbyAvailabilityDateResponseInput,
-): Promise<LobbyAvailabilityDateAnswer> {
-  return (await apiRequest<LobbyAvailabilityDateAnswer>(
-    `/api/lobbies/${lobbyId}/availability-dates/${dateId}/responses`,
-    { method: 'PUT', body: input },
-  ))!;
 }
 
 export async function joinLobby(
@@ -164,18 +150,88 @@ export async function joinLobbyAsGuest(
   return toLobbyEntryModel(dto);
 }
 
-/**
- * ゲストとして日程候補に回答する。認証不要で、トークンは Guest-Token ヘッダーで送る。
- * input には対象ゲスト列を示す memberId を含める。
- */
-export async function updateGuestLobbyAvailabilityDateResponse(
+// ---------- 日程調整（SchedulePoll、v2） ----------
+
+/** ロビーの日程調整の履歴を、新しい順（先頭が最新）で取得する。 */
+export async function listSchedulePolls(
   lobbyId: string,
-  dateId: string,
-  token: string,
-  input: GuestUpdateLobbyAvailabilityDateResponseInput,
-): Promise<LobbyAvailabilityDateAnswer> {
-  return (await apiRequest<LobbyAvailabilityDateAnswer>(
-    `/api/lobbies/${lobbyId}/availability-dates/${dateId}/guest-responses`,
-    { method: 'PUT', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
+): Promise<SchedulePollSummaryModel[]> {
+  const dto = (await apiRequest<LobbySchedulePollSummary[]>(
+    `/api/lobbies/${lobbyId}/schedule-polls`,
   ))!;
+  return dto.map(toSchedulePollSummaryModel);
+}
+
+/**
+ * 新しい日程調整を開始する（ホストのみ）。既存の調整は履歴として残り、
+ * 以降はこの調整が「最新」になる。
+ */
+export async function createSchedulePoll(
+  lobbyId: string,
+  input: CreateSchedulePollInput,
+): Promise<SchedulePollModel> {
+  const dto = (await apiRequest<LobbySchedulePoll>(
+    `/api/lobbies/${lobbyId}/schedule-polls`,
+    { method: 'POST', body: input },
+  ))!;
+  return toSchedulePollModel(dto);
+}
+
+/** 指定した日程調整（候補日・回答を含む）を取得する。過去の調整の閲覧にも使う。 */
+export async function getSchedulePoll(
+  lobbyId: string,
+  pollId: string,
+): Promise<SchedulePollModel> {
+  const dto = (await apiRequest<LobbySchedulePoll>(
+    `/api/lobbies/${lobbyId}/schedule-polls/${pollId}`,
+  ))!;
+  return toSchedulePollModel(dto);
+}
+
+/**
+ * 日程調整の候補日を一括で差し替える（ホストのみ・最新の調整のみ編集可）。
+ * レスポンスに回答は含まれない（`CandidateDateModel.answersByEntryId` は空になる）。
+ */
+export async function replaceCandidateDates(
+  lobbyId: string,
+  pollId: string,
+  input: ReplaceCandidateDatesInput,
+): Promise<CandidateDateModel[]> {
+  const dto = (await apiRequest<LobbyCandidateDate[]>(
+    `/api/lobbies/${lobbyId}/schedule-polls/${pollId}/candidate-dates`,
+    { method: 'PUT', body: input },
+  ))!;
+  return dto.map(toReplacedCandidateDateModel);
+}
+
+/**
+ * ログインユーザーの日程回答をまとめて upsert する（差分更新で、送った候補日ぶんだけ更新する）。
+ */
+export async function upsertScheduleAnswers(
+  lobbyId: string,
+  pollId: string,
+  input: UpsertScheduleAnswersInput,
+): Promise<ScheduleAnswerModel[]> {
+  const dto = (await apiRequest<LobbyScheduleAnswer[]>(
+    `/api/lobbies/${lobbyId}/schedule-polls/${pollId}/answers`,
+    { method: 'PATCH', body: input },
+  ))!;
+  return dto.map(toScheduleAnswerModel);
+}
+
+/**
+ * ゲストの日程回答をまとめて upsert する。認証不要で、トークンは Guest-Token ヘッダーで送る。
+ * input には対象ゲスト列を示す entryId を含める。
+ */
+export async function upsertGuestScheduleAnswers(
+  lobbyId: string,
+  pollId: string,
+  token: string,
+  input: GuestUpsertScheduleAnswersInput,
+): Promise<ScheduleAnswerModel[]> {
+  const dto = (await apiRequest<LobbyScheduleAnswer[]>(
+    `/api/lobbies/${lobbyId}/schedule-polls/${pollId}/guest-answers`,
+    { method: 'PATCH', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
+  ))!;
+  return dto.map(toScheduleAnswerModel);
 }

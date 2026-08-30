@@ -1,13 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { ref } from 'vue';
-import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
 import type { LobbyEntryModel } from '@/models/lobby';
+import type {
+  CandidateDateModel,
+  ScheduleAnswerValue,
+} from '@/models/schedule-poll';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
-import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 
-const MEMBER_A = 'member-a';
-const MEMBER_B = 'member-b';
-const MEMBER_C = 'member-c';
+const ENTRY_A = 'entry-a';
+const ENTRY_B = 'entry-b';
+const ENTRY_C = 'entry-c';
 const DATE_ID = 'date-1';
 
 function makeMember(id: string): LobbyEntryModel {
@@ -22,44 +24,51 @@ function makeMember(id: string): LobbyEntryModel {
 }
 
 function makeDate(
-  answers: { memberId: string; answer: Answer }[],
-): LobbyAvailabilityDate {
+  answers: { entryId: string; answer: ScheduleAnswerValue }[],
+  overrides: Partial<CandidateDateModel> = {},
+): CandidateDateModel {
   return {
     id: DATE_ID,
     date: '2026-06-02',
-    dateNote: null,
-    answers: answers.map((a, i) => ({
-      id: `answer-${i}`,
-      memberId: a.memberId,
-      answer: a.answer,
-      comment: null,
-    })),
+    timeLabel: null,
+    answersByEntryId: new Map(
+      answers.map((a, i) => [
+        a.entryId,
+        {
+          id: `answer-${i}`,
+          entryId: a.entryId,
+          answer: a.answer,
+          comment: null,
+        },
+      ]),
+    ),
+    ...overrides,
   };
 }
 
 function setup(
-  editableMemberIds: string[] = [],
-  draftAnswers: Map<string, Answer> = new Map(),
+  editableEntryIds: string[] = [],
+  draftAnswers: Map<string, ScheduleAnswerValue> = new Map(),
 ) {
-  return useScheduleView(ref(editableMemberIds), ref(draftAnswers));
+  return useScheduleView(ref(editableEntryIds), ref(draftAnswers));
 }
 
-function setupWithDates(availabilityDates: LobbyAvailabilityDate[]) {
+function setupWithDates(candidateDates: CandidateDateModel[]) {
   return useScheduleView(
     ref<string[]>([]),
-    ref(new Map<string, Answer>()),
-    ref(availabilityDates),
+    ref(new Map<string, ScheduleAnswerValue>()),
+    ref(candidateDates),
   );
 }
 
 describe('getAnswer', () => {
   it('API の回答をそのまま返す', () => {
     // Arrange
-    const date = makeDate([{ memberId: MEMBER_A, answer: 'ok' }]);
+    const date = makeDate([{ entryId: ENTRY_A, answer: 'ok' }]);
     const { getAnswer } = setup();
 
     // Act
-    const result = getAnswer(date, MEMBER_A);
+    const result = getAnswer(date, ENTRY_A);
 
     // Assert
     expect(result).toBe('ok');
@@ -67,11 +76,11 @@ describe('getAnswer', () => {
 
   it('回答がないメンバーには null を返す', () => {
     // Arrange
-    const date = makeDate([{ memberId: MEMBER_A, answer: 'ok' }]);
+    const date = makeDate([{ entryId: ENTRY_A, answer: 'ok' }]);
     const { getAnswer } = setup();
 
     // Act
-    const result = getAnswer(date, MEMBER_B);
+    const result = getAnswer(date, ENTRY_B);
 
     // Assert
     expect(result).toBeNull();
@@ -79,12 +88,14 @@ describe('getAnswer', () => {
 
   it('編集可能なメンバーは draft を優先して返す', () => {
     // Arrange
-    const date = makeDate([{ memberId: MEMBER_A, answer: 'ok' }]);
-    const draft = new Map<string, Answer>([[`${MEMBER_A}::${DATE_ID}`, 'ng']]);
-    const { getAnswer } = setup([MEMBER_A], draft);
+    const date = makeDate([{ entryId: ENTRY_A, answer: 'ok' }]);
+    const draft = new Map<string, ScheduleAnswerValue>([
+      [`${ENTRY_A}::${DATE_ID}`, 'ng'],
+    ]);
+    const { getAnswer } = setup([ENTRY_A], draft);
 
     // Act
-    const result = getAnswer(date, MEMBER_A);
+    const result = getAnswer(date, ENTRY_A);
 
     // Assert
     expect(result).toBe('ng');
@@ -92,36 +103,38 @@ describe('getAnswer', () => {
 
   it('編集可能でないメンバーの draft は無視する', () => {
     // Arrange
-    const date = makeDate([{ memberId: MEMBER_A, answer: 'ok' }]);
-    const draft = new Map<string, Answer>([[`${MEMBER_A}::${DATE_ID}`, 'ng']]);
+    const date = makeDate([{ entryId: ENTRY_A, answer: 'ok' }]);
+    const draft = new Map<string, ScheduleAnswerValue>([
+      [`${ENTRY_A}::${DATE_ID}`, 'ng'],
+    ]);
     const { getAnswer } = setup([], draft);
 
     // Act
-    const result = getAnswer(date, MEMBER_A);
+    const result = getAnswer(date, ENTRY_A);
 
     // Assert
     expect(result).toBe('ok');
   });
 
-  it('editableMemberIds・draftAnswers を getter で渡しても最新値を参照する', () => {
+  it('editableEntryIds・draftAnswers を getter で渡しても最新値を参照する', () => {
     // Arrange
-    const date = makeDate([{ memberId: MEMBER_A, answer: 'ok' }]);
-    const editableMemberIds = ref<string[]>([]);
-    const draftAnswers = ref<Map<string, Answer>>(new Map());
+    const date = makeDate([{ entryId: ENTRY_A, answer: 'ok' }]);
+    const editableEntryIds = ref<string[]>([]);
+    const draftAnswers = ref<Map<string, ScheduleAnswerValue>>(new Map());
     const { getAnswer } = useScheduleView(
-      () => editableMemberIds.value,
+      () => editableEntryIds.value,
       () => draftAnswers.value,
     );
 
     // Act & Assert（draft 未反映時は API の値）
-    expect(getAnswer(date, MEMBER_A)).toBe('ok');
+    expect(getAnswer(date, ENTRY_A)).toBe('ok');
 
     // Act: 編集可能にして draft を書き込む
-    editableMemberIds.value = [MEMBER_A];
-    draftAnswers.value = new Map([[`${MEMBER_A}::${DATE_ID}`, 'ng']]);
+    editableEntryIds.value = [ENTRY_A];
+    draftAnswers.value = new Map([[`${ENTRY_A}::${DATE_ID}`, 'ng']]);
 
     // Assert
-    expect(getAnswer(date, MEMBER_A)).toBe('ng');
+    expect(getAnswer(date, ENTRY_A)).toBe('ng');
   });
 });
 
@@ -129,11 +142,11 @@ describe('okCount', () => {
   it('ok と回答したメンバー数を返す', () => {
     // Arrange
     const date = makeDate([
-      { memberId: MEMBER_A, answer: 'ok' },
-      { memberId: MEMBER_B, answer: 'maybe' },
-      { memberId: MEMBER_C, answer: 'ok' },
+      { entryId: ENTRY_A, answer: 'ok' },
+      { entryId: ENTRY_B, answer: 'maybe' },
+      { entryId: ENTRY_C, answer: 'ok' },
     ]);
-    const members = [MEMBER_A, MEMBER_B, MEMBER_C].map(makeMember);
+    const members = [ENTRY_A, ENTRY_B, ENTRY_C].map(makeMember);
     const { okCount } = setup();
 
     // Act
@@ -148,11 +161,11 @@ describe('answerCounts', () => {
   it('ok・maybe・ng の件数をそれぞれ集計する', () => {
     // Arrange
     const date = makeDate([
-      { memberId: MEMBER_A, answer: 'ok' },
-      { memberId: MEMBER_B, answer: 'maybe' },
-      { memberId: MEMBER_C, answer: 'ng' },
+      { entryId: ENTRY_A, answer: 'ok' },
+      { entryId: ENTRY_B, answer: 'maybe' },
+      { entryId: ENTRY_C, answer: 'ng' },
     ]);
-    const members = [MEMBER_A, MEMBER_B, MEMBER_C].map(makeMember);
+    const members = [ENTRY_A, ENTRY_B, ENTRY_C].map(makeMember);
     const { answerCounts } = setup();
 
     // Act
@@ -164,8 +177,8 @@ describe('answerCounts', () => {
 
   it('未回答のメンバーはどのカウントにも含めない', () => {
     // Arrange
-    const date = makeDate([{ memberId: MEMBER_A, answer: 'ok' }]);
-    const members = [MEMBER_A, MEMBER_B, MEMBER_C].map(makeMember);
+    const date = makeDate([{ entryId: ENTRY_A, answer: 'ok' }]);
+    const members = [ENTRY_A, ENTRY_B, ENTRY_C].map(makeMember);
     const { answerCounts } = setup();
 
     // Act
@@ -178,14 +191,14 @@ describe('answerCounts', () => {
   it('編集可能なメンバーは draft を反映して集計する', () => {
     // Arrange
     const date = makeDate([
-      { memberId: MEMBER_A, answer: 'ok' },
-      { memberId: MEMBER_B, answer: 'ng' },
+      { entryId: ENTRY_A, answer: 'ok' },
+      { entryId: ENTRY_B, answer: 'ng' },
     ]);
-    const draft = new Map<string, Answer>([
-      [`${MEMBER_A}::${DATE_ID}`, 'maybe'],
+    const draft = new Map<string, ScheduleAnswerValue>([
+      [`${ENTRY_A}::${DATE_ID}`, 'maybe'],
     ]);
-    const members = [MEMBER_A, MEMBER_B].map(makeMember);
-    const { answerCounts } = setup([MEMBER_A], draft);
+    const members = [ENTRY_A, ENTRY_B].map(makeMember);
+    const { answerCounts } = setup([ENTRY_A], draft);
 
     // Act
     const result = answerCounts(date, members);
@@ -195,39 +208,39 @@ describe('answerCounts', () => {
   });
 });
 
-describe('hasAnyDateNote', () => {
-  // ホストが1件も書いていなければ表にひとこと列を出さないための判定
-  it('ひとことが1件もなければ false を返す', () => {
+describe('hasAnyTimeLabel', () => {
+  // ホストが「ひとこと（時間帯）」を1件も書いていなければ表に列を出さないための判定
+  it('timeLabel が1件もなければ false を返す', () => {
     // Arrange
     const dates = [makeDate([]), makeDate([])];
-    const { hasAnyDateNote } = setupWithDates(dates);
+    const { hasAnyTimeLabel } = setupWithDates(dates);
 
     // Act
-    const result = hasAnyDateNote.value;
+    const result = hasAnyTimeLabel.value;
 
     // Assert
     expect(result).toBe(false);
   });
 
-  it('ひとことが1件でもあれば true を返す', () => {
+  it('timeLabel が1件でもあれば true を返す', () => {
     // Arrange
-    const dates = [makeDate([]), { ...makeDate([]), dateNote: '13:00〜' }];
-    const { hasAnyDateNote } = setupWithDates(dates);
+    const dates = [makeDate([]), makeDate([], { timeLabel: '13:00〜' })];
+    const { hasAnyTimeLabel } = setupWithDates(dates);
 
     // Act
-    const result = hasAnyDateNote.value;
+    const result = hasAnyTimeLabel.value;
 
     // Assert
     expect(result).toBe(true);
   });
 
-  it('空文字のひとことは書かれていない扱いにする', () => {
+  it('空文字の timeLabel は書かれていない扱いにする', () => {
     // Arrange
-    const dates = [{ ...makeDate([]), dateNote: '' }];
-    const { hasAnyDateNote } = setupWithDates(dates);
+    const dates = [makeDate([], { timeLabel: '' })];
+    const { hasAnyTimeLabel } = setupWithDates(dates);
 
     // Act
-    const result = hasAnyDateNote.value;
+    const result = hasAnyTimeLabel.value;
 
     // Assert
     expect(result).toBe(false);
@@ -235,11 +248,11 @@ describe('hasAnyDateNote', () => {
 
   it('候補日が空なら false を返す', () => {
     // Arrange
-    const dates: LobbyAvailabilityDate[] = [];
-    const { hasAnyDateNote } = setupWithDates(dates);
+    const dates: CandidateDateModel[] = [];
+    const { hasAnyTimeLabel } = setupWithDates(dates);
 
     // Act
-    const result = hasAnyDateNote.value;
+    const result = hasAnyTimeLabel.value;
 
     // Assert
     expect(result).toBe(false);

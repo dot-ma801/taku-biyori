@@ -6,7 +6,7 @@ import {
   getPendingTimeLabelErrors,
   syncPendingDates,
   toCandidateDateInputs,
-} from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+} from '@/utils/pendingCandidateDates';
 
 describe('syncPendingDates', () => {
   it('日付を追加するとひとことが空の行が増える', () => {

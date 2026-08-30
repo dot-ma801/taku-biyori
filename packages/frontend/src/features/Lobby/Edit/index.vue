@@ -5,7 +5,7 @@ import InputScheduleInfo from '@/features/Lobby/Edit/InputScheduleInfo.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -13,6 +13,8 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessages: string[];
+  /** 候補日入力を表示するか。ロビー作成フローでは true、編集フローでは false（issue #114） */
+  showCandidateDates: boolean;
 }>();
 
 const title = defineModel<string>('title', { default: '' });
@@ -54,6 +56,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:pendingDates="pendingDates"
+      :show-candidate-dates="showCandidateDates"
     />
 
     <div v-if="hasErrors" class="error-area">

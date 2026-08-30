@@ -30,6 +30,7 @@ const {
       v-model:openUntil="openUntil"
       v-model:location="location"
       v-model:pendingDates="pendingDates"
+      :show-candidate-dates="true"
       :loading="loading"
       :error-messages="errorMessages"
       @submit="submit"

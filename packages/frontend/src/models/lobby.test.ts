@@ -141,7 +141,11 @@ describe('toLobbyModel', () => {
 });
 
 describe('toLobbyDetailModel', () => {
-  const detailDto: LobbyDetail = { ...lobbyDto, entries: [entryDto] };
+  const detailDto: LobbyDetail = {
+    ...lobbyDto,
+    entries: [entryDto],
+    schedulePolls: [],
+  };
 
   it('entries をそのまま model に移す', () => {
     // Arrange / Act

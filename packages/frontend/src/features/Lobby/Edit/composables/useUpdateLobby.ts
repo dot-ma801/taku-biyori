@@ -1,9 +1,9 @@
 import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  bulkUpdateLobbyAvailabilityDates,
   getLobby,
-  listLobbyAvailabilityDates,
+  getSchedulePoll,
+  replaceCandidateDates,
   updateLobby,
 } from '@/api/lobby';
 import { ApiError } from '@/lib/api-client';
@@ -13,7 +13,7 @@ import {
 } from '@/features/Lobby/Edit/composables/maxMembersValidation';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import {
-  getPendingDateNoteErrors,
+  getPendingTimeLabelErrors,
   toCandidateDateInputs,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 
@@ -32,6 +32,12 @@ export const useUpdateLobby = (id: string) => {
   const errorMessages = ref<string[]>([]);
   /** 初期取得失敗時のエラー。フォーム自体を表示できない状態を表す */
   const fetchError = ref('');
+  /**
+   * 編集対象の最新の日程調整 id（ロビー詳細の `schedulePolls[0].id`）。
+   * 調整が1件も無いロビーでは null になり、候補日の更新は行わない
+   * （調整をやり直す＝新しい poll を作る導線は別 PR の担当）。
+   */
+  const pollId = ref<string | null>(null);
 
   // エラー表示中は送信ボタンを無効化しているため、
   // 入力の変更を修正の開始とみなしてエラーをクリアし、再送信できるようにする。
@@ -58,10 +64,7 @@ export const useUpdateLobby = (id: string) => {
     fetchError.value = '';
 
     try {
-      const [lobby, availabilityDates] = await Promise.all([
-        getLobby(id),
-        listLobbyAvailabilityDates(id),
-      ]);
+      const lobby = await getLobby(id);
       title.value = lobby.title;
       scenarioName.value = lobby.scenarioName ?? '';
       maxMembers.value =
@@ -71,10 +74,17 @@ export const useUpdateLobby = (id: string) => {
       description.value = lobby.description ?? '';
       openUntil.value = lobby.openUntil ?? '';
       location.value = lobby.location ?? '';
-      pendingDates.value = availabilityDates.map((date) => ({
-        date: date.date,
-        dateNote: date.dateNote ?? '',
-      }));
+
+      pollId.value = lobby.schedulePolls[0]?.id ?? null;
+      if (pollId.value) {
+        const poll = await getSchedulePoll(id, pollId.value);
+        pendingDates.value = poll.candidateDates.map((date) => ({
+          date: date.date,
+          timeLabel: date.timeLabel ?? '',
+        }));
+      } else {
+        pendingDates.value = [];
+      }
     } catch (err) {
       fetchError.value =
         err instanceof ApiError ? err.message : 'エラーが発生しました';
@@ -103,7 +113,7 @@ export const useUpdateLobby = (id: string) => {
       errors.push('候補日を1件以上指定してください');
     }
 
-    errors.push(...getPendingDateNoteErrors(pendingDates.value));
+    errors.push(...getPendingTimeLabelErrors(pendingDates.value));
 
     return errors;
   }
@@ -126,9 +136,13 @@ export const useUpdateLobby = (id: string) => {
         openUntil: openUntil.value || null,
         location: location.value || null,
       });
-      await bulkUpdateLobbyAvailabilityDates(id, {
-        dates: toCandidateDateInputs(pendingDates.value),
-      });
+
+      // 調整が1件も無いロビーでは候補日の更新導線を出していないため、ここには来ない
+      if (pollId.value) {
+        await replaceCandidateDates(id, pollId.value, {
+          candidateDates: toCandidateDateInputs(pendingDates.value),
+        });
+      }
 
       await router.push({ name: 'lobbies-detail', params: { lobbyId: id } });
     } catch (err) {

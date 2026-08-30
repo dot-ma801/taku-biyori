@@ -60,8 +60,8 @@ describe('useCreateLobby', () => {
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '募集枠';
       pendingDates.value = [
-        { date: '2025-05-01', dateNote: 'あ'.repeat(21) },
-        { date: '2025-05-02', dateNote: '午後から' },
+        { date: '2025-05-01', timeLabel: 'あ'.repeat(21) },
+        { date: '2025-05-02', timeLabel: '午後から' },
       ];
 
       // Act
@@ -79,8 +79,8 @@ describe('useCreateLobby', () => {
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
       pendingDates.value = [
-        { date: '2025-05-01', dateNote: '' },
-        { date: '2025-05-02', dateNote: '' },
+        { date: '2025-05-01', timeLabel: '' },
+        { date: '2025-05-02', timeLabel: '' },
       ];
 
       // Act
@@ -90,8 +90,8 @@ describe('useCreateLobby', () => {
       expect(createLobby).toHaveBeenCalledWith(
         expect.objectContaining({
           candidateDates: [
-            { date: '2025-05-01', dateNote: null },
-            { date: '2025-05-02', dateNote: null },
+            { date: '2025-05-01', timeLabel: null },
+            { date: '2025-05-02', timeLabel: null },
           ],
         }),
       );
@@ -102,8 +102,8 @@ describe('useCreateLobby', () => {
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
       pendingDates.value = [
-        { date: '2025-05-01', dateNote: '  13:00〜17:00  ' },
-        { date: '2025-05-02', dateNote: '' },
+        { date: '2025-05-01', timeLabel: '  13:00〜17:00  ' },
+        { date: '2025-05-02', timeLabel: '' },
       ];
 
       // Act
@@ -113,8 +113,8 @@ describe('useCreateLobby', () => {
       expect(createLobby).toHaveBeenCalledWith(
         expect.objectContaining({
           candidateDates: [
-            { date: '2025-05-01', dateNote: '13:00〜17:00' },
-            { date: '2025-05-02', dateNote: null },
+            { date: '2025-05-01', timeLabel: '13:00〜17:00' },
+            { date: '2025-05-02', timeLabel: null },
           ],
         }),
       );
@@ -126,7 +126,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -163,7 +163,7 @@ describe('useCreateLobby', () => {
         useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '1';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -181,7 +181,7 @@ describe('useCreateLobby', () => {
         useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '21';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -198,7 +198,7 @@ describe('useCreateLobby', () => {
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '2';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -214,7 +214,7 @@ describe('useCreateLobby', () => {
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
       maxMembers.value = '';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -231,7 +231,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -239,7 +239,7 @@ describe('useCreateLobby', () => {
       // Assert
       expect(createLobby).toHaveBeenCalledWith({
         title: '募集枠',
-        candidateDates: [{ date: '2025-05-01', dateNote: null }],
+        candidateDates: [{ date: '2025-05-01', timeLabel: null }],
       });
     });
 
@@ -259,7 +259,7 @@ describe('useCreateLobby', () => {
       description.value = '説明文';
       location.value = 'ココフォリア';
       openUntil.value = '2025-04-30';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -302,7 +302,7 @@ describe('useCreateLobby', () => {
       expect(errorMessages.value).not.toEqual([]);
 
       // Act
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
       await nextTick();
 
       // Assert
@@ -316,7 +316,7 @@ describe('useCreateLobby', () => {
       vi.mocked(createLobby).mockRejectedValue(new Error('network error'));
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -331,7 +331,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
       title.value = '募集枠';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();

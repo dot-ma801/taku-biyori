@@ -8,8 +8,8 @@ import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import {
-  getDateNoteCounter,
-  getDateNoteError,
+  getTimeLabelCounter,
+  getTimeLabelError,
   syncPendingDates,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import { computed } from 'vue';
@@ -45,22 +45,22 @@ const hasDates = computed(() => pendingDates.value.length > 0);
 const dateRows = computed(() =>
   pendingDates.value.map((entry) => ({
     date: entry.date,
-    dateNote: entry.dateNote,
+    timeLabel: entry.timeLabel,
     dateLabel: formatDateWithWeekday(entry.date),
-    counter: getDateNoteCounter(entry.dateNote),
+    counter: getTimeLabelCounter(entry.timeLabel),
   })),
 );
 
-const dateNoteRules = [(v: unknown) => getDateNoteError(v as string) ?? true];
+const timeLabelRules = [(v: unknown) => getTimeLabelError(v as string) ?? true];
 
 function removeDate(date: string) {
   selectedDates.value = selectedDates.value.filter((d) => d !== date);
 }
 
 // ひとことは行ごとに更新する（配列要素を直接書き換えず、新しい配列に差し替える）
-function updateDateNote(date: string, dateNote: string) {
+function updateTimeLabel(date: string, timeLabel: string) {
   pendingDates.value = pendingDates.value.map((entry) =>
-    entry.date === date ? { ...entry, dateNote } : entry,
+    entry.date === date ? { ...entry, timeLabel } : entry,
   );
 }
 </script>
@@ -103,10 +103,10 @@ function updateDateNote(date: string, dateNote: string) {
             <span class="date-text">{{ row.dateLabel }}</span>
             <BaseTextBox
               class="note-input"
-              :model-value="row.dateNote"
+              :model-value="row.timeLabel"
               placeholder="例）19:00〜 / 午後から / 終日OK"
-              :rules="dateNoteRules"
-              @update:model-value="updateDateNote(row.date, $event)"
+              :rules="timeLabelRules"
+              @update:model-value="updateTimeLabel(row.date, $event)"
             />
           </label>
           <span

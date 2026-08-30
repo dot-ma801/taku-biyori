@@ -25,6 +25,14 @@ export interface UpsertGuestScheduleAnswersRepository {
     entryId: string,
     items: readonly ScheduleAnswerItem[],
   ): Promise<LobbyScheduleAnswer[]>;
+  /**
+   * ログインユーザー用の回答と同じ理由でロックを取る。
+   * 詳細は upsert-schedule-answers.ts の同名メソッドのコメントを参照。
+   */
+  executeWithLock<T>(
+    lobbyId: string,
+    fn: (lockedRepo: UpsertGuestScheduleAnswersRepository) => Promise<T>,
+  ): Promise<T>;
 }
 
 export type UpsertGuestScheduleAnswersResult =
@@ -54,41 +62,43 @@ export const upsertGuestScheduleAnswers = async (
   token: string,
   input: GuestUpsertScheduleAnswersInput,
 ): Promise<UpsertGuestScheduleAnswersResult> => {
-  // token 検証と status 取得を並列で実行してレイテンシを削減する
-  const [storedToken, fields] = await Promise.all([
-    repo.findGuestLinkToken(lobbyId),
-    repo.findStatusFields(lobbyId),
-  ]);
+  return repo.executeWithLock(lobbyId, async (locked) => {
+    // token 検証と status 取得を並列で実行してレイテンシを削減する
+    const [storedToken, fields] = await Promise.all([
+      locked.findGuestLinkToken(lobbyId),
+      locked.findStatusFields(lobbyId),
+    ]);
 
-  if (!fields) return { type: 'notFound' };
-  if (storedToken !== token) return { type: 'invalidToken' };
+    if (!fields) return { type: 'notFound' };
+    if (storedToken !== token) return { type: 'invalidToken' };
 
-  const status = getLobbyStatus(fields);
-  if (!canPerformLobbyAction(LobbyAction.answerSchedule, status, 'guest')) {
-    return { type: 'invalidStatus' };
-  }
+    const status = getLobbyStatus(fields);
+    if (!canPerformLobbyAction(LobbyAction.answerSchedule, status, 'guest')) {
+      return { type: 'invalidStatus' };
+    }
 
-  const pollLobbyId = await repo.findSchedulePollLobbyId(pollId);
-  if (pollLobbyId === null || pollLobbyId !== lobbyId) {
-    return { type: 'notFound' };
-  }
+    const pollLobbyId = await locked.findSchedulePollLobbyId(pollId);
+    if (pollLobbyId === null || pollLobbyId !== lobbyId) {
+      return { type: 'notFound' };
+    }
 
-  const latestPollId = await repo.findLatestSchedulePollId(lobbyId);
-  if (latestPollId !== pollId) return { type: 'notLatest' };
+    const latestPollId = await locked.findLatestSchedulePollId(lobbyId);
+    if (latestPollId !== pollId) return { type: 'notLatest' };
 
-  const isGuest = await repo.isGuestEntry(lobbyId, input.entryId);
-  if (!isGuest) return { type: 'forbidden' };
+    const isGuest = await locked.isGuestEntry(lobbyId, input.entryId);
+    if (!isGuest) return { type: 'forbidden' };
 
-  const candidateDateIds = await repo.findCandidateDateIdsByPollId(pollId);
-  const validCandidateDateIds = new Set(candidateDateIds);
-  const hasInvalidCandidateDate = input.answers.some(
-    (item) => !validCandidateDateIds.has(item.candidateDateId),
-  );
-  if (hasInvalidCandidateDate) return { type: 'notFound' };
+    const candidateDateIds = await locked.findCandidateDateIdsByPollId(pollId);
+    const validCandidateDateIds = new Set(candidateDateIds);
+    const hasInvalidCandidateDate = input.answers.some(
+      (item) => !validCandidateDateIds.has(item.candidateDateId),
+    );
+    if (hasInvalidCandidateDate) return { type: 'notFound' };
 
-  const answers = await repo.upsertScheduleAnswers(
-    input.entryId,
-    input.answers,
-  );
-  return { type: 'ok', answers };
+    const answers = await locked.upsertScheduleAnswers(
+      input.entryId,
+      input.answers,
+    );
+    return { type: 'ok', answers };
+  });
 };

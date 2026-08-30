@@ -11,21 +11,28 @@ const mockAnswers: LobbyScheduleAnswer[] = [
 
 const makeRepo = (
   overrides: Partial<UpsertGuestScheduleAnswersRepository> = {},
-): UpsertGuestScheduleAnswersRepository => ({
-  findGuestLinkToken: vi.fn().mockResolvedValue(TOKEN),
-  findStatusFields: vi.fn().mockResolvedValue({
-    publishedAt: new Date('2026-08-01T00:00:00.000Z'),
-    openUntil: null,
-    receptionClosedAt: null,
-    disbandedAt: null,
-  }),
-  findSchedulePollLobbyId: vi.fn().mockResolvedValue('lobby-1'),
-  findLatestSchedulePollId: vi.fn().mockResolvedValue('poll-1'),
-  isGuestEntry: vi.fn().mockResolvedValue(true),
-  findCandidateDateIdsByPollId: vi.fn().mockResolvedValue(['date-1', 'date-2']),
-  upsertScheduleAnswers: vi.fn().mockResolvedValue(mockAnswers),
-  ...overrides,
-});
+): UpsertGuestScheduleAnswersRepository => {
+  const repo: UpsertGuestScheduleAnswersRepository = {
+    findGuestLinkToken: vi.fn().mockResolvedValue(TOKEN),
+    findStatusFields: vi.fn().mockResolvedValue({
+      publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+      openUntil: null,
+      receptionClosedAt: null,
+      disbandedAt: null,
+    }),
+    findSchedulePollLobbyId: vi.fn().mockResolvedValue('lobby-1'),
+    findLatestSchedulePollId: vi.fn().mockResolvedValue('poll-1'),
+    isGuestEntry: vi.fn().mockResolvedValue(true),
+    findCandidateDateIdsByPollId: vi
+      .fn()
+      .mockResolvedValue(['date-1', 'date-2']),
+    upsertScheduleAnswers: vi.fn().mockResolvedValue(mockAnswers),
+    // ロックの中で同じ repo を使う。並行性そのものは実 DB のテストで検証する
+    executeWithLock: vi.fn(async (_lobbyId, fn) => fn(repo)),
+    ...overrides,
+  };
+  return repo;
+};
 
 const act = (
   repo: UpsertGuestScheduleAnswersRepository,
@@ -48,6 +55,37 @@ const act = (
   );
 
 describe('upsertGuestScheduleAnswers', () => {
+  describe('ロックの範囲', () => {
+    it('最新判定・候補日の検証・回答の書き込みを `executeWithLock` の中でまとめて行う', async () => {
+      // Arrange
+      const repo = makeRepo();
+
+      // Act
+      await act(repo);
+
+      // Assert
+      expect(repo.executeWithLock).toHaveBeenCalledTimes(1);
+      expect(repo.findLatestSchedulePollId).toHaveBeenCalled();
+      expect(repo.upsertScheduleAnswers).toHaveBeenCalled();
+    });
+
+    it('ロックを取らずに回答を書き込まない', async () => {
+      // Arrange
+      const upsert = vi.fn().mockResolvedValue(mockAnswers);
+      const repo = makeRepo({
+        upsertScheduleAnswers: upsert,
+        executeWithLock: vi.fn().mockResolvedValue({ type: 'notFound' }),
+      });
+
+      // Act
+      const result = await act(repo);
+
+      // Assert
+      expect(result).toEqual({ type: 'notFound' });
+      expect(upsert).not.toHaveBeenCalled();
+    });
+  });
+
   it('トークン一致かつゲストメンバーならまとめて回答できる', async () => {
     // Arrange
     const repo = makeRepo();

@@ -33,6 +33,7 @@ function makeLobby(
     ...makeUpdatedLobby(LobbyStatus.draft),
     entries: [],
     activeEntries: [],
+    schedulePolls: [],
     ...overrides,
   };
 }

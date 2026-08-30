@@ -48,6 +48,7 @@ function makeLobby(
     hostUserId: 'host-1',
     createdAt: new Date('2024-01-01T00:00:00Z'),
     updatedAt: new Date('2024-01-01T00:00:00Z'),
+    schedulePolls: [],
     ...overrides,
     entries,
     activeEntries: entries.filter((entry) => entry.leftAt === null),

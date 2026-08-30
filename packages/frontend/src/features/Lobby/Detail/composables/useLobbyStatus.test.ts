@@ -105,6 +105,8 @@ describe('canPublish', () => {
   describe.each([
     { status: LobbyStatus.draft, expected: true },
     { status: LobbyStatus.open, expected: false },
+    { status: LobbyStatus.closed, expected: false },
+    { status: LobbyStatus.disbanded, expected: false },
     { status: LobbyStatus.scheduling, expected: false },
     { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
@@ -197,7 +199,10 @@ describe('canEdit', () => {
   describe.each([
     { status: LobbyStatus.draft, expected: true },
     { status: LobbyStatus.open, expected: true },
-    { status: LobbyStatus.scheduling, expected: true },
+    { status: LobbyStatus.closed, expected: true },
+    { status: LobbyStatus.disbanded, expected: false },
+    // 旧値（scheduling / cancelled）は v2 のポリシー表に無いため、どの操作も許可されない
+    { status: LobbyStatus.scheduling, expected: false },
     { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {

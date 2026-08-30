@@ -91,10 +91,3 @@ export const UpdateMemberInputSchema = z
     message: '少なくとも1つのフィールドが必要です',
   });
 export type UpdateMemberInput = z.infer<typeof UpdateMemberInputSchema>;
-
-/**
- * ゲストの参加・回答を認可するトークンを送るヘッダー名。
- * トークンは capability（資格情報）として扱い、クエリやボディではなくこのヘッダーで送る。
- * X- prefix は RFC 6648 で非推奨のため使用しない。
- */
-export const GUEST_TOKEN_HEADER = 'Guest-Token';

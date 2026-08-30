@@ -128,6 +128,28 @@ export const LobbyMemberSchema = z.object({
 });
 export type LobbyMember = z.infer<typeof LobbyMemberSchema>;
 
+/**
+ * ロビーへの参加（lobby.lobby_entries）。v0.2 の `LobbyMember` の改名（design-v2 §3-3）。
+ *
+ * - ログインユーザー: `userId` が非 null、`guestName` は null
+ * - ゲスト: `userId` が null、`guestName` が非 null
+ *
+ * **脱退しても行は消えない。** `leftAt` に時刻が入るだけで、過去の着席・回答・メモは
+ * 繋がったまま残る（design-v2 §9-5）。再参加は新しい行を作らず `leftAt` を null に戻す。
+ *
+ * キャラクター名は着席してからの関心事のため、LobbyEntry は `characterName` を持たない。
+ */
+export const LobbyEntrySchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().nullable(),
+  userName: z.string().nullable(),
+  guestName: z.string().nullable(),
+  joinedAt: z.string(),
+  /** 脱退日時。null なら在籍中 */
+  leftAt: z.string().nullable(),
+});
+export type LobbyEntry = z.infer<typeof LobbyEntrySchema>;
+
 export const LobbyDetailSchema = LobbySchema.extend({
   members: z.array(LobbyMemberSchema),
 });
@@ -142,6 +164,15 @@ export const JoinLobbyAsGuestInputSchema = z.object({
   guestName: z.string().min(1).max(100),
 });
 export type JoinLobbyAsGuestInput = z.infer<typeof JoinLobbyAsGuestInputSchema>;
+
+/**
+ * ゲストの参加・回答を認可するトークンを送るヘッダー名。
+ * トークンは capability（資格情報）として扱い、クエリやボディではなくこのヘッダーで送る。
+ * X- prefix は RFC 6648 で非推奨のため使用しない。
+ *
+ * v2 でトークンはロビーに1本化されたため、game-session.ts からここへ移した（design-v2 §6-5）。
+ */
+export const GUEST_TOKEN_HEADER = 'Guest-Token';
 
 export const LobbyGuestLinkResponseSchema = z.object({
   token: z.string(),

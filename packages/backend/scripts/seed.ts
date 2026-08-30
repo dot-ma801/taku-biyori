@@ -24,8 +24,9 @@ import { dateFromToday } from '@/system/domain/date-from-today';
 import { user } from '@/system/infrastructure/database/schema';
 import {
   lobbies,
-  lobbyAnswers,
-  lobbyCandidates,
+  scheduleAnswers,
+  candidateDates,
+  schedulePolls,
   lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
@@ -164,16 +165,28 @@ const addLobbyMember = async (
   return firstRow(rows, 'addLobbyMember').id;
 };
 
-const addCandidateDate = async (
+const addSchedulePoll = async (
   database: Database,
   lobbyId: string,
-  date: string,
-  dateNote: string | null,
 ): Promise<string> => {
   const rows = await database
-    .insert(lobbyCandidates)
-    .values({ lobbyId, date, dateNote })
-    .returning({ id: lobbyCandidates.id });
+    .insert(schedulePolls)
+    .values({ lobbyId })
+    .returning({ id: schedulePolls.id });
+
+  return firstRow(rows, 'addSchedulePoll').id;
+};
+
+const addCandidateDate = async (
+  database: Database,
+  pollId: string,
+  date: string,
+  timeLabel: string | null,
+): Promise<string> => {
+  const rows = await database
+    .insert(candidateDates)
+    .values({ pollId, date, timeLabel })
+    .returning({ id: candidateDates.id });
 
   return firstRow(rows, 'addCandidateDate').id;
 };
@@ -212,40 +225,73 @@ const main = async (): Promise<void> => {
     guestName: 'そら（ゲスト）',
   });
 
+  const openPollId = await addSchedulePoll(db, openLobbyId);
   const firstDateId = await addCandidateDate(
     db,
-    openLobbyId,
+    openPollId,
     dateFromToday(7),
     '20:00〜',
   );
   const secondDateId = await addCandidateDate(
     db,
-    openLobbyId,
+    openPollId,
     dateFromToday(14),
     '13:00〜17:00',
   );
   const thirdDateId = await addCandidateDate(
     db,
-    openLobbyId,
+    openPollId,
     dateFromToday(21),
     null,
   );
 
-  await db.insert(lobbyAnswers).values([
-    { candidateId: firstDateId, memberId: openHostMemberId, answer: 'ok' },
-    { candidateId: firstDateId, memberId: openHaruMemberId, answer: 'ok' },
+  await db.insert(scheduleAnswers).values([
     {
-      candidateId: firstDateId,
-      memberId: openNatsuMemberId,
+      candidateDateId: firstDateId,
+      lobbyEntryId: openHostMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: firstDateId,
+      lobbyEntryId: openHaruMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: firstDateId,
+      lobbyEntryId: openNatsuMemberId,
       answer: 'maybe',
       comment: '21時からなら確実です',
     },
-    { candidateId: firstDateId, memberId: openGuestMemberId, answer: 'ok' },
-    { candidateId: secondDateId, memberId: openHostMemberId, answer: 'ok' },
-    { candidateId: secondDateId, memberId: openHaruMemberId, answer: 'ng' },
-    { candidateId: secondDateId, memberId: openNatsuMemberId, answer: 'ok' },
-    { candidateId: thirdDateId, memberId: openHostMemberId, answer: 'maybe' },
-    { candidateId: thirdDateId, memberId: openGuestMemberId, answer: 'ng' },
+    {
+      candidateDateId: firstDateId,
+      lobbyEntryId: openGuestMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: secondDateId,
+      lobbyEntryId: openHostMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: secondDateId,
+      lobbyEntryId: openHaruMemberId,
+      answer: 'ng',
+    },
+    {
+      candidateDateId: secondDateId,
+      lobbyEntryId: openNatsuMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: thirdDateId,
+      lobbyEntryId: openHostMemberId,
+      answer: 'maybe',
+    },
+    {
+      candidateDateId: thirdDateId,
+      lobbyEntryId: openGuestMemberId,
+      answer: 'ng',
+    },
   ]);
   console.log('公開・募集中のロビーを作成しました（候補日3件・回答9件）');
 
@@ -270,16 +316,29 @@ const main = async (): Promise<void> => {
   const closedAkiMemberId = await addLobbyMember(db, closedLobbyId, {
     userId: akiId,
   });
+  const closedPollId = await addSchedulePoll(db, closedLobbyId);
   const closedDateId = await addCandidateDate(
     db,
-    closedLobbyId,
+    closedPollId,
     dateFromToday(3),
     '19:00〜',
   );
-  await db.insert(lobbyAnswers).values([
-    { candidateId: closedDateId, memberId: closedHostMemberId, answer: 'ok' },
-    { candidateId: closedDateId, memberId: closedYukiMemberId, answer: 'ok' },
-    { candidateId: closedDateId, memberId: closedAkiMemberId, answer: 'ok' },
+  await db.insert(scheduleAnswers).values([
+    {
+      candidateDateId: closedDateId,
+      lobbyEntryId: closedHostMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: closedDateId,
+      lobbyEntryId: closedYukiMemberId,
+      answer: 'ok',
+    },
+    {
+      candidateDateId: closedDateId,
+      lobbyEntryId: closedAkiMemberId,
+      answer: 'ok',
+    },
   ]);
 
   const scheduledSessionRows = await db
@@ -424,7 +483,8 @@ const main = async (): Promise<void> => {
     isPublished: false,
   });
   await addLobbyMember(db, draftLobbyId, { userId: akiId });
-  await addCandidateDate(db, draftLobbyId, dateFromToday(45), null);
+  const draftPollId = await addSchedulePoll(db, draftLobbyId);
+  await addCandidateDate(db, draftPollId, dateFromToday(45), null);
   console.log('下書きのロビーを作成しました');
 
   // 集計を出しておくと、スキーマ変更でシードが壊れたときに気づきやすい

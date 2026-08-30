@@ -77,6 +77,7 @@ const mockLobby: Lobby = {
 const mockLobbyDetail: LobbyDetail = {
   ...mockLobby,
   entries: [],
+  schedulePolls: [],
 };
 
 const mockGetOk: GetLobbyResult = {
@@ -2205,7 +2206,10 @@ describe('POST → PATCH(公開) → GET の一連フロー', () => {
     );
     const getLobby = vi.fn(async (): Promise<GetLobbyResult> => {
       if (!stored) return { type: 'notFound' };
-      return { type: 'ok', lobby: { ...stored, entries: [] } };
+      return {
+        type: 'ok',
+        lobby: { ...stored, entries: [], schedulePolls: [] },
+      };
     });
     const app = makeApp({ createLobby, updateLobbyStatus, getLobby });
 

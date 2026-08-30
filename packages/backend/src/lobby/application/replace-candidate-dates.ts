@@ -32,7 +32,7 @@ export interface ReplaceCandidateDatesRepository extends LobbyHostRepository {
    * 1トランザクションで実行する。読み取りと書き込みを別トランザクションに分けると、
    * 並行リクエストが同じ「あるべき状態」を根拠に競合する候補日を追加したり、
    * 「最新の調整」判定がすり替わったりする TOCTOU が起きるため
-   * （既存 bulkUpdateAvailabilityDates と同方針）。
+   * （delete-lobby など、読み取りと書き込みをまたぐ既存ユースケースと同方針）。
    */
   executeWithLock<T>(
     lobbyId: string,
@@ -50,7 +50,7 @@ export type ReplaceCandidateDatesResult =
 
 /**
  * 日程調整の候補日を一括で差し替える。リクエストの日付リストを「あるべき状態」として
- * 差分適用する（bulkUpdateAvailabilityDates と同方針）。**最新の調整のみ**編集できる。
+ * 差分適用する。**最新の調整のみ**編集できる。
  *
  * 過去日ルール（issue #114 コメントの決定）: 既存の候補日集合に無い過去日を新たに
  * 追加しようとした場合のみ `pastDateAdded` で弾く。既存にすでにある過去日はそのまま

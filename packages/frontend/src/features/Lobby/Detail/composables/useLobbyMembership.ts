@@ -1,6 +1,10 @@
 import { computed, getCurrentInstance, onUnmounted, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import { LobbyStatus } from '@taku-biyori/shared';
+import {
+  LobbyAction,
+  LobbyStatus,
+  canPerformLobbyAction,
+} from '@taku-biyori/shared';
 import type { LobbyDetailModel, LobbyEntryModel } from '@/models/lobby';
 import { joinLobby, leaveLobby } from '@/api/lobby';
 import { useSession } from '@/lib/auth';
@@ -52,22 +56,24 @@ export const useLobbyMembership = (
       toValue(lobby)?.status === LobbyStatus.open,
   );
 
-  /** 退出可能かどうか。メンバーかつホストでなく・open または scheduling のときのみ true */
+  /** 脱退可能かどうか。在籍中のメンバーかつホストでなく・解散していないときのみ true */
   const canLeave = computed(() => {
     const status = toValue(lobby)?.status;
     return (
       isMember.value &&
       !isHost.value &&
-      (status === LobbyStatus.open || status === LobbyStatus.scheduling)
+      status !== undefined &&
+      canPerformLobbyAction(LobbyAction.leaveLobby, status, 'member')
     );
   });
 
-  /** ホストがメンバーを取り消せるかどうか。ホストかつ open または scheduling のときのみ true */
+  /** ホストが参加者を取り消せるかどうか。ホストかつ解散していないときのみ true */
   const canRemoveMember = computed(() => {
     const status = toValue(lobby)?.status;
     return (
       isHost.value &&
-      (status === LobbyStatus.open || status === LobbyStatus.scheduling)
+      status !== undefined &&
+      canPerformLobbyAction(LobbyAction.leaveLobby, status, 'host')
     );
   });
 

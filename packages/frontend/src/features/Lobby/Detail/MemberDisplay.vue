@@ -5,9 +5,9 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import RemoveMemberDialog from '@/features/Lobby/Detail/Dialog/RemoveMemberDialog.vue';
 import { useLobbyMembership } from '@/features/Lobby/Detail/composables/useLobbyMembership';
+import { useEntryListView } from '@/features/Lobby/Detail/composables/useEntryListView';
 import { UsersRound, UserRoundX } from '@lucide/vue';
 import type { LobbyDetailModel } from '@/models/lobby';
-import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -26,18 +26,10 @@ const { canRemoveMember, removeMember, loading } = useLobbyMembership(
   (memberId) => emit('member-removed', memberId),
 );
 
-const displayMembers = computed(() => {
-  return props.lobby.entries.map((member) => ({
-    id: member.id,
-    userName: memberDisplayName(member),
-    // アバターの種。id を持つメンバーは userId を優先し、
-    // 他画面（ヘッダー・プロフィール）と絵柄を揃える
-    userId: member.userId,
-    // id を持たないゲスト向けのフォールバック。
-    // サフィックスの有無で絵柄が変わらないよう baseName を渡す
-    baseName: memberBaseName(member),
-  }));
-});
+// 参加者一覧は脱退者も含めて全件出す（グレー表示にする）
+const { displayEntries, displayNameOf } = useEntryListView(
+  () => props.lobby.entries,
+);
 
 /** 取り消し確認ダイアログの対象メンバー ID（null のときダイアログ非表示） */
 const pendingRemoveMemberId = ref<string | null>(null);
@@ -49,12 +41,9 @@ const removeDialogOpen = computed({
   },
 });
 
-const pendingMemberName = computed(() => {
-  const found = displayMembers.value.find(
-    (m) => m.id === pendingRemoveMemberId.value,
-  );
-  return found?.userName ?? '';
-});
+const pendingMemberName = computed(() =>
+  displayNameOf(pendingRemoveMemberId.value),
+);
 
 const onConfirmRemove = () => {
   if (pendingRemoveMemberId.value) {
@@ -71,25 +60,29 @@ const onConfirmRemove = () => {
     </BaseSectionHeading>
 
     <div
-      v-for="member in displayMembers"
-      :key="member.id"
+      v-for="entry in displayEntries"
+      :key="entry.id"
       class="user-container"
+      :class="{ 'user-container--left': entry.hasLeft }"
     >
       <UserAvatar
         class="avatar"
         :size="35"
-        :user-id="member.userId"
-        :name="member.baseName"
+        :user-id="entry.userId"
+        :name="entry.baseName"
       />
 
-      <p>{{ member.userName }}</p>
+      <p>
+        {{ entry.userName }}
+        <span v-if="entry.hasLeft" class="left-badge">脱退</span>
+      </p>
 
       <BaseButton
-        v-if="canRemoveMember"
+        v-if="canRemoveMember && !entry.hasLeft"
         variant="secondary"
         :left-icon="UserRoundX"
         :loading="loading"
-        @click="pendingRemoveMemberId = member.id"
+        @click="pendingRemoveMemberId = entry.id"
       >
         取り消し
       </BaseButton>
@@ -117,5 +110,19 @@ const onConfirmRemove = () => {
   padding: var(--space-2);
 
   border-top: solid 2px var(--color-border);
+}
+
+/* 脱退した参加者は記録として残すが、在籍中と見分けがつくよう落とす */
+.user-container--left {
+  opacity: 0.5;
+}
+
+.left-badge {
+  margin-left: var(--space-1);
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-full);
 }
 </style>

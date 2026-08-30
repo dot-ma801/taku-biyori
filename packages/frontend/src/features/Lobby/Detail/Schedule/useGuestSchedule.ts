@@ -1,7 +1,11 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
-import { LobbyStatus } from '@taku-biyori/shared';
+import {
+  LobbyAction,
+  LobbyStatus,
+  canPerformLobbyAction,
+} from '@taku-biyori/shared';
 import { updateGuestLobbyAvailabilityDateResponse } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
@@ -65,11 +69,13 @@ export const useGuestSchedule = (
   /** 招待トークンが付与されているか */
   const hasToken = computed(() => !!toValue(token));
 
-  /** ゲストが日程回答を編集できるか。トークンがあり status が open / scheduling のときのみ true */
+  /** ゲストが日程回答を編集できるか。トークンがあり公開済み（open / closed）のときのみ true */
   const canEditGuestSchedule = computed(() => {
     const s = toValue(status);
     return (
-      hasToken.value && (s === LobbyStatus.open || s === LobbyStatus.scheduling)
+      hasToken.value &&
+      s !== undefined &&
+      canPerformLobbyAction(LobbyAction.answerSchedule, s, 'guest')
     );
   });
 

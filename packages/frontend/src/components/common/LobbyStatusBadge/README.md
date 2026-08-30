@@ -3,7 +3,8 @@
 `LobbyStatus` を受け取り、ステータスに対応したラベルと色のバッジを表示するコンポーネント。
 
 ドメイン知識（`LobbyStatus` の enum）を持つが、複数の feature から共通で利用されるため `components/common/` に配置している。  
-API 呼び出しや composable 依存は一切持たず、純粋な表示のみを担当する。
+API 呼び出しは行わず、表示のみを担当する。ラベルとバリアントの導出は `useLobbyStatusBadge` に置き、
+コンポーネント側はその結果をテンプレートに流すだけにしている（データの導出をコンポーネントに書かない、という規約に従う）。
 
 ## Props
 
@@ -19,17 +20,12 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 ## ステータスとバリアントの対応
 
-| ステータス   | ラベル     | バリアント          |
-| ------------ | ---------- | ------------------- |
-| `draft`      | 非公開     | muted（グレー）     |
-| `open`       | 募集中     | primary（ティール） |
-| `closed`     | 受付終了   | warning（オレンジ） |
-| `disbanded`  | 解散       | error（レッド）     |
-| `scheduling` | 日程調整中 | warning（オレンジ） |
-| `cancelled`  | 中止       | error（レッド）     |
-
-`scheduling` / `cancelled` は v0.2 の値で、v2 では導出されない（design-v2 §4-1）。
-移行タスク3 の frontend PR で削除する。
+| ステータス  | ラベル   | バリアント          |
+| ----------- | -------- | ------------------- |
+| `draft`     | 非公開   | muted（グレー）     |
+| `open`      | 募集中   | primary（ティール） |
+| `closed`    | 受付終了 | warning（オレンジ） |
+| `disbanded` | 解散     | error（レッド）     |
 
 ## Design Notes
 
@@ -50,8 +46,6 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 - `open` のとき「募集中」と表示されること
 - `closed` のとき「受付終了」と表示されること
 - `disbanded` のとき「解散」と表示されること
-- `scheduling` のとき「日程調整中」と表示されること
-- `cancelled` のとき「中止」と表示されること
 
 ### バリアント
 
@@ -59,5 +53,3 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 - `open` のとき `status-badge--primary` クラスが付与されること
 - `closed` のとき `status-badge--warning` クラスが付与されること
 - `disbanded` のとき `status-badge--error` クラスが付与されること
-- `scheduling` のとき `status-badge--warning` クラスが付与されること
-- `cancelled` のとき `status-badge--error` クラスが付与されること

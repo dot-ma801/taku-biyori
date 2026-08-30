@@ -9,17 +9,6 @@ export enum LobbyStatus {
   closed = 'closed',
   /** 解散。企画そのものを終了した（終端状態） */
   disbanded = 'disbanded',
-
-  /**
-   * @deprecated v2 では導出されない。`closed` に置き換わる（design-v2 §4-1）。
-   * 移行タスク3 の backend PR で backend の導出が止まり、frontend PR で削除する。
-   */
-  scheduling = 'scheduling',
-  /**
-   * @deprecated v2 では導出されない。`disbanded` に置き換わる（design-v2 §4-1）。
-   * 移行タスク3 の backend PR で backend の導出が止まり、frontend PR で削除する。
-   */
-  cancelled = 'cancelled',
 }
 
 /**

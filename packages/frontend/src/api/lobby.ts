@@ -133,6 +133,19 @@ export async function getLobbyGuestLink(
 }
 
 /**
+ * ホストがゲスト招待用のトークンを再発行する。旧トークンは即座に無効になる。
+ * 新しいリソースを作るわけではないので 200 が返る（design-v2 §6-12-1）。
+ */
+export async function regenerateLobbyGuestLink(
+  id: string,
+): Promise<LobbyGuestLinkResponse> {
+  return (await apiRequest<LobbyGuestLinkResponse>(
+    `/api/lobbies/${id}/guest-link`,
+    { method: 'POST' },
+  ))!;
+}
+
+/**
  * ゲストとしてロビーに参加する。認証不要で、トークンは Guest-Token ヘッダーで送る。
  */
 export async function joinLobbyAsGuest(

@@ -108,9 +108,9 @@ describe('refetch', () => {
 describe('canInputSchedule', () => {
   it.each([
     [LobbyStatus.open, true],
-    [LobbyStatus.scheduling, true],
+    [LobbyStatus.closed, true],
     [LobbyStatus.draft, false],
-    [LobbyStatus.cancelled, false],
+    [LobbyStatus.disbanded, false],
     [undefined, false],
   ])('status が %s のとき %s', async (status, expected) => {
     // Arrange

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/button/BaseButton.vue';
 import GuestJoinDialog from '@/features/Lobby/Detail/Dialog/GuestJoinDialog.vue';
-import CancelDialog from '@/features/Lobby/Detail/Dialog/CancelDialog.vue';
+import DisbandDialog from '@/features/Lobby/Detail/Dialog/DisbandDialog.vue';
 import LeaveDialog from '@/features/Lobby/Detail/Dialog/LeaveDialog.vue';
 import { useLobbyStatus } from '@/features/Lobby/Detail/composables/useLobbyStatus';
 import { useGuestLink } from '@/features/Lobby/Detail/composables/useGuestLink';
@@ -20,6 +20,9 @@ import {
   Globe,
   UserRoundPlus,
   UserRoundMinus,
+  DoorClosed,
+  Megaphone,
+  RefreshCw,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -36,17 +39,33 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const guestJoinDialogModel = ref(false);
-const cancelDialogModel = ref(false);
+const disbandDialogModel = ref(false);
 const leaveDialogModel = ref(false);
 
-const { canPublish, canEdit, canDisband, loading, publishLobby, disbandLobby } =
-  useLobbyStatus(
-    props.lobby.id,
-    () => props.lobby,
-    (updated) => emit('updated', updated),
-  );
+const {
+  canPublish,
+  canEdit,
+  canCloseReception,
+  canReopenReception,
+  canDisband,
+  loading,
+  publishLobby,
+  closeReception,
+  reopenReception,
+  disbandLobby,
+} = useLobbyStatus(
+  props.lobby.id,
+  () => props.lobby,
+  (updated) => emit('updated', updated),
+);
 
-const { canIssueGuestLink, copyGuestLink } = useGuestLink(
+const {
+  canIssueGuestLink,
+  copyGuestLink,
+  canRegenerateGuestLink,
+  regenerateGuestLink,
+  uncopiedLink,
+} = useGuestLink(
   props.lobby.id,
   () => props.lobby.hostUserId,
   () => props.lobby.status,
@@ -92,8 +111,8 @@ const onGuestJoined = (member: LobbyEntryModel) => {
   emit('member-added', member);
 };
 
-const onConfirmCancel = () => {
-  cancelDialogModel.value = false;
+const onConfirmDisband = () => {
+  disbandDialogModel.value = false;
   disbandLobby();
 };
 </script>
@@ -147,15 +166,54 @@ const onConfirmCancel = () => {
     </BaseButton>
 
     <BaseButton
+      v-if="canRegenerateGuestLink"
+      :left-icon="RefreshCw"
+      variant="secondary"
+      @click="regenerateGuestLink"
+    >
+      招待リンクを再発行
+    </BaseButton>
+
+    <BaseButton
+      v-if="canCloseReception"
+      :loading="loading"
+      variant="secondary"
+      :left-icon="DoorClosed"
+      @click="closeReception"
+    >
+      受付を閉じる
+    </BaseButton>
+
+    <BaseButton
+      v-if="canReopenReception"
+      :loading="loading"
+      :left-icon="Megaphone"
+      @click="reopenReception"
+    >
+      追加募集
+    </BaseButton>
+
+    <BaseButton
       v-if="canDisband"
       :loading="loading"
       variant="danger"
       :left-icon="Ban"
-      @click="cancelDialogModel = true"
+      @click="disbandDialogModel = true"
     >
-      募集中止
+      解散
     </BaseButton>
   </div>
+
+  <!--
+    コピーできなかった招待リンク。再発行は旧トークンを即座に無効にするため、
+    ここに出さないとホストが誰にもリンクを渡せなくなる
+  -->
+  <p v-if="uncopiedLink" class="uncopied-link">
+    <span class="uncopied-link__label"
+      >コピーできませんでした。以下のリンクを手動でコピーしてください。</span
+    >
+    <code class="uncopied-link__value">{{ uncopiedLink }}</code>
+  </p>
 
   <GuestJoinDialog
     v-model="guestJoinDialogModel"
@@ -163,7 +221,7 @@ const onConfirmCancel = () => {
     :lobby-status="lobby.status"
     @joined="onGuestJoined"
   />
-  <CancelDialog v-model="cancelDialogModel" @confirm="onConfirmCancel" />
+  <DisbandDialog v-model="disbandDialogModel" @confirm="onConfirmDisband" />
   <LeaveDialog v-model="leaveDialogModel" @confirm="leave" />
 </template>
 
@@ -176,5 +234,31 @@ const onConfirmCancel = () => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.uncopied-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+
+  background: var(--color-surface-muted, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  font-size: var(--font-size-sm);
+}
+
+.uncopied-link__label {
+  color: var(--color-text-muted);
+}
+
+/* リンクは長いので折り返す。選択してコピーできる必要がある */
+.uncopied-link__value {
+  overflow-wrap: anywhere;
+  user-select: all;
+  font-family: var(--font-mono, monospace);
 }
 </style>

@@ -111,8 +111,8 @@ describe('canPublish', () => {
     { status: LobbyStatus.open, expected: false },
     { status: LobbyStatus.closed, expected: false },
     { status: LobbyStatus.disbanded, expected: false },
-    { status: LobbyStatus.scheduling, expected: false },
-    { status: LobbyStatus.cancelled, expected: false },
+    { status: LobbyStatus.closed, expected: false },
+    { status: LobbyStatus.disbanded, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
       // Arrange
@@ -159,7 +159,7 @@ describe('canDisband', () => {
     { status: LobbyStatus.draft, expected: false },
     { status: LobbyStatus.open, expected: true },
     { status: LobbyStatus.closed, expected: true },
-    { status: LobbyStatus.cancelled, expected: false },
+    { status: LobbyStatus.disbanded, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
       // Arrange
@@ -205,9 +205,6 @@ describe('canEdit', () => {
     { status: LobbyStatus.open, expected: true },
     { status: LobbyStatus.closed, expected: true },
     { status: LobbyStatus.disbanded, expected: false },
-    // 旧値（scheduling / cancelled）は v2 のポリシー表に無いため、どの操作も許可されない
-    { status: LobbyStatus.scheduling, expected: false },
-    { status: LobbyStatus.cancelled, expected: false },
   ])('ステータス policy (status=$status)', ({ status, expected }) => {
     it(`ホストのとき ${expected} を返す`, () => {
       // Arrange
@@ -244,6 +241,141 @@ describe('canEdit', () => {
 
     // Assert
     expect(canEdit.value).toBe(false);
+  });
+});
+
+describe('canCloseReception / canReopenReception', () => {
+  describe.each([
+    { status: LobbyStatus.draft, close: false, reopen: false },
+    { status: LobbyStatus.open, close: true, reopen: false },
+    { status: LobbyStatus.closed, close: false, reopen: true },
+    { status: LobbyStatus.disbanded, close: false, reopen: false },
+  ])('ステータス policy (status=$status)', ({ status, close, reopen }) => {
+    it(`ホストのとき close=${close} / reopen=${reopen} を返す`, () => {
+      // Arrange
+      setupAuthAs(HOST_USER_ID);
+      const lobby = ref(makeLobby({ status }));
+
+      // Act
+      const { canCloseReception, canReopenReception } = useLobbyStatus(
+        LOBBY_ID,
+        lobby,
+        vi.fn(),
+      );
+
+      // Assert
+      expect(canCloseReception.value).toBe(close);
+      expect(canReopenReception.value).toBe(reopen);
+    });
+  });
+
+  it('ホスト以外は open でも false を返す', () => {
+    // Arrange
+    setupAuthAs(OTHER_USER_ID);
+    const lobby = ref(makeLobby({ status: LobbyStatus.open }));
+
+    // Act
+    const { canCloseReception } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Assert
+    expect(canCloseReception.value).toBe(false);
+  });
+});
+
+describe('closeReception', () => {
+  it('updateLobbyStatus を status: closed で呼び出す', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(updateLobbyStatus).mockResolvedValue(
+      makeUpdatedLobby(LobbyStatus.closed),
+    );
+    const lobby = ref(makeLobby({ status: LobbyStatus.open }));
+    const { closeReception } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Act
+    await closeReception();
+
+    // Assert
+    expect(updateLobbyStatus).toHaveBeenCalledWith(LOBBY_ID, {
+      status: 'closed',
+    });
+  });
+
+  it('遷移できないステータスでは API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const lobby = ref(makeLobby({ status: LobbyStatus.draft }));
+    const { closeReception } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Act
+    await closeReception();
+
+    // Assert
+    expect(updateLobbyStatus).not.toHaveBeenCalled();
+  });
+
+  it('成功時に更新後のロビーを onUpdated へ渡す', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const updated = makeUpdatedLobby(LobbyStatus.closed);
+    vi.mocked(updateLobbyStatus).mockResolvedValue(updated);
+    const onUpdated = vi.fn();
+    const lobby = ref(makeLobby({ status: LobbyStatus.open }));
+    const { closeReception } = useLobbyStatus(LOBBY_ID, lobby, onUpdated);
+
+    // Act
+    await closeReception();
+
+    // Assert
+    expect(onUpdated).toHaveBeenCalledWith(updated);
+    expect(mockToastSuccess).toHaveBeenCalled();
+  });
+
+  it('API エラー時に error トーストを表示する', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(updateLobbyStatus).mockRejectedValue(new Error('failed'));
+    const lobby = ref(makeLobby({ status: LobbyStatus.open }));
+    const { closeReception } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Act
+    await closeReception();
+
+    // Assert
+    expect(mockToastError).toHaveBeenCalled();
+  });
+});
+
+describe('reopenReception', () => {
+  it('updateLobbyStatus を status: open で呼び出す（追加募集）', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    vi.mocked(updateLobbyStatus).mockResolvedValue(
+      makeUpdatedLobby(LobbyStatus.open),
+    );
+    const lobby = ref(makeLobby({ status: LobbyStatus.closed }));
+    const { reopenReception } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Act
+    await reopenReception();
+
+    // Assert
+    expect(updateLobbyStatus).toHaveBeenCalledWith(LOBBY_ID, {
+      status: 'open',
+    });
+  });
+
+  it('遷移できないステータスでは API を呼ばない', async () => {
+    // Arrange
+    setupAuthAs(HOST_USER_ID);
+    const lobby = ref(makeLobby({ status: LobbyStatus.open }));
+    const { reopenReception } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
+
+    // Act
+    await reopenReception();
+
+    // Assert
+    expect(updateLobbyStatus).not.toHaveBeenCalled();
   });
 });
 
@@ -382,7 +514,7 @@ describe('disbandLobby', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateLobbyStatus).mockResolvedValue(
-      makeUpdatedLobby(LobbyStatus.cancelled),
+      makeUpdatedLobby(LobbyStatus.disbanded),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
     const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -399,7 +531,7 @@ describe('disbandLobby', () => {
   it('成功後に onUpdated を返り値の Lobby で呼び出す', async () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const updatedLobby = makeUpdatedLobby(LobbyStatus.cancelled);
+    const updatedLobby = makeUpdatedLobby(LobbyStatus.disbanded);
     vi.mocked(updateLobbyStatus).mockResolvedValue(updatedLobby);
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
     const onUpdated = vi.fn();
@@ -416,7 +548,7 @@ describe('disbandLobby', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateLobbyStatus).mockResolvedValue(
-      makeUpdatedLobby(LobbyStatus.cancelled),
+      makeUpdatedLobby(LobbyStatus.disbanded),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
     const { disbandLobby } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -432,7 +564,7 @@ describe('disbandLobby', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
     vi.mocked(updateLobbyStatus).mockResolvedValue(
-      makeUpdatedLobby(LobbyStatus.cancelled),
+      makeUpdatedLobby(LobbyStatus.disbanded),
     );
     const lobby = ref(makeLobby({ status: LobbyStatus.open }));
     const { disbandLobby, loading } = useLobbyStatus(LOBBY_ID, lobby, vi.fn());
@@ -499,7 +631,7 @@ describe('disbandLobby', () => {
     // Act
     const first = disbandLobby();
     await disbandLobby();
-    resolve(makeUpdatedLobby(LobbyStatus.cancelled));
+    resolve(makeUpdatedLobby(LobbyStatus.disbanded));
     await first;
 
     // Assert

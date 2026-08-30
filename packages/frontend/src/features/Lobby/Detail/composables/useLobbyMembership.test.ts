@@ -304,7 +304,7 @@ describe('canLeave', () => {
     // Arrange
     const lobby = ref(
       makeLobby({
-        status: LobbyStatus.scheduling,
+        status: LobbyStatus.closed,
         hostUserId: HOST_ID,
         entries: [makeMember()],
       }),
@@ -334,7 +334,7 @@ describe('canLeave', () => {
     // Arrange
     const lobby = ref(
       makeLobby({
-        status: LobbyStatus.cancelled,
+        status: LobbyStatus.disbanded,
         hostUserId: HOST_ID,
         entries: [makeMember()],
       }),
@@ -382,7 +382,7 @@ describe('canRemoveMember', () => {
   it('ホストかつ scheduling の場合は true', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.scheduling, hostUserId: USER_ID }),
+      makeLobby({ status: LobbyStatus.closed, hostUserId: USER_ID }),
     );
 
     // Act
@@ -408,7 +408,7 @@ describe('canRemoveMember', () => {
   it('open / scheduling 以外のステータスの場合は false', () => {
     // Arrange
     const lobby = ref(
-      makeLobby({ status: LobbyStatus.cancelled, hostUserId: USER_ID }),
+      makeLobby({ status: LobbyStatus.disbanded, hostUserId: USER_ID }),
     );
 
     // Act

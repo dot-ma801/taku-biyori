@@ -19,10 +19,8 @@ const router = useRouter();
 const STATUS_ORDER: Record<LobbyStatus, number> = {
   [LobbyStatus.open]: 0,
   [LobbyStatus.closed]: 1,
-  [LobbyStatus.scheduling]: 1,
   [LobbyStatus.draft]: 2,
   [LobbyStatus.disbanded]: 3,
-  [LobbyStatus.cancelled]: 3,
 };
 
 const INITIAL_VISIBLE_COUNT = 3;

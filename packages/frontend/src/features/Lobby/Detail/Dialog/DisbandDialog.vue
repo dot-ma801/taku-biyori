@@ -12,13 +12,13 @@ const emit = defineEmits<{
 <template>
   <BaseDialog
     v-model="model"
-    title="募集を中止"
-    description="中止した募集は元に戻せません。よろしいですか？"
+    title="企画を解散"
+    description="解散すると元に戻せません。過去の開催記録は残ります。よろしいですか？"
   >
     <template #actions>
       <BaseButton variant="ghost" @click="model = false">キャンセル</BaseButton>
       <BaseButton variant="danger" @click="emit('confirm')"
-        >中止する</BaseButton
+        >解散する</BaseButton
       >
     </template>
   </BaseDialog>

@@ -55,7 +55,7 @@ describe('canGuestJoin', () => {
     const { canGuestJoin } = useGuestJoin(
       LOBBY_ID,
       TOKEN,
-      LobbyStatus.scheduling,
+      LobbyStatus.closed,
       vi.fn(),
     );
 

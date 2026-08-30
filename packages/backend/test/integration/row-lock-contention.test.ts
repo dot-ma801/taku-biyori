@@ -14,13 +14,13 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { deleteLobby } from '@/lobby/application/delete-lobby';
-import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
+import { replaceCandidateDates } from '@/lobby/application/replace-candidate-dates';
 import { deleteGameSession } from '@/game-session/application/delete-game-session';
 import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
-import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
+import type { ReplaceCandidateDatesRepository } from '@/lobby/application/replace-candidate-dates';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
-import { lobbyCandidates } from '@/system/infrastructure/database/lobby-schema';
+import { candidateDates } from '@/system/infrastructure/database/lobby-schema';
 import { closeTestDatabase, withCommitted } from '@test/helpers/test-database';
 import {
   insertGameSession,
@@ -230,7 +230,7 @@ describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
   });
 });
 
-describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () => {
+describe('replace-candidate-dates の TOCTOU（FOR UPDATE 競合）', () => {
   it('同じ候補日を追加する並行更新が unique 違反にならず、候補日は1件になる', async () => {
     await withCommitted(async (db, track) => {
       // Arrange
@@ -239,12 +239,16 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
       track('lobby', lobbyId);
       const repo = createLobbyRepository(db);
-      const input = { dates: [{ date: '2100-11-11', dateNote: null }] };
+      const poll = await repo.createSchedulePollWithDates(lobbyId, []);
+      const pollId = poll.id;
+      const input = {
+        candidateDates: [{ date: '2100-11-11', timeLabel: null }],
+      };
 
       // Act
       const results = await Promise.all([
-        bulkUpdateAvailabilityDates(repo, lobbyId, host.id, input),
-        bulkUpdateAvailabilityDates(repo, lobbyId, host.id, input),
+        replaceCandidateDates(repo, lobbyId, pollId, host.id, input),
+        replaceCandidateDates(repo, lobbyId, pollId, host.id, input),
       ]);
 
       // Assert
@@ -252,8 +256,8 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       expect(
         await db
           .select()
-          .from(lobbyCandidates)
-          .where(eq(lobbyCandidates.lobbyId, lobbyId)),
+          .from(candidateDates)
+          .where(eq(candidateDates.pollId, pollId)),
       ).toHaveLength(1);
     });
   });
@@ -266,30 +270,32 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
       track('lobby', lobbyId);
       const repo = createLobbyRepository(db);
+      const poll = await repo.createSchedulePollWithDates(lobbyId, []);
+      const pollId = poll.id;
 
       const locked = createDeferred();
       const release = createDeferred();
 
       // Act: 先行トランザクションがロックを握ったまま候補日を1件追加する
-      // 同様に、交差型の推論では BulkUpdateAvailabilityDatesRepository が
-      // 選ばれず applyDateChanges が見えないため明示的にキャストする。
+      // 同様に、交差型の推論では ReplaceCandidateDatesRepository が
+      // 選ばれず applyCandidateDateChanges が見えないため明示的にキャストする。
       const leading = repo.executeWithLock(lobbyId, async (lockedRepo) => {
         locked.resolve();
         await release.promise;
         await (
-          lockedRepo as unknown as BulkUpdateAvailabilityDatesRepository
-        ).applyDateChanges(lobbyId, {
-          datesToAdd: [{ date: '2100-12-12', dateNote: null }],
+          lockedRepo as unknown as ReplaceCandidateDatesRepository
+        ).applyCandidateDateChanges(pollId, {
+          datesToAdd: [{ date: '2100-12-12', timeLabel: null }],
           dateIdsToRemove: [],
-          notesToUpdate: [],
+          timeLabelsToUpdate: [],
         });
       });
       // leading も race しておくことで、コールバックが locked.resolve() 前に
       // throw した場合に testTimeout までハングせず即座に検知できる。
       await Promise.race([locked.promise, leading]);
 
-      const following = bulkUpdateAvailabilityDates(repo, lobbyId, host.id, {
-        dates: [{ date: '2100-12-12', dateNote: null }],
+      const following = replaceCandidateDates(repo, lobbyId, pollId, host.id, {
+        candidateDates: [{ date: '2100-12-12', timeLabel: null }],
       });
       const followingSettled = following.then(
         () => 'settled',
@@ -311,8 +317,8 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       expect(
         await db
           .select()
-          .from(lobbyCandidates)
-          .where(eq(lobbyCandidates.lobbyId, lobbyId)),
+          .from(candidateDates)
+          .where(eq(candidateDates.pollId, pollId)),
       ).toHaveLength(1);
     });
   });

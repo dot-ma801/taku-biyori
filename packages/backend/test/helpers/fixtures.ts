@@ -11,9 +11,10 @@ import { firstRow } from '@/system/infrastructure/database/first-row';
 import { user } from '@/system/infrastructure/database/schema';
 import {
   lobbies,
-  lobbyAnswers,
-  lobbyCandidates,
   lobbyEntries,
+  schedulePolls,
+  candidateDates,
+  scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
   gameSessionMembers,
@@ -97,33 +98,52 @@ export const insertLobbyEntry = async (
   return firstRow(rows, 'insertLobbyEntry').id;
 };
 
-export const insertCandidateDate = async (
+export const insertSchedulePoll = async (
   db: Database,
   lobbyId: string,
-  date: string,
-  dateNote: string | null = null,
+  overrides: { createdAt?: Date } = {},
 ): Promise<string> => {
   const rows = await db
-    .insert(lobbyCandidates)
-    .values({ lobbyId, date, dateNote })
-    .returning({ id: lobbyCandidates.id });
+    .insert(schedulePolls)
+    .values({
+      lobbyId,
+      // 同一 timestamp での id タイブレークを検証するテスト用に上書きできる
+      ...(overrides.createdAt !== undefined && {
+        createdAt: overrides.createdAt,
+      }),
+    })
+    .returning({ id: schedulePolls.id });
+
+  return firstRow(rows, 'insertSchedulePoll').id;
+};
+
+export const insertCandidateDate = async (
+  db: Database,
+  pollId: string,
+  date: string,
+  timeLabel: string | null = null,
+): Promise<string> => {
+  const rows = await db
+    .insert(candidateDates)
+    .values({ pollId, date, timeLabel })
+    .returning({ id: candidateDates.id });
 
   return firstRow(rows, 'insertCandidateDate').id;
 };
 
-export const insertAnswer = async (
+export const insertScheduleAnswer = async (
   db: Database,
-  candidateId: string,
-  memberId: string,
+  candidateDateId: string,
+  entryId: string,
   answer: 'ok' | 'maybe' | 'ng',
   comment: string | null = null,
 ): Promise<string> => {
   const rows = await db
-    .insert(lobbyAnswers)
-    .values({ candidateId, memberId, answer, comment })
-    .returning({ id: lobbyAnswers.id });
+    .insert(scheduleAnswers)
+    .values({ candidateDateId, lobbyEntryId: entryId, answer, comment })
+    .returning({ id: scheduleAnswers.id });
 
-  return firstRow(rows, 'insertAnswer').id;
+  return firstRow(rows, 'insertScheduleAnswer').id;
 };
 
 export interface InsertGameSessionOverrides {

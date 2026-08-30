@@ -99,7 +99,7 @@ describe('canEditGuestSchedule', () => {
       LOBBY_ID,
       TOKEN,
       makeDates(),
-      LobbyStatus.confirmed,
+      LobbyStatus.cancelled,
       vi.fn(),
     );
 

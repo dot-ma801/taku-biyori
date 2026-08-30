@@ -24,7 +24,6 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 | `draft`      | 非公開     | muted（グレー）     |
 | `open`       | 募集中     | primary（ティール） |
 | `scheduling` | 日程調整中 | warning（オレンジ） |
-| `confirmed`  | 卓確定済み | success（グリーン） |
 | `cancelled`  | 中止       | error（レッド）     |
 
 ## Design Notes
@@ -45,7 +44,6 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 - `draft` のとき「非公開」と表示されること
 - `open` のとき「募集中」と表示されること
 - `scheduling` のとき「日程調整中」と表示されること
-- `confirmed` のとき「卓確定済み」と表示されること
 - `cancelled` のとき「中止」と表示されること
 
 ### バリアント
@@ -53,5 +51,4 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 - `draft` のとき `status-badge--muted` クラスが付与されること
 - `open` のとき `status-badge--primary` クラスが付与されること
 - `scheduling` のとき `status-badge--warning` クラスが付与されること
-- `confirmed` のとき `status-badge--success` クラスが付与されること
 - `cancelled` のとき `status-badge--error` クラスが付与されること

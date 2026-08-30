@@ -36,7 +36,6 @@ const lobby: LobbyDetail = {
   status: LobbyStatus.draft,
   isPublished: false,
   openUntil: '2026-07-20',
-  closedAt: null,
   cancelledAt: null,
   hostUserId: 'user-1',
   createdAt: '2026-07-01T00:00:00.000Z',

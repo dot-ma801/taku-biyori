@@ -25,7 +25,6 @@ export const Default: Story = {};
 export const Draft: Story = { args: { status: LobbyStatus.draft } };
 export const Open: Story = { args: { status: LobbyStatus.open } };
 export const Scheduling: Story = { args: { status: LobbyStatus.scheduling } };
-export const Confirmed: Story = { args: { status: LobbyStatus.confirmed } };
 export const Cancelled: Story = { args: { status: LobbyStatus.cancelled } };
 
 export const AllStatuses: Story = {

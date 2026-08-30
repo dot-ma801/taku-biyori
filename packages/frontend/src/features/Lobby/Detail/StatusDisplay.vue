@@ -7,7 +7,6 @@ import {
   EyeOff,
   Megaphone,
   CalendarClock,
-  CalendarCheck,
   Ban,
 } from '@lucide/vue';
 import { computed } from 'vue';
@@ -39,12 +38,6 @@ const STATUS_APPEARANCE: Record<LobbyStatus, StatusAppearance> = {
     text: '募集を終了し、開催日を調整しています。',
     variant: 'warning',
     icon: CalendarClock,
-  },
-  [LobbyStatus.confirmed]: {
-    label: '卓確定済み',
-    text: '開催日が確定しました。当日を待っています。',
-    variant: 'success',
-    icon: CalendarCheck,
   },
   [LobbyStatus.cancelled]: {
     label: '中止',

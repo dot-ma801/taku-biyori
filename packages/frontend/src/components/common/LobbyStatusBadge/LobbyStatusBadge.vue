@@ -12,7 +12,6 @@ const LABEL_MAP: Record<LobbyStatus, string> = {
   [LobbyStatus.draft]: '非公開',
   [LobbyStatus.open]: '募集中',
   [LobbyStatus.scheduling]: '日程調整中',
-  [LobbyStatus.confirmed]: '卓確定済み',
   [LobbyStatus.cancelled]: '中止',
 };
 
@@ -20,7 +19,6 @@ const VARIANT_MAP: Record<LobbyStatus, Variant> = {
   [LobbyStatus.draft]: 'muted',
   [LobbyStatus.open]: 'primary',
   [LobbyStatus.scheduling]: 'warning',
-  [LobbyStatus.confirmed]: 'success',
   [LobbyStatus.cancelled]: 'error',
 };
 

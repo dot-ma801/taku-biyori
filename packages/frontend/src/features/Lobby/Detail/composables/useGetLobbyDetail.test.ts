@@ -39,7 +39,6 @@ function makeLobby(overrides: Partial<LobbyDetail> = {}): LobbyDetail {
     isPublished: true,
     maxPlayers: null,
     openUntil: null,
-    closedAt: null,
     cancelledAt: null,
     hostUserId: 'host-1',
     createdAt: '2024-01-01T00:00:00Z',

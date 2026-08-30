@@ -110,7 +110,6 @@ describe('canInputSchedule', () => {
     [LobbyStatus.open, true],
     [LobbyStatus.scheduling, true],
     [LobbyStatus.draft, false],
-    [LobbyStatus.confirmed, false],
     [LobbyStatus.cancelled, false],
     [undefined, false],
   ])('status が %s のとき %s', async (status, expected) => {

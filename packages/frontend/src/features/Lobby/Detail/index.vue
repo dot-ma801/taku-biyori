@@ -4,23 +4,19 @@ defineOptions({ name: 'LobbyDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
-import ConfirmedNotice from '@/features/Lobby/Detail/ConfirmedNotice.vue';
 import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
-import { LobbyStatus } from '@taku-biyori/shared';
 import { computed } from 'vue';
-import { Album, UsersRound, CalendarDays, MapPin } from '@lucide/vue';
+import { Album, UsersRound, MapPin } from '@lucide/vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
-const { lobby, fetch, patchLobby, addMember, removeMember, memberCount } =
+const { lobby, patchLobby, addMember, removeMember, memberCount } =
   useGetLobbyDetail(props.lobbyId);
 
 const scenarioName = computed(() => lobby.value?.scenarioName ?? '未設定');
-
-const gameSessionDateTime = computed(() => lobby.value?.closedAt ?? '未設定');
 
 const capacityText = computed(() => {
   const max = lobby.value?.maxPlayers;
@@ -30,11 +26,6 @@ const capacityText = computed(() => {
 });
 
 const location = computed(() => lobby.value?.location ?? '未設定');
-const isConfirmed = computed(
-  () =>
-    lobby.value?.status === LobbyStatus.confirmed &&
-    lobby.value.confirmedGameSession != null,
-);
 </script>
 
 <template>
@@ -47,8 +38,6 @@ const isConfirmed = computed(
       <div class="description">
         <Album :size="16" />
         <p>シナリオ：{{ scenarioName }}</p>
-        <CalendarDays :size="16" />
-        <p>日時：{{ gameSessionDateTime }}</p>
         <UsersRound :size="16" />
         <p>参加者：{{ capacityText }}</p>
         <MapPin :size="16" />
@@ -66,12 +55,11 @@ const isConfirmed = computed(
     </div>
 
     <StatusDisplay :lobby-status="lobby.status" />
-    <ConfirmedNotice v-if="isConfirmed" :lobby="lobby" />
     <MemoDisplay
       v-if="lobby.description"
       :text="lobby.description ?? undefined"
     />
-    <ScheduleDisplay :lobby="lobby" @lobby-changed="fetch" />
+    <ScheduleDisplay :lobby="lobby" />
     <MemberDisplay :lobby="lobby" @member-removed="removeMember" />
   </div>
 </template>

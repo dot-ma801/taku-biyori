@@ -38,11 +38,6 @@ const router = createRouter({
     { path: '/game-sessions', redirect: { name: 'dashboard' } },
     { path: '/lobbies', redirect: { name: 'dashboard' } },
     {
-      path: '/game-sessions/new',
-      name: 'game-sessions-new',
-      component: () => import('@/views/GameSession/CreateView.vue'),
-    },
-    {
       path: '/game-sessions/edit/:gameSessionId',
       name: 'game-sessions-edit',
       component: () => import('@/views/GameSession/EditView.vue'),

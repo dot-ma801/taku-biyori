@@ -1,8 +1,6 @@
 import type {
   BulkUpdateLobbyAvailabilityDatesInput,
-  ConfirmLobbyInput,
   CreateLobbyInput,
-  GameSession,
   GuestUpdateLobbyAvailabilityDateResponseInput,
   JoinLobbyAsGuestInput,
   JoinLobbyInput,
@@ -96,16 +94,6 @@ export async function updateLobbyStatus(
 ): Promise<Lobby> {
   return (await apiRequest<Lobby>(`/api/lobbies/${id}/status`, {
     method: 'PATCH',
-    body: input,
-  }))!;
-}
-
-export async function confirmLobby(
-  id: string,
-  input: ConfirmLobbyInput,
-): Promise<GameSession> {
-  return (await apiRequest<GameSession>(`/api/lobbies/${id}/confirm`, {
-    method: 'POST',
     body: input,
   }))!;
 }

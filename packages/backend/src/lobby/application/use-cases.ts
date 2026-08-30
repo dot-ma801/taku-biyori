@@ -6,8 +6,10 @@ import type {
   UpdateLobbyStatusInput,
   JoinLobbyInput,
   JoinLobbyAsGuestInput,
-  BulkUpdateLobbyAvailabilityDatesInput,
-  UpdateLobbyAvailabilityDateResponseInput,
+  CreateSchedulePollInput,
+  ReplaceCandidateDatesInput,
+  UpsertScheduleAnswersInput,
+  GuestUpsertScheduleAnswersInput,
 } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyResult } from '@/lobby/application/update-lobby';
@@ -31,14 +33,18 @@ import type { JoinLobbyRepository } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkRepository } from '@/lobby/application/get-guest-link';
-import type { ListAvailabilityDatesResult } from '@/lobby/application/list-availability-dates';
-import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-availability-dates';
-import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk-update-availability-dates';
-import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseResult } from '@/lobby/application/update-availability-date-response';
-import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseResult } from '@/lobby/application/update-guest-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
+import type { ListSchedulePollsResult } from '@/lobby/application/list-schedule-polls';
+import type { ListSchedulePollsRepository } from '@/lobby/application/list-schedule-polls';
+import type { GetSchedulePollResult } from '@/lobby/application/get-schedule-poll';
+import type { GetSchedulePollRepository } from '@/lobby/application/get-schedule-poll';
+import type { CreateSchedulePollResult } from '@/lobby/application/create-schedule-poll';
+import type { CreateSchedulePollRepository } from '@/lobby/application/create-schedule-poll';
+import type { ReplaceCandidateDatesResult } from '@/lobby/application/replace-candidate-dates';
+import type { ReplaceCandidateDatesRepository } from '@/lobby/application/replace-candidate-dates';
+import type { UpsertScheduleAnswersResult } from '@/lobby/application/upsert-schedule-answers';
+import type { UpsertScheduleAnswersRepository } from '@/lobby/application/upsert-schedule-answers';
+import type { UpsertGuestScheduleAnswersResult } from '@/lobby/application/upsert-guest-schedule-answers';
+import type { UpsertGuestScheduleAnswersRepository } from '@/lobby/application/upsert-guest-schedule-answers';
 import { listLobbies } from '@/lobby/application/list-lobbies';
 import { createLobby } from '@/lobby/application/create-lobby';
 import { getLobby } from '@/lobby/application/get-lobby';
@@ -51,10 +57,12 @@ import { joinAsGuest } from '@/lobby/application/join-as-guest';
 import { leaveLobby } from '@/lobby/application/leave-lobby';
 import { getGuestLink } from '@/lobby/application/get-guest-link';
 import { regenerateGuestLink } from '@/lobby/application/regenerate-guest-link';
-import { listAvailabilityDates } from '@/lobby/application/list-availability-dates';
-import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
-import { updateAvailabilityDateResponse } from '@/lobby/application/update-availability-date-response';
-import { updateGuestAvailabilityDateResponse } from '@/lobby/application/update-guest-availability-date-response';
+import { listSchedulePolls } from '@/lobby/application/list-schedule-polls';
+import { getSchedulePoll } from '@/lobby/application/get-schedule-poll';
+import { createSchedulePoll } from '@/lobby/application/create-schedule-poll';
+import { replaceCandidateDates } from '@/lobby/application/replace-candidate-dates';
+import { upsertScheduleAnswers } from '@/lobby/application/upsert-schedule-answers';
+import { upsertGuestScheduleAnswers } from '@/lobby/application/upsert-guest-schedule-answers';
 
 type LobbyRepo = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -68,10 +76,12 @@ type LobbyRepo = ListLobbiesRepository &
   LeaveLobbyRepository &
   GetGuestLinkRepository &
   RegenerateGuestLinkRepository &
-  ListAvailabilityDatesRepository &
-  BulkUpdateAvailabilityDatesRepository &
-  UpdateAvailabilityDateResponseRepository &
-  UpdateGuestAvailabilityDateResponseRepository;
+  ListSchedulePollsRepository &
+  GetSchedulePollRepository &
+  CreateSchedulePollRepository &
+  ReplaceCandidateDatesRepository &
+  UpsertScheduleAnswersRepository &
+  UpsertGuestScheduleAnswersRepository;
 
 export interface LobbyUseCases {
   listLobbies(userId: string): Promise<LobbyListItem[]>;
@@ -112,28 +122,38 @@ export interface LobbyUseCases {
     id: string,
     userId: string,
   ): Promise<RegenerateGuestLinkResult>;
-  listAvailabilityDates(
+  listSchedulePolls(
     lobbyId: string,
     userId: string | null,
-  ): Promise<ListAvailabilityDatesResult>;
-  bulkUpdateAvailabilityDates(
+  ): Promise<ListSchedulePollsResult>;
+  getSchedulePoll(
+    lobbyId: string,
+    pollId: string,
+    userId: string | null,
+  ): Promise<GetSchedulePollResult>;
+  createSchedulePoll(
     lobbyId: string,
     userId: string,
-    input: BulkUpdateLobbyAvailabilityDatesInput,
-  ): Promise<BulkUpdateAvailabilityDatesResult>;
-  updateAvailabilityDateResponse(
+    input: CreateSchedulePollInput,
+  ): Promise<CreateSchedulePollResult>;
+  replaceCandidateDates(
     lobbyId: string,
-    dateId: string,
+    pollId: string,
     userId: string,
-    input: UpdateLobbyAvailabilityDateResponseInput,
-  ): Promise<UpdateAvailabilityDateResponseResult>;
-  updateGuestAvailabilityDateResponse(
+    input: ReplaceCandidateDatesInput,
+  ): Promise<ReplaceCandidateDatesResult>;
+  upsertScheduleAnswers(
     lobbyId: string,
-    dateId: string,
+    pollId: string,
+    userId: string,
+    input: UpsertScheduleAnswersInput,
+  ): Promise<UpsertScheduleAnswersResult>;
+  upsertGuestScheduleAnswers(
+    lobbyId: string,
+    pollId: string,
     token: string,
-    entryId: string,
-    input: UpdateLobbyAvailabilityDateResponseInput,
-  ): Promise<UpdateGuestAvailabilityDateResponseResult>;
+    input: GuestUpsertScheduleAnswersInput,
+  ): Promise<UpsertGuestScheduleAnswersResult>;
 }
 
 export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
@@ -182,37 +202,42 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
     userId: string,
   ): Promise<RegenerateGuestLinkResult> =>
     regenerateGuestLink(repo, id, userId),
-  listAvailabilityDates: (
+  listSchedulePolls: (
     lobbyId: string,
     userId: string | null,
-  ): Promise<ListAvailabilityDatesResult> =>
-    listAvailabilityDates(repo, lobbyId, userId),
-  bulkUpdateAvailabilityDates: (
+  ): Promise<ListSchedulePollsResult> =>
+    listSchedulePolls(repo, lobbyId, userId),
+  getSchedulePoll: (
+    lobbyId: string,
+    pollId: string,
+    userId: string | null,
+  ): Promise<GetSchedulePollResult> =>
+    getSchedulePoll(repo, lobbyId, pollId, userId),
+  createSchedulePoll: (
     lobbyId: string,
     userId: string,
-    input: BulkUpdateLobbyAvailabilityDatesInput,
-  ): Promise<BulkUpdateAvailabilityDatesResult> =>
-    bulkUpdateAvailabilityDates(repo, lobbyId, userId, input),
-  updateAvailabilityDateResponse: (
+    input: CreateSchedulePollInput,
+  ): Promise<CreateSchedulePollResult> =>
+    createSchedulePoll(repo, lobbyId, userId, input),
+  replaceCandidateDates: (
     lobbyId: string,
-    dateId: string,
+    pollId: string,
     userId: string,
-    input: UpdateLobbyAvailabilityDateResponseInput,
-  ): Promise<UpdateAvailabilityDateResponseResult> =>
-    updateAvailabilityDateResponse(repo, lobbyId, dateId, userId, input),
-  updateGuestAvailabilityDateResponse: (
+    input: ReplaceCandidateDatesInput,
+  ): Promise<ReplaceCandidateDatesResult> =>
+    replaceCandidateDates(repo, lobbyId, pollId, userId, input),
+  upsertScheduleAnswers: (
     lobbyId: string,
-    dateId: string,
+    pollId: string,
+    userId: string,
+    input: UpsertScheduleAnswersInput,
+  ): Promise<UpsertScheduleAnswersResult> =>
+    upsertScheduleAnswers(repo, lobbyId, pollId, userId, input),
+  upsertGuestScheduleAnswers: (
+    lobbyId: string,
+    pollId: string,
     token: string,
-    entryId: string,
-    input: UpdateLobbyAvailabilityDateResponseInput,
-  ): Promise<UpdateGuestAvailabilityDateResponseResult> =>
-    updateGuestAvailabilityDateResponse(
-      repo,
-      lobbyId,
-      dateId,
-      token,
-      entryId,
-      input,
-    ),
+    input: GuestUpsertScheduleAnswersInput,
+  ): Promise<UpsertGuestScheduleAnswersResult> =>
+    upsertGuestScheduleAnswers(repo, lobbyId, pollId, token, input),
 });

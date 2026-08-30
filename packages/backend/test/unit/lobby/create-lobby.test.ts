@@ -62,14 +62,14 @@ describe('createLobby', () => {
         hostUserId: 'user-99',
         title: 'マイ募集',
         candidateDates: [
-          { date: '2099-09-01', dateNote: null },
-          { date: '2099-09-02', dateNote: null },
+          { date: '2099-09-01', timeLabel: null },
+          { date: '2099-09-02', timeLabel: null },
         ],
       }),
     );
   });
 
-  it('候補日のひとことを正規化して createWithHostAndCandidates に渡す', async () => {
+  it('候補日の時間帯を正規化して createWithHostAndCandidates に渡す', async () => {
     // Arrange
     const createWithHostAndCandidates = vi.fn().mockResolvedValue(mockLobby);
     const repo: CreateLobbyRepository = { createWithHostAndCandidates };
@@ -78,8 +78,8 @@ describe('createLobby', () => {
     await createLobby(repo, 'user-1', {
       title: '募集',
       candidateDates: [
-        { date: '2099-09-01', dateNote: '  13:00〜17:00  ' },
-        { date: '2099-09-02', dateNote: '   ' },
+        { date: '2099-09-01', timeLabel: '  13:00〜17:00  ' },
+        { date: '2099-09-02', timeLabel: '   ' },
         { date: '2099-09-03' },
       ],
     });
@@ -88,9 +88,9 @@ describe('createLobby', () => {
     expect(createWithHostAndCandidates).toHaveBeenCalledWith(
       expect.objectContaining({
         candidateDates: [
-          { date: '2099-09-01', dateNote: '13:00〜17:00' },
-          { date: '2099-09-02', dateNote: null },
-          { date: '2099-09-03', dateNote: null },
+          { date: '2099-09-01', timeLabel: '13:00〜17:00' },
+          { date: '2099-09-02', timeLabel: null },
+          { date: '2099-09-03', timeLabel: null },
         ],
       }),
     );

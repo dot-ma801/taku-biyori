@@ -2,13 +2,10 @@
 name: add-basic-component
 description: >
   このプロジェクト（taku-biyori）の packages/frontend/src/components 配下に
-  基本UIコンポーネントを追加するためのスキル。
-  「コンポーネントを追加したい」「〇〇コンポーネントを作って」「UIコンポーネントを実装して」
+  基本UIコンポーネントを追加するためのスキル。 「コンポーネントを追加したい」「〇〇コンポーネントを作って」「UIコンポーネントを実装して」
   「packages/frontend/src/components に追加」など、フロントエンドの基本UIコンポーネント追加を
-  依頼されたときは必ずこのスキルを使うこと。BaseButton, BaseAlert のような Base プレフィックスの
-  コンポーネントを作るときも同様。
+  依頼されたときは必ずこのスキルを使うこと。BaseButton, BaseAlert のような Base プレフィックスの コンポーネントを作るときも同様。
 ---
-
 # taku-biyori 基本UIコンポーネント追加スキル
 
 `packages/frontend/src/components` 配下に新しいVue UIコンポーネントを追加する際の規約。

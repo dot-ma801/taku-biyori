@@ -1,0 +1,21 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/mcp-schema.json",
+  "mcpServers": {
+    "postgres-db": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://usr:iyqw8Jo9mindf9vK@localhost:5432/taku_biyori"
+      ],
+      "env": {}
+    },
+    "vuetify-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vuetify/mcp"
+      ]
+    }
+  }
+}

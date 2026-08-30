@@ -5,6 +5,8 @@ description: >
   基本UIコンポーネントを追加するためのスキル。 「コンポーネントを追加したい」「〇〇コンポーネントを作って」「UIコンポーネントを実装して」
   「packages/frontend/src/components に追加」など、フロントエンドの基本UIコンポーネント追加を
   依頼されたときは必ずこのスキルを使うこと。BaseButton, BaseAlert のような Base プレフィックスの コンポーネントを作るときも同様。
+targets:
+  - '*'
 ---
 # taku-biyori 基本UIコンポーネント追加スキル
 

@@ -1,5 +1,5 @@
 import { computed, onMounted, ref } from 'vue';
-import type { GameSessionListItem } from '@taku-biyori/shared';
+import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 import type { GameSessionStatus } from '@taku-biyori/shared';
 import { listGameSessions } from '@/api/game-session';
 
@@ -35,7 +35,7 @@ const startOfToday = (): Date => {
 export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
   const { statuses, sortByScheduledAt = false, includePublic = true } = options;
   /** 全セッション（APIレスポンスそのまま） */
-  const allSessions = ref<GameSessionListItem[]>([]);
+  const allSessions = ref<LegacyGameSessionListItem[]>([]);
 
   /** 取得中かどうか */
   const loading = ref(false);
@@ -90,7 +90,7 @@ export const useGameSessionList = (options: UseGameSessionListOptions = {}) => {
    * mySessions の中で scheduledAt が現在以降かつ最も近いセッション。
    * 該当なければ null。
    */
-  const nextSession = computed<GameSessionListItem | null>(() => {
+  const nextSession = computed<LegacyGameSessionListItem | null>(() => {
     // scheduledAt は日付のみなので、当日の卓も「これから開催される卓」として含める
     const today = startOfToday().getTime();
     const upcoming = mySessions.value.filter(

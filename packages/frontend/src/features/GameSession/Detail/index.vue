@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineOptions({ name: 'GameSessionDetail' });
+defineOptions({ name: 'LegacyGameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import MemberDisplay from '@/features/GameSession/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';

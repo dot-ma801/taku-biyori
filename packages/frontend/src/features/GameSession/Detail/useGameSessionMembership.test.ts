@@ -4,7 +4,7 @@ import type { MaybeRefOrGetter } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   joinGameSession: vi.fn(),
@@ -40,8 +40,8 @@ function makeMember(userId: string | null = USER_ID) {
 }
 
 function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
+  overrides: Partial<LegacyGameSessionDetail> = {},
+): LegacyGameSessionDetail {
   return {
     id: SESSION_ID,
     title: 'テストセッション',
@@ -58,7 +58,7 @@ function makeGameSession(
   };
 }
 
-function setup(gameSession: MaybeRefOrGetter<GameSessionDetail | null>) {
+function setup(gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>) {
   const onRefresh = vi.fn();
   return {
     onRefresh,
@@ -78,7 +78,7 @@ beforeEach(() => {
 });
 
 describe('canJoin', () => {
-  // ACTION_POLICIES.joinSession の statuses（confirmed / today）に従う
+  // LEGACY_ACTION_POLICIES.joinSession の statuses（confirmed / today）に従う
   it.each([GameSessionStatus.confirmed, GameSessionStatus.today] as const)(
     '未参加かつ %s ステータスのセッションでは true',
     (status) => {
@@ -142,7 +142,7 @@ describe('canJoin', () => {
   });
 
   it('gameSession が null の場合は false', () => {
-    const gameSession = ref<GameSessionDetail | null>(null);
+    const gameSession = ref<LegacyGameSessionDetail | null>(null);
 
     // Act
     const { canJoin } = setup(gameSession);
@@ -253,7 +253,7 @@ describe('join', () => {
 });
 
 describe('canLeave', () => {
-  // ACTION_POLICIES.leaveSession の statuses（confirmed / today）に従う
+  // LEGACY_ACTION_POLICIES.leaveSession の statuses（confirmed / today）に従う
   it.each([GameSessionStatus.confirmed, GameSessionStatus.today] as const)(
     '自分がメンバーで %s ステータスの場合は true',
     (status) => {
@@ -300,7 +300,7 @@ describe('canLeave', () => {
 
   it('gameSession が null の場合は false', () => {
     // Arrange
-    const gameSession = ref<GameSessionDetail | null>(null);
+    const gameSession = ref<LegacyGameSessionDetail | null>(null);
 
     // Act
     const { canLeave } = setup(gameSession);

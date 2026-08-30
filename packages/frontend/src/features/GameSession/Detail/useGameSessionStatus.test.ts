@@ -3,7 +3,10 @@ import { ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import type {
+  LegacyGameSessionDetail,
+  GameSessionMember,
+} from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   updateGameSessionStatus: vi.fn(),
@@ -55,8 +58,8 @@ function hostMember(): GameSessionMember {
 }
 
 function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
+  overrides: Partial<LegacyGameSessionDetail> = {},
+): LegacyGameSessionDetail {
   return {
     id: SESSION_ID,
     title: 'テストセッション',
@@ -110,7 +113,7 @@ describe('isHost', () => {
   it('gameSession が null のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref<GameSessionDetail | null>(null);
+    const gameSession = ref<LegacyGameSessionDetail | null>(null);
 
     // Act
     const { isHost } = useGameSessionStatus(SESSION_ID, gameSession, vi.fn());
@@ -547,7 +550,7 @@ describe('canDelete', () => {
   it('gameSession が null のとき false を返す', () => {
     // Arrange
     setupAuthAs(HOST_USER_ID);
-    const gameSession = ref<GameSessionDetail | null>(null);
+    const gameSession = ref<LegacyGameSessionDetail | null>(null);
 
     // Act
     const { canDelete } = useGameSessionStatus(

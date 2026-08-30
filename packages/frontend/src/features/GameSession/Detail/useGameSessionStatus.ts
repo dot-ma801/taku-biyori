@@ -1,11 +1,11 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 import {
   GameSessionStatus,
-  GameSessionAction,
-  canPerform,
+  LegacyGameSessionAction,
+  canPerformLegacy,
 } from '@taku-biyori/shared';
 import { deleteGameSession, updateGameSessionStatus } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
@@ -13,7 +13,7 @@ import { useToast } from '@/composables/useToast';
 
 export const useGameSessionStatus = (
   gameSessionId: string,
-  gameSession: MaybeRefOrGetter<GameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>,
   // NOTE: 変更後の再取得を呼び出し元に委譲する。
   onRefresh: () => void,
 ) => {
@@ -47,7 +47,7 @@ export const useGameSessionStatus = (
   /**
    * 削除可能か。次の全条件を満たすときのみ true。
    * - ホストである（削除 API がホスト限定）
-   * - ステータスが ACTION_POLICIES の deleteSession に含まれる
+   * - ステータスが LEGACY_ACTION_POLICIES の deleteSession に含まれる
    *   （draft のみ。confirmed 以降は参加者の予定が確定しているため不可）
    * - 自分以外のメンバーがいない（参加者がいる卓を勝手に消さない）
    */
@@ -59,7 +59,13 @@ export const useGameSessionStatus = (
     if (!isHost.value) {
       return false;
     }
-    if (!canPerform(GameSessionAction.deleteSession, session.status, 'host')) {
+    if (
+      !canPerformLegacy(
+        LegacyGameSessionAction.deleteSession,
+        session.status,
+        'host',
+      )
+    ) {
       return false;
     }
     const myUserId = authStore.currentUser?.id;

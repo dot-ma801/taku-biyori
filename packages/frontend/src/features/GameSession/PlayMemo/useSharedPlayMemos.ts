@@ -1,7 +1,7 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
-  type GameSessionDetail,
+  type LegacyGameSessionDetail,
   type GameSessionMember,
   type SharedGameSessionPlayMemo,
   canViewSharedPlayMemos,
@@ -50,7 +50,7 @@ export interface PlayMemoMemberEntry {
  */
 export const useSharedPlayMemos = (
   gameSessionId: string,
-  gameSession: MaybeRefOrGetter<GameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>,
   // メンバーでない閲覧者（未ログイン・ゲスト）は null
   myMemberId: MaybeRefOrGetter<string | null | undefined>,
 ) => {

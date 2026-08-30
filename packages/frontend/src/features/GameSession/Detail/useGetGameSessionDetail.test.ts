@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import type {
+  LegacyGameSessionDetail,
+  GameSessionMember,
+} from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   getGameSession: vi.fn(),
@@ -34,8 +37,8 @@ function makeMember(id: string): GameSessionMember {
 }
 
 function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
+  overrides: Partial<LegacyGameSessionDetail> = {},
+): LegacyGameSessionDetail {
   return {
     id: SESSION_ID,
     title: 'テストセッション',
@@ -51,7 +54,7 @@ function makeGameSession(
 }
 
 // gameSession を初期ロード済みの状態にした composable を返すヘルパー
-async function setupLoaded(gameSession: GameSessionDetail) {
+async function setupLoaded(gameSession: LegacyGameSessionDetail) {
   vi.mocked(getGameSession).mockResolvedValue(gameSession);
   const detail = useGetGameSessionDetail(SESSION_ID);
   await detail.fetch();

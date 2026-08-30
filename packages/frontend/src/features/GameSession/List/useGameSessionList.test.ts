@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionListItem } from '@taku-biyori/shared';
+import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   listGameSessions: vi.fn(),
@@ -25,8 +25,8 @@ function daysFromToday(n: number): string {
 }
 
 function makeSession(
-  overrides: Partial<GameSessionListItem> = {},
-): GameSessionListItem {
+  overrides: Partial<LegacyGameSessionListItem> = {},
+): LegacyGameSessionListItem {
   return {
     id: crypto.randomUUID(),
     title: 'テストセッション',
@@ -77,7 +77,7 @@ describe('useGameSessionList', () => {
       // Arrange
       let resolveFetch!: () => void;
       mockListGameSessions.mockReturnValue(
-        new Promise<GameSessionListItem[]>((resolve) => {
+        new Promise<LegacyGameSessionListItem[]>((resolve) => {
           resolveFetch = () => resolve([]);
         }),
       );

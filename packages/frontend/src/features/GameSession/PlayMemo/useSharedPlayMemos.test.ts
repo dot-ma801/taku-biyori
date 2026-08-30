@@ -4,7 +4,7 @@ import { flushPromises } from '@vue/test-utils';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type {
-  GameSessionDetail,
+  LegacyGameSessionDetail,
   GameSessionMember,
   SharedGameSessionPlayMemo,
 } from '@taku-biyori/shared';
@@ -40,8 +40,8 @@ function makeMember(
 
 /** 自分・公開している他メンバー・非公開の他メンバー・ゲストの4人が居る卓 */
 function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
+  overrides: Partial<LegacyGameSessionDetail> = {},
+): LegacyGameSessionDetail {
   return {
     id: SESSION_ID,
     title: 'テストセッション',
@@ -82,7 +82,7 @@ function makeSharedMemo(
 }
 
 function setup(
-  gameSession: GameSessionDetail | null = makeGameSession(),
+  gameSession: LegacyGameSessionDetail | null = makeGameSession(),
   myMemberId: string | null = MY_MEMBER_ID,
 ) {
   return useSharedPlayMemos(
@@ -93,8 +93,10 @@ function setup(
 }
 
 /** ステータスの変化（完了・中止への遷移）を再現するため ref で渡す */
-function setupWithGameSessionRef(initial: GameSessionDetail | null = null) {
-  const gameSession = ref<GameSessionDetail | null>(initial);
+function setupWithGameSessionRef(
+  initial: LegacyGameSessionDetail | null = null,
+) {
+  const gameSession = ref<LegacyGameSessionDetail | null>(initial);
   return {
     ...useSharedPlayMemos(SESSION_ID, gameSession, () => MY_MEMBER_ID),
     gameSession,

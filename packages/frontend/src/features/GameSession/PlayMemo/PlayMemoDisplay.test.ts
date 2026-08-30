@@ -4,7 +4,10 @@ import { createPinia, setActivePinia } from 'pinia';
 import PlayMemoDisplay from '@/features/GameSession/PlayMemo/PlayMemoDisplay.vue';
 import { useAuthStore } from '@/stores/auth';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import type {
+  LegacyGameSessionDetail,
+  GameSessionMember,
+} from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   getMyPlayMemo: vi.fn(),
@@ -31,8 +34,8 @@ function makeMember(
 }
 
 function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
+  overrides: Partial<LegacyGameSessionDetail> = {},
+): LegacyGameSessionDetail {
   return {
     id: 'session-1',
     title: 'テストセッション',
@@ -47,7 +50,9 @@ function makeGameSession(
   };
 }
 
-function mountDisplay(gameSession: GameSessionDetail = makeGameSession()) {
+function mountDisplay(
+  gameSession: LegacyGameSessionDetail = makeGameSession(),
+) {
   return mount(PlayMemoDisplay, {
     props: { gameSession },
     global: {

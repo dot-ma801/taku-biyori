@@ -13,20 +13,26 @@ import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
 import {
   lobbies,
-  lobbyAnswers,
-  lobbyCandidates,
   lobbyEntries,
+  schedulePolls,
+  candidateDates,
+  scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import { closeTestDatabase, withRollback } from '@test/helpers/test-database';
 import {
-  insertAnswer,
   insertCandidateDate,
   insertLobby,
   insertLobbyEntry,
+  insertSchedulePoll,
+  insertScheduleAnswer,
   insertUser,
 } from '@test/helpers/fixtures';
 
 afterAll(closeTestDatabase);
+
+/** 文字列としての昇順比較（uuid の DB 上の並びと同じ基準で比べる） */
+const sortStringsAsc = (values: string[]): string[] =>
+  [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
 describe('findByUserId', () => {
   it('ホストのロビーを hostUserId・参加者つきで返す', async () => {
@@ -305,6 +311,28 @@ describe('findDetailById', () => {
       // Assert
       expect(detail?.id).toBe(lobbyId);
       expect(detail?.entries).toEqual([]);
+      expect(detail?.schedulePolls).toEqual([]);
+    });
+  });
+
+  it('日程調整の履歴を created_at 降順で含める', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const older = await insertSchedulePoll(db, lobbyId, {
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const newer = await insertSchedulePoll(db, lobbyId, {
+        createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(lobbyId);
+
+      // Assert
+      expect(detail?.schedulePolls.map((p) => p.id)).toEqual([newer, older]);
     });
   });
 
@@ -379,7 +407,7 @@ describe('updateById', () => {
 });
 
 describe('deleteById', () => {
-  it('募集枠を削除し、メンバー・候補日・回答もカスケード削除される', async () => {
+  it('募集枠を削除し、メンバー・日程調整・候補日・回答もカスケード削除される', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -387,8 +415,9 @@ describe('deleteById', () => {
       const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
-      await insertAnswer(db, candidateId, memberId, 'ok');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const candidateId = await insertCandidateDate(db, pollId, '2100-01-01');
+      await insertScheduleAnswer(db, candidateId, memberId, 'ok');
       const repo = createLobbyRepository(db);
 
       // Act
@@ -407,8 +436,14 @@ describe('deleteById', () => {
       expect(
         await db
           .select()
-          .from(lobbyAnswers)
-          .where(eq(lobbyAnswers.candidateId, candidateId)),
+          .from(schedulePolls)
+          .where(eq(schedulePolls.lobbyId, lobbyId)),
+      ).toHaveLength(0);
+      expect(
+        await db
+          .select()
+          .from(scheduleAnswers)
+          .where(eq(scheduleAnswers.candidateDateId, candidateId)),
       ).toHaveLength(0);
     });
   });
@@ -623,7 +658,7 @@ describe('disband', () => {
 });
 
 describe('createWithHostAndCandidates', () => {
-  it('募集枠・ホストメンバー・候補日を1トランザクションで作る', async () => {
+  it('候補日が1件以上のとき募集枠・ホストメンバー・日程調整・候補日を1トランザクションで作る', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -636,8 +671,8 @@ describe('createWithHostAndCandidates', () => {
         maxPlayers: 4,
         guestLinkToken: 'token-create',
         candidateDates: [
-          { date: '2100-01-01', dateNote: '13:00〜' },
-          { date: '2100-01-02', dateNote: null },
+          { date: '2100-01-01', timeLabel: '13:00〜' },
+          { date: '2100-01-02', timeLabel: null },
         ],
       });
 
@@ -650,16 +685,23 @@ describe('createWithHostAndCandidates', () => {
           .from(lobbyEntries)
           .where(eq(lobbyEntries.lobbyId, created.id)),
       ).toHaveLength(1);
+
+      const pollRows = await db
+        .select()
+        .from(schedulePolls)
+        .where(eq(schedulePolls.lobbyId, created.id));
+      expect(pollRows).toHaveLength(1);
+
       expect(
         await db
           .select()
-          .from(lobbyCandidates)
-          .where(eq(lobbyCandidates.lobbyId, created.id)),
+          .from(candidateDates)
+          .where(eq(candidateDates.pollId, pollRows[0]!.id)),
       ).toHaveLength(2);
     });
   });
 
-  it('候補日が空でもホストメンバーだけ作られる', async () => {
+  it('候補日が空のときホストメンバーだけ作られ schedule_polls は0行のまま', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -677,8 +719,8 @@ describe('createWithHostAndCandidates', () => {
       expect(
         await db
           .select()
-          .from(lobbyCandidates)
-          .where(eq(lobbyCandidates.lobbyId, created.id)),
+          .from(schedulePolls)
+          .where(eq(schedulePolls.lobbyId, created.id)),
       ).toHaveLength(0);
     });
   });
@@ -859,8 +901,9 @@ describe('エントリー操作', () => {
       const entryId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
-      await insertAnswer(db, candidateId, entryId, 'ok');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const candidateId = await insertCandidateDate(db, pollId, '2100-01-01');
+      await insertScheduleAnswer(db, candidateId, entryId, 'ok');
       const repo = createLobbyRepository(db);
 
       // Act
@@ -872,8 +915,8 @@ describe('エントリー操作', () => {
       expect(
         await db
           .select()
-          .from(lobbyAnswers)
-          .where(eq(lobbyAnswers.memberId, entryId)),
+          .from(scheduleAnswers)
+          .where(eq(scheduleAnswers.lobbyEntryId, entryId)),
       ).toHaveLength(1);
     });
   });
@@ -887,8 +930,9 @@ describe('エントリー操作', () => {
       const entryId = await insertLobbyEntry(db, lobbyId, {
         userId: member.id,
       });
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
-      await insertAnswer(db, candidateId, entryId, 'ok');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const candidateId = await insertCandidateDate(db, pollId, '2100-01-01');
+      await insertScheduleAnswer(db, candidateId, entryId, 'ok');
       const repo = createLobbyRepository(db);
       await repo.markEntryLeft(entryId);
 
@@ -902,8 +946,8 @@ describe('エントリー操作', () => {
       expect(
         await db
           .select()
-          .from(lobbyAnswers)
-          .where(eq(lobbyAnswers.memberId, entryId)),
+          .from(scheduleAnswers)
+          .where(eq(scheduleAnswers.lobbyEntryId, entryId)),
       ).toHaveLength(1);
     });
   });
@@ -945,31 +989,6 @@ describe('エントリー操作', () => {
     });
   });
 
-  it('回答表（findByLobbyId）は脱退者の回答を含めない', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id);
-      const activeId = await insertLobbyEntry(db, lobbyId, {
-        userId: host.id,
-      });
-      const leftId = await insertLobbyEntry(db, lobbyId, {
-        guestName: '脱退した人',
-        leftAt: new Date('2026-08-10T00:00:00.000Z'),
-      });
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
-      await insertAnswer(db, candidateId, activeId, 'ok');
-      await insertAnswer(db, candidateId, leftId, 'ng');
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const dates = await repo.findByLobbyId(lobbyId);
-
-      // Assert — 回答自体は DB に残るが、表には在籍者のぶんだけが出る
-      expect(dates[0]?.answers.map((a) => a.memberId)).toEqual([activeId]);
-    });
-  });
-
   it('isGuestEntry はゲストのときだけ true を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
@@ -1006,78 +1025,270 @@ describe('エントリー操作', () => {
   });
 });
 
-describe('候補日と回答', () => {
-  it('findByLobbyId は候補日を日付順に、回答をぶら下げて返す', async () => {
+describe('findSchedulePollSummaries', () => {
+  it('created_at DESC, id DESC で返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyEntry(db, lobbyId, {
-        userId: host.id,
+      const older = await insertSchedulePoll(db, lobbyId, {
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const later = await insertCandidateDate(db, lobbyId, '2100-02-01');
-      const earlier = await insertCandidateDate(
-        db,
-        lobbyId,
-        '2100-01-01',
-        '13:00〜',
-      );
-      await insertAnswer(db, earlier, memberId, 'ok', 'いけます');
+      const newer = await insertSchedulePoll(db, lobbyId, {
+        createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
       const repo = createLobbyRepository(db);
 
       // Act
-      const dates = await repo.findByLobbyId(lobbyId);
+      const summaries = await repo.findSchedulePollSummaries(lobbyId);
+
+      // Assert
+      expect(summaries.map((s) => s.id)).toEqual([newer, older]);
+      expect(summaries[0]?.createdAt).toBe('2026-02-01T00:00:00.000Z');
+    });
+  });
+
+  it('同一 created_at でも id DESC で決定的な順序になる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const sameTimestamp = new Date('2026-03-01T00:00:00.000Z');
+      const pollA = await insertSchedulePoll(db, lobbyId, {
+        createdAt: sameTimestamp,
+      });
+      const pollB = await insertSchedulePoll(db, lobbyId, {
+        createdAt: sameTimestamp,
+      });
+      const [expectedFirst, expectedSecond] = sortStringsAsc([
+        pollA,
+        pollB,
+      ]).reverse();
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const summaries = await repo.findSchedulePollSummaries(lobbyId);
+
+      // Assert
+      expect(summaries.map((s) => s.id)).toEqual([
+        expectedFirst,
+        expectedSecond,
+      ]);
+    });
+  });
+
+  it('調整が無ければ空配列を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const summaries = await repo.findSchedulePollSummaries(lobbyId);
+
+      // Assert
+      expect(summaries).toEqual([]);
+    });
+  });
+});
+
+describe('findLatestSchedulePollId', () => {
+  it('最新（created_at 降順の先頭）の調整 id を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      await insertSchedulePoll(db, lobbyId, {
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const newer = await insertSchedulePoll(db, lobbyId, {
+        createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const latest = await repo.findLatestSchedulePollId(lobbyId);
+
+      // Assert
+      expect(latest).toBe(newer);
+    });
+  });
+
+  it('同一 created_at でも id DESC の先頭を決定的に返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange — created_at が完全に同値の2件を用意し、タイブレークが id 頼みであることを確認する
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const sameTimestamp = new Date('2026-03-01T00:00:00.000Z');
+      const pollA = await insertSchedulePoll(db, lobbyId, {
+        createdAt: sameTimestamp,
+      });
+      const pollB = await insertSchedulePoll(db, lobbyId, {
+        createdAt: sameTimestamp,
+      });
+      const [expected] = sortStringsAsc([pollA, pollB]).reverse();
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const latest = await repo.findLatestSchedulePollId(lobbyId);
+
+      // Assert
+      expect(latest).toBe(expected);
+    });
+  });
+
+  it('調整が無ければ null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const latest = await repo.findLatestSchedulePollId(lobbyId);
+
+      // Assert
+      expect(latest).toBeNull();
+    });
+  });
+});
+
+describe('findSchedulePollLobbyId', () => {
+  it('poll が属するロビー id を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const result = await repo.findSchedulePollLobbyId(pollId);
+
+      // Assert
+      expect(result).toBe(lobbyId);
+    });
+  });
+
+  it('存在しない調整では null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const result = await repo.findSchedulePollLobbyId(
+        '00000000-0000-0000-0000-000000000000',
+      );
+
+      // Assert
+      expect(result).toBeNull();
+    });
+  });
+});
+
+describe('候補日の一意制約', () => {
+  it('同じ調整に同じ日付を2件入れると unique 制約違反になる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      await insertCandidateDate(db, pollId, '2100-01-01');
+
+      // Act
+      const act = insertCandidateDate(db, pollId, '2100-01-01');
+
+      // Assert
+      await expect(act).rejects.toThrow();
+    });
+  });
+
+  it('別の調整には同じ日付を挙げ直せる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const firstPollId = await insertSchedulePoll(db, lobbyId);
+      const secondPollId = await insertSchedulePoll(db, lobbyId);
+      await insertCandidateDate(db, firstPollId, '2100-01-01');
+
+      // Act
+      const act = insertCandidateDate(db, secondPollId, '2100-01-01');
+
+      // Assert
+      await expect(act).resolves.toEqual(expect.any(String));
+    });
+  });
+});
+
+describe('findCandidateDatesByPollId', () => {
+  it('date 昇順で返す（回答は含まない）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const later = await insertCandidateDate(db, pollId, '2100-02-01');
+      const earlier = await insertCandidateDate(
+        db,
+        pollId,
+        '2100-01-01',
+        '13:00〜',
+      );
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const dates = await repo.findCandidateDatesByPollId(pollId);
 
       // Assert
       expect(dates.map((d) => d.id)).toEqual([earlier, later]);
       expect(dates[0]).toMatchObject({
         date: '2100-01-01',
-        dateNote: '13:00〜',
+        timeLabel: '13:00〜',
       });
-      expect(dates[0]?.answers).toEqual([
-        {
-          id: expect.any(String),
-          memberId,
-          answer: 'ok',
-          comment: 'いけます',
-        },
-      ]);
-      expect(dates[1]?.answers).toEqual([]);
     });
   });
 
-  it('findByLobbyId は候補日が無ければ空配列を返す', async () => {
+  it('候補日が無ければ空配列を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
+      const pollId = await insertSchedulePoll(db, lobbyId);
       const repo = createLobbyRepository(db);
 
       // Act
-      const dates = await repo.findByLobbyId(lobbyId);
+      const dates = await repo.findCandidateDatesByPollId(pollId);
 
       // Assert
       expect(dates).toEqual([]);
     });
   });
+});
 
-  it('findCandidateOwner は所属募集枠と日付を返す', async () => {
+describe('findCandidateDateIdsByPollId', () => {
+  it('その調整の候補日 id をすべて返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-04-04');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const first = await insertCandidateDate(db, pollId, '2100-01-01');
+      const second = await insertCandidateDate(db, pollId, '2100-01-02');
       const repo = createLobbyRepository(db);
 
       // Act
-      const owner = await repo.findCandidateOwner(candidateId);
+      const ids = await repo.findCandidateDateIdsByPollId(pollId);
 
       // Assert
-      expect(owner).toEqual({ lobbyId, date: '2100-04-04' });
+      expect(sortStringsAsc(ids)).toEqual(sortStringsAsc([first, second]));
     });
   });
+});
 
-  it('upsertAnswer は初回は挿入し、2回目は上書きする', async () => {
+describe('findSchedulePollWithAnswers', () => {
+  it('候補日を日付順に、回答をぶら下げて返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -1085,58 +1296,158 @@ describe('候補日と回答', () => {
       const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
-      const candidateId = await insertCandidateDate(db, lobbyId, '2100-06-06');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const later = await insertCandidateDate(db, pollId, '2100-02-01');
+      const earlier = await insertCandidateDate(
+        db,
+        pollId,
+        '2100-01-01',
+        '13:00〜',
+      );
+      await insertScheduleAnswer(db, earlier, memberId, 'ok', 'いけます');
       const repo = createLobbyRepository(db);
 
       // Act
-      const first = await repo.upsertAnswer(candidateId, memberId, {
-        answer: 'maybe',
-        comment: 'たぶん',
-      });
-      const second = await repo.upsertAnswer(candidateId, memberId, {
-        answer: 'ok',
-      });
+      const poll = await repo.findSchedulePollWithAnswers(pollId);
 
       // Assert
-      expect(first.answer).toBe('maybe');
-      expect(second.id).toBe(first.id);
-      expect(second.answer).toBe('ok');
-      expect(second.comment).toBeNull();
+      expect(poll?.lobbyId).toBe(lobbyId);
+      expect(poll?.candidateDates.map((d) => d.id)).toEqual([earlier, later]);
+      expect(poll?.candidateDates[0]).toMatchObject({
+        date: '2100-01-01',
+        timeLabel: '13:00〜',
+      });
+      expect(poll?.candidateDates[0]?.answers).toEqual([
+        {
+          id: expect.any(String),
+          entryId: memberId,
+          answer: 'ok',
+          comment: 'いけます',
+        },
+      ]);
+      expect(poll?.candidateDates[1]?.answers).toEqual([]);
+    });
+  });
+
+  it('脱退した参加者の回答も含める（過去の記録は消さない）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const activeId = await insertLobbyEntry(db, lobbyId, {
+        userId: host.id,
+      });
+      const leftId = await insertLobbyEntry(db, lobbyId, {
+        guestName: '脱退した人',
+        leftAt: new Date('2026-08-10T00:00:00.000Z'),
+      });
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const candidateId = await insertCandidateDate(db, pollId, '2100-01-01');
+      await insertScheduleAnswer(db, candidateId, activeId, 'ok');
+      await insertScheduleAnswer(db, candidateId, leftId, 'ng');
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const poll = await repo.findSchedulePollWithAnswers(pollId);
+
+      // Assert — findByLobbyId（旧・回答表）と異なり、脱退者の回答も表に残す
+      expect(
+        poll?.candidateDates[0]?.answers.map((a) => a.entryId).sort(),
+      ).toEqual([activeId, leftId].sort());
+    });
+  });
+
+  it('候補日が無ければ空配列を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const poll = await repo.findSchedulePollWithAnswers(pollId);
+
+      // Assert
+      expect(poll?.candidateDates).toEqual([]);
+    });
+  });
+
+  it('存在しない調整では null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const poll = await repo.findSchedulePollWithAnswers(
+        '00000000-0000-0000-0000-000000000000',
+      );
+
+      // Assert
+      expect(poll).toBeNull();
+    });
+  });
+});
+
+describe('createSchedulePollWithDates', () => {
+  it('新規の調整を1件作り、候補日ぶんの answers は空配列で date 昇順に返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const poll = await repo.createSchedulePollWithDates(lobbyId, [
+        { date: '2100-02-01', timeLabel: null },
+        { date: '2100-01-01', timeLabel: '13:00〜' },
+      ]);
+
+      // Assert
+      expect(poll.lobbyId).toBe(lobbyId);
+      expect(poll.candidateDates.map((d) => d.date)).toEqual([
+        '2100-01-01',
+        '2100-02-01',
+      ]);
+      expect(poll.candidateDates.every((d) => d.answers.length === 0)).toBe(
+        true,
+      );
       expect(
         await db
           .select()
-          .from(lobbyAnswers)
-          .where(eq(lobbyAnswers.candidateId, candidateId)),
+          .from(schedulePolls)
+          .where(eq(schedulePolls.id, poll.id)),
       ).toHaveLength(1);
     });
   });
 });
 
-describe('applyDateChanges', () => {
-  it('追加・削除・ひとこと更新を1トランザクションで適用する', async () => {
+describe('applyCandidateDateChanges', () => {
+  it('追加・削除・時間帯更新を1トランザクションで適用する', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const keep = await insertCandidateDate(db, lobbyId, '2100-01-01', '旧');
-      const remove = await insertCandidateDate(db, lobbyId, '2100-01-02');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const keep = await insertCandidateDate(db, pollId, '2100-01-01', '旧');
+      const remove = await insertCandidateDate(db, pollId, '2100-01-02');
       const repo = createLobbyRepository(db);
 
       // Act
-      await repo.applyDateChanges(lobbyId, {
-        datesToAdd: [{ date: '2100-01-03', dateNote: '新規' }],
+      await repo.applyCandidateDateChanges(pollId, {
+        datesToAdd: [{ date: '2100-01-03', timeLabel: '新規' }],
         dateIdsToRemove: [remove],
-        notesToUpdate: [{ id: keep, dateNote: '新' }],
+        timeLabelsToUpdate: [{ id: keep, timeLabel: '新' }],
       });
 
       // Assert
-      const dates = await repo.findByLobbyId(lobbyId);
+      const dates = await repo.findCandidateDatesByPollId(pollId);
       expect(dates.map((d) => d.date)).toEqual(['2100-01-01', '2100-01-03']);
-      expect(dates[0]?.dateNote).toBe('新');
+      expect(dates[0]?.timeLabel).toBe('新');
     });
   });
 
-  it('残る候補日の行 ID は変わらないので回答が保持される', async () => {
+  it('残る候補日の行 id は変わらないので回答が保持される', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -1144,46 +1455,121 @@ describe('applyDateChanges', () => {
       const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
-      const keep = await insertCandidateDate(db, lobbyId, '2100-01-01', '旧');
-      await insertAnswer(db, keep, memberId, 'ok');
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const keep = await insertCandidateDate(db, pollId, '2100-01-01', '旧');
+      await insertScheduleAnswer(db, keep, memberId, 'ok');
       const repo = createLobbyRepository(db);
 
       // Act
-      await repo.applyDateChanges(lobbyId, {
+      await repo.applyCandidateDateChanges(pollId, {
         datesToAdd: [],
         dateIdsToRemove: [],
-        notesToUpdate: [{ id: keep, dateNote: 'ひとことだけ変更' }],
+        timeLabelsToUpdate: [{ id: keep, timeLabel: '時間帯だけ変更' }],
       });
 
       // Assert
-      const dates = await repo.findByLobbyId(lobbyId);
+      const dates = await repo.findCandidateDatesByPollId(pollId);
       expect(dates[0]?.id).toBe(keep);
-      expect(dates[0]?.answers).toHaveLength(1);
+      expect(
+        await db
+          .select()
+          .from(scheduleAnswers)
+          .where(eq(scheduleAnswers.candidateDateId, keep)),
+      ).toHaveLength(1);
     });
   });
 
-  it('他の募集枠の候補日は削除対象に含まれていても消さない', async () => {
+  it('他の調整の候補日は削除対象に含まれていても消さない', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const otherLobbyId = await insertLobby(db, host.id);
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const otherPollId = await insertSchedulePoll(db, lobbyId);
       const otherCandidate = await insertCandidateDate(
         db,
-        otherLobbyId,
+        otherPollId,
         '2100-01-01',
       );
       const repo = createLobbyRepository(db);
 
       // Act
-      await repo.applyDateChanges(lobbyId, {
+      await repo.applyCandidateDateChanges(pollId, {
         datesToAdd: [],
         dateIdsToRemove: [otherCandidate],
-        notesToUpdate: [],
+        timeLabelsToUpdate: [],
       });
 
       // Assert
-      expect(await repo.findCandidateOwner(otherCandidate)).not.toBeNull();
+      expect(await repo.findCandidateDatesByPollId(otherPollId)).toHaveLength(
+        1,
+      );
+    });
+  });
+});
+
+describe('upsertScheduleAnswers', () => {
+  it('初回は挿入し、2回目は同じ id を上書きする', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const memberId = await insertLobbyEntry(db, lobbyId, {
+        userId: host.id,
+      });
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const candidateId = await insertCandidateDate(db, pollId, '2100-06-06');
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const first = await repo.upsertScheduleAnswers(memberId, [
+        { candidateDateId: candidateId, answer: 'maybe', comment: 'たぶん' },
+      ]);
+      const second = await repo.upsertScheduleAnswers(memberId, [
+        { candidateDateId: candidateId, answer: 'ok' },
+      ]);
+
+      // Assert
+      expect(first[0]?.answer).toBe('maybe');
+      expect(second[0]?.id).toBe(first[0]?.id);
+      expect(second[0]?.answer).toBe('ok');
+      expect(second[0]?.comment).toBeNull();
+      expect(
+        await db
+          .select()
+          .from(scheduleAnswers)
+          .where(eq(scheduleAnswers.candidateDateId, candidateId)),
+      ).toHaveLength(1);
+    });
+  });
+
+  it('items と同じ順で entryId つきの回答を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const memberId = await insertLobbyEntry(db, lobbyId, {
+        userId: host.id,
+      });
+      const pollId = await insertSchedulePoll(db, lobbyId);
+      const first = await insertCandidateDate(db, pollId, '2100-01-01');
+      const second = await insertCandidateDate(db, pollId, '2100-01-02');
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const answers = await repo.upsertScheduleAnswers(memberId, [
+        { candidateDateId: second, answer: 'ng' },
+        { candidateDateId: first, answer: 'ok' },
+      ]);
+
+      // Assert
+      expect(answers.map((a) => a.entryId)).toEqual([memberId, memberId]);
+      expect(
+        answers.map((a) => [a.answer, a.comment ?? null] as const),
+      ).toEqual([
+        ['ng', null],
+        ['ok', null],
+      ]);
     });
   });
 });

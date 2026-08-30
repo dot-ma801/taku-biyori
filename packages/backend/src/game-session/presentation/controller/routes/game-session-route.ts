@@ -126,6 +126,9 @@ export const registerGameSessionRoute = (
         422,
       );
     }
+    if (result.type === 'pastScheduledAt') {
+      return c.json({ error: 'scheduledAt must be today or later' }, 422);
+    }
     return c.json(result.gameSession, 201);
   });
 
@@ -173,6 +176,9 @@ export const registerGameSessionRoute = (
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     if (result.type === 'invalidStatus') {
       return c.json({ error: 'Cannot edit a cancelled game session' }, 422);
+    }
+    if (result.type === 'pastScheduledAt') {
+      return c.json({ error: 'scheduledAt must be today or later' }, 422);
     }
     return c.json(result.gameSession);
   });

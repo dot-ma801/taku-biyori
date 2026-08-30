@@ -295,7 +295,7 @@ describe('自動取得', () => {
     gameSession.value = makeGameSession({ status: GameSessionStatus.today });
     await flushPromises();
     gameSession.value = makeGameSession({
-      status: GameSessionStatus.confirmed,
+      status: GameSessionStatus.scheduled,
     });
     await flushPromises();
 

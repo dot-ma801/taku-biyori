@@ -12,8 +12,8 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       :statuses="[LobbyStatus.open, LobbyStatus.closed]"
     />
     <GameSessionList
-      title="開催予定の卓"
-      :statuses="[GameSessionStatus.confirmed, GameSessionStatus.today]"
+      title="開催予定"
+      :statuses="[GameSessionStatus.scheduled, GameSessionStatus.today]"
       sort-by-scheduled-at
     />
     <!-- 非公開のロビー・卓はここからしか辿れないため、下書きが残っているときだけ表示する -->
@@ -23,17 +23,12 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       hide-when-empty
       hide-create-button
     />
-    <GameSessionList
-      title="非公開の卓"
-      :statuses="[GameSessionStatus.draft]"
-      hide-when-empty
-    />
     <!--
       履歴。他人の終了した卓は出しても仕方がないので自分の分だけに絞る。
       件数が増えて一覧が重くなったら専用ページへ切り出す。
     -->
     <GameSessionList
-      title="終了した卓"
+      title="終えた開催"
       :statuses="[GameSessionStatus.completed, GameSessionStatus.cancelled]"
       hide-when-empty
       hide-public

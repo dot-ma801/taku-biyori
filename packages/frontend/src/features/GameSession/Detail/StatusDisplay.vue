@@ -4,7 +4,6 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import {
   type LucideIcon,
-  EyeOff,
   CalendarCheck,
   CircleDot,
   Flag,
@@ -24,23 +23,11 @@ type StatusAppearance = {
 /**
  * 卓が取りうるステータスの表示定義。
  *
- * `open`（募集中）は募集枠（lobby）へ移管したため卓では導出されず、表示もしない。
- * ただし `PATCH /:id/status` の公開遷移（`draft → open`）のリクエスト値として使うため、
- * `GameSessionStatus` enum には残っている。導出されないステータスが渡ってもカードを
- * 描画しないよう、「キーが無いことがありうる」ルックアップとして Map で持つ。
+ * 開催の4ステータスを表示する。公開状態はロビーの関心事であり、開催には持たない。
  */
 const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
   [
-    GameSessionStatus.draft,
-    {
-      label: '非公開',
-      text: 'まだ公開していません。準備ができたら公開しましょう。',
-      variant: 'default',
-      icon: EyeOff,
-    },
-  ],
-  [
-    GameSessionStatus.confirmed,
+    GameSessionStatus.scheduled,
     {
       label: '実施前',
       text: '開催日が確定しました。当日を待っています。',

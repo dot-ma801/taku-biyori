@@ -36,6 +36,12 @@ const router = createRouter({
     // 卓・ロビーの一覧ページはダッシュボードに統合した。
     // 404 ルートが無く未定義パスは白画面になるため、旧 URL は残してリダイレクトする。
     { path: '/game-sessions', redirect: { name: 'dashboard' } },
+    {
+      path: '/game-sessions/new',
+      name: 'game-sessions-new',
+      component: () => import('@/views/GameSession/CreateView.vue'),
+      meta: { requiresAuth: true },
+    },
     { path: '/lobbies', redirect: { name: 'dashboard' } },
     // 開催はロビーに属するため、画面ルートも API と同じくロビー配下へ入れ子にする
     // （design-v2 §7-1）。**旧パスからのリダイレクトは作らない。**

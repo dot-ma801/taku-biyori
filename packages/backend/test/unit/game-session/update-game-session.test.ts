@@ -133,6 +133,20 @@ describe('updateGameSession', () => {
     expect(result).toEqual({ type: 'invalidStatus' });
   });
 
+  it('開催日を過去日へ更新できない', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      scheduledAt: '2000-01-01',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'pastScheduledAt' });
+    expect(repo.updateById).not.toHaveBeenCalled();
+  });
+
   it('完了した開催は編集できる（あとから連絡事項を直す運用があるため）', async () => {
     // Arrange
     const repo = makeRepo({

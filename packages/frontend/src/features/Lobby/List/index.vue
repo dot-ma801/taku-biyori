@@ -34,26 +34,25 @@ const hasFilteredPublicLobbies = computed(
 const onClickCreate = () => {
   router.push({ name: 'lobbies-new' });
 };
+
+const onClickCreateDirect = () => {
+  router.push({ name: 'game-sessions-new' });
+};
 </script>
 
 <template>
   <div v-if="isVisible" class="container">
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
-      <BaseButton
-        v-if="showCreateButton"
-        :left-icon="Plus"
-        @click="onClickCreate"
-        >ロビーを作成</BaseButton
-      >
+      <div v-if="showCreateButton" class="create-actions">
+        <BaseButton :left-icon="Plus" @click="onClickCreate">ロビーを作成</BaseButton>
+        <BaseButton variant="secondary" @click="onClickCreateDirect">直接卓を立てる</BaseButton>
+      </div>
     </div>
-    <BaseButton
-      v-else-if="showCreateButton"
-      class="create-btn"
-      :left-icon="Plus"
-      @click="onClickCreate"
-      >ロビーを作成</BaseButton
-    >
+    <div v-else-if="showCreateButton" class="create-actions create-btn">
+      <BaseButton :left-icon="Plus" @click="onClickCreate">ロビーを作成</BaseButton>
+      <BaseButton variant="secondary" @click="onClickCreateDirect">直接卓を立てる</BaseButton>
+    </div>
     <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
     <PublicLobbyList
       v-if="hasFilteredPublicLobbies"
@@ -83,5 +82,10 @@ const onClickCreate = () => {
 
 .create-btn {
   align-self: flex-end;
+}
+
+.create-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 </style>

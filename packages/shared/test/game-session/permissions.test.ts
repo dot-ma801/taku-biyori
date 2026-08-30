@@ -3,20 +3,12 @@ import { canPerform, GameSessionAction } from '@/game-session/permissions';
 import type { GameSessionRole } from '@/game-session/permissions';
 import { GameSessionStatus } from '@/game-session';
 
-// v2 で導出されるステータスは4つ（design-v2 §4-2）。
-// 移行期間中の enum には旧値（draft / open / confirmed）も残るが、どのアクションも許可しない。
-const DERIVED_STATUSES: GameSessionStatus[] = [
+const ALL_STATUSES: GameSessionStatus[] = [
   GameSessionStatus.scheduled,
   GameSessionStatus.today,
   GameSessionStatus.completed,
   GameSessionStatus.cancelled,
 ];
-const LEGACY_STATUSES: GameSessionStatus[] = [
-  GameSessionStatus.draft,
-  GameSessionStatus.open,
-  GameSessionStatus.confirmed,
-];
-const ALL_STATUSES: GameSessionStatus[] = Object.values(GameSessionStatus);
 const ALL_ROLES: GameSessionRole[] = ['host', 'member'];
 
 const on = (

@@ -4,6 +4,7 @@ import {
   GameSessionAction,
   canPerform,
   getGameSessionStatus,
+  todayDateString,
 } from '@taku-biyori/shared';
 
 export interface UpdateGameSessionRepository {
@@ -20,7 +21,8 @@ export type UpdateGameSessionResult =
   | { type: 'ok'; gameSession: GameSession }
   | { type: 'notFound' }
   | { type: 'forbidden' }
-  | { type: 'invalidStatus' };
+  | { type: 'invalidStatus' }
+  | { type: 'pastScheduledAt' };
 
 /**
  * 開催日・上書き項目・当日の連絡事項を更新する（design-v2 §6-13-5）。
@@ -35,6 +37,13 @@ export const updateGameSession = async (
   userId: string,
   input: UpdateGameSessionInput,
 ): Promise<UpdateGameSessionResult> => {
+  if (
+    input.scheduledAt !== undefined &&
+    input.scheduledAt < todayDateString()
+  ) {
+    return { type: 'pastScheduledAt' };
+  }
+
   const actualLobbyId = await repo.findLobbyId(id);
   if (actualLobbyId === null) return { type: 'notFound' };
   // 入れ子パスの代償。存在を漏らさないよう 404 にする（design-v2 §6-5）

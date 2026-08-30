@@ -703,6 +703,8 @@ paths:
       description: |
         新しい `SchedulePoll` を候補日ごと作る。ホストのみ操作可能。**リスケの起点**。
 
+        候補日はすべて新規作成するため**今日以降**に限定し、過去日を1件でも含めば `400`。
+
         作った時点でこれが最新の調整になり、それまでの調整は自動的に読み取り専用になる
         （フラグの更新は不要。`created_at DESC, id DESC` で最新を決める。design-v2 §9-9）。
         古い `schedule_polls` の行は消さない。
@@ -788,6 +790,10 @@ paths:
         v0.2 の `PUT /api/lobbies/{id}/availability-dates` の後継。
         ボディのキーが `dates` から `candidateDates` に、各要素の `dateNote` が `timeLabel` に変わる
         （形は同じ）。候補日0件にはできない。
+
+        すでにこの調整に登録済みで、日付が過ぎただけの候補日は据え置き、または
+        `timeLabel` だけ変更してもよい。一方、現在の調整に存在しない過去日を新規追加する場合は `400`。
+        既存か新規かは、更新前の候補日との日付比較で判定する。
 
         v0.2 にあった候補日の単体 `POST` / `DELETE` は廃止した（フロントは一括更新しか使っていなかった。
         design-v2 §9-6）。
@@ -2236,7 +2242,7 @@ components:
             **v2 で必須から任意になった。** 省略・空配列を許容する。
             1件以上渡したときだけ、日程調整 #1 とその候補日を同時に作る。
             省略した場合は `schedule_polls` が0行のまま（直接卓立ての経路）。
-            日付の重複は 400。
+            候補日は今日以降に限定し、過去日または日付の重複は 400。
           items:
             $ref: '#/components/schemas/LobbyCandidateDateInput'
 
@@ -2459,7 +2465,9 @@ components:
         date:
           type: string
           format: date
-          description: 候補日（今日以降）
+          description: |
+            候補日。ロビー・日程調整の新規作成時は今日以降。
+            一括更新では既存過去日の据え置きだけ許可し、新しい過去日の追加は 400。
         timeLabel:
           type: [string, 'null']
           maxLength: 20
@@ -2476,7 +2484,7 @@ components:
           type: array
           minItems: 1
           maxItems: 100
-          description: 候補日（1件以上必須）。同一リクエスト内で日付は重複できない
+          description: 候補日（1件以上必須・今日以降）。過去日と同一リクエスト内の日付重複は 400
           items:
             $ref: '#/components/schemas/LobbyCandidateDateInput'
 
@@ -2487,12 +2495,15 @@ components:
         候補日の一括更新。指定した候補日で置き換える。候補日0件にはできない。
         v0.2 はボディのキーが `dates` だったが、`CreateSchedulePollInput` と揃えて
         `candidateDates` に改名した（形は同じ）。
+        既存の過去日は据え置き・timeLabel の変更を許可するが、新しい過去日の追加は 400。
       properties:
         candidateDates:
           type: array
           minItems: 1
           maxItems: 100
-          description: 更新後の候補日の配列（1件以上）。日付の重複不可
+          description: |
+            更新後の候補日の配列（1件以上）。日付の重複不可。
+            既存の過去日は据え置けるが、現在の調整に存在しない過去日の追加は 400。
           items:
             $ref: '#/components/schemas/LobbyCandidateDateInput'
 

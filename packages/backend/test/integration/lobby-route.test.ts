@@ -2120,11 +2120,16 @@ describe('PATCH /api/lobbies/:id/schedule-polls/:pollId/guest-answers', () => {
     const app = makeApp();
 
     // Act
+    // トークンは正しいものを付ける。付けないと「トークン欠落で 400」でも通ってしまい、
+    // entryId の検証を見ていることにならない
     const response = await app.request(
       '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
       {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
         body: JSON.stringify({
           answers: [
             {

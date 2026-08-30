@@ -41,13 +41,11 @@ const makeRepo = (
 ): UpdateGameSessionStatusRepository => ({
   findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
   findHostUserId: vi.fn().mockResolvedValue(HOST),
-  findStatusFields: vi
-    .fn()
-    .mockResolvedValue({
-      scheduledAt: TODAY,
-      completedAt: null,
-      cancelledAt: null,
-    }),
+  findStatusFields: vi.fn().mockResolvedValue({
+    scheduledAt: TODAY,
+    completedAt: null,
+    cancelledAt: null,
+  }),
   complete: vi
     .fn()
     .mockResolvedValue({ ...session, completedAt: NOW.toISOString() }),

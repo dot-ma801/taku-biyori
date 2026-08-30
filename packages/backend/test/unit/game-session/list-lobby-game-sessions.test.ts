@@ -58,12 +58,10 @@ describe('listLobbyGameSessions', () => {
   it('下書きロビーはホスト以外に forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyForViewing: vi
-        .fn()
-        .mockResolvedValue({
-          hostUserId: 'user-host',
-          status: LobbyStatus.draft,
-        }),
+      findLobbyForViewing: vi.fn().mockResolvedValue({
+        hostUserId: 'user-host',
+        status: LobbyStatus.draft,
+      }),
     });
 
     // Act
@@ -76,12 +74,10 @@ describe('listLobbyGameSessions', () => {
   it('下書きロビーでもホストなら取得できる', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyForViewing: vi
-        .fn()
-        .mockResolvedValue({
-          hostUserId: 'user-host',
-          status: LobbyStatus.draft,
-        }),
+      findLobbyForViewing: vi.fn().mockResolvedValue({
+        hostUserId: 'user-host',
+        status: LobbyStatus.draft,
+      }),
     });
 
     // Act

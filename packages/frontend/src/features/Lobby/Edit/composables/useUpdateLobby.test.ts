@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import type { LobbyDetailModel } from '@/models/lobby';
+import type { SchedulePollModel } from '@/models/schedule-poll';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { useUpdateLobby } from '@/features/Lobby/Edit/composables/useUpdateLobby';
 import { ApiError } from '@/lib/api-client';
 
 vi.mock('@/api/lobby', () => ({
-  bulkUpdateLobbyAvailabilityDates: vi.fn(),
   getLobby: vi.fn(),
-  listLobbyAvailabilityDates: vi.fn(),
+  getSchedulePoll: vi.fn(),
+  replaceCandidateDates: vi.fn(),
   updateLobby: vi.fn(),
 }));
 
@@ -19,13 +20,15 @@ vi.mock('vue-router', () => ({
 }));
 
 import {
-  bulkUpdateLobbyAvailabilityDates,
   getLobby,
-  listLobbyAvailabilityDates,
+  getSchedulePoll,
+  replaceCandidateDates,
   updateLobby,
 } from '@/api/lobby';
 
 const LOBBY_ID = 'lobby-1';
+const POLL_ID = 'poll-1';
+
 const lobby: LobbyDetailModel = {
   id: LOBBY_ID,
   title: 'Test lobby',
@@ -43,22 +46,31 @@ const lobby: LobbyDetailModel = {
   updatedAt: new Date('2026-07-01T00:00:00.000Z'),
   entries: [],
   activeEntries: [],
-  schedulePolls: [],
+  schedulePolls: [
+    { id: POLL_ID, createdAt: new Date('2026-07-01T00:00:00.000Z') },
+  ],
+};
+
+const schedulePoll: SchedulePollModel = {
+  id: POLL_ID,
+  lobbyId: LOBBY_ID,
+  createdAt: new Date('2026-07-01T00:00:00.000Z'),
+  candidateDates: [
+    {
+      id: 'date-1',
+      date: '2026-07-25',
+      timeLabel: '13:00〜17:00',
+      answersByEntryId: new Map(),
+    },
+  ],
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getLobby).mockResolvedValue(lobby);
-  vi.mocked(listLobbyAvailabilityDates).mockResolvedValue([
-    {
-      id: 'date-1',
-      date: '2026-07-25',
-      dateNote: '13:00〜17:00',
-      answers: [],
-    },
-  ]);
+  vi.mocked(getSchedulePoll).mockResolvedValue(schedulePoll);
   vi.mocked(updateLobby).mockResolvedValue(lobby);
-  vi.mocked(bulkUpdateLobbyAvailabilityDates).mockResolvedValue([]);
+  vi.mocked(replaceCandidateDates).mockResolvedValue([]);
 });
 
 describe('useUpdateLobby', () => {
@@ -77,6 +89,7 @@ describe('useUpdateLobby', () => {
     await fetchInitialValues();
 
     expect(getLobby).toHaveBeenCalledWith(LOBBY_ID);
+    expect(getSchedulePoll).toHaveBeenCalledWith(LOBBY_ID, POLL_ID);
     expect(title.value).toBe('Test lobby');
     expect(scenarioName.value).toBe('Scenario');
     expect(maxMembers.value).toBe('4');
@@ -85,8 +98,21 @@ describe('useUpdateLobby', () => {
     expect(location.value).toBe('Tokyo');
     // 保存済みのひとことは編集フォームに引き継がれる（未入力は空文字で持つ）
     expect(pendingDates.value).toEqual([
-      { date: '2026-07-25', dateNote: '13:00〜17:00' },
+      { date: '2026-07-25', timeLabel: '13:00〜17:00' },
     ]);
+  });
+
+  it('調整が1件も無いロビーでは候補日を取得せず、空のまま初期化する', async () => {
+    // Arrange
+    vi.mocked(getLobby).mockResolvedValue({ ...lobby, schedulePolls: [] });
+    const { fetchInitialValues, pendingDates } = useUpdateLobby(LOBBY_ID);
+
+    // Act
+    await fetchInitialValues();
+
+    // Assert
+    expect(getSchedulePoll).not.toHaveBeenCalled();
+    expect(pendingDates.value).toEqual([]);
   });
 
   // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
@@ -94,7 +120,7 @@ describe('useUpdateLobby', () => {
     const { title, pendingDates, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = [{ date: '2025-05-01', dateNote: 'あ'.repeat(21) }];
+    pendingDates.value = [{ date: '2025-05-01', timeLabel: 'あ'.repeat(21) }];
 
     await submit();
 
@@ -108,7 +134,7 @@ describe('useUpdateLobby', () => {
     const { title, pendingDates, maxMembers, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
+    pendingDates.value = [{ date: '2026-07-25', timeLabel: '' }];
     maxMembers.value = '21';
 
     await submit();
@@ -124,7 +150,7 @@ describe('useUpdateLobby', () => {
     const { title, pendingDates, errorMessages, submit } =
       useUpdateLobby(LOBBY_ID);
     title.value = '   ';
-    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
+    pendingDates.value = [{ date: '2026-07-25', timeLabel: '' }];
 
     // Act
     await submit();
@@ -149,8 +175,9 @@ describe('useUpdateLobby', () => {
     expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
   });
 
-  it('updates the lobby and returns to its detail page', async () => {
+  it('updates the lobby and replaces the candidate dates of the latest poll', async () => {
     const {
+      fetchInitialValues,
       title,
       scenarioName,
       maxMembers,
@@ -160,13 +187,14 @@ describe('useUpdateLobby', () => {
       pendingDates,
       submit,
     } = useUpdateLobby(LOBBY_ID);
+    await fetchInitialValues();
     title.value = 'Updated lobby';
     scenarioName.value = '';
     maxMembers.value = '';
     description.value = '';
     openUntil.value = '';
     location.value = '';
-    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
+    pendingDates.value = [{ date: '2026-07-25', timeLabel: '' }];
 
     await submit();
 
@@ -178,8 +206,8 @@ describe('useUpdateLobby', () => {
       openUntil: null,
       location: null,
     });
-    expect(bulkUpdateLobbyAvailabilityDates).toHaveBeenCalledWith(LOBBY_ID, {
-      dates: [{ date: '2026-07-25', dateNote: null }],
+    expect(replaceCandidateDates).toHaveBeenCalledWith(LOBBY_ID, POLL_ID, {
+      candidateDates: [{ date: '2026-07-25', timeLabel: null }],
     });
     expect(pushMock).toHaveBeenCalledWith({
       name: 'lobbies-detail',
@@ -228,7 +256,7 @@ describe('useUpdateLobby', () => {
     const { submit, errorMessages, fetchError, title, pendingDates } =
       useUpdateLobby(LOBBY_ID);
     title.value = 'Test lobby';
-    pendingDates.value = [{ date: '2026-07-25', dateNote: '' }];
+    pendingDates.value = [{ date: '2026-07-25', timeLabel: '' }];
 
     // Act
     await submit();

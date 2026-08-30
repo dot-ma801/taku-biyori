@@ -1,14 +1,10 @@
 import type {
-  BulkUpdateLobbyAvailabilityDatesInput,
   CreateLobbyInput,
   CreateSchedulePollInput,
-  GuestUpdateLobbyAvailabilityDateResponseInput,
   GuestUpsertScheduleAnswersInput,
   JoinLobbyAsGuestInput,
   JoinLobbyInput,
   Lobby,
-  LobbyAvailabilityDate,
-  LobbyAvailabilityDateAnswer,
   LobbyCandidateDate,
   LobbyDetail,
   LobbyGuestLinkResponse,
@@ -18,7 +14,6 @@ import type {
   LobbySchedulePoll,
   LobbySchedulePollSummary,
   ReplaceCandidateDatesInput,
-  UpdateLobbyAvailabilityDateResponseInput,
   UpdateLobbyInput,
   UpdateLobbyStatusInput,
   UpsertScheduleAnswersInput,
@@ -82,35 +77,6 @@ export async function updateLobby(
     body: input,
   }))!;
   return toLobbyModel(dto);
-}
-
-export async function listLobbyAvailabilityDates(
-  id: string,
-): Promise<LobbyAvailabilityDate[]> {
-  return (await apiRequest<LobbyAvailabilityDate[]>(
-    `/api/lobbies/${id}/availability-dates`,
-  ))!;
-}
-
-export async function bulkUpdateLobbyAvailabilityDates(
-  id: string,
-  input: BulkUpdateLobbyAvailabilityDatesInput,
-): Promise<LobbyAvailabilityDate[]> {
-  return (await apiRequest<LobbyAvailabilityDate[]>(
-    `/api/lobbies/${id}/availability-dates`,
-    { method: 'PUT', body: input },
-  ))!;
-}
-
-export async function updateLobbyAvailabilityDateResponse(
-  lobbyId: string,
-  dateId: string,
-  input: UpdateLobbyAvailabilityDateResponseInput,
-): Promise<LobbyAvailabilityDateAnswer> {
-  return (await apiRequest<LobbyAvailabilityDateAnswer>(
-    `/api/lobbies/${lobbyId}/availability-dates/${dateId}/responses`,
-    { method: 'PUT', body: input },
-  ))!;
 }
 
 export async function joinLobby(
@@ -182,22 +148,6 @@ export async function joinLobbyAsGuest(
     },
   ))!;
   return toLobbyEntryModel(dto);
-}
-
-/**
- * ゲストとして日程候補に回答する。認証不要で、トークンは Guest-Token ヘッダーで送る。
- * input には対象ゲスト列を示す memberId を含める。
- */
-export async function updateGuestLobbyAvailabilityDateResponse(
-  lobbyId: string,
-  dateId: string,
-  token: string,
-  input: GuestUpdateLobbyAvailabilityDateResponseInput,
-): Promise<LobbyAvailabilityDateAnswer> {
-  return (await apiRequest<LobbyAvailabilityDateAnswer>(
-    `/api/lobbies/${lobbyId}/availability-dates/${dateId}/guest-responses`,
-    { method: 'PUT', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
-  ))!;
 }
 
 // ---------- 日程調整（SchedulePoll、v2） ----------

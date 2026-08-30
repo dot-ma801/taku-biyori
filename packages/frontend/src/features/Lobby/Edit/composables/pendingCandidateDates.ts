@@ -1,5 +1,5 @@
-import type { LobbyCandidateDateInput } from '@taku-biyori/shared';
-import { DATE_NOTE_MAX_LENGTH, normalizeDateNote } from '@taku-biyori/shared';
+import type { SchedulePollCandidateDateInput } from '@taku-biyori/shared';
+import { TIME_LABEL_MAX_LENGTH, normalizeTimeLabel } from '@taku-biyori/shared';
 import { formatDateWithWeekday } from '@/utils/date';
 
 /**
@@ -8,7 +8,7 @@ import { formatDateWithWeekday } from '@/utils/date';
  */
 export type PendingCandidateDate = {
   date: string;
-  dateNote: string;
+  timeLabel: string;
 };
 
 /**
@@ -21,27 +21,27 @@ export const syncPendingDates = (
   current: readonly PendingCandidateDate[],
   selectedDates: readonly string[],
 ): PendingCandidateDate[] => {
-  const noteByDate = new Map(
-    current.map((entry) => [entry.date, entry.dateNote]),
+  const timeLabelByDate = new Map(
+    current.map((entry) => [entry.date, entry.timeLabel]),
   );
 
   return [...new Set(selectedDates)]
     .sort((a, b) => a.localeCompare(b))
-    .map((date) => ({ date, dateNote: noteByDate.get(date) ?? '' }));
+    .map((date) => ({ date, timeLabel: timeLabelByDate.get(date) ?? '' }));
 };
 
 // 保存されるのは正規化後の値なので、検証もカウンターも正規化後の長さで数える
 // （生の長さで数えると「21/20 と出ているのにエラーにならない」がありうる）。
-const dateNoteLength = (value: string): number =>
-  (normalizeDateNote(value) ?? '').length;
+const timeLabelLength = (value: string): number =>
+  (normalizeTimeLabel(value) ?? '').length;
 
 /**
  * ひとことの入力エラー文言。問題なければ null を返す。
  * 送信されるのは正規化後の値なので、検証も正規化後の長さで行う（API 側と同じ基準）。
  */
-export const getDateNoteError = (value: string): string | null =>
-  dateNoteLength(value) > DATE_NOTE_MAX_LENGTH
-    ? `ひとことは${DATE_NOTE_MAX_LENGTH}文字以内で入力してください`
+export const getTimeLabelError = (value: string): string | null =>
+  timeLabelLength(value) > TIME_LABEL_MAX_LENGTH
+    ? `ひとことは${TIME_LABEL_MAX_LENGTH}文字以内で入力してください`
     : null;
 
 /**
@@ -51,30 +51,30 @@ export const getDateNoteError = (value: string): string | null =>
  * `errorMessages` だけを見ている）、送信側でも同じ基準で弾く。
  * 複数の候補日ぶんがまとめてアラートに並ぶため、どの日のことか分かる文言にする。
  */
-export const getPendingDateNoteErrors = (
+export const getPendingTimeLabelErrors = (
   pending: readonly PendingCandidateDate[],
 ): string[] =>
   pending.flatMap((entry) => {
-    const error = getDateNoteError(entry.dateNote);
+    const error = getTimeLabelError(entry.timeLabel);
     return error ? [`${formatDateWithWeekday(entry.date)}の${error}`] : [];
   });
 
 /** 入力欄に添える文字数カウンター（プレイメモの `N / MAX` と同じ形式） */
-export const getDateNoteCounter = (
+export const getTimeLabelCounter = (
   value: string,
 ): { label: string; isOver: boolean } => {
-  const length = dateNoteLength(value);
+  const length = timeLabelLength(value);
   return {
-    label: `${length} / ${DATE_NOTE_MAX_LENGTH}`,
-    isOver: length > DATE_NOTE_MAX_LENGTH,
+    label: `${length} / ${TIME_LABEL_MAX_LENGTH}`,
+    isOver: length > TIME_LABEL_MAX_LENGTH,
   };
 };
 
 /** API へ送る形式に変換する。空白のみのひとことは未入力（null）として送る */
 export const toCandidateDateInputs = (
   pending: readonly PendingCandidateDate[],
-): LobbyCandidateDateInput[] =>
+): SchedulePollCandidateDateInput[] =>
   pending.map((entry) => ({
     date: entry.date,
-    dateNote: normalizeDateNote(entry.dateNote),
+    timeLabel: normalizeTimeLabel(entry.timeLabel),
   }));

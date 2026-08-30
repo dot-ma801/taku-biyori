@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { DATE_NOTE_MAX_LENGTH } from '@taku-biyori/shared';
+import { TIME_LABEL_MAX_LENGTH } from '@taku-biyori/shared';
 import {
-  getDateNoteCounter,
-  getDateNoteError,
-  getPendingDateNoteErrors,
+  getTimeLabelCounter,
+  getTimeLabelError,
+  getPendingTimeLabelErrors,
   syncPendingDates,
   toCandidateDateInputs,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
@@ -11,7 +11,7 @@ import {
 describe('syncPendingDates', () => {
   it('日付を追加するとひとことが空の行が増える', () => {
     // Arrange
-    const current = [{ date: '2025-10-01', dateNote: '13:00〜' }];
+    const current = [{ date: '2025-10-01', timeLabel: '13:00〜' }];
     const selected = ['2025-10-01', '2025-10-02'];
 
     // Act
@@ -19,16 +19,16 @@ describe('syncPendingDates', () => {
 
     // Assert
     expect(result).toEqual([
-      { date: '2025-10-01', dateNote: '13:00〜' },
-      { date: '2025-10-02', dateNote: '' },
+      { date: '2025-10-01', timeLabel: '13:00〜' },
+      { date: '2025-10-02', timeLabel: '' },
     ]);
   });
 
   it('残る日付のひとことは保持される', () => {
     // Arrange
     const current = [
-      { date: '2025-10-01', dateNote: '13:00〜' },
-      { date: '2025-10-02', dateNote: '午後から' },
+      { date: '2025-10-01', timeLabel: '13:00〜' },
+      { date: '2025-10-02', timeLabel: '午後から' },
     ];
     const selected = ['2025-10-02'];
 
@@ -36,12 +36,12 @@ describe('syncPendingDates', () => {
     const result = syncPendingDates(current, selected);
 
     // Assert
-    expect(result).toEqual([{ date: '2025-10-02', dateNote: '午後から' }]);
+    expect(result).toEqual([{ date: '2025-10-02', timeLabel: '午後から' }]);
   });
 
   it('選択が空になれば空配列を返す', () => {
     // Arrange
-    const current = [{ date: '2025-10-01', dateNote: '13:00〜' }];
+    const current = [{ date: '2025-10-01', timeLabel: '13:00〜' }];
     const selected: string[] = [];
 
     // Act
@@ -54,7 +54,7 @@ describe('syncPendingDates', () => {
   // 選んだ順ではなく日付順に並べる（表示・送信のどちらでも読み順が安定する）
   it('日付の昇順に並べ替える', () => {
     // Arrange
-    const current: { date: string; dateNote: string }[] = [];
+    const current: { date: string; timeLabel: string }[] = [];
     const selected = ['2025-10-05', '2025-10-01', '2025-10-03'];
 
     // Act
@@ -70,36 +70,36 @@ describe('syncPendingDates', () => {
 
   it('同じ日付が重複して選ばれても1件に丸める', () => {
     // Arrange
-    const current: { date: string; dateNote: string }[] = [];
+    const current: { date: string; timeLabel: string }[] = [];
     const selected = ['2025-10-01', '2025-10-01'];
 
     // Act
     const result = syncPendingDates(current, selected);
 
     // Assert
-    expect(result).toEqual([{ date: '2025-10-01', dateNote: '' }]);
+    expect(result).toEqual([{ date: '2025-10-01', timeLabel: '' }]);
   });
 
   it('一度外した日付を選び直すとひとことは空に戻る', () => {
     // Arrange
-    const current = [{ date: '2025-10-01', dateNote: '13:00〜' }];
+    const current = [{ date: '2025-10-01', timeLabel: '13:00〜' }];
 
     // Act
     const removed = syncPendingDates(current, []);
     const readded = syncPendingDates(removed, ['2025-10-01']);
 
     // Assert
-    expect(readded).toEqual([{ date: '2025-10-01', dateNote: '' }]);
+    expect(readded).toEqual([{ date: '2025-10-01', timeLabel: '' }]);
   });
 });
 
-describe('getDateNoteError', () => {
+describe('getTimeLabelError', () => {
   it('未入力はエラーにしない', () => {
     // Arrange
     const value = '';
 
     // Act
-    const result = getDateNoteError(value);
+    const result = getTimeLabelError(value);
 
     // Assert
     expect(result).toBeNull();
@@ -107,10 +107,10 @@ describe('getDateNoteError', () => {
 
   it('上限ちょうどはエラーにしない', () => {
     // Arrange
-    const value = 'あ'.repeat(DATE_NOTE_MAX_LENGTH);
+    const value = 'あ'.repeat(TIME_LABEL_MAX_LENGTH);
 
     // Act
-    const result = getDateNoteError(value);
+    const result = getTimeLabelError(value);
 
     // Assert
     expect(result).toBeNull();
@@ -118,24 +118,24 @@ describe('getDateNoteError', () => {
 
   it('上限を超えるとエラー文言を返す', () => {
     // Arrange
-    const value = 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1);
+    const value = 'あ'.repeat(TIME_LABEL_MAX_LENGTH + 1);
 
     // Act
-    const result = getDateNoteError(value);
+    const result = getTimeLabelError(value);
 
     // Assert
     expect(result).toBe(
-      `ひとことは${DATE_NOTE_MAX_LENGTH}文字以内で入力してください`,
+      `ひとことは${TIME_LABEL_MAX_LENGTH}文字以内で入力してください`,
     );
   });
 
   // 送信されるのは正規化後の値なので、末尾の空白だけで超過扱いにしない
   it('前後の空白を除けば収まる場合はエラーにしない', () => {
     // Arrange
-    const value = `${'あ'.repeat(DATE_NOTE_MAX_LENGTH)}   `;
+    const value = `${'あ'.repeat(TIME_LABEL_MAX_LENGTH)}   `;
 
     // Act
-    const result = getDateNoteError(value);
+    const result = getTimeLabelError(value);
 
     // Assert
     expect(result).toBeNull();
@@ -146,9 +146,9 @@ describe('toCandidateDateInputs', () => {
   it('ひとことを正規化して API の入力形式に変換する', () => {
     // Arrange
     const pending = [
-      { date: '2025-10-01', dateNote: '  13:00〜17:00  ' },
-      { date: '2025-10-02', dateNote: '   ' },
-      { date: '2025-10-03', dateNote: '' },
+      { date: '2025-10-01', timeLabel: '  13:00〜17:00  ' },
+      { date: '2025-10-02', timeLabel: '   ' },
+      { date: '2025-10-03', timeLabel: '' },
     ];
 
     // Act
@@ -156,23 +156,23 @@ describe('toCandidateDateInputs', () => {
 
     // Assert
     expect(result).toEqual([
-      { date: '2025-10-01', dateNote: '13:00〜17:00' },
-      { date: '2025-10-02', dateNote: null },
-      { date: '2025-10-03', dateNote: null },
+      { date: '2025-10-01', timeLabel: '13:00〜17:00' },
+      { date: '2025-10-02', timeLabel: null },
+      { date: '2025-10-03', timeLabel: null },
     ]);
   });
 });
 
-describe('getPendingDateNoteErrors', () => {
+describe('getPendingTimeLabelErrors', () => {
   it('すべて上限内なら空配列を返す', () => {
     // Arrange
     const pending = [
-      { date: '2025-05-01', dateNote: '13:00〜17:00' },
-      { date: '2025-05-02', dateNote: '' },
+      { date: '2025-05-01', timeLabel: '13:00〜17:00' },
+      { date: '2025-05-02', timeLabel: '' },
     ];
 
     // Act
-    const result = getPendingDateNoteErrors(pending);
+    const result = getPendingTimeLabelErrors(pending);
 
     // Assert
     expect(result).toEqual([]);
@@ -182,28 +182,37 @@ describe('getPendingDateNoteErrors', () => {
   it('超過した候補日は日付付きのエラー文言を返す', () => {
     // Arrange
     const pending = [
-      { date: '2025-05-01', dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1) },
+      {
+        date: '2025-05-01',
+        timeLabel: 'あ'.repeat(TIME_LABEL_MAX_LENGTH + 1),
+      },
     ];
 
     // Act
-    const result = getPendingDateNoteErrors(pending);
+    const result = getPendingTimeLabelErrors(pending);
 
     // Assert
     expect(result).toEqual([
-      `5/1（木）のひとことは${DATE_NOTE_MAX_LENGTH}文字以内で入力してください`,
+      `5/1（木）のひとことは${TIME_LABEL_MAX_LENGTH}文字以内で入力してください`,
     ]);
   });
 
   it('超過した候補日が複数あればすべて返す', () => {
     // Arrange
     const pending = [
-      { date: '2025-05-01', dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1) },
-      { date: '2025-05-02', dateNote: '午後から' },
-      { date: '2025-05-03', dateNote: 'い'.repeat(DATE_NOTE_MAX_LENGTH + 5) },
+      {
+        date: '2025-05-01',
+        timeLabel: 'あ'.repeat(TIME_LABEL_MAX_LENGTH + 1),
+      },
+      { date: '2025-05-02', timeLabel: '午後から' },
+      {
+        date: '2025-05-03',
+        timeLabel: 'い'.repeat(TIME_LABEL_MAX_LENGTH + 5),
+      },
     ];
 
     // Act
-    const result = getPendingDateNoteErrors(pending);
+    const result = getPendingTimeLabelErrors(pending);
 
     // Assert
     expect(result).toHaveLength(2);
@@ -212,17 +221,17 @@ describe('getPendingDateNoteErrors', () => {
   });
 });
 
-describe('getDateNoteCounter', () => {
+describe('getTimeLabelCounter', () => {
   it('未入力は 0 から数える', () => {
     // Arrange
     const value = '';
 
     // Act
-    const result = getDateNoteCounter(value);
+    const result = getTimeLabelCounter(value);
 
     // Assert
     expect(result).toEqual({
-      label: `0 / ${DATE_NOTE_MAX_LENGTH}`,
+      label: `0 / ${TIME_LABEL_MAX_LENGTH}`,
       isOver: false,
     });
   });
@@ -232,21 +241,21 @@ describe('getDateNoteCounter', () => {
     const value = '13:00〜17:00';
 
     // Act
-    const result = getDateNoteCounter(value);
+    const result = getTimeLabelCounter(value);
 
     // Assert
     expect(result).toEqual({
-      label: `11 / ${DATE_NOTE_MAX_LENGTH}`,
+      label: `11 / ${TIME_LABEL_MAX_LENGTH}`,
       isOver: false,
     });
   });
 
   it('上限ちょうどは超過扱いにしない', () => {
     // Arrange
-    const value = 'あ'.repeat(DATE_NOTE_MAX_LENGTH);
+    const value = 'あ'.repeat(TIME_LABEL_MAX_LENGTH);
 
     // Act
-    const result = getDateNoteCounter(value);
+    const result = getTimeLabelCounter(value);
 
     // Assert
     expect(result.isOver).toBe(false);
@@ -254,14 +263,14 @@ describe('getDateNoteCounter', () => {
 
   it('上限を超えると isOver が true になる', () => {
     // Arrange
-    const value = 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1);
+    const value = 'あ'.repeat(TIME_LABEL_MAX_LENGTH + 1);
 
     // Act
-    const result = getDateNoteCounter(value);
+    const result = getTimeLabelCounter(value);
 
     // Assert
     expect(result).toEqual({
-      label: `${DATE_NOTE_MAX_LENGTH + 1} / ${DATE_NOTE_MAX_LENGTH}`,
+      label: `${TIME_LABEL_MAX_LENGTH + 1} / ${TIME_LABEL_MAX_LENGTH}`,
       isOver: true,
     });
   });
@@ -273,9 +282,9 @@ describe('getDateNoteCounter', () => {
     const value = '  午後から  ';
 
     // Act
-    const result = getDateNoteCounter(value);
+    const result = getTimeLabelCounter(value);
 
     // Assert
-    expect(result.label).toBe(`4 / ${DATE_NOTE_MAX_LENGTH}`);
+    expect(result.label).toBe(`4 / ${TIME_LABEL_MAX_LENGTH}`);
   });
 });

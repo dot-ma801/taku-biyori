@@ -9,7 +9,7 @@ import {
 } from '@/features/Lobby/Edit/composables/maxMembersValidation';
 import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 import {
-  getPendingDateNoteErrors,
+  getPendingTimeLabelErrors,
   toCandidateDateInputs,
 } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
 
@@ -65,7 +65,7 @@ export const useCreateLobby = () => {
       errors.push('候補日を1件以上指定してください');
     }
 
-    errors.push(...getPendingDateNoteErrors(pendingDates.value));
+    errors.push(...getPendingTimeLabelErrors(pendingDates.value));
 
     return errors;
   }

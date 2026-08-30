@@ -8,26 +8,25 @@ import type {
   LobbyDetail,
   LobbyListItem,
   LobbyEntry,
-  LobbyAvailabilityDate,
-  LobbyAvailabilityDateAnswer,
+  LobbySchedulePoll,
+  LobbySchedulePollSummary,
+  LobbyCandidateDate,
+  LobbyScheduleAnswer,
+  CreateSchedulePollInput,
+  GuestUpsertScheduleAnswersInput,
   CreateLobbyInput,
   UpdateLobbyStatusInput,
 } from '@taku-biyori/shared';
-import {
-  DATE_NOTE_MAX_LENGTH,
-  GUEST_TOKEN_HEADER,
-  LobbyStatus,
-} from '@taku-biyori/shared';
+import { GUEST_TOKEN_HEADER, LobbyStatus } from '@taku-biyori/shared';
 import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { ListEntriesResult } from '@/lobby/application/list-entries';
 import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestResult } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyResult } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkResult } from '@/lobby/application/get-guest-link';
-import type { ListAvailabilityDatesResult } from '@/lobby/application/list-availability-dates';
-import type { BulkUpdateAvailabilityDatesResult } from '@/lobby/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseResult } from '@/lobby/application/update-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseResult } from '@/lobby/application/update-guest-availability-date-response';
+import type { ListSchedulePollsResult } from '@/lobby/application/list-schedule-polls';
+import type { CreateSchedulePollResult } from '@/lobby/application/create-schedule-poll';
+import type { UpsertGuestScheduleAnswersResult } from '@/lobby/application/upsert-guest-schedule-answers';
 import type { UpdateLobbyStatusResult } from '@/lobby/application/update-lobby-status';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -85,18 +84,29 @@ const mockGetOk: GetLobbyResult = {
   lobby: mockLobbyDetail,
 };
 
-const mockAvailabilityDate: LobbyAvailabilityDate = {
+const mockCandidateDate: LobbyCandidateDate = {
   id: 'date-1',
-  date: '2025-09-01',
-  dateNote: null,
-  answers: [],
+  date: '2099-09-01',
+  timeLabel: null,
 };
 
-const mockAnswer: LobbyAvailabilityDateAnswer = {
+const mockScheduleAnswer: LobbyScheduleAnswer = {
   id: 'answer-1',
-  memberId: 'member-1',
+  entryId: 'member-1',
   answer: 'ok',
   comment: null,
+};
+
+const mockSchedulePollSummary: LobbySchedulePollSummary = {
+  id: 'poll-1',
+  createdAt: '2025-01-01T00:00:00.000Z',
+};
+
+const mockSchedulePoll: LobbySchedulePoll = {
+  id: 'poll-1',
+  lobbyId: 'lobby-1',
+  createdAt: '2025-01-01T00:00:00.000Z',
+  candidateDates: [{ ...mockCandidateDate, answers: [mockScheduleAnswer] }],
 };
 
 const stubProfile = {} as unknown as ProfileUseCases;
@@ -137,18 +147,26 @@ const makeApp = (
     getGuestLink:
       overrides.getGuestLink ??
       vi.fn().mockResolvedValue({ type: 'ok', token: 'guest-token-abc' }),
-    listAvailabilityDates:
-      overrides.listAvailabilityDates ??
-      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
-    bulkUpdateAvailabilityDates:
-      overrides.bulkUpdateAvailabilityDates ??
-      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] }),
-    updateAvailabilityDateResponse:
-      overrides.updateAvailabilityDateResponse ??
-      vi.fn().mockResolvedValue({ type: 'ok', answer: mockAnswer }),
-    updateGuestAvailabilityDateResponse:
-      overrides.updateGuestAvailabilityDateResponse ??
-      vi.fn().mockResolvedValue({ type: 'ok', answer: mockAnswer }),
+    listSchedulePolls:
+      overrides.listSchedulePolls ??
+      vi
+        .fn()
+        .mockResolvedValue({ type: 'ok', polls: [mockSchedulePollSummary] }),
+    getSchedulePoll:
+      overrides.getSchedulePoll ??
+      vi.fn().mockResolvedValue({ type: 'ok', poll: mockSchedulePoll }),
+    createSchedulePoll:
+      overrides.createSchedulePoll ??
+      vi.fn().mockResolvedValue({ type: 'ok', poll: mockSchedulePoll }),
+    replaceCandidateDates:
+      overrides.replaceCandidateDates ??
+      vi.fn().mockResolvedValue({ type: 'ok', dates: [mockCandidateDate] }),
+    upsertScheduleAnswers:
+      overrides.upsertScheduleAnswers ??
+      vi.fn().mockResolvedValue({ type: 'ok', answers: [mockScheduleAnswer] }),
+    upsertGuestScheduleAnswers:
+      overrides.upsertGuestScheduleAnswers ??
+      vi.fn().mockResolvedValue({ type: 'ok', answers: [mockScheduleAnswer] }),
   };
 
   return createApp({
@@ -1368,99 +1386,307 @@ describe('POST /api/lobbies/:id/guest-link（トークンの再発行）', () =>
   });
 });
 
-describe('GET /api/lobbies/:id/availability-dates', () => {
-  it('公開済み募集枠は未認証でも 200 で候補日一覧を返す', async () => {
+describe('GET /api/lobbies/:id/schedule-polls', () => {
+  it('公開済み募集枠は未認証でも 200 で日程調整の要約一覧を返す', async () => {
     // Arrange
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-    );
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls');
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
-    expect(body).toEqual([mockAvailabilityDate]);
+    expect(body).toEqual([mockSchedulePollSummary]);
   });
 
   it('存在しない募集枠なら 404 を返す', async () => {
     // Arrange
-    const app = makeApp({
-      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'notFound' }),
-    });
+    const listSchedulePolls = vi.fn().mockResolvedValue({ type: 'notFound' });
+    const app = makeApp({ listSchedulePolls });
 
     // Act
     const response = await app.request(
-      '/api/lobbies/nonexistent/availability-dates',
+      '/api/lobbies/nonexistent/schedule-polls',
     );
 
     // Assert
     expect(response.status).toBe(404);
   });
 
-  it('非公開募集枠にホスト以外がアクセスすると 403 を返す', async () => {
+  it('非公開の募集枠を未認証で見ると 401 を返す', async () => {
     // Arrange
+    const listSchedulePolls = vi.fn().mockResolvedValue({ type: 'forbidden' });
     const app = makeApp({
-      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'forbidden' }),
+      listSchedulePolls,
+      getSession: vi.fn().mockResolvedValue(null),
     });
 
     // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-    );
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls');
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('非公開の募集枠をホスト以外が見ると 403 を返す', async () => {
+    // Arrange
+    const listSchedulePolls = vi.fn().mockResolvedValue({ type: 'forbidden' });
+    const app = makeApp({ listSchedulePolls });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls');
 
     // Assert
     expect(response.status).toBe(403);
   });
 
-  it('非公開募集枠に未認証でアクセスすると 401 を返す', async () => {
+  it('lobbyId と userId を listSchedulePolls に渡す', async () => {
     // Arrange
+    const listSchedulePolls: (
+      lobbyId: string,
+      userId: string | null,
+    ) => Promise<ListSchedulePollsResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', polls: [] });
+    const app = makeApp({ listSchedulePolls });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/schedule-polls');
+
+    // Assert
+    expect(listSchedulePolls).toHaveBeenCalledWith('lobby-1', 'user-1');
+  });
+});
+
+describe('POST /api/lobbies/:id/schedule-polls', () => {
+  it('有効なボディで 201 と日程調整を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        candidateDates: [{ date: '2099-09-01' }],
+      }),
+    });
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(201);
+    expect(body).toEqual(mockSchedulePoll);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        candidateDates: [{ date: '2099-09-01' }],
+      }),
+    });
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('不正な JSON なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{invalid',
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('candidateDates が空なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ candidateDates: [] }),
+    });
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('存在しない募集枠なら 404 を返す', async () => {
+    // Arrange
+    const createSchedulePoll = vi.fn().mockResolvedValue({ type: 'notFound' });
+    const app = makeApp({ createSchedulePoll });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/nonexistent/schedule-polls',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          candidateDates: [{ date: '2099-09-01' }],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('ホスト以外なら 403 を返す', async () => {
+    // Arrange
+    const createSchedulePoll = vi.fn().mockResolvedValue({ type: 'forbidden' });
+    const app = makeApp({ createSchedulePoll });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        candidateDates: [{ date: '2099-09-01' }],
+      }),
+    });
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('募集枠が disbanded なら 422 を返す', async () => {
+    // Arrange
+    const createSchedulePoll = vi
+      .fn()
+      .mockResolvedValue({ type: 'invalidStatus' });
+    const app = makeApp({ createSchedulePoll });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        candidateDates: [{ date: '2099-09-01' }],
+      }),
+    });
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('lobbyId・userId・body を createSchedulePoll に渡す', async () => {
+    // Arrange
+    const createSchedulePoll: (
+      lobbyId: string,
+      userId: string,
+      input: CreateSchedulePollInput,
+    ) => Promise<CreateSchedulePollResult> = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', poll: mockSchedulePoll });
+    const app = makeApp({ createSchedulePoll });
+
+    // Act
+    await app.request('/api/lobbies/lobby-1/schedule-polls', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        candidateDates: [{ date: '2099-09-01', timeLabel: '夜' }],
+      }),
+    });
+
+    // Assert
+    expect(createSchedulePoll).toHaveBeenCalledWith('lobby-1', 'user-1', {
+      candidateDates: [{ date: '2099-09-01', timeLabel: '夜' }],
+    });
+  });
+});
+
+describe('GET /api/lobbies/:id/schedule-polls/:pollId', () => {
+  it('公開済み募集枠は未認証でも 200 で日程調整を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1',
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual(mockSchedulePoll);
+  });
+
+  it('存在しない調整なら 404 を返す', async () => {
+    // Arrange
+    const getSchedulePoll = vi.fn().mockResolvedValue({ type: 'notFound' });
+    const app = makeApp({ getSchedulePoll });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/nonexistent',
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('非公開の募集枠を未認証で見ると 401 を返す', async () => {
+    // Arrange
+    const getSchedulePoll = vi.fn().mockResolvedValue({ type: 'forbidden' });
     const app = makeApp({
+      getSchedulePoll,
       getSession: vi.fn().mockResolvedValue(null),
-      listAvailabilityDates: vi.fn().mockResolvedValue({ type: 'forbidden' }),
     });
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1',
     );
 
     // Assert
     expect(response.status).toBe(401);
   });
 
-  it('lobbyId と userId を listAvailabilityDates に渡す', async () => {
+  it('非公開の募集枠をホスト以外が見ると 403 を返す', async () => {
     // Arrange
-    const listAvailabilityDates: (
-      lobbyId: string,
-      userId: string | null,
-    ) => Promise<ListAvailabilityDatesResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', dates: [] });
-    const app = makeApp({ listAvailabilityDates });
+    const getSchedulePoll = vi.fn().mockResolvedValue({ type: 'forbidden' });
+    const app = makeApp({ getSchedulePoll });
 
     // Act
-    await app.request('/api/lobbies/lobby-1/availability-dates');
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1',
+    );
 
     // Assert
-    expect(listAvailabilityDates).toHaveBeenCalledWith('lobby-1', 'user-1');
+    expect(response.status).toBe(403);
   });
 });
 
-describe('PUT /api/lobbies/:id/availability-dates', () => {
-  it('ホストが有効なボディで一括更新すると 200 と候補日一覧を返す', async () => {
+describe('PUT /api/lobbies/:id/schedule-polls/:pollId/candidate-dates', () => {
+  it('有効なボディで 200 と候補日一覧を返す', async () => {
     // Arrange
     const app = makeApp();
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
+          candidateDates: [{ date: '2099-09-01', timeLabel: '夜' }],
         }),
       },
     );
@@ -1468,7 +1694,7 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(body).toEqual([mockAvailabilityDate]);
+    expect(body).toEqual([mockCandidateDate]);
   });
 
   it('未認証なら 401 を返す', async () => {
@@ -1477,11 +1703,13 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
+        body: JSON.stringify({
+          candidateDates: [{ date: '2099-09-01' }],
+        }),
       },
     );
 
@@ -1489,83 +1717,17 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
     expect(response.status).toBe(401);
   });
 
-  it('ホスト以外は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      bulkUpdateAvailabilityDates: vi
-        .fn()
-        .mockResolvedValue({ type: 'forbidden' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('存在しない募集枠なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      bulkUpdateAvailabilityDates: vi
-        .fn()
-        .mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/nonexistent/availability-dates',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      bulkUpdateAvailabilityDates: vi
-        .fn()
-        .mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: [{ date: '2099-09-01' }] }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(409);
-  });
-
-  it('dates が空配列なら 400 を返す（game-session と異なり 1 件以上が必須）', async () => {
+  it('candidateDates が空なら 400 を返す', async () => {
     // Arrange
     const app = makeApp();
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dates: [] }),
+        body: JSON.stringify({ candidateDates: [] }),
       },
     );
 
@@ -1573,21 +1735,401 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
     expect(response.status).toBe(400);
   });
 
-  it('dateNote が上限を超えると 400 を返す', async () => {
+  it('存在しない調整なら 404 を返す', async () => {
+    // Arrange
+    const replaceCandidateDates = vi
+      .fn()
+      .mockResolvedValue({ type: 'notFound' });
+    const app = makeApp({ replaceCandidateDates });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/nonexistent/candidate-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          candidateDates: [{ date: '2099-09-01' }],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('ホスト以外なら 403 を返す', async () => {
+    // Arrange
+    const replaceCandidateDates = vi
+      .fn()
+      .mockResolvedValue({ type: 'forbidden' });
+    const app = makeApp({ replaceCandidateDates });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          candidateDates: [{ date: '2099-09-01' }],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('募集枠が disbanded なら 422 を返す', async () => {
+    // Arrange
+    const replaceCandidateDates = vi
+      .fn()
+      .mockResolvedValue({ type: 'invalidStatus' });
+    const app = makeApp({ replaceCandidateDates });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          candidateDates: [{ date: '2099-09-01' }],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('最新の調整でなければ 409 を返す', async () => {
+    // Arrange
+    const replaceCandidateDates = vi
+      .fn()
+      .mockResolvedValue({ type: 'notLatest' });
+    const app = makeApp({ replaceCandidateDates });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          candidateDates: [{ date: '2099-09-01' }],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('現在の調整に無い過去日を追加すると 400 を返す', async () => {
+    // Arrange
+    const replaceCandidateDates = vi
+      .fn()
+      .mockResolvedValue({ type: 'pastDateAdded' });
+    const app = makeApp({ replaceCandidateDates });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/candidate-dates',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          candidateDates: [{ date: '2020-01-01' }],
+        }),
+      },
+    );
+    const body = (await response.json()) as { error: string };
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(body.error).toContain('past date');
+  });
+});
+
+describe('PATCH /api/lobbies/:id/schedule-polls/:pollId/answers', () => {
+  it('有効なボディで 200 と回答一覧を返す', async () => {
     // Arrange
     const app = makeApp();
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
       {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          dates: [
+          answers: [
             {
-              date: '2099-09-01',
-              dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1),
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockScheduleAnswer]);
+  });
+
+  it('未認証なら 401 を返す', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(401);
+  });
+
+  it('answers が空なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answers: [] }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('存在しない調整なら 404 を返す', async () => {
+    // Arrange
+    const upsertScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'notFound' });
+    const app = makeApp({ upsertScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/nonexistent/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('脱退済み・未参加なら 403 を返す', async () => {
+    // Arrange
+    const upsertScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'forbidden' });
+    const app = makeApp({ upsertScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('最新の調整でなければ 409 を返す', async () => {
+    // Arrange
+    const upsertScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'notLatest' });
+    const app = makeApp({ upsertScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('募集枠が未公開なら 422 を返す', async () => {
+    // Arrange
+    const upsertScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'notPublished' });
+    const app = makeApp({ upsertScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+
+  it('募集枠が disbanded なら 422 を返す', async () => {
+    // Arrange
+    const upsertScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'invalidStatus' });
+    const app = makeApp({ upsertScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(422);
+  });
+});
+
+describe('PATCH /api/lobbies/:id/schedule-polls/:pollId/guest-answers', () => {
+  it('有効なボディで 200 と回答一覧を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          entryId: 'dddddddd-0000-4000-8000-000000000002',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockScheduleAnswer]);
+  });
+
+  it('不正な JSON なら 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: '{invalid',
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
+  it('entryId が無ければ 400 を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
             },
           ],
         }),
@@ -1598,153 +2140,31 @@ describe('PUT /api/lobbies/:id/availability-dates', () => {
     expect(response.status).toBe(400);
   });
 
-  it('dateNote 付きの候補日をユースケースへそのまま渡す', async () => {
+  it('存在しない調整なら 404 を返す', async () => {
     // Arrange
-    const bulkUpdateAvailabilityDates = vi
+    const upsertGuestScheduleAnswers = vi
       .fn()
-      .mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] });
-    const app = makeApp({ bulkUpdateAvailabilityDates });
-
-    // Act
-    await app.request('/api/lobbies/lobby-1/availability-dates', {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        dates: [{ date: '2099-09-01', dateNote: '13:00〜17:00' }],
-      }),
-    });
-
-    // Assert
-    expect(bulkUpdateAvailabilityDates).toHaveBeenCalledWith(
-      'lobby-1',
-      'user-1',
-      { dates: [{ date: '2099-09-01', dateNote: '13:00〜17:00' }] },
-    );
-  });
-
-  it('dates 未指定なら 400 を返す', async () => {
-    // Arrange
-    const app = makeApp();
+      .mockResolvedValue({ type: 'notFound' });
+    const app = makeApp({ upsertGuestScheduleAnswers });
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates',
+      '/api/lobbies/lobby-1/schedule-polls/nonexistent/guest-answers',
       {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({}),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(400);
-  });
-
-  it('ユースケースに lobbyId・userId・input を渡す', async () => {
-    // Arrange
-    const bulkUpdateAvailabilityDates: (
-      lobbyId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<BulkUpdateAvailabilityDatesResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', dates: [mockAvailabilityDate] });
-    const app = makeApp({ bulkUpdateAvailabilityDates });
-
-    // Act
-    await app.request('/api/lobbies/lobby-1/availability-dates', {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }],
-      }),
-    });
-
-    // Assert
-    expect(bulkUpdateAvailabilityDates).toHaveBeenCalledWith(
-      'lobby-1',
-      'user-1',
-      { dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }] },
-    );
-  });
-});
-
-describe('PUT /api/lobbies/:id/availability-dates/:dateId/responses', () => {
-  it('メンバーが自分の回答を登録すると 200 と回答を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'ok' }),
-      },
-    );
-    const body = await response.json();
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(body).toEqual(mockAnswer);
-  });
-
-  it('未認証なら 401 を返す', async () => {
-    // Arrange
-    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'ok' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(401);
-  });
-
-  it('募集枠のメンバーでない場合は 403 を返す（本人以外は回答できない）', async () => {
-    // Arrange
-    const app = makeApp({
-      updateAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'forbidden' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'ok' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('存在しない募集枠・候補日なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/nonexistent/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'ok' }),
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          entryId: 'dddddddd-0000-4000-8000-000000000002',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
       },
     );
 
@@ -1752,21 +2172,127 @@ describe('PUT /api/lobbies/:id/availability-dates/:dateId/responses', () => {
     expect(response.status).toBe(404);
   });
 
-  it('募集枠が draft（公開前）の場合は 422 を返す', async () => {
+  it('トークン不一致なら 403 を返す', async () => {
     // Arrange
-    const app = makeApp({
-      updateAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'notPublished' }),
-    });
+    const upsertGuestScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'invalidToken' });
+    const app = makeApp({ upsertGuestScheduleAnswers });
 
     // Act
     const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
       {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'ok' }),
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'wrong-token',
+        },
+        body: JSON.stringify({
+          entryId: 'dddddddd-0000-4000-8000-000000000002',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('ゲスト以外・脱退済みの entryId を指定すると 403 を返す', async () => {
+    // Arrange
+    const upsertGuestScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'forbidden' });
+    const app = makeApp({ upsertGuestScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          entryId: 'dddddddd-0000-4000-8000-000000000001',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(403);
+  });
+
+  it('最新の調整でなければ 409 を返す', async () => {
+    // Arrange
+    const upsertGuestScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'notLatest' });
+    const app = makeApp({ upsertGuestScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          entryId: 'dddddddd-0000-4000-8000-000000000002',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
+      },
+    );
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
+
+  it('募集枠が draft・disbanded なら 422 を返す', async () => {
+    // Arrange
+    const upsertGuestScheduleAnswers = vi
+      .fn()
+      .mockResolvedValue({ type: 'invalidStatus' });
+    const app = makeApp({ upsertGuestScheduleAnswers });
+
+    // Act
+    const response = await app.request(
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
+        },
+        body: JSON.stringify({
+          entryId: 'dddddddd-0000-4000-8000-000000000002',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
+        }),
       },
     );
 
@@ -1774,398 +2300,54 @@ describe('PUT /api/lobbies/:id/availability-dates/:dateId/responses', () => {
     expect(response.status).toBe(422);
   });
 
-  it('募集枠が確定済み・中止済みの場合は 409 を返す', async () => {
+  it('lobbyId・pollId・token・入力全体（entryId 含む）を upsertGuestScheduleAnswers にそのまま渡す', async () => {
     // Arrange
-    const app = makeApp({
-      updateAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'ok' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(409);
-  });
-
-  it('answer が不正な値なら 400 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'invalid' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(400);
-  });
-
-  it('ユースケースに lobbyId・dateId・userId・input を渡す（memberId は本文で受け取らない）', async () => {
-    // Arrange
-    const updateAvailabilityDateResponse: (
+    const upsertGuestScheduleAnswers: (
       lobbyId: string,
-      dateId: string,
-      userId: string,
-      input: unknown,
-    ) => Promise<UpdateAvailabilityDateResponseResult> = vi
-      .fn()
-      .mockResolvedValue({ type: 'ok', answer: mockAnswer });
-    const app = makeApp({ updateAvailabilityDateResponse });
-
-    // Act
-    await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ answer: 'maybe', comment: 'たぶん行ける' }),
-      },
-    );
-
-    // Assert
-    expect(updateAvailabilityDateResponse).toHaveBeenCalledWith(
-      'lobby-1',
-      'date-1',
-      'user-1',
-      { answer: 'maybe', comment: 'たぶん行ける' },
-    );
-  });
-});
-
-describe('PUT /api/lobbies/:id/availability-dates/:dateId/guest-responses', () => {
-  it('有効な Guest-Token とゲストの memberId で回答すると 200 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
-      },
-    );
-    const body = await response.json();
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(body).toEqual(mockAnswer);
-  });
-
-  it('認証（セッション）は不要', async () => {
-    // Arrange
-    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(200);
-  });
-
-  it('Guest-Token がない場合は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateGuestAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'invalidToken' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('Guest-Token が一致しない場合は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateGuestAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'invalidToken' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'wrong-token',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('トークンは正しいが memberId がゲストメンバーでない場合は 403 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateGuestAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'forbidden' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000099',
-        }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(403);
-  });
-
-  it('存在しない募集枠・候補日なら 404 を返す', async () => {
-    // Arrange
-    const app = makeApp({
-      updateGuestAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'notFound' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/nonexistent/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(404);
-  });
-
-  it('draft を含め open/scheduling 以外の募集枠は 409 を返す（game-session と異なり 423 は使わない）', async () => {
-    // Arrange
-    const app = makeApp({
-      updateGuestAvailabilityDateResponse: vi
-        .fn()
-        .mockResolvedValue({ type: 'invalidStatus' }),
-    });
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(409);
-  });
-
-  it('memberId が UUID でない場合は 400 を返す', async () => {
-    // Arrange
-    const app = makeApp();
-
-    // Act
-    const response = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({ answer: 'ok', memberId: 'not-a-uuid' }),
-      },
-    );
-
-    // Assert
-    expect(response.status).toBe(400);
-  });
-
-  it('ユースケースに lobbyId・dateId・token・memberId・input を渡す', async () => {
-    // Arrange
-    const updateGuestAvailabilityDateResponse: (
-      lobbyId: string,
-      dateId: string,
+      pollId: string,
       token: string,
-      memberId: string,
-      input: unknown,
-    ) => Promise<UpdateGuestAvailabilityDateResponseResult> = vi
+      input: GuestUpsertScheduleAnswersInput,
+    ) => Promise<UpsertGuestScheduleAnswersResult> = vi
       .fn()
-      .mockResolvedValue({ type: 'ok', answer: mockAnswer });
-    const app = makeApp({ updateGuestAvailabilityDateResponse });
+      .mockResolvedValue({ type: 'ok', answers: [mockScheduleAnswer] });
+    const app = makeApp({ upsertGuestScheduleAnswers });
 
     // Act
     await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
       {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'content-type': 'application/json',
           [GUEST_TOKEN_HEADER]: 'guest-token-abc',
         },
         body: JSON.stringify({
-          answer: 'maybe',
-          comment: 'たぶん行ける',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
+          entryId: 'dddddddd-0000-4000-8000-000000000002',
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+            },
+          ],
         }),
       },
     );
 
     // Assert
-    expect(updateGuestAvailabilityDateResponse).toHaveBeenCalledWith(
+    expect(upsertGuestScheduleAnswers).toHaveBeenCalledWith(
       'lobby-1',
-      'date-1',
+      'poll-1',
       'guest-token-abc',
-      'aaaaaaaa-0000-4000-8000-000000000001',
-      { answer: 'maybe', comment: 'たぶん行ける' },
-    );
-  });
-
-  it('1つのゲストトークンで複数の異なるゲストメンバーの回答を編集できる（調整さん方式）', async () => {
-    // Arrange
-    // トークンとゲストメンバーの状態を持つ簡易 in-memory 実装で検証する
-    const validGuestMemberIds = new Set([
-      'aaaaaaaa-0000-4000-8000-000000000001',
-      'aaaaaaaa-0000-4000-8000-000000000002',
-    ]);
-    const answers = new Map<string, LobbyAvailabilityDateAnswer>();
-    const updateGuestAvailabilityDateResponse = vi.fn(
-      async (
-        _lobbyId: string,
-        _dateId: string,
-        token: string,
-        memberId: string,
-        input: { answer: 'ok' | 'maybe' | 'ng'; comment?: string },
-      ): Promise<UpdateGuestAvailabilityDateResponseResult> => {
-        if (token !== 'guest-token-abc') return { type: 'invalidToken' };
-        if (!validGuestMemberIds.has(memberId)) return { type: 'forbidden' };
-        const answer: LobbyAvailabilityDateAnswer = {
-          id: `answer-${memberId}`,
-          memberId,
-          answer: input.answer,
-          comment: input.comment ?? null,
-        };
-        answers.set(memberId, answer);
-        return { type: 'ok', answer };
-      },
-    );
-    const app = makeApp({ updateGuestAvailabilityDateResponse });
-
-    // Act: 同じトークンで2人分のゲスト回答を更新する
-    const first = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
       {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ok',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-        }),
+        entryId: 'dddddddd-0000-4000-8000-000000000002',
+        answers: [
+          {
+            candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+            answer: 'ok',
+          },
+        ],
       },
     );
-    const second = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
-      {
-        method: 'PUT',
-        headers: {
-          'content-type': 'application/json',
-          [GUEST_TOKEN_HEADER]: 'guest-token-abc',
-        },
-        body: JSON.stringify({
-          answer: 'ng',
-          memberId: 'aaaaaaaa-0000-4000-8000-000000000002',
-        }),
-      },
-    );
-
-    // Assert
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(answers.get('aaaaaaaa-0000-4000-8000-000000000001')).toMatchObject({
-      memberId: 'aaaaaaaa-0000-4000-8000-000000000001',
-      answer: 'ok',
-    });
-    expect(answers.get('aaaaaaaa-0000-4000-8000-000000000002')).toMatchObject({
-      memberId: 'aaaaaaaa-0000-4000-8000-000000000002',
-      answer: 'ng',
-    });
   });
 });
 
@@ -2255,7 +2437,7 @@ describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一
     const guestLinkToken = 'flow-guest-token-xyz';
     const guestMembers = new Map<string, LobbyEntry>();
     let nextMemberId = 1;
-    const answers = new Map<string, LobbyAvailabilityDateAnswer>();
+    const answers = new Map<string, LobbyScheduleAnswer>();
 
     const getGuestLink = vi.fn(
       async (): Promise<GetGuestLinkResult> => ({
@@ -2284,24 +2466,25 @@ describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一
       },
     );
 
-    const updateGuestAvailabilityDateResponse = vi.fn(
+    const upsertGuestScheduleAnswers = vi.fn(
       async (
         _lobbyId: string,
-        _dateId: string,
+        _pollId: string,
         token: string,
-        memberId: string,
-        input: { answer: 'ok' | 'maybe' | 'ng'; comment?: string },
-      ): Promise<UpdateGuestAvailabilityDateResponseResult> => {
+        input: GuestUpsertScheduleAnswersInput,
+      ): Promise<UpsertGuestScheduleAnswersResult> => {
         if (token !== guestLinkToken) return { type: 'invalidToken' };
-        if (!guestMembers.has(memberId)) return { type: 'forbidden' };
-        const answer: LobbyAvailabilityDateAnswer = {
-          id: `answer-${memberId}`,
-          memberId,
-          answer: input.answer,
-          comment: input.comment ?? null,
+        if (!guestMembers.has(input.entryId)) return { type: 'forbidden' };
+        const item = input.answers[0];
+        if (!item) return { type: 'forbidden' };
+        const answer: LobbyScheduleAnswer = {
+          id: `answer-${input.entryId}`,
+          entryId: input.entryId,
+          answer: item.answer,
+          comment: item.comment ?? null,
         };
-        answers.set(memberId, answer);
-        return { type: 'ok', answer };
+        answers.set(input.entryId, answer);
+        return { type: 'ok', answers: [answer] };
       },
     );
 
@@ -2309,7 +2492,7 @@ describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一
       getSession: vi.fn().mockResolvedValue(mockSession),
       getGuestLink,
       joinAsGuest,
-      updateGuestAvailabilityDateResponse,
+      upsertGuestScheduleAnswers,
     });
 
     // Act 1: ホストがゲストリンクを発行する
@@ -2329,21 +2512,26 @@ describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一
 
     // Act 3: 参加したゲストとして日程回答する
     const responseRes = await app.request(
-      '/api/lobbies/lobby-1/availability-dates/date-1/guest-responses',
+      '/api/lobbies/lobby-1/schedule-polls/poll-1/guest-answers',
       {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'content-type': 'application/json',
           [GUEST_TOKEN_HEADER]: token,
         },
         body: JSON.stringify({
-          answer: 'ok',
-          comment: '参加します',
-          memberId: joinedMember.id,
+          entryId: joinedMember.id,
+          answers: [
+            {
+              candidateDateId: 'cccccccc-0000-4000-8000-000000000001',
+              answer: 'ok',
+              comment: '参加します',
+            },
+          ],
         }),
       },
     );
-    const answer = (await responseRes.json()) as LobbyAvailabilityDateAnswer;
+    const responseAnswers = (await responseRes.json()) as LobbyScheduleAnswer[];
 
     // Assert
     expect(guestLinkRes.status).toBe(200);
@@ -2352,10 +2540,10 @@ describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一
     expect(joinedMember.guestName).toBe('ゲスト花子');
     expect(joinedMember.userId).toBeNull();
     expect(responseRes.status).toBe(200);
-    expect(answer.memberId).toBe(joinedMember.id);
-    expect(answer.answer).toBe('ok');
+    expect(responseAnswers[0]?.entryId).toBe(joinedMember.id);
+    expect(responseAnswers[0]?.answer).toBe('ok');
     expect(answers.get(joinedMember.id)).toMatchObject({
-      memberId: joinedMember.id,
+      entryId: joinedMember.id,
       answer: 'ok',
       comment: '参加します',
     });

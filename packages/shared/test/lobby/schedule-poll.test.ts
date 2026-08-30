@@ -190,6 +190,39 @@ describe('日程回答の入力契約', () => {
     expect(result.success).toBe(false);
   });
 
+  it('同じ候補日への回答が重複していたら失敗する', () => {
+    // Arrange
+    const input = {
+      answers: [
+        { candidateDateId, answer: 'ok' },
+        { candidateDateId, answer: 'ng' },
+      ],
+    };
+
+    // Act
+    const result = UpsertScheduleAnswersInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  it('ゲストの回答でも候補日の重複を拒否する', () => {
+    // Arrange
+    const input = {
+      entryId,
+      answers: [
+        { candidateDateId, answer: 'ok' },
+        { candidateDateId, answer: 'maybe' },
+      ],
+    };
+
+    // Act
+    const result = GuestUpsertScheduleAnswersInputSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
   it('ゲストの entryId と回答を受け付ける', () => {
     // Arrange
     const input = {

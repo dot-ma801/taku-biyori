@@ -315,17 +315,37 @@ export const ScheduleAnswerItemSchema = z.object({
 });
 export type ScheduleAnswerItem = z.infer<typeof ScheduleAnswerItemSchema>;
 
-export const UpsertScheduleAnswersInputSchema = z.object({
-  answers: z.array(ScheduleAnswerItemSchema).min(1),
-});
+// 1リクエストに同じ候補日を2回含めると、一括 upsert では衝突対象が重複してエラーになり、
+// 逐次実装では配列の順番が保存値を決めてしまう。どちらも避けたいので parse 境界で弾く。
+const refineUniqueCandidateDates = (
+  input: { answers: ScheduleAnswerItem[] },
+  ctx: z.RefinementCtx,
+): void => {
+  const ids = input.answers.map((entry) => entry.candidateDateId);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['answers'],
+      message: '同じ候補日への回答を重複して送ることはできません',
+    });
+  }
+};
+
+export const UpsertScheduleAnswersInputSchema = z
+  .object({
+    answers: z.array(ScheduleAnswerItemSchema).min(1),
+  })
+  .superRefine(refineUniqueCandidateDates);
 export type UpsertScheduleAnswersInput = z.infer<
   typeof UpsertScheduleAnswersInputSchema
 >;
 
-export const GuestUpsertScheduleAnswersInputSchema =
-  UpsertScheduleAnswersInputSchema.extend({
+export const GuestUpsertScheduleAnswersInputSchema = z
+  .object({
+    answers: z.array(ScheduleAnswerItemSchema).min(1),
     entryId: z.string().uuid(),
-  });
+  })
+  .superRefine(refineUniqueCandidateDates);
 export type GuestUpsertScheduleAnswersInput = z.infer<
   typeof GuestUpsertScheduleAnswersInputSchema
 >;

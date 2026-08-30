@@ -6,7 +6,7 @@ import type {
   GameSessionMember,
 } from '@taku-biyori/shared';
 
-vi.mock('@/api/game-session', () => ({
+vi.mock('@/api/legacy-game-session', () => ({
   getGameSession: vi.fn(),
 }));
 
@@ -21,7 +21,7 @@ vi.mock('vue', async (importOriginal) => {
   return { ...actual, onMounted: vi.fn() };
 });
 
-import { getGameSession } from '@/api/game-session';
+import { getGameSession } from '@/api/legacy-game-session';
 
 const SESSION_ID = 'session-1';
 

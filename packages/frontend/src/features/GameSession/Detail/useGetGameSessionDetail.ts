@@ -1,5 +1,5 @@
 import { ref, onMounted } from 'vue';
-import { getGameSession } from '@/api/game-session';
+import { getGameSession } from '@/api/legacy-game-session';
 import { ApiError } from '@/lib/api-client';
 import type {
   LegacyGameSessionDetail,

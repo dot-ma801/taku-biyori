@@ -1,7 +1,7 @@
 import { computed, onMounted, ref } from 'vue';
 import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 import type { GameSessionStatus } from '@taku-biyori/shared';
-import { listGameSessions } from '@/api/game-session';
+import { listGameSessions } from '@/api/legacy-game-session';
 
 interface UseGameSessionListOptions {
   statuses?: GameSessionStatus[];

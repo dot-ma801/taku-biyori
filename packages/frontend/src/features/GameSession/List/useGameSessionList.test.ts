@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 
-vi.mock('@/api/game-session', () => ({
+vi.mock('@/api/legacy-game-session', () => ({
   listGameSessions: vi.fn(),
 }));
 
-import { listGameSessions } from '@/api/game-session';
+import { listGameSessions } from '@/api/legacy-game-session';
 import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
 
 const mockListGameSessions = vi.mocked(listGameSessions);

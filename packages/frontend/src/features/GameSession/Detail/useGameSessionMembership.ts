@@ -5,7 +5,7 @@ import {
   LegacyGameSessionAction,
   canPerformLegacy,
 } from '@taku-biyori/shared';
-import { joinGameSession, leaveGameSession } from '@/api/game-session';
+import { joinGameSession, leaveGameSession } from '@/api/legacy-game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 

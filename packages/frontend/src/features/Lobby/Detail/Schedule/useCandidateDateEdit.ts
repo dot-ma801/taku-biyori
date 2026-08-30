@@ -2,6 +2,7 @@ import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
   LobbyAction,
+  LOBBY_CANDIDATE_DATES_MAX_COUNT,
   LobbyStatus,
   canPerformLobbyAction,
 } from '@taku-biyori/shared';
@@ -20,6 +21,8 @@ const STALE_POLL_MESSAGE =
 
 const PAST_DATE_ADDED_MESSAGE =
   '現在の調整に含まれていない過去日を追加することはできません';
+
+const CANDIDATE_DATES_MAX_COUNT_MESSAGE = `候補日は${LOBBY_CANDIDATE_DATES_MAX_COUNT}件以下で指定してください`;
 
 /**
  * ホストが最新の日程調整の候補日を編集する（`replaceCandidateDates` を呼ぶ）ための composable。
@@ -92,14 +95,11 @@ export const useCandidateDateEdit = (
    * 親が最新の調整を読み込んだら、古い調整に対する編集ドラフトを破棄する。
    * pollId を切り替えた直後に古い候補日を新しい調整へ保存してしまうことを防ぐ。
    */
-  watch(
-    [() => toValue(pollId), () => toValue(candidateDates)],
-    () => {
-      if (isEditing.value) {
-        cancelEdit();
-      }
-    },
-  );
+  watch([() => toValue(pollId), () => toValue(candidateDates)], () => {
+    if (isEditing.value) {
+      cancelEdit();
+    }
+  });
 
   /** 送信前のクライアント側バリデーション（早期 return せず収集する） */
   function validate(): string[] {
@@ -107,6 +107,9 @@ export const useCandidateDateEdit = (
 
     if (pendingDates.value.length === 0) {
       errors.push('候補日を1件以上指定してください');
+    }
+    if (pendingDates.value.length > LOBBY_CANDIDATE_DATES_MAX_COUNT) {
+      errors.push(CANDIDATE_DATES_MAX_COUNT_MESSAGE);
     }
 
     errors.push(...getPendingTimeLabelErrors(pendingDates.value));

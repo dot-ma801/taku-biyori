@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { nextTick, ref } from 'vue';
-import { LobbyStatus } from '@taku-biyori/shared';
+import {
+  LOBBY_CANDIDATE_DATES_MAX_COUNT,
+  LobbyStatus,
+} from '@taku-biyori/shared';
 import { useCandidateDateEdit } from '@/features/Lobby/Detail/Schedule/useCandidateDateEdit';
 import { ApiError } from '@/lib/api-client';
 import type { CandidateDateModel } from '@/models/schedule-poll';
@@ -218,6 +221,37 @@ describe('submitEdit', () => {
     // Assert
     expect(replaceCandidateDates).not.toHaveBeenCalled();
     expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
+  });
+
+  it('候補日が上限を超えると API を呼ばずエラーを設定する', async () => {
+    // Arrange
+    const { enterEditMode, pendingDates, submitEdit, errorMessages } =
+      useCandidateDateEdit(
+        LOBBY_ID,
+        () => POLL_ID,
+        () => HOST_USER_ID,
+        () => LobbyStatus.open,
+        () => makeCandidateDates(),
+        vi.fn(),
+        vi.fn(),
+      );
+    enterEditMode();
+    pendingDates.value = Array.from(
+      { length: LOBBY_CANDIDATE_DATES_MAX_COUNT + 1 },
+      (_, index) => ({
+        date: `2026-10-${String(index + 1).padStart(2, '0')}`,
+        timeLabel: '',
+      }),
+    );
+
+    // Act
+    await submitEdit();
+
+    // Assert
+    expect(replaceCandidateDates).not.toHaveBeenCalled();
+    expect(errorMessages.value).toEqual([
+      `候補日は${LOBBY_CANDIDATE_DATES_MAX_COUNT}件以下で指定してください`,
+    ]);
   });
 
   it('pendingDates を API の入力形式に変換して送信する', async () => {

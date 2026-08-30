@@ -2,16 +2,33 @@
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
-import { getMaxMembersError } from '@/features/GameSession/Edit/maxMembersValidation';
 import { NotebookPen, BookOpenText } from '@lucide/vue';
+import { computed } from 'vue';
+
+/**
+ * 呼び名とシナリオ名は**この開催だけの上書き**。
+ * 空欄なら保存時に `null` を送り、ロビーの値に追随する（design-v2 §5-5）。
+ * 何が既定値かはプレースホルダで示す。
+ */
+const props = defineProps<{
+  lobbyDefaults?: {
+    title: string;
+    scenarioName: string | null;
+    location: string | null;
+  } | null;
+}>();
 
 const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
-const maxMembers = defineModel<string>('maxMembers', { default: '' });
 
-const maxMembersRules = [
-  (v: unknown) => getMaxMembersError(v as string) ?? true,
-];
+const titlePlaceholder = computed(() =>
+  props.lobbyDefaults ? `未入力なら「${props.lobbyDefaults.title}」` : '',
+);
+const scenarioPlaceholder = computed(() =>
+  props.lobbyDefaults?.scenarioName
+    ? `未入力なら「${props.lobbyDefaults.scenarioName}」`
+    : '',
+);
 </script>
 
 <template>
@@ -26,17 +43,8 @@ const maxMembersRules = [
       <div class="contents">
         <BaseTextBox
           v-model="title"
-          label="タイトル"
-          placeholder="例：【5月】定期開催マダミス会"
-          required
-        ></BaseTextBox>
-        <BaseTextBox
-          v-model="maxMembers"
-          label="募集人数（自分を含めて）"
-          :type="'number'"
-          min="2"
-          max="20"
-          :rules="maxMembersRules"
+          label="この開催の呼び名"
+          :placeholder="titlePlaceholder"
         ></BaseTextBox>
 
         <div class="scenario-info">
@@ -50,6 +58,7 @@ const maxMembersRules = [
           <BaseTextBox
             v-model="scenarioName"
             label="シナリオタイトル"
+            :placeholder="scenarioPlaceholder"
           ></BaseTextBox>
 
           <!-- TODO: Ph2 シナリオ管理機能の実装時に結合する

@@ -20,11 +20,7 @@ const formattedPublishSessions = computed(() => {
 
 // 定員はロビーの関心事になり、一覧の契約からは外れた（design-v2 §6-11）。
 // 残枠を出したい画面はロビーの一覧を見る
-const sessionLink = (item: {
-  id: string;
-  lobbyId: string;
-  title: string;
-}) => ({
+const sessionLink = (item: { id: string; lobbyId: string; title: string }) => ({
   to: {
     name: 'game-sessions-detail',
     params: { lobbyId: item.lobbyId, gameSessionId: item.id },
@@ -51,7 +47,6 @@ const sessionLink = (item: {
         ></GameSessionStatusBadge>
         <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
       </div>
-
     </div>
 
     <div class="content-area">

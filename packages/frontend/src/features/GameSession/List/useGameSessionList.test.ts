@@ -99,7 +99,7 @@ describe('useGameSessionList', () => {
       // Arrange
       let resolveFetch!: () => void;
       mockListGameSessions.mockReturnValue(
-        new Promise<LegacyGameSessionListItem[]>((resolve) => {
+        new Promise<GameSessionListItemModel[]>((resolve) => {
           resolveFetch = () => resolve([]);
         }),
       );

@@ -4,8 +4,8 @@ import type { ReplaceCandidateDatesRepository } from '@/lobby/application/replac
 import type { LobbyCandidateDate } from '@taku-biyori/shared';
 
 const existingDates: LobbyCandidateDate[] = [
-  { id: 'date-1', date: '2026-09-01', timeLabel: null },
-  { id: 'date-2', date: '2026-09-02', timeLabel: null },
+  { id: 'date-1', date: '2100-09-01', timeLabel: null },
+  { id: 'date-2', date: '2100-09-02', timeLabel: null },
 ];
 
 // makeRepo:
@@ -39,7 +39,7 @@ describe('replaceCandidateDates', () => {
     // Arrange
     const updatedDates: LobbyCandidateDate[] = [
       ...existingDates,
-      { id: 'date-3', date: '2026-09-03', timeLabel: null },
+      { id: 'date-3', date: '2100-09-03', timeLabel: null },
     ];
     const findCandidateDatesByPollId = vi
       .fn()
@@ -55,9 +55,9 @@ describe('replaceCandidateDates', () => {
       'user-1',
       {
         candidateDates: [
-          { date: '2026-09-01' },
-          { date: '2026-09-02' },
-          { date: '2026-09-03' },
+          { date: '2100-09-01' },
+          { date: '2100-09-02' },
+          { date: '2100-09-03' },
         ],
       },
     );
@@ -72,14 +72,14 @@ describe('replaceCandidateDates', () => {
     const repo = makeRepo({ applyCandidateDateChanges });
 
     // Act
-    // date-1 (2026-09-01) は残し、date-2 (2026-09-02) を消して 2026-09-05 を足す
+    // date-1 (2100-09-01) は残し、date-2 (2100-09-02) を消して 2100-09-05 を足す
     await replaceCandidateDates(repo, 'lobby-1', 'poll-1', 'user-1', {
-      candidateDates: [{ date: '2026-09-01' }, { date: '2026-09-05' }],
+      candidateDates: [{ date: '2100-09-01' }, { date: '2100-09-05' }],
     });
 
     // Assert
     expect(applyCandidateDateChanges).toHaveBeenCalledWith('poll-1', {
-      datesToAdd: [{ date: '2026-09-05', timeLabel: null }],
+      datesToAdd: [{ date: '2100-09-05', timeLabel: null }],
       dateIdsToRemove: ['date-2'],
       timeLabelsToUpdate: [],
     });
@@ -97,7 +97,7 @@ describe('replaceCandidateDates', () => {
       'poll-1',
       'user-1',
       {
-        candidateDates: [{ date: '2026-09-01' }, { date: '2026-09-02' }],
+        candidateDates: [{ date: '2100-09-01' }, { date: '2100-09-02' }],
       },
     );
 
@@ -114,8 +114,8 @@ describe('replaceCandidateDates', () => {
     // Act
     await replaceCandidateDates(repo, 'lobby-1', 'poll-1', 'user-1', {
       candidateDates: [
-        { date: '2026-09-01', timeLabel: '13:00〜17:00' },
-        { date: '2026-09-02' },
+        { date: '2100-09-01', timeLabel: '13:00〜17:00' },
+        { date: '2100-09-02' },
       ],
     });
 
@@ -137,7 +137,7 @@ describe('replaceCandidateDates', () => {
       'nonexistent',
       'poll-1',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -158,7 +158,7 @@ describe('replaceCandidateDates', () => {
       'lobby-1',
       'poll-1',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -178,7 +178,7 @@ describe('replaceCandidateDates', () => {
       'lobby-1',
       'poll-1',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -202,7 +202,7 @@ describe('replaceCandidateDates', () => {
       'lobby-1',
       'poll-1',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -221,7 +221,7 @@ describe('replaceCandidateDates', () => {
       'lobby-1',
       'nonexistent',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -240,7 +240,7 @@ describe('replaceCandidateDates', () => {
       'lobby-1',
       'poll-1',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -261,7 +261,7 @@ describe('replaceCandidateDates', () => {
       'lobby-1',
       'poll-1',
       'user-1',
-      { candidateDates: [{ date: '2026-09-01' }] },
+      { candidateDates: [{ date: '2100-09-01' }] },
     );
 
     // Assert
@@ -283,7 +283,7 @@ describe('replaceCandidateDates', () => {
         'user-1',
         {
           candidateDates: [
-            { date: '2026-09-01' },
+            { date: '2100-09-01' },
             { date: '2020-01-01' }, // 既存に無い過去日
           ],
         },
@@ -356,7 +356,7 @@ describe('replaceCandidateDates', () => {
 
       // Act
       await replaceCandidateDates(repo, 'lobby-1', 'poll-1', 'user-1', {
-        candidateDates: [{ date: '2026-09-01' }, { date: '2026-09-05' }],
+        candidateDates: [{ date: '2100-09-01' }, { date: '2100-09-05' }],
       });
 
       // Assert
@@ -379,7 +379,7 @@ describe('replaceCandidateDates', () => {
         'lobby-1',
         'poll-1',
         'user-1',
-        { candidateDates: [{ date: '2026-09-01' }] },
+        { candidateDates: [{ date: '2100-09-01' }] },
       );
 
       // Assert

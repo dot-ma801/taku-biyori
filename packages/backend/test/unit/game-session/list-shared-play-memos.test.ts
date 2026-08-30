@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { listSharedPlayMemos } from '@/game-session/application/list-shared-play-memos';
 import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 import type { SharedGameSessionPlayMemo } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
 
-const now = new Date('2026-08-02T12:00:00.000Z');
+const today = '2026-08-02';
+const LOBBY_ID = 'lobby-1';
 
 const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
   {
@@ -20,19 +22,23 @@ const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
   },
 ];
 
-/** 公開済みかつ完了した卓（ステータスは completed に導出される） */
+/** 完了した開催（ステータスは completed に導出される） */
 const completedFields = {
-  isPublished: true,
-  scheduledAt: new Date('2026-08-01T00:00:00.000Z'),
+  scheduledAt: '2026-08-01',
   completedAt: new Date('2026-08-02T00:00:00.000Z'),
   cancelledAt: null,
 };
+
+/** 公開はロビーの関心事に移ったので、閲覧可否の材料は lobby.status になった（design-v2 §4-2） */
+const openLobby = { hostUserId: 'host-1', status: LobbyStatus.open };
+const draftLobby = { hostUserId: 'host-1', status: LobbyStatus.draft };
 
 const makeRepo = (
   overrides: Partial<ListSharedPlayMemosRepository> = {},
 ): ListSharedPlayMemosRepository => ({
   findStatusFields: vi.fn().mockResolvedValue(completedFields),
-  findHostUserId: vi.fn().mockResolvedValue('host-1'),
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
+  findLobbyForViewing: vi.fn().mockResolvedValue(openLobby),
   findSharedPlayMemos: vi.fn().mockResolvedValue(sharedPlayMemos),
   ...overrides,
 });
@@ -43,7 +49,7 @@ describe('listSharedPlayMemos', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
@@ -61,7 +67,7 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
@@ -78,73 +84,72 @@ describe('listSharedPlayMemos', () => {
       repo,
       'nonexistent',
       'user-1',
-      now,
+      today,
     );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  // ⚠️ 非公開のまま中止された卓は cancelled に導出される（cancelled_at が draft より優先）。
-  // 卓の公開制御を先に噛ませないと、非公開卓のメモが第三者に読める（design-v1.2 §4 手順2）
-  it('非公開のまま中止された卓は、ホスト以外に forbidden を返す', async () => {
+  // ⚠️ 下書きロビーのまま中止された開催は cancelled に導出される。
+  // ロビーの公開制御を先に噛ませないと、下書きロビーのメモが第三者に読める（design-v1.2 §4 手順2）
+  it('下書きロビーのまま中止された開催は、ホスト以外に forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
-        scheduledAt: new Date('2026-08-01T00:00:00.000Z'),
+        scheduledAt: '2026-08-01',
         completedAt: null,
         cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
       }),
+      findLobbyForViewing: vi.fn().mockResolvedValue(draftLobby),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
     expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
-  it('非公開の卓は未ログインの閲覧者にも forbidden を返す', async () => {
+  it('下書きロビーの開催は未ログインの閲覧者にも forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
-        scheduledAt: new Date('2026-08-01T00:00:00.000Z'),
+        scheduledAt: '2026-08-01',
         completedAt: null,
         cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
       }),
+      findLobbyForViewing: vi.fn().mockResolvedValue(draftLobby),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', null, now);
+    const result = await listSharedPlayMemos(repo, 'session-1', null, today);
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  // findHostUserId が null を返し得るのは型上の話で（スキーマ上は host_user_id が
-  // notNull だが、リポジトリの戻り値の型は string | null）、未ログイン（userId === null）
-  // と重なると `null !== null` が false になり素通りしてホスト扱いになってしまう。
-  // 未ログイン同士の null 一致でホスト扱いにしないことを保証する
-  it('findHostUserId が null を返し、かつ未ログインなら forbidden を返す', async () => {
+  // v0.2 では findHostUserId の戻り値が string | null で、未ログイン（userId === null）と
+  // 重なると `null !== null` が false になりホスト扱いで素通りする穴があった。
+  // v2 の LobbySummary は hostUserId が非 null なので、その穴は型で塞がっている。
+  // 代わりにロビーが引けないケースを notFound として押さえる
+  it('ロビーが引けなければ notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
-        scheduledAt: new Date('2026-08-01T00:00:00.000Z'),
+        scheduledAt: '2026-08-01',
         completedAt: null,
         cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
       }),
-      findHostUserId: vi.fn().mockResolvedValue(null),
+      findLobbyForViewing: vi.fn().mockResolvedValue(null),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', null, now);
+    const result = await listSharedPlayMemos(repo, 'session-1', null, today);
 
     // Assert
-    expect(result).toEqual({ type: 'forbidden' });
+    expect(result).toEqual({ type: 'notFound' });
     expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
@@ -152,15 +157,14 @@ describe('listSharedPlayMemos', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
-        scheduledAt: new Date('2026-08-01T00:00:00.000Z'),
+        scheduledAt: '2026-08-01',
         completedAt: null,
         cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
       }),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'host-1', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'host-1', today);
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
@@ -171,15 +175,14 @@ describe('listSharedPlayMemos', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        scheduledAt: new Date('2026-09-01T00:00:00.000Z'),
+        scheduledAt: '2026-09-01',
         completedAt: null,
         cancelledAt: null,
       }),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-1', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'user-1', today);
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: [] });
@@ -190,34 +193,32 @@ describe('listSharedPlayMemos', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        scheduledAt: now,
+        scheduledAt: today,
         completedAt: null,
         cancelledAt: null,
       }),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'user-1', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'user-1', today);
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: [] });
   });
 
-  // 未公開（draft）の卓はホストのみ到達できるが、ステータスが completed / cancelled でないため空配列
-  it('draft の卓ではホストにも空配列を返す', async () => {
+  // 下書きロビーの開催はホストのみ到達できるが、ステータスが completed / cancelled でないため空配列
+  it('下書きロビーの開催ではホストにも空配列を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
-        scheduledAt: new Date('2026-09-01T00:00:00.000Z'),
+        scheduledAt: '2026-09-01',
         completedAt: null,
         cancelledAt: null,
       }),
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', 'host-1', now);
+    const result = await listSharedPlayMemos(repo, 'session-1', 'host-1', today);
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: [] });
@@ -229,14 +230,14 @@ describe('listSharedPlayMemos', () => {
     const repo = makeRepo();
 
     // Act
-    const asHost = await listSharedPlayMemos(repo, 'session-1', 'host-1', now);
+    const asHost = await listSharedPlayMemos(repo, 'session-1', 'host-1', today);
     const asMember = await listSharedPlayMemos(
       repo,
       'session-1',
       'member-user-1',
-      now,
+      today,
     );
-    const asAnonymous = await listSharedPlayMemos(repo, 'session-1', null, now);
+    const asAnonymous = await listSharedPlayMemos(repo, 'session-1', null, today);
 
     // Assert
     expect(asHost).toEqual(asMember);
@@ -249,7 +250,7 @@ describe('listSharedPlayMemos', () => {
     const repo = makeRepo();
 
     // Act
-    await listSharedPlayMemos(repo, 'session-1', 'user-9', now);
+    await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
 
     // Assert
     expect(repo.findSharedPlayMemos).toHaveBeenCalledWith('session-1');

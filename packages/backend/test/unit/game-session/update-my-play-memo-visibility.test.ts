@@ -16,7 +16,7 @@ const makeRepo = (
   overrides: Partial<UpdateMyPlayMemoVisibilityRepository> = {},
 ): UpdateMyPlayMemoVisibilityRepository => ({
   gameSessionExists: vi.fn().mockResolvedValue(true),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
+  findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
   updatePlayMemoVisibility: vi.fn().mockResolvedValue(sharedPlayMemo),
   ...overrides,
 });
@@ -89,7 +89,7 @@ describe('updateMyPlayMemoVisibility', () => {
   it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -141,7 +141,7 @@ describe('updateMyPlayMemoVisibility', () => {
     );
 
     // Assert
-    expect(repo.findMemberByUserId).not.toHaveBeenCalled();
+    expect(repo.findSeatByUserId).not.toHaveBeenCalled();
     expect(repo.updatePlayMemoVisibility).not.toHaveBeenCalled();
   });
 
@@ -171,7 +171,7 @@ describe('updateMyPlayMemoVisibility', () => {
   it('メンバーでないときは更新を行わない', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act

@@ -1,112 +1,149 @@
 import { describe, expect, it, vi } from 'vitest';
 import { updateGameSession } from '@/game-session/application/update-game-session';
 import type { UpdateGameSessionRepository } from '@/game-session/application/update-game-session';
-import type { LegacyGameSession } from '@taku-biyori/shared';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import type { GameSession } from '@taku-biyori/shared';
+import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
 
-const mockGameSession: LegacyGameSession = {
+const LOBBY_ID = 'lobby-1';
+const HOST = 'user-host';
+
+const updated: GameSession = {
   id: 'session-1',
-  title: '更新後の卓',
+  lobbyId: LOBBY_ID,
+  scheduledAt: '2026-09-01',
+  status: GameSessionStatus.scheduled,
   description: null,
-  scenarioName: null,
-  status: GameSessionStatus.draft,
-  isPublished: false,
-  scheduledAt: '2025-05-30',
+  overrides: { title: null, scenarioName: null, location: null, timeLabel: null },
+  lobby: {
+    id: LOBBY_ID,
+    title: 'マダミス「蒼き月」',
+    scenarioName: null,
+    location: null,
+    maxPlayers: null,
+    hostUserId: HOST,
+    status: LobbyStatus.open,
+  },
   completedAt: null,
-  maxMembers: null,
-  createdBy: 'user-1',
-  createdAt: '2025-01-01T00:00:00.000Z',
-  updatedAt: '2025-01-02T00:00:00.000Z',
+  cancelledAt: null,
+  createdAt: '2026-08-01T00:00:00.000Z',
+  updatedAt: '2026-08-02T00:00:00.000Z',
 };
 
+const makeRepo = (
+  overrides: Partial<UpdateGameSessionRepository> = {},
+): UpdateGameSessionRepository => ({
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
+  findHostUserId: vi.fn().mockResolvedValue(HOST),
+  findStatusFields: vi.fn().mockResolvedValue({
+    scheduledAt: '2026-09-01',
+    completedAt: null,
+    cancelledAt: null,
+  }),
+  updateById: vi.fn().mockResolvedValue(updated),
+  ...overrides,
+});
+
 describe('updateGameSession', () => {
-  it('ホストが更新すると更新後のセッションを返す', async () => {
+  it('ホストは開催情報を更新できる', async () => {
     // Arrange
-    const repo: UpdateGameSessionRepository = {
-      findHostUserId: vi.fn().mockResolvedValue('user-1'),
-      updateById: vi.fn().mockResolvedValue(mockGameSession),
-    };
+    const repo = makeRepo();
 
     // Act
-    const result = await updateGameSession(repo, 'session-1', 'user-1', {
-      title: '更新後の卓',
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      location: 'カフェ〇〇',
     });
 
     // Assert
-    expect(result).toEqual({ type: 'ok', gameSession: mockGameSession });
+    expect(result).toEqual({ type: 'ok', gameSession: updated });
   });
 
-  it('ホストでないユーザーは forbidden を返す', async () => {
+  it('存在しなければ notFound を返す', async () => {
     // Arrange
-    const repo: UpdateGameSessionRepository = {
-      findHostUserId: vi.fn().mockResolvedValue('user-1'),
-      updateById: vi.fn(),
-    };
+    const repo = makeRepo({ findLobbyId: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const result = await updateGameSession(repo, 'session-1', 'user-other', {
-      title: '更新後',
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      location: 'x',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+  });
+
+  it('URL の lobbyId が所属ロビーと違えば notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateGameSession(repo, 'lobby-other', 'session-1', HOST, {
+      location: 'x',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.updateById).not.toHaveBeenCalled();
+  });
+
+  it('ホスト以外は forbidden を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', 'user-2', {
+      location: 'x',
     });
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
-    expect(repo.updateById).not.toHaveBeenCalled();
   });
 
-  it('セッションが存在しない場合は notFound を返す', async () => {
+  it('中止した開催は編集できない', async () => {
     // Arrange
-    const repo: UpdateGameSessionRepository = {
-      findHostUserId: vi.fn().mockResolvedValue(null),
-      updateById: vi.fn(),
-    };
-
-    // Act
-    const result = await updateGameSession(repo, 'nonexistent', 'user-1', {
-      title: '更新後',
-    });
-
-    // Assert
-    expect(result).toEqual({ type: 'notFound' });
-    expect(repo.updateById).not.toHaveBeenCalled();
-  });
-
-  it('updateById が null を返す場合（並行削除）は notFound を返す', async () => {
-    // Arrange
-    const repo: UpdateGameSessionRepository = {
-      findHostUserId: vi.fn().mockResolvedValue('user-1'),
-      updateById: vi.fn().mockResolvedValue(null),
-    };
-
-    // Act
-    const result = await updateGameSession(repo, 'session-1', 'user-1', {
-      title: '更新後',
-    });
-
-    // Assert
-    expect(result).toEqual({ type: 'notFound' });
-  });
-
-  it('updateById に id と入力を渡す', async () => {
-    // Arrange
-    const updateById = vi.fn().mockResolvedValue(mockGameSession);
-    const repo: UpdateGameSessionRepository = {
-      findHostUserId: vi.fn().mockResolvedValue('user-1'),
-      updateById,
-    };
-
-    // Act
-    await updateGameSession(repo, 'session-1', 'user-1', {
-      title: '新しいタイトル',
-      description: '説明文',
-    });
-
-    // Assert
-    expect(updateById).toHaveBeenCalledWith(
-      'session-1',
-      expect.objectContaining({
-        title: '新しいタイトル',
-        description: '説明文',
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        scheduledAt: '2026-09-01',
+        completedAt: null,
+        cancelledAt: new Date('2026-08-20T00:00:00.000Z'),
       }),
-    );
+    });
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      location: 'x',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'invalidStatus' });
+  });
+
+  it('完了した開催は編集できる（あとから連絡事項を直す運用があるため）', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        scheduledAt: '2026-09-01',
+        completedAt: new Date('2026-09-01T22:00:00.000Z'),
+        cancelledAt: null,
+      }),
+    });
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      description: 'おつかれさまでした',
+    });
+
+    // Assert
+    expect(result.type).toBe('ok');
+  });
+
+  it('上書き項目の null（解除）をそのままリポジトリへ渡す', async () => {
+    // Arrange
+    // null と「キーの省略」を潰すと、上書き解除ができなくなる（design-v2 §6-13-5）
+    const repo = makeRepo();
+
+    // Act
+    await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, { title: null });
+
+    // Assert
+    expect(repo.updateById).toHaveBeenCalledWith('session-1', { title: null });
   });
 });

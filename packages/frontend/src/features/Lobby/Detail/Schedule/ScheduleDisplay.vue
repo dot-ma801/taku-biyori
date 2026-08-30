@@ -155,10 +155,10 @@ const canEditSchedule = computed(
     </BaseSectionHeading>
 
     <div v-if="loading" class="state-message">読み込み中...</div>
-    <div v-else-if="errorMessage" class="state-message error">
-      {{ errorMessage }}
-    </div>
     <template v-else>
+      <div v-if="errorMessage" class="state-message error">
+        {{ errorMessage }}
+      </div>
       <div class="schedule-table">
         <ScheduleTable
           :candidate-dates="candidateDates"

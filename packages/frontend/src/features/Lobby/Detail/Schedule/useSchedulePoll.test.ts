@@ -391,7 +391,7 @@ describe('submitEdit', () => {
   it('409 以外のエラーのとき errorMessage を設定し onStale は呼ばない', async () => {
     // Arrange
     const onStale = vi.fn();
-    const { enterEditMode, cycleAnswer, submitEdit, errorMessage } =
+    const { enterEditMode, cycleAnswer, submitEdit, errorMessage, isEditing } =
       await setupLoaded(POLL_ID, MY_ENTRY_ID, LobbyStatus.open, onStale);
     enterEditMode();
     cycleAnswer(DATE_ID_1);
@@ -403,5 +403,6 @@ describe('submitEdit', () => {
     // Assert
     expect(errorMessage.value).toBe('日程回答の更新に失敗しました');
     expect(onStale).not.toHaveBeenCalled();
+    expect(isEditing.value).toBe(true);
   });
 });

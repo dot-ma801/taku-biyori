@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LobbyStatus } from '@/lobby/status';
 import { DateNoteSchema } from '@/lobby/date-note';
+import { TimeLabelSchema } from '@/lobby/time-label';
 import { todayDateString } from '@/date';
 
 export { LobbyStatus };
@@ -76,6 +77,8 @@ export type Lobby = z.infer<typeof LobbySchema>;
 export const LobbyCandidateDateInputSchema = z.object({
   date: z.iso.date(),
   dateNote: DateNoteSchema.optional(),
+  /** v2 の候補日に添える時間帯。dateNote は移行中の互換性のため残す */
+  timeLabel: TimeLabelSchema.optional(),
 });
 export type LobbyCandidateDateInput = z.infer<
   typeof LobbyCandidateDateInputSchema
@@ -111,6 +114,16 @@ export const CreateLobbyInputSchema = z
       });
     }
     const dates = (input.candidateDates ?? []).map((entry) => entry.date);
+    const pastDateIndex = (input.candidateDates ?? []).findIndex(
+      (entry) => entry.date < today,
+    );
+    if (pastDateIndex !== -1) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['candidateDates', pastDateIndex, 'date'],
+        message: '候補日には今日以降の日付を指定してください',
+      });
+    }
     if (new Set(dates).size !== dates.length) {
       ctx.addIssue({
         code: 'custom',
@@ -159,12 +172,6 @@ export type UpdateLobbyStatusInput = z.infer<
   typeof UpdateLobbyStatusInputSchema
 >;
 
-export const LobbyDetailSchema = LobbySchema.extend({
-  /** 参加者。**脱退者も含めて全件返す**（leftAt で見分ける）。ホストが先頭、以降 joinedAt 昇順 */
-  entries: z.array(LobbyEntrySchema),
-});
-export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
-
 // 募集枠メンバーは character_name を持たない（design-v1.1 §6）ため、
 // 参加入力は空オブジェクト。将来的にフィールドが増える可能性に備えてスキーマ自体は残す。
 export const JoinLobbyInputSchema = z.object({});
@@ -189,6 +196,158 @@ export const LobbyGuestLinkResponseSchema = z.object({
 });
 export type LobbyGuestLinkResponse = z.infer<
   typeof LobbyGuestLinkResponseSchema
+>;
+
+// v2 日程調整（SchedulePoll）。旧 availability 契約は段階移行のため下に残す。
+export const LobbyScheduleAnswerSchema = z.object({
+  id: z.string().uuid(),
+  entryId: z.string().uuid(),
+  answer: z.enum(['ok', 'maybe', 'ng']),
+  comment: z.string().max(500).nullable().optional(),
+});
+export type LobbyScheduleAnswer = z.infer<typeof LobbyScheduleAnswerSchema>;
+
+export const LobbyCandidateDateSchema = z.object({
+  id: z.string().uuid(),
+  date: z.iso.date(),
+  timeLabel: TimeLabelSchema,
+});
+export type LobbyCandidateDate = z.infer<typeof LobbyCandidateDateSchema>;
+
+export const LobbyCandidateDateWithAnswersSchema =
+  LobbyCandidateDateSchema.extend({
+    answers: z.array(LobbyScheduleAnswerSchema),
+  });
+export type LobbyCandidateDateWithAnswers = z.infer<
+  typeof LobbyCandidateDateWithAnswersSchema
+>;
+
+export const LobbySchedulePollSummarySchema = z.object({
+  id: z.string().uuid(),
+  createdAt: z.string(),
+});
+export type LobbySchedulePollSummary = z.infer<
+  typeof LobbySchedulePollSummarySchema
+>;
+
+export const LobbySchedulePollSchema = z.object({
+  id: z.string().uuid(),
+  lobbyId: z.string().uuid(),
+  candidateDates: z.array(LobbyCandidateDateWithAnswersSchema),
+  createdAt: z.string(),
+});
+export type LobbySchedulePoll = z.infer<typeof LobbySchedulePollSchema>;
+
+export const LobbyDetailSchema = LobbySchema.extend({
+  /** 参加者。**脱退者も含めて全件返す**（leftAt で見分ける）。ホストが先頭、以降 joinedAt 昇順 */
+  entries: z.array(LobbyEntrySchema),
+  /** 日程調整の履歴。createdAt 降順で先頭が最新 */
+  schedulePolls: z.array(LobbySchedulePollSummarySchema).optional(),
+});
+export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
+
+/** SchedulePoll API 用の候補日入力。旧 dateNote を受け取らない v2 契約。 */
+export const SchedulePollCandidateDateInputSchema = z.object({
+  date: z.iso.date(),
+  timeLabel: TimeLabelSchema.optional(),
+});
+export type SchedulePollCandidateDateInput = z.infer<
+  typeof SchedulePollCandidateDateInputSchema
+>;
+
+export const CreateSchedulePollInputSchema = z
+  .object({
+    candidateDates: z
+      .array(SchedulePollCandidateDateInputSchema)
+      .min(1)
+      .max(LOBBY_CANDIDATE_DATES_MAX_COUNT),
+  })
+  .superRefine((input, ctx) => {
+    const today = todayDateString();
+    const dates = input.candidateDates.map((entry) => entry.date);
+    const pastDateIndex = input.candidateDates.findIndex(
+      (entry) => entry.date < today,
+    );
+    if (pastDateIndex !== -1) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['candidateDates', pastDateIndex, 'date'],
+        message: '候補日には今日以降の日付を指定してください',
+      });
+    }
+    if (new Set(dates).size !== dates.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['candidateDates'],
+        message: '候補日に重複する日付を含めることはできません',
+      });
+    }
+  });
+export type CreateSchedulePollInput = z.infer<
+  typeof CreateSchedulePollInputSchema
+>;
+
+export const ReplaceCandidateDatesInputSchema = z
+  .object({
+    candidateDates: z
+      .array(SchedulePollCandidateDateInputSchema)
+      .min(1)
+      .max(LOBBY_CANDIDATE_DATES_MAX_COUNT),
+  })
+  .superRefine((input, ctx) => {
+    const dates = input.candidateDates.map((entry) => entry.date);
+    if (new Set(dates).size !== dates.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['candidateDates'],
+        message: '候補日に重複する日付を含めることはできません',
+      });
+    }
+  });
+export type ReplaceCandidateDatesInput = z.infer<
+  typeof ReplaceCandidateDatesInputSchema
+>;
+
+export const ScheduleAnswerItemSchema = z.object({
+  candidateDateId: z.string().uuid(),
+  answer: LobbyScheduleAnswerSchema.shape.answer,
+  comment: z.string().max(500).nullable().optional(),
+});
+export type ScheduleAnswerItem = z.infer<typeof ScheduleAnswerItemSchema>;
+
+// 1リクエストに同じ候補日を2回含めると、一括 upsert では衝突対象が重複してエラーになり、
+// 逐次実装では配列の順番が保存値を決めてしまう。どちらも避けたいので parse 境界で弾く。
+const refineUniqueCandidateDates = (
+  input: { answers: ScheduleAnswerItem[] },
+  ctx: z.RefinementCtx,
+): void => {
+  const ids = input.answers.map((entry) => entry.candidateDateId);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['answers'],
+      message: '同じ候補日への回答を重複して送ることはできません',
+    });
+  }
+};
+
+export const UpsertScheduleAnswersInputSchema = z
+  .object({
+    answers: z.array(ScheduleAnswerItemSchema).min(1),
+  })
+  .superRefine(refineUniqueCandidateDates);
+export type UpsertScheduleAnswersInput = z.infer<
+  typeof UpsertScheduleAnswersInputSchema
+>;
+
+export const GuestUpsertScheduleAnswersInputSchema = z
+  .object({
+    answers: z.array(ScheduleAnswerItemSchema).min(1),
+    entryId: z.string().uuid(),
+  })
+  .superRefine(refineUniqueCandidateDates);
+export type GuestUpsertScheduleAnswersInput = z.infer<
+  typeof GuestUpsertScheduleAnswersInputSchema
 >;
 
 // 日程調整（候補日・回答）。game-session の availability-dates 系と同一インターフェースだが、

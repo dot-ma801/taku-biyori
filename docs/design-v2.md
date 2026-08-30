@@ -886,6 +886,16 @@ Spotify の `/me/playlists` と同じ。
 **廃止**: 候補日の単体 `POST` / `DELETE`（現行の `POST|DELETE /api/lobbies/:id/availability-dates[/:dateId]`）。
 フロントエンドは一括更新しか使っていないため落とす。
 
+#### 候補日の過去日ルール
+
+- `POST /api/lobbies` で日程調整 #1 を同時作成するときと、
+  `POST .../schedule-polls` で新しい調整を始めるときは、候補日を**今日以降**に限定する。
+  すべて新規の候補日なので、過去日が1件でもあれば `400`
+- `PUT .../candidate-dates` は、すでに登録済みで日付だけが過ぎた候補日の**据え置き**と
+  `timeLabel` だけの変更を許可する。日が経っただけで調整を編集不能にしないため
+- 同じ一括更新でも、現在の調整に存在しない過去日を**新規追加**する場合は `400`。
+  既存か新規かは現在の候補日との比較が必要なため、shared の形の検証ではなく backend で判定する
+
 **廃止**: `GET .../schedule-polls/latest`。`GET /api/lobbies/:id` が `schedulePolls[]` を
 `createdAt` 降順で返すので、クライアントは先頭の `id` で `GET .../schedule-polls/:pollId` を叩けばよい。
 
@@ -1379,6 +1389,8 @@ backend のルートは1度も返しておらず、仕様書だけに残った�
 | `candidateDates[].date` | date | ✅ | 今日以降。同一リクエスト内で重複不可 |
 | `candidateDates[].timeLabel` | string \| null | | 最大20文字。空白のみは `null` に正規化 |
 
+- 候補日はすべて新規作成なので、過去日を1件でも含む場合は `400`。既存過去日の据え置きを
+  許可する例外は `PUT .../candidate-dates` だけに適用する
 - 作った時点でこれが最新の調整になり、**それまでの調整は自動的に読み取り専用**になる（フラグ更新は不要。§9-9）
 - 古い `schedule_polls` は消さない
 - レスポンスの `candidateDates[].answers` は必ず空配列（作りたてなので回答が無い）
@@ -1518,6 +1530,7 @@ v0.2 の `PATCH /api/game-sessions/:id/members/:memberId` と同じ位置に戻�
 | `candidateDates[].date` | date | ✅ | 今日以降。重複不可 |
 | `candidateDates[].timeLabel` | string \| null | | 最大20文字（現行 `dateNote` の改名） |
 
+- 候補日は日程調整 #1 と同時に新規作成するため、過去日を1件でも含む場合は `400`
 - `candidateDates` を**1件以上渡したときだけ** `SchedulePoll` #1 とその候補日を同時に作る。
   省略・空配列なら `schedule_polls` は0行のまま（直接卓立ての経路。§5-3）
 - 現行の「候補日0件は `422`」（`lobby-route.ts` の `hasCandidateDates` 事前チェック）は**丸ごと削除**する

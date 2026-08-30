@@ -18,6 +18,7 @@
 | 対象 | 目的 |
 |---|---|
 | 該当 issue の本文 | やることのチェックリストと完了条件。**これが仕様の入口** |
+| 該当 issue のコメント | 前のタスクから持ち越された未決事項が書かれていることがある。**本文だけ読んで着手しない** |
 | [migration-plan §2 の該当タスク](./migration-plan-concept-model.md) | スコープ・既存への影響・検証手順 |
 | `docs/design-v2.md` の該当節（§11 の表を参照） | スキーマ・API・ステータスの正 |
 | `CLAUDE.md` | 実装規約（レイヤー・命名・import・TDD・コミット規則） |
@@ -190,7 +191,7 @@ git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" c
 | タスク | issue | 読む design-v2 の節 | PR 分割の目安 | 特に注意 |
 |---|---|---|---|---|
 | 3 Lobby / LobbyEntry | #113 | §3-2 §3-3 §4-1 §4-5 §6-2 §6-3 | 4本（shared / backend / frontend models+api / frontend UI） | 脱退のソフト化。**参加者一覧・回答表・着席候補のクエリを `left_at IS NULL` で絞る**（漏れやすい）。`lobby-repository.ts` はファイルごと置換。`getLobbyStatus()` を backend → shared へ移設 |
-| 4 SchedulePoll | #114 | §3-4 §3-5 §3-6 §6-4 §9-9 | 3本（shared / backend / frontend） | 「最新の poll」の判定は `created_at DESC, id DESC` で決定的に。最新以外への書き込みは 409。ロジックの大半は既存の候補日ユースケースの移植（`poll_id` が1階層挟まる＋`memberId` → `entryId`） |
+| 4 SchedulePoll | #114 | §3-4 §3-5 §3-6 §6-4 §9-9 | 3本（shared / backend / frontend） | 「最新の poll」の判定は `created_at DESC, id DESC` で決定的に。最新以外への書き込みは 409。ロジックの大半は既存の候補日ユースケースの移植（`poll_id` が1階層挟まる＋`memberId` → `entryId`）。**候補日の過去日を許すかの決定が持ち越されている**（issue のコメント参照） |
 | 5 GameSession / Seat | #115 | §3-7 §3-8 §4-2 §5-2 §5-4 §5-5 §6-5 §6-6 §9-3 | 4本（shared / backend セッション / backend 着席 / frontend） | **新モデルが初めて通しで動く回。タスク2 で失った機能がここで復活する。** `seats.lobby_entry_id` のロビーと `game_sessions.lobby_id` の不一致は 422。作成時のロック（`FOR UPDATE` + `FOR KEY SHARE`）を実 DB のテストで検証。表示値の導出（未設定ならロビー参照）を DB にコピーしない |
 | 6 CharacterAssignment / PlayMemo | #116 | §3-9 §3-10 §6-7 §6-15 §9-4 | 3本（shared / backend / frontend） | **プレイメモ4本はレスポンス形が不変契約**（移行の等価性の基準点）。既存31ケースを紐付け先だけ変えて 1:1 で移植する。ゲストがメモを持てないことを構造的に排除 |
 | 7 横断 UI・語彙・docs | #117 | §2-2 §7-1 §7-5 | 2〜3本（ルート入れ子化 / 語彙置換 / docs） | 画面ルートを `/lobbies/:lobbyId/game-sessions/:id/*` へ入れ子化。**旧パスからのリダイレクトは作らない**。完了条件の grep（`募集枠` `卓確定` `confirmed` `closedAt` `lobbyMemberId` `dateNote` `availability` `game_session_members`）を0件にする |

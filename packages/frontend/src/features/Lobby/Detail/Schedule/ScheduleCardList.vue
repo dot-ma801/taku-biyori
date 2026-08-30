@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import type { CandidateDateModel } from '@/models/schedule-poll';
 import type { LobbyEntryModel } from '@/models/lobby';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
@@ -8,53 +8,50 @@ import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useSchedul
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
-import { computed, toRef } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps<{
-  availabilityDates: LobbyAvailabilityDate[];
+  candidateDates: CandidateDateModel[];
   members: LobbyEntryModel[];
-  myMemberId: string | null;
+  myEntryId: string | null;
   // いま編集可能なメンバー列の id 一覧
-  editableMemberIds: string[];
-  // 編集中ドラフト。`${memberId}::${dateId}` → 回答
+  editableEntryIds: string[];
+  // 編集中ドラフト。`${entryId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
 }>();
 
 const emit = defineEmits<{
-  cellClick: [memberId: string, dateId: string];
+  cellClick: [entryId: string, dateId: string];
 }>();
 
 const { getAnswer } = useScheduleView(
-  toRef(props, 'editableMemberIds'),
-  toRef(props, 'draftAnswers'),
+  () => props.editableEntryIds,
+  () => props.draftAnswers,
 );
 
 const { isEditing, isMyAnswerEditable, editHint } = useScheduleEditHint(
-  () => props.editableMemberIds,
-  () => props.myMemberId,
+  () => props.editableEntryIds,
+  () => props.myEntryId,
   'card',
 );
 
-const hasDates = computed(() => props.availabilityDates.length > 0);
+const hasDates = computed(() => props.candidateDates.length > 0);
 
 // チップの見た目を回答状態で切り替えるためのクラス（未回答は 'none'）
-function chipAnswerClass(
-  date: LobbyAvailabilityDate,
-  memberId: string,
-): string {
-  const answer = getAnswer(date, memberId);
+function chipAnswerClass(date: CandidateDateModel, entryId: string): string {
+  const answer = getAnswer(date, entryId);
   return `chip--${answer ?? 'none'}`;
 }
 
 // 自分の回答（「あなたの回答」行の表示用）
-function myAnswer(date: LobbyAvailabilityDate): Answer | null {
-  if (!props.myMemberId) return null;
-  return getAnswer(date, props.myMemberId);
+function myAnswer(date: CandidateDateModel): Answer | null {
+  if (!props.myEntryId) return null;
+  return getAnswer(date, props.myEntryId);
 }
 
 // このメンバーのチップがいま編集可能か
-function isChipEditable(memberId: string): boolean {
-  return props.editableMemberIds.includes(memberId);
+function isChipEditable(entryId: string): boolean {
+  return props.editableEntryIds.includes(entryId);
 }
 
 // 編集可能なチップ・回答行に付与するアクセシビリティ属性
@@ -63,30 +60,30 @@ function editableAttrs(editable: boolean) {
 }
 
 // チップタップ時（編集可能なチップのみ cellClick を発火）
-function onChipClick(memberId: string, dateId: string) {
-  if (isChipEditable(memberId)) emit('cellClick', memberId, dateId);
+function onChipClick(entryId: string, dateId: string) {
+  if (isChipEditable(entryId)) emit('cellClick', entryId, dateId);
 }
 
 // 自分の回答行タップ時
 function onMyAnswerClick(dateId: string) {
-  if (isMyAnswerEditable.value && props.myMemberId)
-    emit('cellClick', props.myMemberId, dateId);
+  if (isMyAnswerEditable.value && props.myEntryId)
+    emit('cellClick', props.myEntryId, dateId);
 }
 
 // キーボード操作（Enter・Space で cellClick を発火）
-function onChipKeydown(e: KeyboardEvent, memberId: string, dateId: string) {
-  if (!isChipEditable(memberId)) return;
+function onChipKeydown(e: KeyboardEvent, entryId: string, dateId: string) {
+  if (!isChipEditable(entryId)) return;
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    emit('cellClick', memberId, dateId);
+    emit('cellClick', entryId, dateId);
   }
 }
 
 function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
-  if (!isMyAnswerEditable.value || !props.myMemberId) return;
+  if (!isMyAnswerEditable.value || !props.myEntryId) return;
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    emit('cellClick', props.myMemberId, dateId);
+    emit('cellClick', props.myEntryId, dateId);
   }
 }
 </script>
@@ -94,13 +91,13 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 <template>
   <div v-if="hasDates" class="card-list">
     <p v-if="isEditing" class="edit-hint">{{ editHint }}</p>
-    <div v-for="date in availabilityDates" :key="date.id" class="card">
+    <div v-for="date in candidateDates" :key="date.id" class="card">
       <div class="card-header">
         <span class="card-date">{{ formatDateWithWeekday(date.date) }}</span>
       </div>
 
       <!-- ひとことは日付の見出し行の外に、独立した行として置く -->
-      <p v-if="date.dateNote" class="card-note">{{ date.dateNote }}</p>
+      <p v-if="date.timeLabel" class="card-note">{{ date.timeLabel }}</p>
 
       <div class="chips">
         <span
@@ -128,7 +125,7 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
       </div>
 
       <div
-        v-if="myMemberId"
+        v-if="myEntryId"
         class="my-answer"
         :class="{ 'my-answer--editing': isMyAnswerEditable }"
         v-bind="editableAttrs(isMyAnswerEditable)"

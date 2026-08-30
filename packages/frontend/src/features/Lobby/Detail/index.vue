@@ -13,7 +13,7 @@ import { Album, UsersRound, MapPin } from '@lucide/vue';
 
 const props = defineProps<{ lobbyId: string }>();
 
-const { lobby, patchLobby, addEntry, removeEntry, activeEntryCount } =
+const { lobby, patchLobby, addEntry, removeEntry, activeEntryCount, fetch } =
   useGetLobbyDetail(props.lobbyId);
 
 const scenarioName = computed(() => lobby.value?.scenarioName ?? '未設定');
@@ -59,7 +59,7 @@ const location = computed(() => lobby.value?.location ?? '未設定');
       v-if="lobby.description"
       :text="lobby.description ?? undefined"
     />
-    <ScheduleDisplay :lobby="lobby" />
+    <ScheduleDisplay :lobby="lobby" @stale="fetch" />
     <MemberDisplay :lobby="lobby" @member-removed="removeEntry" />
   </div>
 </template>

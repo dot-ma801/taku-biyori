@@ -3,11 +3,12 @@ import { ref } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type {
-  LegacyGameSessionDetail,
-  GameSessionMember,
-  SharedGameSessionPlayMemo,
-} from '@taku-biyori/shared';
+import {
+  makeGameSessionDetailModel,
+  makeSeatModel,
+} from '@/models/__fixtures__/game-session';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
+import type { SharedGameSessionPlayMemo } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   listSharedPlayMemos: vi.fn(),
@@ -23,50 +24,46 @@ const OTHER_MEMBER_ID = 'member-other';
 const PRIVATE_MEMBER_ID = 'member-private';
 const GUEST_MEMBER_ID = 'member-guest';
 
-function makeMember(
+const makeMember = (
   id: string,
-  overrides: Partial<GameSessionMember> = {},
-): GameSessionMember {
-  return {
+  overrides: Partial<SeatModel> = {},
+): SeatModel =>
+  makeSeatModel({
     id,
+    entryId: `entry-${id}`,
     userId: `user-${id}`,
     userName: `ユーザー${id}`,
     guestName: null,
     characterName: null,
-    joinedAt: '2024-01-01T00:00:00Z',
     ...overrides,
-  };
-}
+  });
 
-/** 自分・公開している他メンバー・非公開の他メンバー・ゲストの4人が居る卓 */
-function makeGameSession(
-  overrides: Partial<LegacyGameSessionDetail> = {},
-): LegacyGameSessionDetail {
-  return {
+/** 自分・公開している他メンバー・非公開の他メンバー・ゲストの4人が着席した開催 */
+const makeGameSession = (
+  overrides: Partial<GameSessionDetailModel> = {},
+): GameSessionDetailModel =>
+  makeGameSessionDetailModel({
     id: SESSION_ID,
-    title: 'テストセッション',
     status: GameSessionStatus.completed,
-    isPublished: true,
     scheduledAt: '2026-08-01',
-    createdBy: HOST_USER_ID,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [
+    completedAt: new Date('2026-08-01T22:00:00.000Z'),
+    lobby: {
+      ...makeGameSessionDetailModel().lobby,
+      hostUserId: HOST_USER_ID,
+    },
+    seats: [
       makeMember(MY_MEMBER_ID, { userName: '自分', characterName: '探偵' }),
-      makeMember(OTHER_MEMBER_ID, {
-        userName: '青木',
-        characterName: '執事',
-      }),
+      makeMember(OTHER_MEMBER_ID, { userName: '青木', characterName: '執事' }),
       makeMember(PRIVATE_MEMBER_ID, { userName: '佐藤' }),
       makeMember(GUEST_MEMBER_ID, {
         userId: null,
         userName: null,
         guestName: '通りすがり',
+        isGuest: true,
       }),
     ],
     ...overrides,
-  };
-}
+  });
 
 function makeSharedMemo(
   memberId: string,
@@ -82,7 +79,7 @@ function makeSharedMemo(
 }
 
 function setup(
-  gameSession: LegacyGameSessionDetail | null = makeGameSession(),
+  gameSession: GameSessionDetailModel | null = makeGameSession(),
   myMemberId: string | null = MY_MEMBER_ID,
 ) {
   return useSharedPlayMemos(
@@ -94,9 +91,9 @@ function setup(
 
 /** ステータスの変化（完了・中止への遷移）を再現するため ref で渡す */
 function setupWithGameSessionRef(
-  initial: LegacyGameSessionDetail | null = null,
+  initial: GameSessionDetailModel | null = null,
 ) {
-  const gameSession = ref<LegacyGameSessionDetail | null>(initial);
+  const gameSession = ref<GameSessionDetailModel | null>(initial);
   return {
     ...useSharedPlayMemos(SESSION_ID, gameSession, () => MY_MEMBER_ID),
     gameSession,

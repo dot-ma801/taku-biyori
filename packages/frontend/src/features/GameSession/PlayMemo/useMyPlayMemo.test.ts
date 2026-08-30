@@ -4,11 +4,12 @@ import { flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type {
-  LegacyGameSessionDetail,
-  GameSessionMember,
-  MyGameSessionPlayMemo,
-} from '@taku-biyori/shared';
+import {
+  makeGameSessionDetailModel,
+  makeSeatModel,
+} from '@/models/__fixtures__/game-session';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
+import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
   getMyPlayMemo: vi.fn(),
@@ -27,36 +28,28 @@ const HOST_USER_ID = 'user-host';
 const MEMBER_USER_ID = 'user-member';
 const MY_MEMBER_ID = 'member-1';
 
-function makeMember(
-  overrides: Partial<GameSessionMember> = {},
-): GameSessionMember {
-  return {
+const makeMember = (overrides: Partial<SeatModel> = {}): SeatModel =>
+  makeSeatModel({
     id: MY_MEMBER_ID,
     userId: MEMBER_USER_ID,
     userName: 'テストユーザー',
     guestName: null,
     characterName: null,
-    joinedAt: '2024-01-01T00:00:00Z',
     ...overrides,
-  };
-}
+  });
 
-function makeGameSession(
-  overrides: Partial<LegacyGameSessionDetail> = {},
-): LegacyGameSessionDetail {
-  return {
+const makeGameSession = (
+  overrides: Partial<GameSessionDetailModel> = {},
+): GameSessionDetailModel =>
+  makeGameSessionDetailModel({
     id: SESSION_ID,
-    title: 'テストセッション',
-    status: GameSessionStatus.confirmed,
-    isPublished: true,
-    scheduledAt: '2026-08-01',
-    createdBy: HOST_USER_ID,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [makeMember()],
+    lobby: {
+      ...makeGameSessionDetailModel().lobby,
+      hostUserId: HOST_USER_ID,
+    },
+    seats: [makeMember()],
     ...overrides,
-  };
-}
+  });
 
 function makePlayMemo(
   overrides: Partial<MyGameSessionPlayMemo> = {},
@@ -79,9 +72,7 @@ function mockCurrentUser(userId: string | null) {
   } as unknown as ReturnType<typeof useAuthStore>);
 }
 
-function setup(
-  gameSession: LegacyGameSessionDetail | null = makeGameSession(),
-) {
+function setup(gameSession: GameSessionDetailModel | null = makeGameSession()) {
   return useMyPlayMemo(SESSION_ID, () => gameSession);
 }
 
@@ -93,9 +84,9 @@ function setup(
  * ref で渡し、テスト側で途中から値を差し替えられるようにする必要がある。
  */
 function setupWithGameSessionRef(
-  initial: LegacyGameSessionDetail | null = null,
+  initial: GameSessionDetailModel | null = null,
 ) {
-  const gameSession = ref<LegacyGameSessionDetail | null>(initial);
+  const gameSession = ref<GameSessionDetailModel | null>(initial);
   return { ...useMyPlayMemo(SESSION_ID, gameSession), gameSession };
 }
 
@@ -104,7 +95,7 @@ function setupWithGameSessionRef(
  * fetch を明示的に呼ぶテストが、自動取得の分と混ざらないようにするためのヘルパー。
  */
 async function setupSettled(
-  gameSession: LegacyGameSessionDetail | null = makeGameSession(),
+  gameSession: GameSessionDetailModel | null = makeGameSession(),
 ) {
   const result = setup(gameSession);
   await flushPromises();
@@ -142,7 +133,7 @@ describe('isMyMemo', () => {
   it('ゲストしかいない卓では false（ゲストは userId = null で引き当てられない）', () => {
     // Arrange
     const gameSession = makeGameSession({
-      members: [
+      seats: [
         makeMember({ userId: null, userName: null, guestName: 'ゲスト' }),
       ],
     });
@@ -199,17 +190,16 @@ describe('showLoginPrompt', () => {
 });
 
 describe('canEditBody', () => {
-  it.each([
-    GameSessionStatus.draft,
-    GameSessionStatus.confirmed,
-    GameSessionStatus.today,
-  ])('メンバーかつ %s ステータスのとき true', (status) => {
-    // Arrange & Act
-    const { canEditBody } = setup(makeGameSession({ status }));
+  it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
+    '着席していて %s ステータスのとき true',
+    (status) => {
+      // Arrange & Act
+      const { canEditBody } = setup(makeGameSession({ status }));
 
-    // Assert
-    expect(canEditBody.value).toBe(true);
-  });
+      // Assert
+      expect(canEditBody.value).toBe(true);
+    },
+  );
 
   it.each([GameSessionStatus.completed, GameSessionStatus.cancelled])(
     '%s ステータスでは false（本文編集は閉じる）',
@@ -226,7 +216,7 @@ describe('canEditBody', () => {
     // Arrange
     mockCurrentUser(HOST_USER_ID);
     const gameSession = makeGameSession({
-      members: [makeMember({ userId: HOST_USER_ID })],
+      seats: [makeMember({ userId: HOST_USER_ID })],
     });
 
     // Act
@@ -316,14 +306,14 @@ describe('自動取得', () => {
 
   it('参加して members に自分が加わったら取得する', async () => {
     // Arrange: 自分がまだメンバーに含まれていない卓
-    const strangerSession = makeGameSession({ members: [] });
+    const strangerSession = makeGameSession({ seats: [] });
     const { gameSession, playMemo } = setupWithGameSessionRef(strangerSession);
     await flushPromises();
     expect(getMyPlayMemo).not.toHaveBeenCalled();
     expect(playMemo.value).toBeNull();
 
     // Act: 参加して members に自分が加わる
-    gameSession.value = makeGameSession({ members: [makeMember()] });
+    gameSession.value = makeGameSession({ seats: [makeMember()] });
     await flushPromises();
 
     // Assert

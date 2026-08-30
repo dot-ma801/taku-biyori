@@ -11,7 +11,7 @@ describe('GameSessionStatusBadge', () => {
     it('デフォルト props でレンダリングされる', () => {
       // Arrange & Act
       const wrapper = mount(GameSessionStatusBadge, {
-        props: { status: GameSessionStatus.confirmed },
+        props: { status: GameSessionStatus.scheduled },
       });
 
       // Assert
@@ -21,10 +21,9 @@ describe('GameSessionStatusBadge', () => {
 
   describe('ラベル', () => {
     it.each([
-      [GameSessionStatus.draft, '非公開'],
-      [GameSessionStatus.confirmed, '実施前'],
-      [GameSessionStatus.today, '当日'],
-      [GameSessionStatus.completed, '通過済み'],
+      [GameSessionStatus.scheduled, '開催予定'],
+      [GameSessionStatus.today, '本日開催'],
+      [GameSessionStatus.completed, '完了'],
       [GameSessionStatus.cancelled, '中止'],
     ] as const)(
       'status="%s" のとき "%s" と表示される',
@@ -40,8 +39,7 @@ describe('GameSessionStatusBadge', () => {
 
   describe('バリアント', () => {
     it.each([
-      [GameSessionStatus.draft, 'status-badge--muted'],
-      [GameSessionStatus.confirmed, 'status-badge--success'],
+      [GameSessionStatus.scheduled, 'status-badge--success'],
       [GameSessionStatus.today, 'status-badge--error'],
       [GameSessionStatus.completed, 'status-badge--muted'],
       [GameSessionStatus.cancelled, 'status-badge--error'],
@@ -57,9 +55,13 @@ describe('GameSessionStatusBadge', () => {
     );
   });
 
-  describe('卓では扱わないステータス', () => {
-    it.each([GameSessionStatus.open] as const)(
-      'status="%s"（募集枠へ移管）のときバッジを描画しない',
+  describe('v2 で導出されないステータス', () => {
+    it.each([
+      GameSessionStatus.draft,
+      GameSessionStatus.open,
+      GameSessionStatus.confirmed,
+    ] as const)(
+      'status="%s"（公開・募集はロビーの関心事へ移った）のときバッジを描画しない',
       (status) => {
         // Arrange & Act
         const wrapper = mount(GameSessionStatusBadge, { props: { status } });

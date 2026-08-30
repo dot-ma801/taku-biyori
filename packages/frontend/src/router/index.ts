@@ -37,30 +37,35 @@ const router = createRouter({
     // 404 ルートが無く未定義パスは白画面になるため、旧 URL は残してリダイレクトする。
     { path: '/game-sessions', redirect: { name: 'dashboard' } },
     { path: '/lobbies', redirect: { name: 'dashboard' } },
+    // 開催はロビーに属するため、画面ルートも API と同じくロビー配下へ入れ子にする
+    // （design-v2 §7-1）。**旧パスからのリダイレクトは作らない。**
     {
-      path: '/game-sessions/edit/:gameSessionId',
+      path: '/lobbies/:lobbyId/game-sessions/:gameSessionId/edit',
       name: 'game-sessions-edit',
       component: () => import('@/views/GameSession/EditView.vue'),
       props: (to) => ({
+        lobbyId: to.params.lobbyId,
         gameSessionId: to.params.gameSessionId,
       }),
     },
     {
-      path: '/game-sessions/:gameSessionId',
+      path: '/lobbies/:lobbyId/game-sessions/:gameSessionId',
       name: 'game-sessions-detail',
       component: () => import('@/views/GameSession/DetailView.vue'),
       props: (to) => ({
+        lobbyId: to.params.lobbyId,
         gameSessionId: to.params.gameSessionId,
       }),
     },
-    // プレイ中に何度も開き直すため、卓詳細を経由せず直接開ける URL を持たせる。
-    // 完了・中止した卓の公開メモは未ログイン・ゲストにも開く（要求 §3-4）ため
-    // requiresAuth は付けない。書く操作の可否は画面側のメンバー判定が決める。
+    // プレイ中に何度も開き直すため、開催の詳細を経由せず直接開ける URL を持たせる。
+    // 完了・中止した開催の公開メモは未ログイン・ゲストにも開く（要求 §3-4）ため
+    // requiresAuth は付けない。書く操作の可否は画面側の着席判定が決める。
     {
-      path: '/game-sessions/:gameSessionId/play-memo',
+      path: '/lobbies/:lobbyId/game-sessions/:gameSessionId/play-memo',
       name: 'game-sessions-play-memo',
       component: () => import('@/views/GameSession/PlayMemoView.vue'),
       props: (to) => ({
+        lobbyId: to.params.lobbyId,
         gameSessionId: to.params.gameSessionId,
       }),
     },

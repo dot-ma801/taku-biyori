@@ -11,28 +11,72 @@ export { todayDateString } from './date.js';
 export {
   GameSessionStatusSchema,
   GameSessionStatus,
-  GameSessionListItemSchema,
-  type GameSessionListItem,
+  GameSessionOverridesSchema,
+  type GameSessionOverrides,
+  LobbySummarySchema,
+  type LobbySummary,
   GameSessionSchema,
   type GameSession,
+  GameSessionDetailSchema,
+  type GameSessionDetail,
+  GameSessionListItemSchema,
+  type GameSessionListItem,
+  GameSessionSummarySchema,
+  type GameSessionSummary,
+  CreateGameSessionInputSchema,
+  type CreateGameSessionInput,
   UpdateGameSessionInputSchema,
   type UpdateGameSessionInput,
   UpdateGameSessionStatusInputSchema,
   type UpdateGameSessionStatusInput,
+  // v0.2 契約（移行期間中だけ残す）
+  LegacyGameSessionSchema,
+  type LegacyGameSession,
+  LegacyGameSessionDetailSchema,
+  type LegacyGameSessionDetail,
+  LegacyGameSessionListItemSchema,
+  type LegacyGameSessionListItem,
+  LegacyUpdateGameSessionInputSchema,
+  type LegacyUpdateGameSessionInput,
+  LegacyUpdateGameSessionStatusInputSchema,
+  type LegacyUpdateGameSessionStatusInput,
   GameSessionMemberSchema,
   type GameSessionMember,
-  GameSessionDetailSchema,
-  type GameSessionDetail,
   JoinGameSessionInputSchema,
   type JoinGameSessionInput,
   UpdateMemberInputSchema,
   type UpdateMemberInput,
 } from './game-session.js';
 export {
+  getGameSessionStatus,
+  type GameSessionStatusFacts,
+} from './game-session/status.js';
+export {
+  resolveGameSessionDisplay,
+  type GameSessionDisplay,
+  type GameSessionDisplayDefaults,
+  type GameSessionOverrideFields,
+} from './game-session/display.js';
+export {
+  SeatSchema,
+  type Seat,
+  SeatRefSchema,
+  type SeatRef,
+  CreateSeatInputSchema,
+  type CreateSeatInput,
+  UpdateSeatInputSchema,
+  type UpdateSeatInput,
+  isGuestSeat,
+} from './game-session/seat.js';
+export {
   type GameSessionRole,
   GameSessionAction,
   ACTION_POLICIES,
   canPerform,
+  // v0.2 契約（移行期間中だけ残す）
+  LegacyGameSessionAction,
+  LEGACY_ACTION_POLICIES,
+  canPerformLegacy,
 } from './game-session/permissions.js';
 export { isGuestMember } from './game-session/member.js';
 export {

@@ -15,7 +15,12 @@ const session: GameSession = {
   scheduledAt: TODAY,
   status: GameSessionStatus.today,
   description: null,
-  overrides: { title: null, scenarioName: null, location: null, timeLabel: null },
+  overrides: {
+    title: null,
+    scenarioName: null,
+    location: null,
+    timeLabel: null,
+  },
   lobby: {
     id: LOBBY_ID,
     title: 'ロビー',
@@ -38,9 +43,17 @@ const makeRepo = (
   findHostUserId: vi.fn().mockResolvedValue(HOST),
   findStatusFields: vi
     .fn()
-    .mockResolvedValue({ scheduledAt: TODAY, completedAt: null, cancelledAt: null }),
-  complete: vi.fn().mockResolvedValue({ ...session, completedAt: NOW.toISOString() }),
-  cancel: vi.fn().mockResolvedValue({ ...session, cancelledAt: NOW.toISOString() }),
+    .mockResolvedValue({
+      scheduledAt: TODAY,
+      completedAt: null,
+      cancelledAt: null,
+    }),
+  complete: vi
+    .fn()
+    .mockResolvedValue({ ...session, completedAt: NOW.toISOString() }),
+  cancel: vi
+    .fn()
+    .mockResolvedValue({ ...session, cancelledAt: NOW.toISOString() }),
   ...overrides,
 });
 
@@ -51,7 +64,12 @@ describe('updateGameSessionStatus', () => {
 
     // Act
     const result = await updateGameSessionStatus(
-      repo, LOBBY_ID, 'session-1', HOST, { status: 'completed' }, NOW,
+      repo,
+      LOBBY_ID,
+      'session-1',
+      HOST,
+      { status: 'completed' },
+      NOW,
     );
 
     // Assert
@@ -72,7 +90,12 @@ describe('updateGameSessionStatus', () => {
 
     // Act
     const result = await updateGameSessionStatus(
-      repo, LOBBY_ID, 'session-1', HOST, { status: 'completed' }, NOW,
+      repo,
+      LOBBY_ID,
+      'session-1',
+      HOST,
+      { status: 'completed' },
+      NOW,
     );
 
     // Assert
@@ -86,7 +109,12 @@ describe('updateGameSessionStatus', () => {
 
     // Act
     const result = await updateGameSessionStatus(
-      repo, LOBBY_ID, 'session-1', HOST, { status: 'cancelled' }, NOW,
+      repo,
+      LOBBY_ID,
+      'session-1',
+      HOST,
+      { status: 'cancelled' },
+      NOW,
     );
 
     // Assert
@@ -97,22 +125,30 @@ describe('updateGameSessionStatus', () => {
   it.each([
     ['completed' as const, { completedAt: NOW, cancelledAt: null }],
     ['cancelled' as const, { completedAt: null, cancelledAt: NOW }],
-  ])('すでに終端なら %s への遷移を invalidTransition にする', async (target, terminal) => {
-    // Arrange
-    const repo = makeRepo({
-      findStatusFields: vi
-        .fn()
-        .mockResolvedValue({ scheduledAt: TODAY, ...terminal }),
-    });
+  ])(
+    'すでに終端なら %s への遷移を invalidTransition にする',
+    async (target, terminal) => {
+      // Arrange
+      const repo = makeRepo({
+        findStatusFields: vi
+          .fn()
+          .mockResolvedValue({ scheduledAt: TODAY, ...terminal }),
+      });
 
-    // Act
-    const result = await updateGameSessionStatus(
-      repo, LOBBY_ID, 'session-1', HOST, { status: target }, NOW,
-    );
+      // Act
+      const result = await updateGameSessionStatus(
+        repo,
+        LOBBY_ID,
+        'session-1',
+        HOST,
+        { status: target },
+        NOW,
+      );
 
-    // Assert
-    expect(result).toEqual({ type: 'invalidTransition' });
-  });
+      // Assert
+      expect(result).toEqual({ type: 'invalidTransition' });
+    },
+  );
 
   it('ホスト以外は forbidden を返す', async () => {
     // Arrange
@@ -120,7 +156,12 @@ describe('updateGameSessionStatus', () => {
 
     // Act
     const result = await updateGameSessionStatus(
-      repo, LOBBY_ID, 'session-1', 'user-2', { status: 'completed' }, NOW,
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'user-2',
+      { status: 'completed' },
+      NOW,
     );
 
     // Assert
@@ -133,7 +174,12 @@ describe('updateGameSessionStatus', () => {
 
     // Act
     const result = await updateGameSessionStatus(
-      repo, 'lobby-other', 'session-1', HOST, { status: 'completed' }, NOW,
+      repo,
+      'lobby-other',
+      'session-1',
+      HOST,
+      { status: 'completed' },
+      NOW,
     );
 
     // Assert
@@ -146,7 +192,12 @@ describe('updateGameSessionStatus', () => {
 
     // Act
     const result = await updateGameSessionStatus(
-      repo, LOBBY_ID, 'session-1', HOST, { status: 'completed' }, NOW,
+      repo,
+      LOBBY_ID,
+      'session-1',
+      HOST,
+      { status: 'completed' },
+      NOW,
     );
 
     // Assert

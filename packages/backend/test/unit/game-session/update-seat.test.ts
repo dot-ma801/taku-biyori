@@ -40,9 +40,16 @@ describe('updateSeat', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await updateSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER, {
-      characterName: 'アルベルト',
-    });
+    const result = await updateSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+      {
+        characterName: 'アルベルト',
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', seat });
@@ -53,9 +60,16 @@ describe('updateSeat', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await updateSeat(repo, LOBBY_ID, 'session-1', 'seat-1', HOST, {
-      characterName: 'アルベルト',
-    });
+    const result = await updateSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      HOST,
+      {
+        characterName: 'アルベルト',
+      },
+    );
 
     // Assert
     expect(result.type).toBe('ok');
@@ -66,9 +80,16 @@ describe('updateSeat', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await updateSeat(repo, LOBBY_ID, 'session-1', 'seat-1', 'user-9', {
-      characterName: 'x',
-    });
+    const result = await updateSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      'user-9',
+      {
+        characterName: 'x',
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -98,9 +119,16 @@ describe('updateSeat', () => {
     });
 
     // Act
-    const result = await updateSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER, {
-      characterName: 'アルベルト',
-    });
+    const result = await updateSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+      {
+        characterName: 'アルベルト',
+      },
+    );
 
     // Assert
     expect(result.type).toBe('ok');
@@ -117,9 +145,16 @@ describe('updateSeat', () => {
     });
 
     // Act
-    const result = await updateSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER, {
-      characterName: 'x',
-    });
+    const result = await updateSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+      {
+        characterName: 'x',
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });
@@ -134,9 +169,16 @@ describe('updateSeat', () => {
     });
 
     // Act
-    const result = await updateSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER, {
-      characterName: 'x',
-    });
+    const result = await updateSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+      {
+        characterName: 'x',
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });

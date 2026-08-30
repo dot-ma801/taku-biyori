@@ -520,7 +520,9 @@ const main = async (): Promise<void> => {
   console.log('シード完了');
   console.log(`  ユーザー: 4（パスワードはすべて ${SEED_PASSWORD}）`);
   console.log('    ユーザー名でログインできます: yuki / haru / natsu / aki');
-  console.log('  ロビー: 5（公開・募集中 / 日程調整中 / 下書き / 完了済み / 直接卓立て）');
+  console.log(
+    '  ロビー: 5（公開・募集中 / 日程調整中 / 下書き / 完了済み / 直接卓立て）',
+  );
   console.log('  開催: 3（開催予定 / 完了済み / 直接卓立て）');
   console.log(`  開催予定の開催の着席: ${seatCheck.length}`);
   console.log('');

@@ -71,7 +71,9 @@ describe('createGameSession', () => {
 
   it('ロビーが無ければ notFound を返す', async () => {
     // Arrange
-    const repo = makeRepo({ findLobbyForHost: vi.fn().mockResolvedValue(null) });
+    const repo = makeRepo({
+      findLobbyForHost: vi.fn().mockResolvedValue(null),
+    });
 
     // Act
     const result = await createGameSession(repo, LOBBY_ID, HOST, input);

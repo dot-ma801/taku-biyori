@@ -120,7 +120,9 @@ export const registerGameSessionRoute = (
     }
     if (result.type === 'invalidEntries') {
       return c.json(
-        { error: 'entryIds contains an entry that is not active in this lobby' },
+        {
+          error: 'entryIds contains an entry that is not active in this lobby',
+        },
         422,
       );
     }

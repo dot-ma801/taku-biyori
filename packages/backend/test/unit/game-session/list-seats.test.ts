@@ -65,7 +65,10 @@ describe('listSeats', () => {
     const repo = makeRepo({
       findLobbyForViewing: vi
         .fn()
-        .mockResolvedValue({ hostUserId: 'user-host', status: LobbyStatus.draft }),
+        .mockResolvedValue({
+          hostUserId: 'user-host',
+          status: LobbyStatus.draft,
+        }),
     });
 
     // Act

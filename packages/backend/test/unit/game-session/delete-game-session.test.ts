@@ -78,7 +78,12 @@ describe('deleteGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await deleteGameSession(repo, LOBBY_ID, 'session-1', 'user-2');
+    const result = await deleteGameSession(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'user-2',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -100,7 +105,12 @@ describe('deleteGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await deleteGameSession(repo, 'lobby-other', 'session-1', HOST);
+    const result = await deleteGameSession(
+      repo,
+      'lobby-other',
+      'session-1',
+      HOST,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });

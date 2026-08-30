@@ -29,7 +29,13 @@ describe('deleteSeat', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await deleteSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER);
+    const result = await deleteSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok' });
@@ -41,7 +47,13 @@ describe('deleteSeat', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await deleteSeat(repo, LOBBY_ID, 'session-1', 'seat-1', HOST);
+    const result = await deleteSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      HOST,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok' });
@@ -56,7 +68,13 @@ describe('deleteSeat', () => {
     });
 
     // Act
-    const result = await deleteSeat(repo, LOBBY_ID, 'session-1', 'seat-1', HOST);
+    const result = await deleteSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      HOST,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok' });
@@ -67,7 +85,13 @@ describe('deleteSeat', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await deleteSeat(repo, LOBBY_ID, 'session-1', 'seat-1', 'user-9');
+    const result = await deleteSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      'user-9',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -86,7 +110,13 @@ describe('deleteSeat', () => {
     });
 
     // Act
-    const result = await deleteSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER);
+    const result = await deleteSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });
@@ -101,7 +131,13 @@ describe('deleteSeat', () => {
     });
 
     // Act
-    const result = await deleteSeat(repo, LOBBY_ID, 'session-1', 'seat-1', OWNER);
+    const result = await deleteSeat(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'seat-1',
+      OWNER,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });

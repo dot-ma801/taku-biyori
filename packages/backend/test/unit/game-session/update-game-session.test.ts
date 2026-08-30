@@ -13,7 +13,12 @@ const updated: GameSession = {
   scheduledAt: '2026-09-01',
   status: GameSessionStatus.scheduled,
   description: null,
-  overrides: { title: null, scenarioName: null, location: null, timeLabel: null },
+  overrides: {
+    title: null,
+    scenarioName: null,
+    location: null,
+    timeLabel: null,
+  },
   lobby: {
     id: LOBBY_ID,
     title: 'マダミス「蒼き月」',
@@ -75,9 +80,15 @@ describe('updateGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await updateGameSession(repo, 'lobby-other', 'session-1', HOST, {
-      location: 'x',
-    });
+    const result = await updateGameSession(
+      repo,
+      'lobby-other',
+      'session-1',
+      HOST,
+      {
+        location: 'x',
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -89,9 +100,15 @@ describe('updateGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', 'user-2', {
-      location: 'x',
-    });
+    const result = await updateGameSession(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'user-2',
+      {
+        location: 'x',
+      },
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });

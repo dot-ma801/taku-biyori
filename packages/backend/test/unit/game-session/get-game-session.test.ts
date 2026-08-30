@@ -87,7 +87,12 @@ describe('getGameSession', () => {
     const repo = repoWith(gameSession);
 
     // Act
-    const result = await getGameSession(repo, LOBBY_ID, 'session-1', 'user-host');
+    const result = await getGameSession(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'user-host',
+    );
 
     // Assert
     expect(result).toEqual({ type: 'ok', gameSession });

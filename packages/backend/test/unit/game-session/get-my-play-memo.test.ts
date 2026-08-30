@@ -14,8 +14,8 @@ const makeRepo = (
   overrides: Partial<GetMyPlayMemoRepository> = {},
 ): GetMyPlayMemoRepository => ({
   gameSessionExists: vi.fn().mockResolvedValue(true),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
-  findPlayMemoByMemberId: vi.fn().mockResolvedValue(mockPlayMemo),
+  findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
+  findPlayMemoBySeatId: vi.fn().mockResolvedValue(mockPlayMemo),
   ...overrides,
 });
 
@@ -35,7 +35,7 @@ describe('getMyPlayMemo', () => {
   it('メモ未作成でも notFound ではなく空メモを返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findPlayMemoByMemberId: vi.fn().mockResolvedValue(null),
+      findPlayMemoBySeatId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -71,7 +71,7 @@ describe('getMyPlayMemo', () => {
   it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -91,7 +91,7 @@ describe('getMyPlayMemo', () => {
     await getMyPlayMemo(repo, 'nonexistent', 'user-1');
 
     // Assert
-    expect(repo.findMemberByUserId).not.toHaveBeenCalled();
-    expect(repo.findPlayMemoByMemberId).not.toHaveBeenCalled();
+    expect(repo.findSeatByUserId).not.toHaveBeenCalled();
+    expect(repo.findPlayMemoBySeatId).not.toHaveBeenCalled();
   });
 });

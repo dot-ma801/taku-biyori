@@ -55,20 +55,4 @@ describe('GameSessionStatusBadge', () => {
     );
   });
 
-  describe('v2 で導出されないステータス', () => {
-    it.each([
-      GameSessionStatus.draft,
-      GameSessionStatus.open,
-      GameSessionStatus.confirmed,
-    ] as const)(
-      'status="%s"（公開・募集はロビーの関心事へ移った）のときバッジを描画しない',
-      (status) => {
-        // Arrange & Act
-        const wrapper = mount(GameSessionStatusBadge, { props: { status } });
-
-        // Assert
-        expect(wrapper.find('.status-badge').exists()).toBe(false);
-      },
-    );
-  });
 });

@@ -60,11 +60,6 @@ export const useCreateLobby = () => {
       errors.push(maxMembersError);
     }
 
-    // 候補日は募集枠の存在意義であるため、作成時点で1件以上必須（design-v1.1 §6）
-    if (pendingDates.value.length === 0) {
-      errors.push('候補日を1件以上指定してください');
-    }
-
     errors.push(...getPendingTimeLabelErrors(pendingDates.value));
 
     return errors;

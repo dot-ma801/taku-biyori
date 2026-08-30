@@ -9,16 +9,6 @@ export enum GameSessionStatus {
   completed = 'completed',
   /** 中止。この回の開催を取りやめた（終端状態） */
   cancelled = 'cancelled',
-
-  // ---- 移行期間中だけ残す v0.2 の値（design-v2 §4-2 では廃止）----
-  // getGameSessionStatus() はこれらを導出しない。旧経路の型解決のためだけに残しており、
-  // 旧 UI を置き換える PR で削除する。
-  /** @deprecated 公開はロビーの関心事へ移った（v2 では導出しない） */
-  draft = 'draft',
-  /** @deprecated 募集はロビーの関心事へ移った（v2 では導出しない） */
-  open = 'open',
-  /** @deprecated `scheduled` に改名（v2 では導出しない） */
-  confirmed = 'confirmed',
 }
 
 /**

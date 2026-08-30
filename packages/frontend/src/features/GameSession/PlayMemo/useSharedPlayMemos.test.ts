@@ -128,8 +128,7 @@ describe('canViewShared', () => {
   );
 
   it.each([
-    GameSessionStatus.draft,
-    GameSessionStatus.confirmed,
+    GameSessionStatus.scheduled,
     GameSessionStatus.today,
   ])('%s なら false（他メンバーのメモは読めない）', (status) => {
     // Arrange & Act
@@ -159,8 +158,7 @@ describe('自動取得', () => {
   });
 
   it.each([
-    GameSessionStatus.draft,
-    GameSessionStatus.confirmed,
+    GameSessionStatus.scheduled,
     GameSessionStatus.today,
   ])('%s では取得しない（1件も返らない時期に通信しない）', async (status) => {
     // Arrange & Act
@@ -454,7 +452,7 @@ describe('fetch', () => {
   it('読めないステータスでは呼んでも通信しない', async () => {
     // Arrange
     const { fetch } = setup(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
+      makeGameSession({ status: GameSessionStatus.scheduled }),
     );
     await flushPromises();
 

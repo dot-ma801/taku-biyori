@@ -1,10 +1,8 @@
-import type { GameSessionMember } from '@/game-session';
-
 /**
- * ゲストメンバー（アカウントを持たず招待リンクから参加したメンバー）かどうかを判定する。
+ * アカウントを持たない参加者かどうかを判定する。
  */
 export const isGuestMember = (
-  member: Pick<GameSessionMember, 'userId'>,
+  member: Pick<{ userId: string | null }, 'userId'>,
 ): boolean => {
   return member.userId === null;
 };

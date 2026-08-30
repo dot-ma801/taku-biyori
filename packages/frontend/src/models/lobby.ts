@@ -6,6 +6,8 @@ import type {
   LobbyStatus,
 } from '@taku-biyori/shared';
 import { getLobbyStatus } from '@taku-biyori/shared';
+import type { SchedulePollSummaryModel } from '@/models/schedule-poll';
+import { toSchedulePollSummaryModel } from '@/models/schedule-poll';
 
 /**
  * ロビー系の model と、DTO（`@taku-biyori/shared` の契約型）からの変換関数。
@@ -60,6 +62,8 @@ export type LobbyDetailModel = LobbyModel & {
   entries: LobbyEntryModel[];
   /** 在籍中の参加者だけ。**回答表・着席候補はこちらを使う** */
   activeEntries: LobbyEntryModel[];
+  /** 日程調整の履歴。新しい順・先頭が最新。調整が1件も無ければ空配列 */
+  schedulePolls: SchedulePollSummaryModel[];
 };
 
 export type LobbyListItemModel = {
@@ -129,6 +133,7 @@ export const toLobbyDetailModel = (dto: LobbyDetail): LobbyDetailModel => {
     ...toLobbyModel(dto),
     entries,
     activeEntries: entries.filter((entry) => entry.leftAt === null),
+    schedulePolls: dto.schedulePolls.map(toSchedulePollSummaryModel),
   };
 };
 

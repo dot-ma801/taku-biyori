@@ -17,7 +17,9 @@ export const getLobby = async (
   const lobby = await repo.findDetailById(id);
   if (!lobby) return { type: 'notFound' };
 
-  if (!lobby.isPublished && lobby.hostUserId !== userId) {
+  // 閲覧可否はステータスではなく published_at ファクトで判定する。
+  // draft のまま解散したロビーは disbanded でも非公開のまま（design-v2 §6-13-4）
+  if (lobby.publishedAt === null && lobby.hostUserId !== userId) {
     return { type: 'forbidden' };
   }
 

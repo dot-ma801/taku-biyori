@@ -17,14 +17,15 @@ const makeRepo = (
 ): UpdateGuestAvailabilityDateResponseRepository => ({
   findGuestLinkToken: vi.fn().mockResolvedValue(TOKEN),
   findStatusFields: vi.fn().mockResolvedValue({
-    isPublished: true,
+    publishedAt: new Date('2026-08-01T00:00:00.000Z'),
     openUntil: null,
-    cancelledAt: null,
+    receptionClosedAt: null,
+    disbandedAt: null,
   }),
   findCandidateOwner: vi
     .fn()
     .mockResolvedValue({ lobbyId: 'lobby-1', date: '2025-10-01' }),
-  isGuestMember: vi.fn().mockResolvedValue(true),
+  isGuestEntry: vi.fn().mockResolvedValue(true),
   upsertAnswer: vi.fn().mockResolvedValue(mockAnswer),
   ...overrides,
 });
@@ -129,7 +130,7 @@ describe('updateGuestAvailabilityDateResponse', () => {
   it('指定 memberId がゲストメンバーでない場合は forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      isGuestMember: vi.fn().mockResolvedValue(false),
+      isGuestEntry: vi.fn().mockResolvedValue(false),
     });
 
     // Act
@@ -165,9 +166,10 @@ describe('updateGuestAvailabilityDateResponse', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        openUntil: new Date('2099-01-01'),
-        cancelledAt: null,
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+        openUntil: '2099-01-01',
+        receptionClosedAt: null,
+        disbandedAt: null,
       }),
     });
 
@@ -178,13 +180,14 @@ describe('updateGuestAvailabilityDateResponse', () => {
     expect(result).toEqual({ type: 'ok', answer: mockAnswer });
   });
 
-  it('status が scheduling のとき回答できる', async () => {
+  it('status が closed（受付終了）のときも回答できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        openUntil: new Date('2020-01-01'),
-        cancelledAt: null,
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+        openUntil: '2020-01-01',
+        receptionClosedAt: null,
+        disbandedAt: null,
       }),
     });
 
@@ -199,9 +202,10 @@ describe('updateGuestAvailabilityDateResponse', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: false,
+        publishedAt: null,
         openUntil: null,
-        cancelledAt: null,
+        receptionClosedAt: null,
+        disbandedAt: null,
       }),
     });
 
@@ -212,13 +216,14 @@ describe('updateGuestAvailabilityDateResponse', () => {
     expect(result).toEqual({ type: 'invalidStatus' });
   });
 
-  it('status が cancelled のとき invalidStatus を返す', async () => {
+  it('status が disbanded のとき invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
         openUntil: null,
-        cancelledAt: new Date('2025-01-01'),
+        receptionClosedAt: null,
+        disbandedAt: new Date('2025-01-01'),
       }),
     });
 

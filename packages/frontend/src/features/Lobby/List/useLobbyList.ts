@@ -1,7 +1,8 @@
-import { computed, onMounted, ref } from 'vue';
+import { computed, getCurrentInstance, onMounted, onUnmounted, ref } from 'vue';
 import type { LobbyStatus } from '@taku-biyori/shared';
 import { listLobbies } from '@/api/lobby';
 import type { LobbyListItemModel } from '@/models/lobby';
+import { useSession } from '@/lib/auth';
 
 export const useLobbyList = (statuses?: LobbyStatus[]) => {
   /** 全募集枠 */
@@ -13,13 +14,35 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
   /** エラーメッセージ */
   const errorMessage = ref('');
 
+  // useSession は nanostores の Atom なので Vue の ref に変換する
+  const sessionData = ref(useSession.get());
+  const unsubscribeSession = useSession.subscribe((v) => {
+    sessionData.value = v;
+  });
+  if (getCurrentInstance()) {
+    onUnmounted(unsubscribeSession);
+  }
+
+  const myUserId = computed(() => sessionData.value.data?.user?.id ?? null);
+
+  /**
+   * 自分のロビーか（ホスト、または在籍中の参加者）。
+   * v0.2 の `role` を置き換えた判定。誰がホストかを捨てずに済む（design-v2 §6-13）
+   */
+  const isMine = (lobby: LobbyListItemModel): boolean => {
+    const userId = myUserId.value;
+    if (userId === null) return false;
+    return (
+      lobby.hostUserId === userId ||
+      lobby.activeEntries.some((entry) => entry.userId === userId)
+    );
+  };
+
   const publicLobbies = computed(() =>
-    allLobbies.value.filter((l) => l.role === null),
+    allLobbies.value.filter((l) => !isMine(l)),
   );
 
-  const myLobbies = computed(() =>
-    allLobbies.value.filter((l) => l.role !== null),
-  );
+  const myLobbies = computed(() => allLobbies.value.filter(isMine));
 
   /** 自分のロビーのうち statuses に該当するもの（未指定時は myLobbies をそのまま返す） */
   const filteredMyLobbies = computed(() => {

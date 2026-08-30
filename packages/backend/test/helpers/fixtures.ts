@@ -13,7 +13,7 @@ import {
   lobbies,
   lobbyAnswers,
   lobbyCandidates,
-  lobbyMembers,
+  lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
   gameSessionMembers,
@@ -44,9 +44,10 @@ export interface InsertLobbyOverrides {
   location?: string | null;
   maxPlayers?: number | null;
   guestLinkToken?: string;
-  isPublished?: boolean;
+  publishedAt?: Date | null;
   openUntil?: string | null;
-  cancelledAt?: Date | null;
+  receptionClosedAt?: Date | null;
+  disbandedAt?: Date | null;
 }
 
 export const insertLobby = async (
@@ -64,30 +65,36 @@ export const insertLobby = async (
       location: overrides.location ?? null,
       maxPlayers: overrides.maxPlayers ?? null,
       guestLinkToken: overrides.guestLinkToken ?? `token-${randomUUID()}`,
-      isPublished: overrides.isPublished ?? false,
+      publishedAt: overrides.publishedAt ?? null,
       openUntil: overrides.openUntil ?? null,
-      cancelledAt: overrides.cancelledAt ?? null,
+      receptionClosedAt: overrides.receptionClosedAt ?? null,
+      disbandedAt: overrides.disbandedAt ?? null,
     })
     .returning({ id: lobbies.id });
 
   return firstRow(rows, 'insertLobby').id;
 };
 
-export const insertLobbyMember = async (
+export const insertLobbyEntry = async (
   db: Database,
   lobbyId: string,
-  member: { userId?: string | null; guestName?: string | null } = {},
+  entry: {
+    userId?: string | null;
+    guestName?: string | null;
+    leftAt?: Date | null;
+  } = {},
 ): Promise<string> => {
   const rows = await db
-    .insert(lobbyMembers)
+    .insert(lobbyEntries)
     .values({
       lobbyId,
-      userId: member.userId ?? null,
-      guestName: member.guestName ?? null,
+      userId: entry.userId ?? null,
+      guestName: entry.guestName ?? null,
+      leftAt: entry.leftAt ?? null,
     })
-    .returning({ id: lobbyMembers.id });
+    .returning({ id: lobbyEntries.id });
 
-  return firstRow(rows, 'insertLobbyMember').id;
+  return firstRow(rows, 'insertLobbyEntry').id;
 };
 
 export const insertCandidateDate = async (

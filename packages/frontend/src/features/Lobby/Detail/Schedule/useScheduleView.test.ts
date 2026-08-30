@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ref } from 'vue';
-import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
+import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 
@@ -9,13 +10,14 @@ const MEMBER_B = 'member-b';
 const MEMBER_C = 'member-c';
 const DATE_ID = 'date-1';
 
-function makeMember(id: string): LobbyMember {
+function makeMember(id: string): LobbyEntryModel {
   return {
     id,
     userId: null,
     userName: null,
     guestName: id,
-    joinedAt: '2026-01-01T00:00:00Z',
+    joinedAt: new Date('2026-01-01T00:00:00Z'),
+    leftAt: null,
   };
 }
 

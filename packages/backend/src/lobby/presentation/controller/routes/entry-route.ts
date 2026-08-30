@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import type {
-  LobbyMember,
+  LobbyEntry,
   JoinLobbyAsGuestInput,
   JoinLobbyInput,
 } from '@taku-biyori/shared';
@@ -9,17 +9,17 @@ import {
   JoinLobbyAsGuestInputSchema,
   JoinLobbyInputSchema,
 } from '@taku-biyori/shared';
-import type { ListMembersResult } from '@/lobby/application/list-members';
+import type { ListEntriesResult } from '@/lobby/application/list-entries';
 import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestResult } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyResult } from '@/lobby/application/leave-lobby';
 
-export interface RegisterMemberRouteOptions {
+export interface RegisterEntryRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
-  listMembers: (
+  listEntries: (
     lobbyId: string,
     userId: string | null,
-  ) => Promise<ListMembersResult>;
+  ) => Promise<ListEntriesResult>;
   joinLobby: (
     lobbyId: string,
     userId: string,
@@ -32,20 +32,20 @@ export interface RegisterMemberRouteOptions {
   ) => Promise<JoinAsGuestResult>;
   leaveLobby: (
     lobbyId: string,
-    memberId: string,
+    entryId: string,
     userId: string,
   ) => Promise<LeaveLobbyResult>;
 }
 
-export const registerMemberRoute = (
+export const registerEntryRoute = (
   app: Hono,
-  options: RegisterMemberRouteOptions,
+  options: RegisterEntryRouteOptions,
 ): void => {
-  app.get('/api/lobbies/:id/members', async (c) => {
+  app.get('/api/lobbies/:id/entries', async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     const userId = authSession?.user.id ?? null;
 
-    const result = await options.listMembers(c.req.param('id'), userId);
+    const result = await options.listEntries(c.req.param('id'), userId);
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') {
@@ -53,10 +53,10 @@ export const registerMemberRoute = (
         ? c.json({ error: 'Unauthorized' }, 401)
         : c.json({ error: 'Forbidden' }, 403);
     }
-    return c.json(result.members satisfies LobbyMember[]);
+    return c.json(result.entries satisfies LobbyEntry[]);
   });
 
-  app.post('/api/lobbies/:id/members', async (c) => {
+  app.post('/api/lobbies/:id/entries', async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -88,11 +88,11 @@ export const registerMemberRoute = (
     if (result.type === 'alreadyJoined') {
       return c.json({ error: 'Already joined' }, 409);
     }
-    return c.json(result.member satisfies LobbyMember, 201);
+    return c.json(result.entry satisfies LobbyEntry, 201);
   });
 
   // ゲスト参加は完全匿名。認証は不要で、Guest-Token ヘッダーで認可する。
-  app.post('/api/lobbies/:id/guest-members', async (c) => {
+  app.post('/api/lobbies/:id/guest-entries', async (c) => {
     const token = c.req.header(GUEST_TOKEN_HEADER) ?? '';
 
     let body: unknown;
@@ -120,16 +120,16 @@ export const registerMemberRoute = (
     if (result.type === 'lobbyNotOpen') {
       return c.json({ error: 'Lobby is not open for joining' }, 422);
     }
-    return c.json(result.member satisfies LobbyMember, 201);
+    return c.json(result.entry satisfies LobbyEntry, 201);
   });
 
-  app.delete('/api/lobbies/:id/members/:memberId', async (c) => {
+  app.delete('/api/lobbies/:id/entries/:entryId', async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
 
     const result = await options.leaveLobby(
       c.req.param('id'),
-      c.req.param('memberId'),
+      c.req.param('entryId'),
       authSession.user.id,
     );
 

@@ -19,12 +19,14 @@ import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyRepository } from '@/lobby/application/update-lobby';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
 import type { UpdateLobbyStatusRepository } from '@/lobby/application/update-lobby-status';
-import type { ListMembersResult } from '@/lobby/application/list-members';
+import type { ListEntriesResult } from '@/lobby/application/list-entries';
 import type { JoinLobbyResult } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestResult } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyResult } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkResult } from '@/lobby/application/get-guest-link';
-import type { ListMembersRepository } from '@/lobby/application/list-members';
+import type { RegenerateGuestLinkResult } from '@/lobby/application/regenerate-guest-link';
+import type { RegenerateGuestLinkRepository } from '@/lobby/application/regenerate-guest-link';
+import type { ListEntriesRepository } from '@/lobby/application/list-entries';
 import type { JoinLobbyRepository } from '@/lobby/application/join-lobby';
 import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
@@ -43,11 +45,12 @@ import { getLobby } from '@/lobby/application/get-lobby';
 import { updateLobby } from '@/lobby/application/update-lobby';
 import { deleteLobby } from '@/lobby/application/delete-lobby';
 import { updateLobbyStatus } from '@/lobby/application/update-lobby-status';
-import { listMembers } from '@/lobby/application/list-members';
+import { listEntries } from '@/lobby/application/list-entries';
 import { joinLobby } from '@/lobby/application/join-lobby';
 import { joinAsGuest } from '@/lobby/application/join-as-guest';
 import { leaveLobby } from '@/lobby/application/leave-lobby';
 import { getGuestLink } from '@/lobby/application/get-guest-link';
+import { regenerateGuestLink } from '@/lobby/application/regenerate-guest-link';
 import { listAvailabilityDates } from '@/lobby/application/list-availability-dates';
 import { bulkUpdateAvailabilityDates } from '@/lobby/application/bulk-update-availability-dates';
 import { updateAvailabilityDateResponse } from '@/lobby/application/update-availability-date-response';
@@ -59,11 +62,12 @@ type LobbyRepo = ListLobbiesRepository &
   UpdateLobbyRepository &
   DeleteLobbyRepository &
   UpdateLobbyStatusRepository &
-  ListMembersRepository &
+  ListEntriesRepository &
   JoinLobbyRepository &
   JoinAsGuestRepository &
   LeaveLobbyRepository &
   GetGuestLinkRepository &
+  RegenerateGuestLinkRepository &
   ListAvailabilityDatesRepository &
   BulkUpdateAvailabilityDatesRepository &
   UpdateAvailabilityDateResponseRepository &
@@ -84,10 +88,10 @@ export interface LobbyUseCases {
     userId: string,
     input: UpdateLobbyStatusInput,
   ): Promise<UpdateLobbyStatusResult>;
-  listMembers(
+  listEntries(
     lobbyId: string,
     userId: string | null,
-  ): Promise<ListMembersResult>;
+  ): Promise<ListEntriesResult>;
   joinLobby(
     lobbyId: string,
     userId: string,
@@ -100,10 +104,14 @@ export interface LobbyUseCases {
   ): Promise<JoinAsGuestResult>;
   leaveLobby(
     lobbyId: string,
-    memberId: string,
+    entryId: string,
     userId: string,
   ): Promise<LeaveLobbyResult>;
   getGuestLink(id: string, userId: string): Promise<GetGuestLinkResult>;
+  regenerateGuestLink(
+    id: string,
+    userId: string,
+  ): Promise<RegenerateGuestLinkResult>;
   listAvailabilityDates(
     lobbyId: string,
     userId: string | null,
@@ -123,7 +131,7 @@ export interface LobbyUseCases {
     lobbyId: string,
     dateId: string,
     token: string,
-    memberId: string,
+    entryId: string,
     input: UpdateLobbyAvailabilityDateResponseInput,
   ): Promise<UpdateGuestAvailabilityDateResponseResult>;
 }
@@ -148,10 +156,10 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
     input: UpdateLobbyStatusInput,
   ): Promise<UpdateLobbyStatusResult> =>
     updateLobbyStatus(repo, id, userId, input),
-  listMembers: (
+  listEntries: (
     lobbyId: string,
     userId: string | null,
-  ): Promise<ListMembersResult> => listMembers(repo, lobbyId, userId),
+  ): Promise<ListEntriesResult> => listEntries(repo, lobbyId, userId),
   joinLobby: (
     lobbyId: string,
     userId: string,
@@ -164,11 +172,16 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
   ): Promise<JoinAsGuestResult> => joinAsGuest(repo, lobbyId, token, input),
   leaveLobby: (
     lobbyId: string,
-    memberId: string,
+    entryId: string,
     userId: string,
-  ): Promise<LeaveLobbyResult> => leaveLobby(repo, lobbyId, memberId, userId),
+  ): Promise<LeaveLobbyResult> => leaveLobby(repo, lobbyId, entryId, userId),
   getGuestLink: (id: string, userId: string): Promise<GetGuestLinkResult> =>
     getGuestLink(repo, id, userId),
+  regenerateGuestLink: (
+    id: string,
+    userId: string,
+  ): Promise<RegenerateGuestLinkResult> =>
+    regenerateGuestLink(repo, id, userId),
   listAvailabilityDates: (
     lobbyId: string,
     userId: string | null,
@@ -191,7 +204,7 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
     lobbyId: string,
     dateId: string,
     token: string,
-    memberId: string,
+    entryId: string,
     input: UpdateLobbyAvailabilityDateResponseInput,
   ): Promise<UpdateGuestAvailabilityDateResponseResult> =>
     updateGuestAvailabilityDateResponse(
@@ -199,7 +212,7 @@ export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
       lobbyId,
       dateId,
       token,
-      memberId,
+      entryId,
       input,
     ),
 });

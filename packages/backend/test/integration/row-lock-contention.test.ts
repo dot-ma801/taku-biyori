@@ -26,7 +26,7 @@ import {
   insertGameSession,
   insertGameSessionMember,
   insertLobby,
-  insertLobbyMember,
+  insertLobbyEntry,
   insertUser,
 } from '@test/helpers/fixtures';
 
@@ -77,7 +77,7 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
       track('user', host.id);
       const lobbyId = await insertLobby(db, host.id);
       track('lobby', lobbyId);
-      await insertLobbyMember(db, lobbyId, { userId: host.id });
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -102,7 +102,9 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
       track('user', host.id);
       const joiner = await insertUser(db);
       track('user', joiner.id);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: true });
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+      });
       track('lobby', lobbyId);
       const repo = createLobbyRepository(db);
 
@@ -129,7 +131,7 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
       await Promise.race([locked.promise, deleting]);
 
       // 別トランザクションからの参加は親行の FOR KEY SHARE を取れずブロックされる
-      const joining = repo.addMember(lobbyId, joiner.id, {});
+      const joining = repo.addEntry(lobbyId, joiner.id, {});
       const joiningSettled = joining.then(
         () => 'settled',
         () => 'settled',
@@ -234,7 +236,7 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       // Arrange
       const host = await insertUser(db);
       track('user', host.id);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: false });
+      const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
       track('lobby', lobbyId);
       const repo = createLobbyRepository(db);
       const input = { dates: [{ date: '2100-11-11', dateNote: null }] };
@@ -261,7 +263,7 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
       // Arrange
       const host = await insertUser(db);
       track('user', host.id);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: false });
+      const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
       track('lobby', lobbyId);
       const repo = createLobbyRepository(db);
 

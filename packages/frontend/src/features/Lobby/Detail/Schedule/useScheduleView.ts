@@ -1,6 +1,7 @@
 import { computed, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
+import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 
 export const useScheduleView = (
@@ -27,7 +28,7 @@ export const useScheduleView = (
   /** 指定候補日に ok と回答したメンバー数 */
   function okCount(
     date: LobbyAvailabilityDate,
-    members: LobbyMember[],
+    members: LobbyEntryModel[],
   ): number {
     return members.filter((m) => getAnswer(date, m.id) === 'ok').length;
   }
@@ -35,7 +36,7 @@ export const useScheduleView = (
   // 回答種別ごとの件数（未回答はどのカウントにも含めない）。カード表示の集計に使う
   function answerCounts(
     date: LobbyAvailabilityDate,
-    members: LobbyMember[],
+    members: LobbyEntryModel[],
   ): Record<Answer, number> {
     const counts: Record<Answer, number> = { ok: 0, maybe: 0, ng: 0 };
     for (const member of members) {

@@ -34,17 +34,6 @@ export interface RegisterLobbyRouteOptions {
   ) => Promise<UpdateLobbyStatusResult>;
 }
 
-/**
- * candidateDates が「1件以上の配列」であるかだけを先に検査する。
- * 候補日なしの募集枠は存在意義がない（design-v1.1 §6）ため、
- * 通常のバリデーションエラー（400）と区別して 422 を返す。
- */
-const hasCandidateDates = (body: unknown): boolean => {
-  if (typeof body !== 'object' || body === null) return false;
-  const candidateDates = (body as Record<string, unknown>).candidateDates;
-  return Array.isArray(candidateDates) && candidateDates.length > 0;
-};
-
 export const registerLobbyRoute = (
   app: Hono,
   options: RegisterLobbyRouteOptions,
@@ -69,10 +58,6 @@ export const registerLobbyRoute = (
       body = await c.req.json();
     } catch {
       return c.json({ error: 'Invalid JSON' }, 400);
-    }
-
-    if (!hasCandidateDates(body)) {
-      return c.json({ error: '候補日を1件以上指定してください' }, 422);
     }
 
     const parsed = CreateLobbyInputSchema.safeParse(body);
@@ -177,7 +162,8 @@ export const registerLobbyRoute = (
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     if (result.type === 'invalidTransition') {
-      return c.json({ error: 'Invalid status transition' }, 409);
+      // 状態が操作を許さないため 422（design-v2 §6-13-2）
+      return c.json({ error: 'Invalid status transition' }, 422);
     }
     return c.json(result.lobby);
   });

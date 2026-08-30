@@ -2,16 +2,24 @@ import type {
   LobbyAvailabilityDateAnswer,
   UpdateLobbyAvailabilityDateResponseInput,
 } from '@taku-biyori/shared';
-import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyStatusInput } from '@/lobby/domain/lobby-status';
-import { getLobbyStatus } from '@/lobby/domain/lobby-status';
+import {
+  LobbyAction,
+  LobbyStatus,
+  canPerformLobbyAction,
+  getLobbyStatus,
+  type LobbyStatusFacts,
+} from '@taku-biyori/shared';
 
 export interface UpdateAvailabilityDateResponseRepository {
-  findStatusFields(lobbyId: string): Promise<LobbyStatusInput | null>;
+  findStatusFields(lobbyId: string): Promise<LobbyStatusFacts | null>;
   findCandidateOwner(
     dateId: string,
   ): Promise<{ lobbyId: string; date: string } | null>;
-  findMemberByUserId(lobbyId: string, userId: string): Promise<string | null>;
+  /** 在籍中の参加だけを引く。脱退済みの行では回答させない */
+  findActiveEntryByUserId(
+    lobbyId: string,
+    userId: string,
+  ): Promise<string | null>;
   upsertAnswer(
     candidateId: string,
     memberId: string,
@@ -40,12 +48,13 @@ export const updateAvailabilityDateResponse = async (
   const candidate = await repo.findCandidateOwner(dateId);
   if (!candidate || candidate.lobbyId !== lobbyId) return { type: 'notFound' };
 
-  const memberId = await repo.findMemberByUserId(lobbyId, userId);
+  const memberId = await repo.findActiveEntryByUserId(lobbyId, userId);
   if (!memberId) return { type: 'forbidden' };
 
   const status = getLobbyStatus(fields);
   if (status === LobbyStatus.draft) return { type: 'notPublished' };
-  if (status !== LobbyStatus.open && status !== LobbyStatus.scheduling) {
+  // 受付終了（closed）でも、すでに参加している人は回答できる（design-v2 §3-2）
+  if (!canPerformLobbyAction(LobbyAction.answerSchedule, status, 'member')) {
     return { type: 'invalidStatus' };
   }
 

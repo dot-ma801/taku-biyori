@@ -6,18 +6,45 @@ import { todayDateString } from '@/date';
 export { LobbyStatus };
 export const LobbyStatusSchema = z.nativeEnum(LobbyStatus);
 
+/**
+ * ロビーへの参加（lobby.lobby_entries）。v0.2 の `LobbyMember` の改名（design-v2 §3-3）。
+ *
+ * - ログインユーザー: `userId` が非 null、`guestName` は null
+ * - ゲスト: `userId` が null、`guestName` が非 null
+ *
+ * **脱退しても行は消えない。** `leftAt` に時刻が入るだけで、過去の着席・回答・メモは
+ * 繋がったまま残る（design-v2 §9-5）。再参加は新しい行を作らず `leftAt` を null に戻す。
+ *
+ * キャラクター名は着席してからの関心事のため、LobbyEntry は `characterName` を持たない。
+ */
+export const LobbyEntrySchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().nullable(),
+  userName: z.string().nullable(),
+  guestName: z.string().nullable(),
+  joinedAt: z.string(),
+  /** 脱退日時。null なら在籍中 */
+  leftAt: z.string().nullable(),
+});
+export type LobbyEntry = z.infer<typeof LobbyEntrySchema>;
+
 export const LobbyListItemSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   scenarioName: z.string().nullable().optional(),
   status: LobbyStatusSchema,
-  isPublished: z.boolean(),
+  /** 下書きを抜けて動き出した時点。null なら draft */
+  publishedAt: z.string().nullable(),
   openUntil: z.string().nullable().optional(),
-  memberCount: z.number().int(),
+  /** ホストが受付を手動で閉じた時点。追加募集で null に戻る */
+  receptionClosedAt: z.string().nullable(),
   maxPlayers: z.number().int().nullable().optional(),
+  /** 参加者。**脱退者も含む**（leftAt で見分ける）。件数が要るなら長さを取る */
+  entries: z.array(LobbyEntrySchema),
+  /** ホストの userId。`hostUserId === myUserId` で自分がホストか判定する */
+  hostUserId: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  role: z.enum(['host', 'member']).nullable(),
 });
 export type LobbyListItem = z.infer<typeof LobbyListItemSchema>;
 
@@ -28,10 +55,14 @@ export const LobbySchema = z.object({
   scenarioName: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
   status: LobbyStatusSchema,
-  isPublished: z.boolean(),
+  /** 下書きを抜けて動き出した時点。null なら draft（v0.2 の isPublished を置き換えた） */
+  publishedAt: z.string().nullable(),
   maxPlayers: z.number().int().nullable().optional(),
   openUntil: z.string().nullable().optional(),
-  cancelledAt: z.string().nullable().optional(),
+  /** ホストが**新しい参加の受付**を手動で閉じた時点。追加募集で null に戻る */
+  receptionClosedAt: z.string().nullable(),
+  /** **企画そのもの**を畳んだ日時（v0.2 の cancelledAt の改名）。終端状態 */
+  disbandedAt: z.string().nullable().optional(),
   hostUserId: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -63,10 +94,12 @@ export const CreateLobbyInputSchema = z
     location: z.string().max(200).optional(),
     maxPlayers: z.number().int().min(2).max(20).optional(),
     openUntil: z.iso.date().optional(),
+    // v2 で必須から任意になった（design-v2 §6-13-1）。1件以上渡したときだけ
+    // 日程調整 #1 とその候補日を同時に作る。省略すれば直接卓立ての経路になる
     candidateDates: z
       .array(LobbyCandidateDateInputSchema)
-      .min(1)
-      .max(LOBBY_CANDIDATE_DATES_MAX_COUNT),
+      .max(LOBBY_CANDIDATE_DATES_MAX_COUNT)
+      .optional(),
   })
   .superRefine((input, ctx) => {
     const today = todayDateString();
@@ -77,7 +110,7 @@ export const CreateLobbyInputSchema = z
         message: '募集締め切り日には今日以降の日付を指定してください',
       });
     }
-    const dates = input.candidateDates.map((entry) => entry.date);
+    const dates = (input.candidateDates ?? []).map((entry) => entry.date);
     if (new Set(dates).size !== dates.length) {
       ctx.addIssue({
         code: 'custom',
@@ -112,46 +145,23 @@ export const UpdateLobbyInputSchema = z
   });
 export type UpdateLobbyInput = z.infer<typeof UpdateLobbyInputSchema>;
 
+/**
+ * 遷移の**意図**を表す。現在のステータスそのものを送るのではない（design-v2 §6-13-2）。
+ *
+ * - `open`: 公開（published_at をセット）／追加募集（reception_closed_at をクリア）
+ * - `closed`: 受付を閉じる（reception_closed_at をセット）。企画は継続する
+ * - `disbanded`: 解散（disbanded_at をセット）。終端状態
+ */
 export const UpdateLobbyStatusInputSchema = z.object({
-  status: z.enum(['open', 'cancelled']),
+  status: z.enum(['open', 'closed', 'disbanded']),
 });
 export type UpdateLobbyStatusInput = z.infer<
   typeof UpdateLobbyStatusInputSchema
 >;
 
-export const LobbyMemberSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().nullable(),
-  userName: z.string().nullable(),
-  guestName: z.string().nullable(),
-  joinedAt: z.string(),
-});
-export type LobbyMember = z.infer<typeof LobbyMemberSchema>;
-
-/**
- * ロビーへの参加（lobby.lobby_entries）。v0.2 の `LobbyMember` の改名（design-v2 §3-3）。
- *
- * - ログインユーザー: `userId` が非 null、`guestName` は null
- * - ゲスト: `userId` が null、`guestName` が非 null
- *
- * **脱退しても行は消えない。** `leftAt` に時刻が入るだけで、過去の着席・回答・メモは
- * 繋がったまま残る（design-v2 §9-5）。再参加は新しい行を作らず `leftAt` を null に戻す。
- *
- * キャラクター名は着席してからの関心事のため、LobbyEntry は `characterName` を持たない。
- */
-export const LobbyEntrySchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().nullable(),
-  userName: z.string().nullable(),
-  guestName: z.string().nullable(),
-  joinedAt: z.string(),
-  /** 脱退日時。null なら在籍中 */
-  leftAt: z.string().nullable(),
-});
-export type LobbyEntry = z.infer<typeof LobbyEntrySchema>;
-
 export const LobbyDetailSchema = LobbySchema.extend({
-  members: z.array(LobbyMemberSchema),
+  /** 参加者。**脱退者も含めて全件返す**（leftAt で見分ける）。ホストが先頭、以降 joinedAt 昇順 */
+  entries: z.array(LobbyEntrySchema),
 });
 export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
 

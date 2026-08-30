@@ -10,7 +10,7 @@ import type {
   LobbyDetail,
   LobbyGuestLinkResponse,
   LobbyListItem,
-  LobbyMember,
+  LobbyEntry,
   UpdateLobbyAvailabilityDateResponseInput,
   UpdateLobbyInput,
   UpdateLobbyStatusInput,
@@ -97,15 +97,15 @@ export async function joinLobby(
   id: string,
   input: JoinLobbyInput,
 ): Promise<LobbyEntryModel> {
-  const dto = (await apiRequest<LobbyMember>(`/api/lobbies/${id}/members`, {
+  const dto = (await apiRequest<LobbyEntry>(`/api/lobbies/${id}/entries`, {
     method: 'POST',
     body: input,
   }))!;
   return toLobbyEntryModel(dto);
 }
 
-export function leaveLobby(id: string, memberId: string): Promise<void> {
-  return apiRequest<void>(`/api/lobbies/${id}/members/${memberId}`, {
+export function leaveLobby(id: string, entryId: string): Promise<void> {
+  return apiRequest<void>(`/api/lobbies/${id}/entries/${entryId}`, {
     method: 'DELETE',
   });
 }
@@ -140,8 +140,8 @@ export async function joinLobbyAsGuest(
   token: string,
   input: JoinLobbyAsGuestInput,
 ): Promise<LobbyEntryModel> {
-  const dto = (await apiRequest<LobbyMember>(
-    `/api/lobbies/${id}/guest-members`,
+  const dto = (await apiRequest<LobbyEntry>(
+    `/api/lobbies/${id}/guest-entries`,
     {
       method: 'POST',
       body: input,

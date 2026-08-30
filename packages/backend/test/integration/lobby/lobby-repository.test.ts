@@ -15,27 +15,27 @@ import {
   lobbies,
   lobbyAnswers,
   lobbyCandidates,
-  lobbyMembers,
+  lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import { closeTestDatabase, withRollback } from '@test/helpers/test-database';
 import {
   insertAnswer,
   insertCandidateDate,
   insertLobby,
-  insertLobbyMember,
+  insertLobbyEntry,
   insertUser,
 } from '@test/helpers/fixtures';
 
 afterAll(closeTestDatabase);
 
 describe('findByUserId', () => {
-  it('ホストの募集枠を role: host・参加者数つきで返す', async () => {
+  it('ホストのロビーを hostUserId・参加者つきで返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, { title: 'ホストの卓' });
-      await insertLobbyMember(db, lobbyId, { userId: host.id });
-      await insertLobbyMember(db, lobbyId, { guestName: 'ゲスト' });
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      await insertLobbyEntry(db, lobbyId, { guestName: 'ゲスト' });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -45,36 +45,38 @@ describe('findByUserId', () => {
       const target = rows.find((row) => row.id === lobbyId);
       expect(target).toMatchObject({
         title: 'ホストの卓',
-        role: 'host',
-        memberCount: 2,
+        hostUserId: host.id,
       });
+      expect(target?.entries).toHaveLength(2);
     });
   });
 
-  it('参加している他人の募集枠を role: member で返す', async () => {
+  it('参加している他人のロビーを返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const member = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      await insertLobbyMember(db, lobbyId, { userId: member.id });
+      await insertLobbyEntry(db, lobbyId, { userId: member.id });
       const repo = createLobbyRepository(db);
 
       // Act
       const rows = await repo.findByUserId(member.id);
 
       // Assert
-      expect(rows.find((row) => row.id === lobbyId)?.role).toBe('member');
+      const row = rows.find((r) => r.id === lobbyId);
+      expect(row?.hostUserId).toBe(host.id);
+      expect(row?.entries.map((e) => e.userId)).toContain(member.id);
     });
   });
 
-  it('未参加でも公開・募集中の募集枠は role: null で含まれる', async () => {
+  it('未参加でも公開・受付中のロビーは含まれる（探索用）', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const stranger = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
+        publishedAt: new Date(),
         openUntil: null,
       });
       const repo = createLobbyRepository(db);
@@ -83,7 +85,9 @@ describe('findByUserId', () => {
       const rows = await repo.findByUserId(stranger.id);
 
       // Assert
-      expect(rows.find((row) => row.id === lobbyId)?.role).toBeNull();
+      const row = rows.find((r) => r.id === lobbyId);
+      expect(row).toBeDefined();
+      expect(row?.entries.some((e) => e.userId === stranger.id)).toBe(false);
     });
   });
 
@@ -92,7 +96,7 @@ describe('findByUserId', () => {
       // Arrange
       const host = await insertUser(db);
       const stranger = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: false });
+      const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -109,7 +113,7 @@ describe('findByUserId', () => {
       const host = await insertUser(db);
       const stranger = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
+        publishedAt: new Date(),
         openUntil: '2000-01-01',
       });
       const repo = createLobbyRepository(db);
@@ -127,7 +131,7 @@ describe('findByUserId', () => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
+        publishedAt: new Date(),
         openUntil: '2000-01-01',
       });
       const repo = createLobbyRepository(db);
@@ -136,7 +140,7 @@ describe('findByUserId', () => {
       const rows = await repo.findByUserId(host.id);
 
       // Assert
-      expect(rows.find((row) => row.id === lobbyId)?.role).toBe('host');
+      expect(rows.find((row) => row.id === lobbyId)?.hostUserId).toBe(host.id);
     });
   });
 
@@ -144,19 +148,19 @@ describe('findByUserId', () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const cancelledId = await insertLobby(db, host.id, {
-        isPublished: true,
-        cancelledAt: new Date(),
+      const disbandedId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        disbandedAt: new Date(),
       });
-      const draftId = await insertLobby(db, host.id, { isPublished: false });
+      const draftId = await insertLobby(db, host.id, { publishedAt: null });
       const repo = createLobbyRepository(db);
 
       // Act
       const rows = await repo.findByUserId(host.id);
 
       // Assert
-      expect(rows.find((row) => row.id === cancelledId)?.status).toBe(
-        LobbyStatus.cancelled,
+      expect(rows.find((row) => row.id === disbandedId)?.status).toBe(
+        LobbyStatus.disbanded,
       );
       expect(rows.find((row) => row.id === draftId)?.status).toBe(
         LobbyStatus.draft,
@@ -202,7 +206,9 @@ describe('findLobbyStatus / findStatusFields', () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: true });
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+      });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -213,12 +219,12 @@ describe('findLobbyStatus / findStatusFields', () => {
     });
   });
 
-  it('期限切れなら scheduling を返す', async () => {
+  it('締め切り日を過ぎていれば closed を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
+        publishedAt: new Date(),
         openUntil: '2000-01-01',
       });
       const repo = createLobbyRepository(db);
@@ -227,7 +233,7 @@ describe('findLobbyStatus / findStatusFields', () => {
       const status = await repo.findLobbyStatus(lobbyId);
 
       // Assert
-      expect(status).toBe(LobbyStatus.scheduling);
+      expect(status).toBe(LobbyStatus.closed);
     });
   });
 
@@ -246,12 +252,12 @@ describe('findLobbyStatus / findStatusFields', () => {
     });
   });
 
-  it('findStatusFields は date 型の open_until を Date に変換して返す', async () => {
+  it('findStatusFields は date 型の open_until を YYYY-MM-DD の文字列で返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
+        publishedAt: new Date(),
         openUntil: '2100-06-01',
       });
       const repo = createLobbyRepository(db);
@@ -260,8 +266,7 @@ describe('findLobbyStatus / findStatusFields', () => {
       const fields = await repo.findStatusFields(lobbyId);
 
       // Assert
-      expect(fields?.openUntil).toBeInstanceOf(Date);
-      expect(fields?.openUntil?.toISOString().slice(0, 10)).toBe('2100-06-01');
+      expect(fields?.openUntil).toBe('2100-06-01');
     });
   });
 });
@@ -272,8 +277,8 @@ describe('findDetailById', () => {
       // Arrange
       const host = await insertUser(db, { name: 'ホストさん' });
       const lobbyId = await insertLobby(db, host.id, { title: '詳細テスト' });
-      await insertLobbyMember(db, lobbyId, { userId: host.id });
-      await insertLobbyMember(db, lobbyId, { guestName: 'ゲストさん' });
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      await insertLobbyEntry(db, lobbyId, { guestName: 'ゲストさん' });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -281,9 +286,9 @@ describe('findDetailById', () => {
 
       // Assert
       expect(detail?.title).toBe('詳細テスト');
-      expect(detail?.members).toHaveLength(2);
-      expect(detail?.members.map((m) => m.userName)).toContain('ホストさん');
-      expect(detail?.members.map((m) => m.guestName)).toContain('ゲストさん');
+      expect(detail?.entries).toHaveLength(2);
+      expect(detail?.entries.map((e) => e.userName)).toContain('ホストさん');
+      expect(detail?.entries.map((e) => e.guestName)).toContain('ゲストさん');
     });
   });
 
@@ -299,7 +304,7 @@ describe('findDetailById', () => {
 
       // Assert
       expect(detail?.id).toBe(lobbyId);
-      expect(detail?.members).toEqual([]);
+      expect(detail?.entries).toEqual([]);
     });
   });
 
@@ -379,7 +384,7 @@ describe('deleteById', () => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
@@ -396,8 +401,8 @@ describe('deleteById', () => {
       expect(
         await db
           .select()
-          .from(lobbyMembers)
-          .where(eq(lobbyMembers.lobbyId, lobbyId)),
+          .from(lobbyEntries)
+          .where(eq(lobbyEntries.lobbyId, lobbyId)),
       ).toHaveLength(0);
       expect(
         await db
@@ -409,20 +414,20 @@ describe('deleteById', () => {
   });
 });
 
-describe('countOtherMembers', () => {
+describe('countOtherEntries', () => {
   it('ホスト以外のメンバー数を数える', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const other = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      await insertLobbyMember(db, lobbyId, { userId: host.id });
-      await insertLobbyMember(db, lobbyId, { userId: other.id });
-      await insertLobbyMember(db, lobbyId, { guestName: 'ゲスト' });
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      await insertLobbyEntry(db, lobbyId, { userId: other.id });
+      await insertLobbyEntry(db, lobbyId, { guestName: 'ゲスト' });
       const repo = createLobbyRepository(db);
 
       // Act
-      const count = await repo.countOtherMembers(lobbyId, host.id);
+      const count = await repo.countOtherEntries(lobbyId, host.id);
 
       // Assert
       expect(count).toBe(2);
@@ -434,11 +439,11 @@ describe('countOtherMembers', () => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      await insertLobbyMember(db, lobbyId, { userId: host.id });
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
       const repo = createLobbyRepository(db);
 
       // Act
-      const count = await repo.countOtherMembers(lobbyId, host.id);
+      const count = await repo.countOtherEntries(lobbyId, host.id);
 
       // Assert
       expect(count).toBe(0);
@@ -451,14 +456,14 @@ describe('publish', () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: false });
+      const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
       const repo = createLobbyRepository(db);
 
       // Act
       const published = await repo.publish(lobbyId);
 
       // Assert
-      expect(published?.isPublished).toBe(true);
+      expect(published?.publishedAt).not.toBeNull();
       expect(published?.status).toBe(LobbyStatus.open);
     });
   });
@@ -467,7 +472,9 @@ describe('publish', () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: true });
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+      });
       const repo = createLobbyRepository(db);
 
       // Act
@@ -479,38 +486,138 @@ describe('publish', () => {
   });
 });
 
-describe('cancel', () => {
-  it('cancelled_at をセットして中止にする', async () => {
-    await withRollback(async (db) => {
-      // Arrange
-      const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: true });
-      const repo = createLobbyRepository(db);
-
-      // Act
-      const cancelled = await repo.cancel(lobbyId);
-
-      // Assert
-      expect(cancelled?.status).toBe(LobbyStatus.cancelled);
-      expect(cancelled?.cancelledAt).not.toBeNull();
-    });
-  });
-
-  it('中止済みを再度中止しても null を返す', async () => {
+describe('closeReception / reopenReception', () => {
+  it('closeReception は reception_closed_at をセットして受付終了にする', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
-        isPublished: true,
-        cancelledAt: new Date(),
+        publishedAt: new Date(),
       });
       const repo = createLobbyRepository(db);
 
       // Act
-      const cancelled = await repo.cancel(lobbyId);
+      const closed = await repo.closeReception(lobbyId);
 
       // Assert
-      expect(cancelled).toBeNull();
+      expect(closed?.status).toBe(LobbyStatus.closed);
+      expect(closed?.receptionClosedAt).not.toBeNull();
+    });
+  });
+
+  it('closeReception は受付終了済みなら null を返す（二重クローズの排他）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const closed = await repo.closeReception(lobbyId);
+
+      // Assert
+      expect(closed).toBeNull();
+    });
+  });
+
+  it('reopenReception は reception_closed_at を消して受付中に戻す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const reopened = await repo.reopenReception(lobbyId);
+
+      // Assert
+      expect(reopened?.receptionClosedAt).toBeNull();
+      expect(reopened?.status).toBe(LobbyStatus.open);
+    });
+  });
+
+  // CASE 式は実 DB でしか検証できない（モックの単体テストでは式の誤りを検出できない）
+  it('reopenReception は過去日の open_until を NULL に戻す', async () => {
+    await withRollback(async (db) => {
+      // Arrange — 締め切り日が過ぎたまま再開すると closed のままになってしまう
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        openUntil: '2020-01-01',
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const reopened = await repo.reopenReception(lobbyId);
+
+      // Assert
+      expect(reopened?.openUntil).toBeNull();
+      expect(reopened?.status).toBe(LobbyStatus.open);
+    });
+  });
+
+  it('reopenReception は未来日の open_until を保持する', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        openUntil: '2099-12-31',
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const reopened = await repo.reopenReception(lobbyId);
+
+      // Assert
+      expect(reopened?.openUntil).toBe('2099-12-31');
+      expect(reopened?.status).toBe(LobbyStatus.open);
+    });
+  });
+});
+
+describe('disband', () => {
+  it('disbanded_at をセットして解散にする', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const disbanded = await repo.disband(lobbyId);
+
+      // Assert
+      expect(disbanded?.status).toBe(LobbyStatus.disbanded);
+      expect(disbanded?.disbandedAt).not.toBeNull();
+    });
+  });
+
+  it('解散済みを再度解散しても null を返す（二重解散の排他）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        disbandedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const disbanded = await repo.disband(lobbyId);
+
+      // Assert
+      expect(disbanded).toBeNull();
     });
   });
 });
@@ -540,8 +647,8 @@ describe('createWithHostAndCandidates', () => {
       expect(
         await db
           .select()
-          .from(lobbyMembers)
-          .where(eq(lobbyMembers.lobbyId, created.id)),
+          .from(lobbyEntries)
+          .where(eq(lobbyEntries.lobbyId, created.id)),
       ).toHaveLength(1);
       expect(
         await db
@@ -578,18 +685,21 @@ describe('createWithHostAndCandidates', () => {
 });
 
 describe('findLobbyVisibility', () => {
-  it('公開フラグとホストを返す', async () => {
+  it('公開日時とホストを返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: true });
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+      });
       const repo = createLobbyRepository(db);
 
       // Act
       const visibility = await repo.findLobbyVisibility(lobbyId);
 
       // Assert
-      expect(visibility).toEqual({ isPublished: true, hostUserId: host.id });
+      expect(visibility?.hostUserId).toBe(host.id);
+      expect(visibility?.publishedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -609,29 +719,29 @@ describe('findLobbyVisibility', () => {
   });
 });
 
-describe('メンバー操作', () => {
-  it('findMembersByLobbyId は参加順に返す', async () => {
+describe('エントリー操作', () => {
+  it('findEntriesByLobbyId は参加順に返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db, { name: 'ホスト' });
       const lobbyId = await insertLobby(db, host.id);
-      const first = await insertLobbyMember(db, lobbyId, { userId: host.id });
-      const second = await insertLobbyMember(db, lobbyId, {
+      const first = await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      const second = await insertLobbyEntry(db, lobbyId, {
         guestName: 'あとから',
       });
       const repo = createLobbyRepository(db);
 
       // Act
-      const members = await repo.findMembersByLobbyId(lobbyId);
+      const entries = await repo.findEntriesByLobbyId(lobbyId);
 
       // Assert
-      expect(members.map((m) => m.id)).toEqual([first, second]);
-      expect(members[0]?.userName).toBe('ホスト');
-      expect(members[1]?.guestName).toBe('あとから');
+      expect(entries.map((e) => e.id)).toEqual([first, second]);
+      expect(entries[0]?.userName).toBe('ホスト');
+      expect(entries[1]?.guestName).toBe('あとから');
     });
   });
 
-  it('findMembersByLobbyId はメンバーがいなければ空配列を返す', async () => {
+  it('findEntriesByLobbyId はメンバーがいなければ空配列を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -639,31 +749,33 @@ describe('メンバー操作', () => {
       const repo = createLobbyRepository(db);
 
       // Act
-      const members = await repo.findMembersByLobbyId(lobbyId);
+      const entries = await repo.findEntriesByLobbyId(lobbyId);
 
       // Assert
-      expect(members).toEqual([]);
+      expect(entries).toEqual([]);
     });
   });
 
-  it('findMemberByUserId は参加していれば member id を返す', async () => {
+  it('findActiveEntryByUserId は参加していれば entry id を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const member = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: member.id,
       });
       const repo = createLobbyRepository(db);
 
       // Act & Assert
-      expect(await repo.findMemberByUserId(lobbyId, member.id)).toBe(memberId);
-      expect(await repo.findMemberByUserId(lobbyId, host.id)).toBeNull();
+      expect(await repo.findActiveEntryByUserId(lobbyId, member.id)).toBe(
+        memberId,
+      );
+      expect(await repo.findActiveEntryByUserId(lobbyId, host.id)).toBeNull();
     });
   });
 
-  it('addMember は参加者を追加してユーザー名つきで返す', async () => {
+  it('addEntry は参加者を追加してユーザー名つきで返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -672,7 +784,7 @@ describe('メンバー操作', () => {
       const repo = createLobbyRepository(db);
 
       // Act
-      const added = await repo.addMember(lobbyId, joiner.id, {});
+      const added = await repo.addEntry(lobbyId, joiner.id, {});
 
       // Assert
       expect(added).toMatchObject({
@@ -683,24 +795,24 @@ describe('メンバー操作', () => {
     });
   });
 
-  it('addMember は同じユーザーの二重参加で null を返す（partial unique index）', async () => {
+  it('addEntry は同じユーザーの二重参加で null を返す（partial unique index）', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const joiner = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      await insertLobbyMember(db, lobbyId, { userId: joiner.id });
+      await insertLobbyEntry(db, lobbyId, { userId: joiner.id });
       const repo = createLobbyRepository(db);
 
       // Act
-      const added = await repo.addMember(lobbyId, joiner.id, {});
+      const added = await repo.addEntry(lobbyId, joiner.id, {});
 
       // Assert
       expect(added).toBeNull();
     });
   });
 
-  it('addGuestMember は同名のゲストを何人でも追加できる', async () => {
+  it('addGuestEntry は同名のゲストを何人でも追加できる', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -708,10 +820,10 @@ describe('メンバー操作', () => {
       const repo = createLobbyRepository(db);
 
       // Act
-      const first = await repo.addGuestMember(lobbyId, {
+      const first = await repo.addGuestEntry(lobbyId, {
         guestName: '同じ名前',
       });
-      const second = await repo.addGuestMember(lobbyId, {
+      const second = await repo.addGuestEntry(lobbyId, {
         guestName: '同じ名前',
       });
 
@@ -721,82 +833,175 @@ describe('メンバー操作', () => {
     });
   });
 
-  it('findMemberOwner はメンバーの所属と本人を返す', async () => {
+  it('findEntryOwner は参加の所属・本人・脱退日時を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const repo = createLobbyRepository(db);
 
       // Act
-      const owner = await repo.findMemberOwner(memberId);
+      const owner = await repo.findEntryOwner(memberId);
 
       // Assert
-      expect(owner).toEqual({ lobbyId, userId: host.id });
+      expect(owner).toEqual({ lobbyId, userId: host.id, leftAt: null });
     });
   });
 
-  it('deleteMemberById はメンバーを削除し、回答もカスケード削除される', async () => {
+  it('markEntryLeft は行を消さず left_at をセットし、過去の回答も残る', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const entryId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
-      await insertAnswer(db, candidateId, memberId, 'ok');
+      await insertAnswer(db, candidateId, entryId, 'ok');
       const repo = createLobbyRepository(db);
 
       // Act
-      await repo.deleteMemberById(memberId);
+      await repo.markEntryLeft(entryId);
 
       // Assert
-      expect(await repo.findMemberOwner(memberId)).toBeNull();
+      const owner = await repo.findEntryOwner(entryId);
+      expect(owner?.leftAt).toBeInstanceOf(Date);
       expect(
         await db
           .select()
           .from(lobbyAnswers)
-          .where(eq(lobbyAnswers.memberId, memberId)),
-      ).toHaveLength(0);
+          .where(eq(lobbyAnswers.memberId, entryId)),
+      ).toHaveLength(1);
     });
   });
 
-  it('isGuestMember はゲストのときだけ true を返す', async () => {
+  it('rejoinEntry は left_at を NULL に戻し、過去の回答が繋がったまま復帰する', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const member = await insertUser(db, { name: '戻ってきた人' });
+      const lobbyId = await insertLobby(db, host.id);
+      const entryId = await insertLobbyEntry(db, lobbyId, {
+        userId: member.id,
+      });
+      const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
+      await insertAnswer(db, candidateId, entryId, 'ok');
+      const repo = createLobbyRepository(db);
+      await repo.markEntryLeft(entryId);
+
+      // Act
+      const rejoined = await repo.rejoinEntry(entryId);
+
+      // Assert — 同じ行が復帰するので、回答の紐付け先も変わらない
+      expect(rejoined?.id).toBe(entryId);
+      expect(rejoined?.leftAt).toBeNull();
+      expect(rejoined?.userName).toBe('戻ってきた人');
+      expect(
+        await db
+          .select()
+          .from(lobbyAnswers)
+          .where(eq(lobbyAnswers.memberId, entryId)),
+      ).toHaveLength(1);
+    });
+  });
+
+  it('rejoinEntry は在籍中の行には何もしない（null を返す）', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const guestId = await insertLobbyMember(db, lobbyId, {
+      const entryId = await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rejoined = await repo.rejoinEntry(entryId);
+
+      // Assert
+      expect(rejoined).toBeNull();
+    });
+  });
+
+  it('脱退済みの参加も findEntriesByLobbyId には含まれる（参加者一覧は全件）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      const leftId = await insertLobbyEntry(db, lobbyId, {
+        guestName: '脱退した人',
+        leftAt: new Date('2026-08-10T00:00:00.000Z'),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const entries = await repo.findEntriesByLobbyId(lobbyId);
+
+      // Assert
+      expect(entries).toHaveLength(2);
+      expect(entries.find((e) => e.id === leftId)?.leftAt).not.toBeNull();
+    });
+  });
+
+  it('回答表（findByLobbyId）は脱退者の回答を含めない', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const activeId = await insertLobbyEntry(db, lobbyId, {
+        userId: host.id,
+      });
+      const leftId = await insertLobbyEntry(db, lobbyId, {
+        guestName: '脱退した人',
+        leftAt: new Date('2026-08-10T00:00:00.000Z'),
+      });
+      const candidateId = await insertCandidateDate(db, lobbyId, '2100-01-01');
+      await insertAnswer(db, candidateId, activeId, 'ok');
+      await insertAnswer(db, candidateId, leftId, 'ng');
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const dates = await repo.findByLobbyId(lobbyId);
+
+      // Assert — 回答自体は DB に残るが、表には在籍者のぶんだけが出る
+      expect(dates[0]?.answers.map((a) => a.memberId)).toEqual([activeId]);
+    });
+  });
+
+  it('isGuestEntry はゲストのときだけ true を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const guestId = await insertLobbyEntry(db, lobbyId, {
         guestName: 'ゲスト',
       });
-      const userMemberId = await insertLobbyMember(db, lobbyId, {
+      const userMemberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const repo = createLobbyRepository(db);
 
       // Act & Assert
-      expect(await repo.isGuestMember(lobbyId, guestId)).toBe(true);
-      expect(await repo.isGuestMember(lobbyId, userMemberId)).toBe(false);
+      expect(await repo.isGuestEntry(lobbyId, guestId)).toBe(true);
+      expect(await repo.isGuestEntry(lobbyId, userMemberId)).toBe(false);
     });
   });
 
-  it('isGuestMember は別の募集枠のメンバーには false を返す', async () => {
+  it('isGuestEntry は別の募集枠のメンバーには false を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
       const otherLobbyId = await insertLobby(db, host.id);
-      const guestId = await insertLobbyMember(db, otherLobbyId, {
+      const guestId = await insertLobbyEntry(db, otherLobbyId, {
         guestName: 'よそのゲスト',
       });
       const repo = createLobbyRepository(db);
 
       // Act & Assert
-      expect(await repo.isGuestMember(lobbyId, guestId)).toBe(false);
+      expect(await repo.isGuestEntry(lobbyId, guestId)).toBe(false);
     });
   });
 });
@@ -807,7 +1012,7 @@ describe('候補日と回答', () => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const later = await insertCandidateDate(db, lobbyId, '2100-02-01');
@@ -877,7 +1082,7 @@ describe('候補日と回答', () => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const candidateId = await insertCandidateDate(db, lobbyId, '2100-06-06');
@@ -936,7 +1141,7 @@ describe('applyDateChanges', () => {
       // Arrange
       const host = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id);
-      const memberId = await insertLobbyMember(db, lobbyId, {
+      const memberId = await insertLobbyEntry(db, lobbyId, {
         userId: host.id,
       });
       const keep = await insertCandidateDate(db, lobbyId, '2100-01-01', '旧');

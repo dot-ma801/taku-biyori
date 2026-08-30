@@ -8,7 +8,8 @@ const mockLobby: Lobby = {
   id: 'lobby-1',
   title: '更新後',
   status: LobbyStatus.draft,
-  isPublished: false,
+  publishedAt: null,
+  receptionClosedAt: null,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
@@ -70,10 +71,10 @@ describe('updateLobby', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('cancelled の場合は invalidStatus を返す', async () => {
+  it('disbanded の場合は invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.cancelled),
+      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.disbanded),
       updateById: vi.fn(),
     });
 
@@ -102,10 +103,10 @@ describe('updateLobby', () => {
     expect(result).toEqual({ type: 'ok', lobby: mockLobby });
   });
 
-  it('scheduling の場合は更新できる', async () => {
+  it('closed（受付終了）でも更新できる', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.scheduling),
+      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.closed),
     });
 
     // Act

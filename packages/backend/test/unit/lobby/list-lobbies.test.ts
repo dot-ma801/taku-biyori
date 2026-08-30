@@ -8,9 +8,10 @@ const mockListItem: LobbyListItem = {
   id: 'lobby-1',
   title: 'テスト募集',
   status: LobbyStatus.draft,
-  isPublished: false,
-  memberCount: 1,
-  role: 'host',
+  publishedAt: null,
+  receptionClosedAt: null,
+  entries: [],
+  hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
 };

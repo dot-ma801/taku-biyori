@@ -11,9 +11,10 @@ const mockDates: LobbyAvailabilityDate[] = [
 const makeRepo = (
   overrides: Partial<ListAvailabilityDatesRepository> = {},
 ): ListAvailabilityDatesRepository => ({
-  findLobbyVisibility: vi
-    .fn()
-    .mockResolvedValue({ isPublished: true, hostUserId: 'user-1' }),
+  findLobbyVisibility: vi.fn().mockResolvedValue({
+    publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+    hostUserId: 'user-1',
+  }),
   findByLobbyId: vi.fn().mockResolvedValue(mockDates),
   ...overrides,
 });
@@ -48,7 +49,7 @@ describe('listAvailabilityDates', () => {
     const repo = makeRepo({
       findLobbyVisibility: vi
         .fn()
-        .mockResolvedValue({ isPublished: false, hostUserId: 'user-1' }),
+        .mockResolvedValue({ publishedAt: null, hostUserId: 'user-1' }),
     });
 
     // Act
@@ -63,7 +64,7 @@ describe('listAvailabilityDates', () => {
     const repo = makeRepo({
       findLobbyVisibility: vi
         .fn()
-        .mockResolvedValue({ isPublished: false, hostUserId: 'user-1' }),
+        .mockResolvedValue({ publishedAt: null, hostUserId: 'user-1' }),
     });
 
     // Act

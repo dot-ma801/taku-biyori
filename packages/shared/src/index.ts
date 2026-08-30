@@ -71,8 +71,6 @@ export {
   type UpdateLobbyInput,
   UpdateLobbyStatusInputSchema,
   type UpdateLobbyStatusInput,
-  LobbyMemberSchema,
-  type LobbyMember,
   LobbyEntrySchema,
   type LobbyEntry,
   GUEST_TOKEN_HEADER,

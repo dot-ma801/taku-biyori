@@ -1,265 +1,355 @@
 import { describe, expect, it, vi } from 'vitest';
 import { updateLobbyStatus } from '@/lobby/application/update-lobby-status';
 import type { UpdateLobbyStatusRepository } from '@/lobby/application/update-lobby-status';
-import type { Lobby } from '@taku-biyori/shared';
+import type { Lobby, LobbyStatusFacts } from '@taku-biyori/shared';
 import { LobbyStatus } from '@taku-biyori/shared';
+
+const TODAY = '2026-08-29';
+const PUBLISHED_AT = new Date('2026-08-01T00:00:00.000Z');
 
 const baseLobby: Lobby = {
   id: 'lobby-1',
-  title: 'テスト募集',
+  title: 'テストロビー',
   status: LobbyStatus.draft,
-  isPublished: false,
+  publishedAt: null,
+  receptionClosedAt: null,
+  disbandedAt: null,
   hostUserId: 'user-1',
-  createdAt: '2025-01-01T00:00:00.000Z',
-  updatedAt: '2025-01-01T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 };
+
+const facts = {
+  draft: {
+    publishedAt: null,
+    openUntil: null,
+    receptionClosedAt: null,
+    disbandedAt: null,
+  },
+  open: {
+    publishedAt: PUBLISHED_AT,
+    openUntil: null,
+    receptionClosedAt: null,
+    disbandedAt: null,
+  },
+  closed: {
+    publishedAt: PUBLISHED_AT,
+    openUntil: null,
+    receptionClosedAt: new Date('2026-08-20T00:00:00.000Z'),
+    disbandedAt: null,
+  },
+  disbanded: {
+    publishedAt: PUBLISHED_AT,
+    openUntil: null,
+    receptionClosedAt: null,
+    disbandedAt: new Date('2026-08-25T00:00:00.000Z'),
+  },
+} satisfies Record<string, LobbyStatusFacts>;
 
 const makeRepo = (
   overrides: Partial<UpdateLobbyStatusRepository> = {},
 ): UpdateLobbyStatusRepository => ({
   findHostUserId: vi.fn().mockResolvedValue('user-1'),
-  findStatusFields: vi.fn().mockResolvedValue({
-    isPublished: false,
-    openUntil: null,
-    cancelledAt: null,
-  }),
-  publish: vi
-    .fn()
-    .mockResolvedValue({ ...baseLobby, status: 'open', isPublished: true }),
-  cancel: vi.fn().mockResolvedValue({
+  findStatusFields: vi.fn().mockResolvedValue(facts.draft),
+  findLobbyById: vi.fn().mockResolvedValue(baseLobby),
+  publish: vi.fn().mockResolvedValue({
     ...baseLobby,
-    status: 'cancelled',
-    cancelledAt: '2025-01-01T00:00:00.000Z',
+    status: LobbyStatus.open,
+    publishedAt: PUBLISHED_AT.toISOString(),
+  }),
+  closeReception: vi.fn().mockResolvedValue({
+    ...baseLobby,
+    status: LobbyStatus.closed,
+    publishedAt: PUBLISHED_AT.toISOString(),
+    receptionClosedAt: '2026-08-29T00:00:00.000Z',
+  }),
+  reopenReception: vi.fn().mockResolvedValue({
+    ...baseLobby,
+    status: LobbyStatus.open,
+    publishedAt: PUBLISHED_AT.toISOString(),
+    receptionClosedAt: null,
+  }),
+  disband: vi.fn().mockResolvedValue({
+    ...baseLobby,
+    status: LobbyStatus.disbanded,
+    disbandedAt: '2026-08-29T00:00:00.000Z',
   }),
   ...overrides,
 });
 
 describe('updateLobbyStatus', () => {
-  describe('draft → open（公開）', () => {
-    it('ホストが draft → open に遷移できる', async () => {
+  describe('target: open', () => {
+    it('draft からは公開する（published_at をセット）', async () => {
       // Arrange
-      const repo = makeRepo();
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue(facts.draft),
+      });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'open',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({
         type: 'ok',
-        lobby: expect.objectContaining({ status: 'open' }),
+        lobby: expect.objectContaining({ status: LobbyStatus.open }),
       });
-    });
-
-    it('publish を呼び出す', async () => {
-      // Arrange
-      const repo = makeRepo();
-
-      // Act
-      await updateLobbyStatus(repo, 'lobby-1', 'user-1', { status: 'open' });
-
-      // Assert
       expect(repo.publish).toHaveBeenCalledWith('lobby-1');
+      expect(repo.reopenReception).not.toHaveBeenCalled();
     });
 
-    it('draft 以外から open に遷移しようとすると invalidTransition を返す', async () => {
+    it('closed からは追加募集で受付を開き直す（reception_closed_at をクリア）', async () => {
       // Arrange
       const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: true,
-          openUntil: null,
-          cancelledAt: null,
-        }),
+        findStatusFields: vi.fn().mockResolvedValue(facts.closed),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'open',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
 
       // Assert
-      expect(result).toEqual({ type: 'invalidTransition' });
+      expect(result).toEqual({
+        type: 'ok',
+        lobby: expect.objectContaining({ status: LobbyStatus.open }),
+      });
+      expect(repo.reopenReception).toHaveBeenCalledWith('lobby-1');
       expect(repo.publish).not.toHaveBeenCalled();
     });
-  });
 
-  describe('募集中止（cancelled）', () => {
-    it('draft から中止できる', async () => {
+    it('すでに open なら書き込まずに成功する（冪等）', async () => {
       // Arrange
       const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: false,
-          openUntil: null,
-          cancelledAt: null,
-        }),
+        findStatusFields: vi.fn().mockResolvedValue(facts.open),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
+
+      // Assert
+      expect(result.type).toBe('ok');
+      expect(repo.publish).not.toHaveBeenCalled();
+      expect(repo.reopenReception).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('target: closed', () => {
+    it('open からは受付を閉じる（reception_closed_at をセット）', async () => {
+      // Arrange
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue(facts.open),
       });
+
+      // Act
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'closed' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({
         type: 'ok',
-        lobby: expect.objectContaining({ status: 'cancelled' }),
+        lobby: expect.objectContaining({ status: LobbyStatus.closed }),
       });
-      expect(repo.cancel).toHaveBeenCalledWith('lobby-1');
+      expect(repo.closeReception).toHaveBeenCalledWith('lobby-1');
     });
 
-    it('open から中止できる', async () => {
+    it('すでに closed なら書き込まずに成功する（冪等）', async () => {
       // Arrange
       const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: true,
-          openUntil: null,
-          cancelledAt: null,
-        }),
+        findStatusFields: vi.fn().mockResolvedValue(facts.closed),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'closed' },
+        TODAY,
+      );
 
       // Assert
       expect(result.type).toBe('ok');
+      expect(repo.closeReception).not.toHaveBeenCalled();
     });
 
-    it('scheduling から中止できる', async () => {
+    it('draft からは閉じられない（公開していない受付は閉じられない）', async () => {
       // Arrange
       const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: true,
-          openUntil: new Date('2000-01-01'),
-          cancelledAt: null,
-        }),
+        findStatusFields: vi.fn().mockResolvedValue(facts.draft),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
-      });
-
-      // Assert
-      expect(result.type).toBe('ok');
-    });
-
-    it('既に cancelled の場合（二重中止）は invalidTransition を返す', async () => {
-      // Arrange
-      const repo = makeRepo({
-        findStatusFields: vi.fn().mockResolvedValue({
-          isPublished: true,
-          openUntil: null,
-          cancelledAt: new Date('2025-01-01'),
-        }),
-        cancel: vi.fn(),
-      });
-
-      // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'closed' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({ type: 'invalidTransition' });
-      expect(repo.cancel).not.toHaveBeenCalled();
+      expect(repo.closeReception).not.toHaveBeenCalled();
     });
   });
 
-  describe('権限・存在チェック', () => {
-    it('募集枠が存在しない場合は notFound を返す', async () => {
+  describe('target: disbanded', () => {
+    it.each([
+      ['draft', facts.draft],
+      ['open', facts.open],
+      ['closed', facts.closed],
+    ])('%s から解散できる', async (_label, statusFacts) => {
+      // Arrange
+      const repo = makeRepo({
+        findStatusFields: vi.fn().mockResolvedValue(statusFacts),
+      });
+
+      // Act
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'disbanded' },
+        TODAY,
+      );
+
+      // Assert
+      expect(result).toEqual({
+        type: 'ok',
+        lobby: expect.objectContaining({ status: LobbyStatus.disbanded }),
+      });
+      expect(repo.disband).toHaveBeenCalledWith('lobby-1');
+    });
+  });
+
+  describe('disbanded は終端状態', () => {
+    it.each(['open', 'closed', 'disbanded'] as const)(
+      'disbanded から %s への遷移は invalidTransition',
+      async (target) => {
+        // Arrange
+        const repo = makeRepo({
+          findStatusFields: vi.fn().mockResolvedValue(facts.disbanded),
+        });
+
+        // Act
+        const result = await updateLobbyStatus(
+          repo,
+          'lobby-1',
+          'user-1',
+          { status: target },
+          TODAY,
+        );
+
+        // Assert
+        expect(result).toEqual({ type: 'invalidTransition' });
+        expect(repo.publish).not.toHaveBeenCalled();
+        expect(repo.reopenReception).not.toHaveBeenCalled();
+        expect(repo.closeReception).not.toHaveBeenCalled();
+        expect(repo.disband).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe('権限と存在確認', () => {
+    it('ロビーが存在しなければ notFound', async () => {
       // Arrange
       const repo = makeRepo({
         findHostUserId: vi.fn().mockResolvedValue(null),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'nonexistent', 'user-1', {
-        status: 'open',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({ type: 'notFound' });
     });
 
-    it('ホストでないユーザーは forbidden を返す', async () => {
+    it('ホスト以外は forbidden', async () => {
       // Arrange
       const repo = makeRepo({
-        findHostUserId: vi.fn().mockResolvedValue('user-1'),
+        findHostUserId: vi.fn().mockResolvedValue('other-user'),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-other', {
-        status: 'open',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({ type: 'forbidden' });
     });
+  });
 
-    // 条件付き UPDATE が 0 行（null）のとき、行が存在するなら並行する遷移に
-    // 先を越されたケースなので invalidTransition（409）、行が消えているなら notFound。
-    it('publish が null を返し行が存在する場合は invalidTransition を返す', async () => {
-      // Arrange
-      const repo = makeRepo({ publish: vi.fn().mockResolvedValue(null) });
-
-      // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'open',
-      });
-
-      // Assert
-      expect(result).toEqual({ type: 'invalidTransition' });
-    });
-
-    it('publish が null を返し行が消えている場合は notFound を返す', async () => {
+  describe('条件付き UPDATE が0行だったとき', () => {
+    it('行が残っていれば invalidTransition（並行する遷移に先を越された）', async () => {
       // Arrange
       const repo = makeRepo({
-        findHostUserId: vi
-          .fn()
-          .mockResolvedValueOnce('user-1') // 権限チェック時は存在
-          .mockResolvedValueOnce(null), // 再確認時には削除済み
         publish: vi.fn().mockResolvedValue(null),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'open',
-      });
-
-      // Assert
-      expect(result).toEqual({ type: 'notFound' });
-    });
-
-    it('cancel が null を返し行が存在する場合（並行確定に敗北）は invalidTransition を返す', async () => {
-      // Arrange
-      const repo = makeRepo({ cancel: vi.fn().mockResolvedValue(null) });
-
-      // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({ type: 'invalidTransition' });
     });
 
-    it('cancel が null を返し行が消えている場合は notFound を返す', async () => {
+    it('行ごと消えていれば notFound', async () => {
       // Arrange
+      const findHostUserId = vi
+        .fn()
+        .mockResolvedValueOnce('user-1')
+        .mockResolvedValueOnce(null);
       const repo = makeRepo({
-        findHostUserId: vi
-          .fn()
-          .mockResolvedValueOnce('user-1')
-          .mockResolvedValueOnce(null),
-        cancel: vi.fn().mockResolvedValue(null),
+        findHostUserId,
+        publish: vi.fn().mockResolvedValue(null),
       });
 
       // Act
-      const result = await updateLobbyStatus(repo, 'lobby-1', 'user-1', {
-        status: 'cancelled',
-      });
+      const result = await updateLobbyStatus(
+        repo,
+        'lobby-1',
+        'user-1',
+        { status: 'open' },
+        TODAY,
+      );
 
       // Assert
       expect(result).toEqual({ type: 'notFound' });

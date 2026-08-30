@@ -39,7 +39,7 @@ const guestJoinDialogModel = ref(false);
 const cancelDialogModel = ref(false);
 const leaveDialogModel = ref(false);
 
-const { canPublish, canEdit, canCancel, loading, publishLobby, cancelLobby } =
+const { canPublish, canEdit, canDisband, loading, publishLobby, disbandLobby } =
   useLobbyStatus(
     props.lobby.id,
     () => props.lobby,
@@ -94,7 +94,7 @@ const onGuestJoined = (member: LobbyEntryModel) => {
 
 const onConfirmCancel = () => {
   cancelDialogModel.value = false;
-  cancelLobby();
+  disbandLobby();
 };
 </script>
 
@@ -147,7 +147,7 @@ const onConfirmCancel = () => {
     </BaseButton>
 
     <BaseButton
-      v-if="canCancel"
+      v-if="canDisband"
       :loading="loading"
       variant="danger"
       :left-icon="Ban"

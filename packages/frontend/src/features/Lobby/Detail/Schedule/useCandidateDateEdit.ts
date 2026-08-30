@@ -1,4 +1,4 @@
-import { computed, ref, toValue } from 'vue';
+import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
   LobbyAction,
@@ -87,6 +87,19 @@ export const useCandidateDateEdit = (
     pendingDates.value = [];
     errorMessages.value = [];
   }
+
+  /**
+   * 親が最新の調整を読み込んだら、古い調整に対する編集ドラフトを破棄する。
+   * pollId を切り替えた直後に古い候補日を新しい調整へ保存してしまうことを防ぐ。
+   */
+  watch(
+    [() => toValue(pollId), () => toValue(candidateDates)],
+    () => {
+      if (isEditing.value) {
+        cancelEdit();
+      }
+    },
+  );
 
   /** 送信前のクライアント側バリデーション（早期 return せず収集する） */
   function validate(): string[] {

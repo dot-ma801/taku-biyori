@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick, ref } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
 import { useCandidateDateEdit } from '@/features/Lobby/Detail/Schedule/useCandidateDateEdit';
 import { ApiError } from '@/lib/api-client';
@@ -153,6 +154,41 @@ describe('cancelEdit', () => {
 
     // Act
     cancelEdit();
+
+    // Assert
+    expect(isEditing.value).toBe(false);
+    expect(pendingDates.value).toEqual([]);
+  });
+});
+
+describe('サーバ値の更新', () => {
+  it('編集中に pollId が変わったら編集を終了してドラフトを破棄する', async () => {
+    // Arrange
+    const pollId = ref(POLL_ID);
+    const candidateDates = ref(makeCandidateDates());
+    const { enterEditMode, isEditing, pendingDates } = useCandidateDateEdit(
+      LOBBY_ID,
+      pollId,
+      () => HOST_USER_ID,
+      () => LobbyStatus.open,
+      candidateDates,
+      vi.fn(),
+      vi.fn(),
+    );
+    enterEditMode();
+    pendingDates.value[0]!.timeLabel = '変更中';
+
+    // Act
+    pollId.value = 'poll-2';
+    candidateDates.value = [
+      {
+        id: 'date-3',
+        date: '2026-09-01',
+        timeLabel: null,
+        answersByEntryId: new Map(),
+      },
+    ];
+    await nextTick();
 
     // Assert
     expect(isEditing.value).toBe(false);

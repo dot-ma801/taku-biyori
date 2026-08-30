@@ -21,18 +21,18 @@ const HINTS: Record<ScheduleViewKind, { self: string; guest: string }> = {
  */
 export const useScheduleEditHint = (
   // いま編集可能なメンバー列の id 一覧（メンバー編集なら自分のみ、ゲスト編集ならゲスト列すべて）
-  editableMemberIds: MaybeRefOrGetter<string[]>,
-  myMemberId: MaybeRefOrGetter<string | null>,
+  editableEntryIds: MaybeRefOrGetter<string[]>,
+  myEntryId: MaybeRefOrGetter<string | null>,
   view: ScheduleViewKind,
 ) => {
   /** いずれかの編集モード中か */
-  const isEditing = computed(() => toValue(editableMemberIds).length > 0);
+  const isEditing = computed(() => toValue(editableEntryIds).length > 0);
 
   /** 自分の回答がいま編集可能か（ゲスト編集中は false） */
   const isMyAnswerEditable = computed(() => {
-    const memberId = toValue(myMemberId);
-    if (!memberId) return false;
-    return toValue(editableMemberIds).includes(memberId);
+    const entryId = toValue(myEntryId);
+    if (!entryId) return false;
+    return toValue(editableEntryIds).includes(entryId);
   });
 
   /** 編集モードに応じた操作ヒントの文言 */

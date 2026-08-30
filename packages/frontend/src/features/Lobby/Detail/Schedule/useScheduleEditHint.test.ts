@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { ref } from 'vue';
 import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useScheduleEditHint';
 
-const MY_MEMBER_ID = 'member-me';
-const GUEST_MEMBER_ID = 'member-guest';
+const MY_ENTRY_ID = 'entry-me';
+const GUEST_ENTRY_ID = 'entry-guest';
 
 describe('useScheduleEditHint', () => {
   describe('isEditing', () => {
     it('編集可能なメンバーが1人もいないとき false になる', () => {
       // Arrange & Act
-      const { isEditing } = useScheduleEditHint([], MY_MEMBER_ID, 'table');
+      const { isEditing } = useScheduleEditHint([], MY_ENTRY_ID, 'table');
 
       // Assert
       expect(isEditing.value).toBe(false);
@@ -18,7 +18,7 @@ describe('useScheduleEditHint', () => {
     it('編集可能なメンバーがいるとき true になる', () => {
       // Arrange & Act
       const { isEditing } = useScheduleEditHint(
-        [GUEST_MEMBER_ID],
+        [GUEST_ENTRY_ID],
         null,
         'table',
       );
@@ -32,8 +32,8 @@ describe('useScheduleEditHint', () => {
     it('自分の列が編集可能なとき true になる', () => {
       // Arrange & Act
       const { isMyAnswerEditable } = useScheduleEditHint(
-        [MY_MEMBER_ID],
-        MY_MEMBER_ID,
+        [MY_ENTRY_ID],
+        MY_ENTRY_ID,
         'table',
       );
 
@@ -44,8 +44,8 @@ describe('useScheduleEditHint', () => {
     it('ゲスト編集中で自分の列が対象外のとき false になる', () => {
       // Arrange & Act
       const { isMyAnswerEditable } = useScheduleEditHint(
-        [GUEST_MEMBER_ID],
-        MY_MEMBER_ID,
+        [GUEST_ENTRY_ID],
+        MY_ENTRY_ID,
         'table',
       );
 
@@ -53,10 +53,10 @@ describe('useScheduleEditHint', () => {
       expect(isMyAnswerEditable.value).toBe(false);
     });
 
-    it('myMemberId が null のとき false になる', () => {
+    it('myEntryId が null のとき false になる', () => {
       // Arrange & Act
       const { isMyAnswerEditable } = useScheduleEditHint(
-        [GUEST_MEMBER_ID],
+        [GUEST_ENTRY_ID],
         null,
         'table',
       );
@@ -70,8 +70,8 @@ describe('useScheduleEditHint', () => {
     it('自分の列を編集中はセルクリックで切り替わる旨を案内する', () => {
       // Arrange & Act
       const { editHint } = useScheduleEditHint(
-        [MY_MEMBER_ID],
-        MY_MEMBER_ID,
+        [MY_ENTRY_ID],
+        MY_ENTRY_ID,
         'table',
       );
 
@@ -84,8 +84,8 @@ describe('useScheduleEditHint', () => {
     it('ゲスト編集中はゲストの列を案内する', () => {
       // Arrange & Act
       const { editHint } = useScheduleEditHint(
-        [GUEST_MEMBER_ID],
-        MY_MEMBER_ID,
+        [GUEST_ENTRY_ID],
+        MY_ENTRY_ID,
         'table',
       );
 
@@ -100,8 +100,8 @@ describe('useScheduleEditHint', () => {
     it('自分の回答を編集中は「あなたの回答」のタップを案内する', () => {
       // Arrange & Act
       const { editHint } = useScheduleEditHint(
-        [MY_MEMBER_ID],
-        MY_MEMBER_ID,
+        [MY_ENTRY_ID],
+        MY_ENTRY_ID,
         'card',
       );
 
@@ -114,8 +114,8 @@ describe('useScheduleEditHint', () => {
     it('ゲスト編集中はゲストのチップのタップを案内する', () => {
       // Arrange & Act
       const { editHint } = useScheduleEditHint(
-        [GUEST_MEMBER_ID],
-        MY_MEMBER_ID,
+        [GUEST_ENTRY_ID],
+        MY_ENTRY_ID,
         'card',
       );
 
@@ -129,10 +129,10 @@ describe('useScheduleEditHint', () => {
   describe('リアクティビティ', () => {
     it('getter で渡した編集状態の変化に追従する', () => {
       // Arrange
-      const editableMemberIds = ref<string[]>([]);
+      const editableEntryIds = ref<string[]>([]);
       const { isEditing, isMyAnswerEditable } = useScheduleEditHint(
-        () => editableMemberIds.value,
-        MY_MEMBER_ID,
+        () => editableEntryIds.value,
+        MY_ENTRY_ID,
         'table',
       );
 
@@ -140,7 +140,7 @@ describe('useScheduleEditHint', () => {
       expect(isEditing.value).toBe(false);
 
       // Act
-      editableMemberIds.value = [MY_MEMBER_ID];
+      editableEntryIds.value = [MY_ENTRY_ID];
 
       // Assert
       expect(isEditing.value).toBe(true);

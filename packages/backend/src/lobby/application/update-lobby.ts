@@ -40,7 +40,7 @@ export const updateLobby = async (
 
     const status = await lockedRepo.findLobbyStatus(id);
     if (status === null) return { type: 'notFound' };
-    if (status === LobbyStatus.confirmed || status === LobbyStatus.cancelled) {
+    if (status === LobbyStatus.cancelled) {
       return { type: 'invalidStatus' };
     }
 

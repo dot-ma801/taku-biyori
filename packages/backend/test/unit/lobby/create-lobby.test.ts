@@ -14,7 +14,6 @@ const mockLobby: Lobby = {
   status: LobbyStatus.draft,
   isPublished: false,
   openUntil: null,
-  closedAt: null,
   cancelledAt: null,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',

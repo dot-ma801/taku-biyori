@@ -19,7 +19,6 @@ import { deleteGameSession } from '@/game-session/application/delete-game-sessio
 import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
 import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
-import type { ConfirmLobbyRepository } from '@/lobby/application/confirm-lobby';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
 import { lobbyCandidates } from '@/system/infrastructure/database/lobby-schema';
 import { closeTestDatabase, withCommitted } from '@test/helpers/test-database';
@@ -111,9 +110,9 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
       const release = createDeferred();
 
       // Act: ロックを保持したまま削除するトランザクションを開く
-      // LobbyRepository は複数の narrower interface（Update/Delete/BulkUpdate/
-      // Confirm）を交差しており、それぞれ executeWithLock の callback 引数型が
-      // 異なるため、推論された lockedRepo の型に deleteById が現れない。
+      // LobbyRepository は複数の narrower interface（Update/Delete/BulkUpdate）
+      // を交差しており、それぞれ executeWithLock の callback 引数型が異なるため、
+      // 推論された lockedRepo の型に deleteById が現れない。
       // 実体は createLobbyRepository が返すフル機能のリポジトリなので、
       // DeleteLobbyRepository として明示的にキャストする。
       const deleting = repo.executeWithLock(lobbyId, async (lockedRepo) => {
@@ -313,58 +312,6 @@ describe('bulk-update-availability-dates の TOCTOU（FOR UPDATE 競合）', () 
           .from(lobbyCandidates)
           .where(eq(lobbyCandidates.lobbyId, lobbyId)),
       ).toHaveLength(1);
-    });
-  });
-});
-
-describe('confirm-lobby の TOCTOU（FOR KEY SHARE 競合）', () => {
-  it('選出メンバー行のロック保持中は同じメンバーの退出がブロックされる', async () => {
-    await withCommitted(async (db, track) => {
-      // Arrange
-      const host = await insertUser(db);
-      track('user', host.id);
-      const lobbyId = await insertLobby(db, host.id, { isPublished: true });
-      track('lobby', lobbyId);
-      const memberId = await insertLobbyMember(db, lobbyId, {
-        userId: host.id,
-      });
-      const repo = createLobbyRepository(db);
-
-      const locked = createDeferred();
-      const release = createDeferred();
-
-      // Act: findMemberCoresByIds の FOR KEY SHARE で選出メンバー行をロックした
-      // まま保持するトランザクションを開く（confirm-lobby と同じ経路）
-      const confirming = repo.executeWithLock(lobbyId, async (lockedRepo) => {
-        await (
-          lockedRepo as unknown as ConfirmLobbyRepository
-        ).findMemberCoresByIds(lobbyId, [memberId]);
-        locked.resolve();
-        await release.promise;
-      });
-      // confirming も race しておくことで、コールバックが locked.resolve() 前に
-      // throw した場合に testTimeout までハングせず即座に検知できる。
-      await Promise.race([locked.promise, confirming]);
-
-      // 別トランザクションからの退出（同じメンバー行の DELETE）はロック解放待ちでブロックされる
-      const leaving = repo.deleteMemberById(memberId);
-      const leavingSettled = leaving.then(
-        () => 'settled',
-        () => 'settled',
-      );
-      const raced = await Promise.race([
-        leavingSettled,
-        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
-      ]);
-
-      // Assert: ロック保持中は待たされている
-      expect(raced).toBe('blocked');
-
-      release.resolve();
-      await confirming;
-      await leaving;
-
-      expect(await repo.findMembersByLobbyId(lobbyId)).toEqual([]);
     });
   });
 });

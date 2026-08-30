@@ -32,7 +32,6 @@ export const lobbies = lobbySchema.table('lobbies', {
   guestLinkToken: text('guest_link_token').notNull(),
   isPublished: boolean('is_published').notNull().default(false),
   openUntil: date('open_until'),
-  closedAt: timestamp('closed_at'),
   cancelledAt: timestamp('cancelled_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at')

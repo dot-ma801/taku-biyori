@@ -46,7 +46,6 @@ export interface InsertLobbyOverrides {
   guestLinkToken?: string;
   isPublished?: boolean;
   openUntil?: string | null;
-  closedAt?: Date | null;
   cancelledAt?: Date | null;
 }
 
@@ -67,7 +66,6 @@ export const insertLobby = async (
       guestLinkToken: overrides.guestLinkToken ?? `token-${randomUUID()}`,
       isPublished: overrides.isPublished ?? false,
       openUntil: overrides.openUntil ?? null,
-      closedAt: overrides.closedAt ?? null,
       cancelledAt: overrides.cancelledAt ?? null,
     })
     .returning({ id: lobbies.id });
@@ -132,7 +130,6 @@ export interface InsertGameSessionOverrides {
   scheduledAt?: string;
   completedAt?: Date | null;
   cancelledAt?: Date | null;
-  lobbyId?: string | null;
 }
 
 export const insertGameSession = async (
@@ -154,7 +151,6 @@ export const insertGameSession = async (
       scheduledAt: overrides.scheduledAt ?? '2999-12-31',
       completedAt: overrides.completedAt ?? null,
       cancelledAt: overrides.cancelledAt ?? null,
-      lobbyId: overrides.lobbyId ?? null,
     })
     .returning({ id: gameSessions.id });
 
@@ -168,7 +164,6 @@ export const insertGameSessionMember = async (
     userId?: string | null;
     guestName?: string | null;
     characterName?: string | null;
-    lobbyMemberId?: string | null;
   } = {},
 ): Promise<string> => {
   const rows = await db
@@ -178,7 +173,6 @@ export const insertGameSessionMember = async (
       userId: member.userId ?? null,
       guestName: member.guestName ?? null,
       characterName: member.characterName ?? null,
-      lobbyMemberId: member.lobbyMemberId ?? null,
     })
     .returning({ id: gameSessionMembers.id });
 

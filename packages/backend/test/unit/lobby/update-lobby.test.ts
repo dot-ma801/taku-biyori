@@ -70,23 +70,6 @@ describe('updateLobby', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('confirmed の場合は invalidStatus を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.confirmed),
-      updateById: vi.fn(),
-    });
-
-    // Act
-    const result = await updateLobby(repo, 'lobby-1', 'user-1', {
-      title: 'x',
-    });
-
-    // Assert
-    expect(result).toEqual({ type: 'invalidStatus' });
-    expect(repo.updateById).not.toHaveBeenCalled();
-  });
-
   it('cancelled の場合は invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({

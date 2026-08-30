@@ -19,7 +19,6 @@ const makeRepo = (
   findStatusFields: vi.fn().mockResolvedValue({
     isPublished: true,
     openUntil: null,
-    closedAt: null,
     cancelledAt: null,
   }),
   findCandidateOwner: vi
@@ -168,7 +167,6 @@ describe('updateGuestAvailabilityDateResponse', () => {
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: true,
         openUntil: new Date('2099-01-01'),
-        closedAt: null,
         cancelledAt: null,
       }),
     });
@@ -186,7 +184,6 @@ describe('updateGuestAvailabilityDateResponse', () => {
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: true,
         openUntil: new Date('2020-01-01'),
-        closedAt: null,
         cancelledAt: null,
       }),
     });
@@ -204,25 +201,6 @@ describe('updateGuestAvailabilityDateResponse', () => {
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: false,
         openUntil: null,
-        closedAt: null,
-        cancelledAt: null,
-      }),
-    });
-
-    // Act
-    const result = await act(repo);
-
-    // Assert
-    expect(result).toEqual({ type: 'invalidStatus' });
-  });
-
-  it('status が confirmed のとき invalidStatus を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findStatusFields: vi.fn().mockResolvedValue({
-        isPublished: true,
-        openUntil: null,
-        closedAt: new Date('2025-01-01'),
         cancelledAt: null,
       }),
     });
@@ -240,7 +218,6 @@ describe('updateGuestAvailabilityDateResponse', () => {
       findStatusFields: vi.fn().mockResolvedValue({
         isPublished: true,
         openUntil: null,
-        closedAt: null,
         cancelledAt: new Date('2025-01-01'),
       }),
     });

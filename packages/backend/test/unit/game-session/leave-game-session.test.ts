@@ -124,7 +124,7 @@ describe('leaveGameSession', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  // 退出可能なのは公開済み・実施前（confirmed）／当日（today）（ACTION_POLICIES）
+  // 退出可能なのは公開済み・実施前（confirmed）／当日（today）（LEGACY_ACTION_POLICIES）
   it.each([
     GameSessionStatus.draft,
     GameSessionStatus.completed,

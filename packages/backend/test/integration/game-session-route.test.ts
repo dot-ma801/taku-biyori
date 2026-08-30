@@ -4,8 +4,8 @@ import type { GameSessionUseCases } from '@/game-session/application/use-cases';
 import type { ProfileUseCases } from '@/profile/application/use-cases';
 import type { LobbyUseCases } from '@/lobby/application/use-cases';
 import type {
-  GameSessionListItem,
-  GameSession,
+  LegacyGameSessionListItem,
+  LegacyGameSession,
   GameSessionPlayMemo,
 } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
@@ -16,7 +16,7 @@ const mockSession = { user: { id: 'user-1' } };
 /** モックの scheduledAt に使う十分に未来の日付 */
 const FUTURE_DATE = '2999-12-31';
 
-const mockListItem: GameSessionListItem = {
+const mockListItem: LegacyGameSessionListItem = {
   id: 'session-1',
   title: 'テスト卓',
   status: GameSessionStatus.draft,
@@ -28,7 +28,7 @@ const mockListItem: GameSessionListItem = {
   role: 'host',
 };
 
-const mockGameSession: GameSession = {
+const mockGameSession: LegacyGameSession = {
   id: 'session-1',
   title: '新規卓',
   status: GameSessionStatus.draft,

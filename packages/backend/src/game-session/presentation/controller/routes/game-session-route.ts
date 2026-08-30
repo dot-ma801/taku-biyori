@@ -1,12 +1,12 @@
 import type { Hono } from 'hono';
 import type {
-  GameSessionListItem,
-  UpdateGameSessionInput,
-  UpdateGameSessionStatusInput,
+  LegacyGameSessionListItem,
+  LegacyUpdateGameSessionInput,
+  LegacyUpdateGameSessionStatusInput,
 } from '@taku-biyori/shared';
 import {
-  UpdateGameSessionInputSchema,
-  UpdateGameSessionStatusInputSchema,
+  LegacyUpdateGameSessionInputSchema,
+  LegacyUpdateGameSessionStatusInputSchema,
 } from '@taku-biyori/shared';
 import type { GetGameSessionResult } from '@/game-session/application/get-game-session';
 import type { UpdateGameSessionResult } from '@/game-session/application/update-game-session';
@@ -15,7 +15,7 @@ import type { UpdateGameSessionStatusResult } from '@/game-session/application/u
 
 export interface RegisterGameSessionRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
-  listGameSessions: (userId: string) => Promise<GameSessionListItem[]>;
+  listGameSessions: (userId: string) => Promise<LegacyGameSessionListItem[]>;
   getGameSession: (
     id: string,
     userId: string | null,
@@ -23,7 +23,7 @@ export interface RegisterGameSessionRouteOptions {
   updateGameSession: (
     id: string,
     userId: string,
-    input: UpdateGameSessionInput,
+    input: LegacyUpdateGameSessionInput,
   ) => Promise<UpdateGameSessionResult>;
   deleteGameSession: (
     id: string,
@@ -32,7 +32,7 @@ export interface RegisterGameSessionRouteOptions {
   updateGameSessionStatus: (
     id: string,
     userId: string,
-    input: UpdateGameSessionStatusInput,
+    input: LegacyUpdateGameSessionStatusInput,
   ) => Promise<UpdateGameSessionStatusResult>;
 }
 
@@ -77,7 +77,7 @@ export const registerGameSessionRoute = (
       return c.json({ error: 'Invalid JSON' }, 400);
     }
 
-    const parsed = UpdateGameSessionInputSchema.safeParse(body);
+    const parsed = LegacyUpdateGameSessionInputSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues }, 400);
     }
@@ -128,7 +128,7 @@ export const registerGameSessionRoute = (
       return c.json({ error: 'Invalid JSON' }, 400);
     }
 
-    const parsed = UpdateGameSessionStatusInputSchema.safeParse(body);
+    const parsed = LegacyUpdateGameSessionStatusInputSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues }, 400);
     }

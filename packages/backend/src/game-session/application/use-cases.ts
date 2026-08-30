@@ -1,7 +1,7 @@
 import type {
-  GameSessionListItem,
-  UpdateGameSessionInput,
-  UpdateGameSessionStatusInput,
+  LegacyGameSessionListItem,
+  LegacyUpdateGameSessionInput,
+  LegacyUpdateGameSessionStatusInput,
   JoinGameSessionInput,
   UpdateMemberInput,
   UpsertGameSessionPlayMemoInput,
@@ -61,7 +61,7 @@ type GameSessionRepo = ListGameSessionsRepository &
   ListSharedPlayMemosRepository;
 
 export interface GameSessionUseCases {
-  listGameSessions(userId: string): Promise<GameSessionListItem[]>;
+  listGameSessions(userId: string): Promise<LegacyGameSessionListItem[]>;
   getGameSession(
     id: string,
     userId: string | null,
@@ -69,7 +69,7 @@ export interface GameSessionUseCases {
   updateGameSession(
     id: string,
     userId: string,
-    input: UpdateGameSessionInput,
+    input: LegacyUpdateGameSessionInput,
   ): Promise<UpdateGameSessionResult>;
   deleteGameSession(
     id: string,
@@ -78,7 +78,7 @@ export interface GameSessionUseCases {
   updateGameSessionStatus(
     id: string,
     userId: string,
-    input: UpdateGameSessionStatusInput,
+    input: LegacyUpdateGameSessionStatusInput,
   ): Promise<UpdateGameSessionStatusResult>;
   listMembers(gameSessionId: string): Promise<ListMembersResult>;
   joinGameSession(
@@ -120,7 +120,7 @@ export interface GameSessionUseCases {
 export const createGameSessionUseCases = (
   repo: GameSessionRepo,
 ): GameSessionUseCases => ({
-  listGameSessions: (userId: string): Promise<GameSessionListItem[]> =>
+  listGameSessions: (userId: string): Promise<LegacyGameSessionListItem[]> =>
     listGameSessions(repo, userId),
   getGameSession: (
     id: string,
@@ -129,7 +129,7 @@ export const createGameSessionUseCases = (
   updateGameSession: (
     id: string,
     userId: string,
-    input: UpdateGameSessionInput,
+    input: LegacyUpdateGameSessionInput,
   ): Promise<UpdateGameSessionResult> =>
     updateGameSession(repo, id, userId, input),
   deleteGameSession: (
@@ -139,7 +139,7 @@ export const createGameSessionUseCases = (
   updateGameSessionStatus: (
     id: string,
     userId: string,
-    input: UpdateGameSessionStatusInput,
+    input: LegacyUpdateGameSessionStatusInput,
   ): Promise<UpdateGameSessionStatusResult> =>
     updateGameSessionStatus(repo, id, userId, input),
   listMembers: (gameSessionId: string): Promise<ListMembersResult> =>

@@ -1,9 +1,9 @@
 import {
-  GameSessionAction,
+  LegacyGameSessionAction,
   GameSessionStatus,
-  canPerform,
-  type GameSession,
-  type UpdateGameSessionStatusInput,
+  canPerformLegacy,
+  type LegacyGameSession,
+  type LegacyUpdateGameSessionStatusInput,
 } from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
@@ -11,13 +11,13 @@ import { getGameSessionStatus } from '@/game-session/domain/game-session-status'
 
 export interface UpdateGameSessionStatusRepository extends GameSessionHostRepository {
   findStatusFields(id: string): Promise<GameSessionStatusInput | null>;
-  publish(id: string): Promise<GameSession | null>;
-  complete(id: string, completedAt: Date): Promise<GameSession | null>;
-  cancel(id: string, cancelledAt: Date): Promise<GameSession | null>;
+  publish(id: string): Promise<LegacyGameSession | null>;
+  complete(id: string, completedAt: Date): Promise<LegacyGameSession | null>;
+  cancel(id: string, cancelledAt: Date): Promise<LegacyGameSession | null>;
 }
 
 export type UpdateGameSessionStatusResult =
-  | { type: 'ok'; gameSession: GameSession }
+  | { type: 'ok'; gameSession: LegacyGameSession }
   | { type: 'notFound' }
   | { type: 'forbidden' }
   | { type: 'invalidTransition' };
@@ -26,7 +26,7 @@ export const updateGameSessionStatus = async (
   repo: UpdateGameSessionStatusRepository,
   id: string,
   userId: string,
-  input: UpdateGameSessionStatusInput,
+  input: LegacyUpdateGameSessionStatusInput,
   now: Date = new Date(),
 ): Promise<UpdateGameSessionStatusResult> => {
   const hostUserId = await repo.findHostUserId(id);
@@ -41,7 +41,13 @@ export const updateGameSessionStatus = async (
   // 公開遷移。段階6b 以降 open は導出されないが、公開（is_published = true）の
   // リクエスト値としては維持する（design-v1.1 §6・migration-plan 段階6b）
   if (input.status === GameSessionStatus.open) {
-    if (!canPerform(GameSessionAction.publishSession, currentStatus, 'host'))
+    if (
+      !canPerformLegacy(
+        LegacyGameSessionAction.publishSession,
+        currentStatus,
+        'host',
+      )
+    )
       return { type: 'invalidTransition' };
     const gameSession = await repo.publish(id);
     if (!gameSession) return { type: 'notFound' };
@@ -49,7 +55,13 @@ export const updateGameSessionStatus = async (
   }
 
   if (input.status === GameSessionStatus.completed) {
-    if (!canPerform(GameSessionAction.completeSession, currentStatus, 'host'))
+    if (
+      !canPerformLegacy(
+        LegacyGameSessionAction.completeSession,
+        currentStatus,
+        'host',
+      )
+    )
       return { type: 'invalidTransition' };
     const gameSession = await repo.complete(id, now);
     // この時点で findHostUserId / findStatusFields により存在は確認済みのため、

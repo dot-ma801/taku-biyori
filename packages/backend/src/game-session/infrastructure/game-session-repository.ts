@@ -10,14 +10,14 @@ import {
   getTableColumns,
 } from 'drizzle-orm';
 import type {
-  GameSession,
-  GameSessionDetail,
-  GameSessionListItem,
+  LegacyGameSession,
+  LegacyGameSessionDetail,
+  LegacyGameSessionListItem,
   GameSessionMember,
   GameSessionPlayMemo,
   SharedGameSessionPlayMemo,
   JoinGameSessionInput,
-  UpdateGameSessionInput,
+  LegacyUpdateGameSessionInput,
   UpdateMemberInput,
 } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
@@ -78,7 +78,7 @@ type ListRow = GameSessionRow & {
   userMemberId: string | null;
 };
 
-export const toGameSession = (row: GameSessionRow): GameSession => ({
+export const toGameSession = (row: GameSessionRow): LegacyGameSession => ({
   id: row.id,
   title: row.title,
   description: row.description,
@@ -114,7 +114,10 @@ const toPlayMemo = (row: PlayMemoRow): GameSessionPlayMemo => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
+const toListItem = (
+  row: ListRow,
+  userId: string,
+): LegacyGameSessionListItem => ({
   id: row.id,
   title: row.title,
   scenarioName: row.scenarioName,
@@ -141,7 +144,7 @@ const toListItem = (row: ListRow, userId: string): GameSessionListItem => ({
 export const createGameSessionRepository = (
   db: Database,
 ): GameSessionRepository => ({
-  async findByUserId(userId: string): Promise<GameSessionListItem[]> {
+  async findByUserId(userId: string): Promise<LegacyGameSessionListItem[]> {
     const rows = await db
       .select({
         ...getTableColumns(gameSessions),
@@ -206,7 +209,7 @@ export const createGameSessionRepository = (
     return getGameSessionStatus(fields);
   },
 
-  async findDetailById(id: string): Promise<GameSessionDetail | null> {
+  async findDetailById(id: string): Promise<LegacyGameSessionDetail | null> {
     const rows = await db
       .select({
         ...getTableColumns(gameSessions),
@@ -246,8 +249,8 @@ export const createGameSessionRepository = (
 
   async updateById(
     id: string,
-    input: UpdateGameSessionInput,
-  ): Promise<GameSession | null> {
+    input: LegacyUpdateGameSessionInput,
+  ): Promise<LegacyGameSession | null> {
     const result = await db
       .update(gameSessions)
       .set({
@@ -336,7 +339,7 @@ export const createGameSessionRepository = (
     };
   },
 
-  async publish(id: string): Promise<GameSession | null> {
+  async publish(id: string): Promise<LegacyGameSession | null> {
     const result = await db
       .update(gameSessions)
       .set({ isPublished: true })
@@ -348,7 +351,10 @@ export const createGameSessionRepository = (
     return toGameSession(session);
   },
 
-  async complete(id: string, completedAt: Date): Promise<GameSession | null> {
+  async complete(
+    id: string,
+    completedAt: Date,
+  ): Promise<LegacyGameSession | null> {
     // completed_at が NULL の行だけを更新する（二重完了の排他）。
     // cancelled_at も NULL であることを要求し、cancel() との並行実行で
     // 両方の終端カラムが同時にセットされる二重終端状態を防ぐ。
@@ -370,7 +376,10 @@ export const createGameSessionRepository = (
     return toGameSession(session);
   },
 
-  async cancel(id: string, cancelledAt: Date): Promise<GameSession | null> {
+  async cancel(
+    id: string,
+    cancelledAt: Date,
+  ): Promise<LegacyGameSession | null> {
     // cancelled_at が NULL の行だけを更新する（二重中止・並行中止の排他）。
     // completed_at も NULL であることを要求し、complete() との並行実行で
     // 両方の終端カラムが同時にセットされる二重終端状態を防ぐ。

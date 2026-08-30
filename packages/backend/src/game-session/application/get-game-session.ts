@@ -1,11 +1,11 @@
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 
 export interface GetGameSessionRepository {
-  findDetailById(id: string): Promise<GameSessionDetail | null>;
+  findDetailById(id: string): Promise<LegacyGameSessionDetail | null>;
 }
 
 export type GetGameSessionResult =
-  | { type: 'ok'; gameSession: GameSessionDetail }
+  | { type: 'ok'; gameSession: LegacyGameSessionDetail }
   | { type: 'notFound' }
   | { type: 'forbidden' };
 

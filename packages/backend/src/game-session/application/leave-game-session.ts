@@ -1,5 +1,5 @@
 import type { GameSessionStatus } from '@taku-biyori/shared';
-import { GameSessionAction, canPerform } from '@taku-biyori/shared';
+import { LegacyGameSessionAction, canPerformLegacy } from '@taku-biyori/shared';
 
 export interface LeaveGameSessionRepository {
   findMemberOwner(
@@ -29,11 +29,11 @@ export const leaveGameSession = async (
   }
 
   const status = await repo.findGameSessionStatus(gameSessionId);
-  // 退出可能なステータスは ACTION_POLICIES の leaveSession に委譲する
+  // 退出可能なステータスは LEGACY_ACTION_POLICIES の leaveSession に委譲する
   // （段階6b/6c で open・scheduling を導出しなくなったため confirmed / today が該当）
   if (
     status === null ||
-    !canPerform(GameSessionAction.leaveSession, status, 'member')
+    !canPerformLegacy(LegacyGameSessionAction.leaveSession, status, 'member')
   ) {
     return { type: 'sessionNotOpen' };
   }

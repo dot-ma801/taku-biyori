@@ -9,20 +9,27 @@ const mockAnswers: LobbyScheduleAnswer[] = [
 
 const makeRepo = (
   overrides: Partial<UpsertScheduleAnswersRepository> = {},
-): UpsertScheduleAnswersRepository => ({
-  findStatusFields: vi.fn().mockResolvedValue({
-    publishedAt: new Date('2026-08-01T00:00:00.000Z'),
-    openUntil: null,
-    receptionClosedAt: null,
-    disbandedAt: null,
-  }),
-  findSchedulePollLobbyId: vi.fn().mockResolvedValue('lobby-1'),
-  findLatestSchedulePollId: vi.fn().mockResolvedValue('poll-1'),
-  findActiveEntryByUserId: vi.fn().mockResolvedValue('entry-1'),
-  findCandidateDateIdsByPollId: vi.fn().mockResolvedValue(['date-1', 'date-2']),
-  upsertScheduleAnswers: vi.fn().mockResolvedValue(mockAnswers),
-  ...overrides,
-});
+): UpsertScheduleAnswersRepository => {
+  const repo: UpsertScheduleAnswersRepository = {
+    findStatusFields: vi.fn().mockResolvedValue({
+      publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+      openUntil: null,
+      receptionClosedAt: null,
+      disbandedAt: null,
+    }),
+    findSchedulePollLobbyId: vi.fn().mockResolvedValue('lobby-1'),
+    findLatestSchedulePollId: vi.fn().mockResolvedValue('poll-1'),
+    findActiveEntryByUserId: vi.fn().mockResolvedValue('entry-1'),
+    findCandidateDateIdsByPollId: vi
+      .fn()
+      .mockResolvedValue(['date-1', 'date-2']),
+    upsertScheduleAnswers: vi.fn().mockResolvedValue(mockAnswers),
+    // ロックの中で同じ repo を使う。並行性そのものは実 DB のテストで検証する
+    executeWithLock: vi.fn(async (_lobbyId, fn) => fn(repo)),
+    ...overrides,
+  };
+  return repo;
+};
 
 const act = (
   repo: UpsertScheduleAnswersRepository,
@@ -37,6 +44,39 @@ const act = (
   );
 
 describe('upsertScheduleAnswers', () => {
+  describe('ロックの範囲', () => {
+    it('最新判定・候補日の検証・回答の書き込みを `executeWithLock` の中でまとめて行う', async () => {
+      // Arrange
+      const repo = makeRepo();
+
+      // Act
+      await act(repo);
+
+      // Assert
+      // 判定と書き込みが別トランザクションに分かれると、判定のあとに新しい調整が
+      // 作られて古い調整へ書き込めてしまう。1スコープに収まっていることを固定する
+      expect(repo.executeWithLock).toHaveBeenCalledTimes(1);
+      expect(repo.findLatestSchedulePollId).toHaveBeenCalled();
+      expect(repo.upsertScheduleAnswers).toHaveBeenCalled();
+    });
+
+    it('ロックを取らずに回答を書き込まない', async () => {
+      // Arrange
+      const upsert = vi.fn().mockResolvedValue(mockAnswers);
+      const repo = makeRepo({
+        upsertScheduleAnswers: upsert,
+        executeWithLock: vi.fn().mockResolvedValue({ type: 'notFound' }),
+      });
+
+      // Act
+      const result = await act(repo);
+
+      // Assert
+      expect(result).toEqual({ type: 'notFound' });
+      expect(upsert).not.toHaveBeenCalled();
+    });
+  });
+
   it('在籍中メンバーが自分の回答をまとめて登録できる', async () => {
     // Arrange
     const repo = makeRepo();

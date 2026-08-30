@@ -22,7 +22,7 @@ export interface CreateSchedulePollRepository extends LobbyHostRepository {
   /**
    * 対象募集枠行に排他ロックを取り、コールバック内のクエリを1トランザクションで実行する。
    * `replaceCandidateDates` の「最新かどうか」判定と直列化するため
-   * （既存 bulkUpdateAvailabilityDates と同方針）。
+   * （delete-lobby など、読み取りと書き込みをまたぐ既存ユースケースと同方針）。
    */
   executeWithLock<T>(
     lobbyId: string,

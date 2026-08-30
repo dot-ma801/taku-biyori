@@ -16,7 +16,7 @@ const mockPoll: LobbySchedulePoll = {
 // `executeWithLock` のモックは「コールバックを同期的にそのまま実行する」スタブを既定とする。
 // 実 DB ではここでトランザクション境界 + 行ロックが張られるが、ユニットテストでは
 // application 層の判定ロジックが lockedRepo 経由で正しく走ることだけ検証したい
-// （既存 bulkUpdateAvailabilityDates と同方針）。
+// （読み取りと書き込みをまたぐ既存ユースケースと同方針）。
 const makeRepo = (
   overrides: Partial<CreateSchedulePollRepository> = {},
 ): CreateSchedulePollRepository => {

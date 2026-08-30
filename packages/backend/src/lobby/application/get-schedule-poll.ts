@@ -17,7 +17,7 @@ export type GetSchedulePollResult =
 
 /**
  * 日程調整1件を回答つきで取得する。公開済みの募集枠は誰でも閲覧できる。
- * 非公開（draft）はホストのみ（listAvailabilityDates と同方針。design-v1.1 §Lobby Schedules）。
+ * 非公開（draft）はホストのみ（listEntries と同方針。design-v2 §6-4）。
  * 指定 pollId が別ロビーのものだった場合も notFound とし、他ロビーの ID の存在を漏らさない。
  */
 export const getSchedulePoll = async (

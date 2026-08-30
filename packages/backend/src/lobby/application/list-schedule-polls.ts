@@ -17,7 +17,7 @@ export type ListSchedulePollsResult =
 
 /**
  * 日程調整の履歴一覧。公開済みの募集枠は誰でも閲覧できる。
- * 非公開（draft）はホストのみ（listAvailabilityDates と同方針。design-v1.1 §Lobby Schedules）。
+ * 非公開（draft）はホストのみ（listEntries と同方針。design-v2 §6-4）。
  */
 export const listSchedulePolls = async (
   repo: ListSchedulePollsRepository,

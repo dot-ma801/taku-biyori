@@ -2,6 +2,7 @@ import {
   and,
   asc,
   count,
+  desc,
   eq,
   exists,
   inArray,
@@ -16,20 +17,24 @@ import type {
   LobbyDetail,
   LobbyEntry,
   LobbyListItem,
-  LobbyAvailabilityDate,
-  LobbyAvailabilityDateAnswer,
+  LobbySchedulePoll,
+  LobbySchedulePollSummary,
+  LobbyCandidateDate,
+  LobbyCandidateDateWithAnswers,
+  LobbyScheduleAnswer,
+  ScheduleAnswerItem,
   JoinLobbyInput,
   JoinLobbyAsGuestInput,
   UpdateLobbyInput,
-  UpdateLobbyAvailabilityDateResponseInput,
 } from '@taku-biyori/shared';
 import { LobbyStatus, getLobbyStatus } from '@taku-biyori/shared';
 import type { Database } from '@/system/infrastructure/database/client';
 import {
   lobbies,
   lobbyEntries,
-  lobbyCandidates,
-  lobbyAnswers,
+  schedulePolls,
+  candidateDates,
+  scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import { user } from '@/system/infrastructure/database/schema';
 import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
@@ -45,10 +50,12 @@ import type { JoinAsGuestRepository } from '@/lobby/application/join-as-guest';
 import type { LeaveLobbyRepository } from '@/lobby/application/leave-lobby';
 import type { GetGuestLinkRepository } from '@/lobby/application/get-guest-link';
 import type { RegenerateGuestLinkRepository } from '@/lobby/application/regenerate-guest-link';
-import type { ListAvailabilityDatesRepository } from '@/lobby/application/list-availability-dates';
-import type { BulkUpdateAvailabilityDatesRepository } from '@/lobby/application/bulk-update-availability-dates';
-import type { UpdateAvailabilityDateResponseRepository } from '@/lobby/application/update-availability-date-response';
-import type { UpdateGuestAvailabilityDateResponseRepository } from '@/lobby/application/update-guest-availability-date-response';
+import type { ListSchedulePollsRepository } from '@/lobby/application/list-schedule-polls';
+import type { GetSchedulePollRepository } from '@/lobby/application/get-schedule-poll';
+import type { CreateSchedulePollRepository } from '@/lobby/application/create-schedule-poll';
+import type { ReplaceCandidateDatesRepository } from '@/lobby/application/replace-candidate-dates';
+import type { UpsertScheduleAnswersRepository } from '@/lobby/application/upsert-schedule-answers';
+import type { UpsertGuestScheduleAnswersRepository } from '@/lobby/application/upsert-guest-schedule-answers';
 
 export type LobbyRepository = ListLobbiesRepository &
   CreateLobbyRepository &
@@ -62,10 +69,12 @@ export type LobbyRepository = ListLobbiesRepository &
   LeaveLobbyRepository &
   GetGuestLinkRepository &
   RegenerateGuestLinkRepository &
-  ListAvailabilityDatesRepository &
-  BulkUpdateAvailabilityDatesRepository &
-  UpdateAvailabilityDateResponseRepository &
-  UpdateGuestAvailabilityDateResponseRepository;
+  ListSchedulePollsRepository &
+  GetSchedulePollRepository &
+  CreateSchedulePollRepository &
+  ReplaceCandidateDatesRepository &
+  UpsertScheduleAnswersRepository &
+  UpsertGuestScheduleAnswersRepository;
 
 type LobbyRow = {
   id: string;
@@ -252,8 +261,10 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
 
     // 参加者一覧は脱退者も含めて全件返す（leftAt で見分ける。design-v2 §6-13-4）
     const entries = await this.findEntriesByLobbyId(id);
+    // 日程調整の履歴（createdAt 降順で先頭が最新）
+    const polls = await this.findSchedulePollSummaries(id);
 
-    return { ...toLobby(row), entries };
+    return { ...toLobby(row), entries, schedulePolls: polls };
   },
 
   async findLobbyById(id: string): Promise<Lobby | null> {
@@ -421,12 +432,22 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
         userId: params.hostUserId,
       });
 
+      // 候補日が1件以上あるときだけ日程調整 #1 を作る（design-v2 §6-13-1）。
+      // 0件なら schedule_polls は0行のまま
       if (params.candidateDates.length > 0) {
-        await tx.insert(lobbyCandidates).values(
+        const pollResult = await tx
+          .insert(schedulePolls)
+          .values({ lobbyId: row.id })
+          .returning({ id: schedulePolls.id });
+
+        const pollRow = pollResult[0];
+        if (!pollRow) throw new Error('日程調整の作成に失敗しました');
+
+        await tx.insert(candidateDates).values(
           params.candidateDates.map((entry) => ({
-            lobbyId: row.id,
+            pollId: pollRow.id,
             date: entry.date,
-            dateNote: entry.dateNote,
+            timeLabel: entry.timeLabel,
           })),
         );
       }
@@ -596,119 +617,6 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
       .where(eq(lobbyEntries.id, entryId));
   },
 
-  async findByLobbyId(lobbyId: string): Promise<LobbyAvailabilityDate[]> {
-    const rows = await db
-      .select({
-        candidateId: lobbyCandidates.id,
-        date: lobbyCandidates.date,
-        dateNote: lobbyCandidates.dateNote,
-        answerId: lobbyAnswers.id,
-        memberId: lobbyAnswers.memberId,
-        answer: lobbyAnswers.answer,
-        comment: lobbyAnswers.comment,
-        activeEntryId: lobbyEntries.id,
-      })
-      .from(lobbyCandidates)
-      // 回答表は在籍中の参加者だけを出す。脱退者の回答は残るが表には現れない
-      .leftJoin(lobbyAnswers, eq(lobbyAnswers.candidateId, lobbyCandidates.id))
-      .leftJoin(
-        lobbyEntries,
-        and(
-          eq(lobbyEntries.id, lobbyAnswers.memberId),
-          isNull(lobbyEntries.leftAt),
-        ),
-      )
-      .where(eq(lobbyCandidates.lobbyId, lobbyId))
-      .orderBy(lobbyCandidates.date, lobbyAnswers.createdAt);
-
-    const map = new Map<string, LobbyAvailabilityDate>();
-    for (const row of rows) {
-      if (!map.has(row.candidateId)) {
-        map.set(row.candidateId, {
-          id: row.candidateId,
-          date: row.date,
-          dateNote: row.dateNote,
-          answers: [],
-        });
-      }
-      // LEFT JOIN なので、脱退者の回答は activeEntryId が NULL になる。
-      // 回答自体は DB に残るが表には出さない（design-v2 完了条件）
-      if (
-        row.answerId !== null &&
-        row.memberId !== null &&
-        row.activeEntryId !== null
-      ) {
-        const entry = map.get(row.candidateId)!;
-        const answerValue = row.answer as LobbyAvailabilityDateAnswer['answer'];
-        entry.answers.push({
-          id: row.answerId,
-          memberId: row.memberId,
-          answer: answerValue,
-          comment: row.comment,
-        });
-      }
-    }
-
-    return [...map.values()];
-  },
-
-  async findCandidateOwner(
-    dateId: string,
-  ): Promise<{ lobbyId: string; date: string } | null> {
-    const row = await db
-      .select({
-        lobbyId: lobbyCandidates.lobbyId,
-        date: lobbyCandidates.date,
-      })
-      .from(lobbyCandidates)
-      .where(eq(lobbyCandidates.id, dateId))
-      .limit(1);
-    return row[0] ?? null;
-  },
-
-  async applyDateChanges(
-    lobbyId: string,
-    diff: CandidateDateDiff,
-  ): Promise<void> {
-    // 残る候補日の行は触らない（DELETE→INSERT の全置換にすると行 ID が変わり、
-    // lobby_answers が onDelete: cascade で消えてしまう）
-    await db.transaction(async (tx) => {
-      if (diff.dateIdsToRemove.length > 0) {
-        await tx
-          .delete(lobbyCandidates)
-          .where(
-            and(
-              eq(lobbyCandidates.lobbyId, lobbyId),
-              inArray(lobbyCandidates.id, diff.dateIdsToRemove),
-            ),
-          );
-      }
-
-      if (diff.datesToAdd.length > 0) {
-        await tx.insert(lobbyCandidates).values(
-          diff.datesToAdd.map((entry) => ({
-            lobbyId,
-            date: entry.date,
-            dateNote: entry.dateNote,
-          })),
-        );
-      }
-
-      // 残る候補日のひとことだけを更新する。行を作り直さないので回答は保持される
-      for (const note of diff.notesToUpdate) {
-        await tx
-          .update(lobbyCandidates)
-          .set({ dateNote: note.dateNote })
-          .where(
-            and(
-              eq(lobbyCandidates.lobbyId, lobbyId),
-              eq(lobbyCandidates.id, note.id),
-            ),
-          );
-      }
-    });
-  },
-
   async findGuestLinkInfo(
     id: string,
   ): Promise<{ hostUserId: string; token: string } | null> {
@@ -763,37 +671,270 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
     return row[0] !== undefined;
   },
 
-  async upsertAnswer(
-    candidateId: string,
-    memberId: string,
-    input: UpdateLobbyAvailabilityDateResponseInput,
-  ): Promise<LobbyAvailabilityDateAnswer> {
-    const result = await db
-      .insert(lobbyAnswers)
-      .values({
-        candidateId,
-        memberId,
-        answer: input.answer,
-        comment: input.comment ?? null,
-      })
-      .onConflictDoUpdate({
-        target: [lobbyAnswers.candidateId, lobbyAnswers.memberId],
-        set: {
-          answer: input.answer,
-          comment: input.comment ?? null,
-        },
-      })
-      .returning();
+  async findSchedulePollSummaries(
+    lobbyId: string,
+  ): Promise<LobbySchedulePollSummary[]> {
+    const rows = await db
+      .select({ id: schedulePolls.id, createdAt: schedulePolls.createdAt })
+      .from(schedulePolls)
+      .where(eq(schedulePolls.lobbyId, lobbyId))
+      // 同一 timestamp でも id DESC でタイブレークし、最新判定を決定的にする
+      .orderBy(desc(schedulePolls.createdAt), desc(schedulePolls.id));
 
-    const row = result[0];
-    if (!row) throw new Error('回答の登録に失敗しました');
-
-    const answerValue = row.answer as LobbyAvailabilityDateAnswer['answer'];
-    return {
+    return rows.map((row) => ({
       id: row.id,
-      memberId: row.memberId,
-      answer: answerValue,
-      comment: row.comment,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  },
+
+  async findLatestSchedulePollId(lobbyId: string): Promise<string | null> {
+    const row = await db
+      .select({ id: schedulePolls.id })
+      .from(schedulePolls)
+      .where(eq(schedulePolls.lobbyId, lobbyId))
+      .orderBy(desc(schedulePolls.createdAt), desc(schedulePolls.id))
+      .limit(1);
+    return row[0]?.id ?? null;
+  },
+
+  async findSchedulePollLobbyId(pollId: string): Promise<string | null> {
+    const row = await db
+      .select({ lobbyId: schedulePolls.lobbyId })
+      .from(schedulePolls)
+      .where(eq(schedulePolls.id, pollId))
+      .limit(1);
+    return row[0]?.lobbyId ?? null;
+  },
+
+  async findSchedulePollWithAnswers(
+    pollId: string,
+  ): Promise<LobbySchedulePoll | null> {
+    const pollRows = await db
+      .select({
+        id: schedulePolls.id,
+        lobbyId: schedulePolls.lobbyId,
+        createdAt: schedulePolls.createdAt,
+      })
+      .from(schedulePolls)
+      .where(eq(schedulePolls.id, pollId))
+      .limit(1);
+
+    const pollRow = pollRows[0];
+    if (!pollRow) return null;
+
+    const dateRows = await db
+      .select({
+        id: candidateDates.id,
+        date: candidateDates.date,
+        timeLabel: candidateDates.timeLabel,
+      })
+      .from(candidateDates)
+      .where(eq(candidateDates.pollId, pollId))
+      .orderBy(asc(candidateDates.date));
+
+    // 脱退した参加者の回答も含めて全部返す（過去の記録なので消さない。design-v2 §9-5）
+    const answerRows =
+      dateRows.length === 0
+        ? []
+        : await db
+            .select({
+              id: scheduleAnswers.id,
+              candidateDateId: scheduleAnswers.candidateDateId,
+              entryId: scheduleAnswers.lobbyEntryId,
+              answer: scheduleAnswers.answer,
+              comment: scheduleAnswers.comment,
+            })
+            .from(scheduleAnswers)
+            .where(
+              inArray(
+                scheduleAnswers.candidateDateId,
+                dateRows.map((d) => d.id),
+              ),
+            )
+            .orderBy(asc(scheduleAnswers.createdAt));
+
+    const answersByDate = new Map<string, LobbyScheduleAnswer[]>();
+    for (const row of answerRows) {
+      const list = answersByDate.get(row.candidateDateId) ?? [];
+      list.push({
+        id: row.id,
+        entryId: row.entryId,
+        answer: row.answer as LobbyScheduleAnswer['answer'],
+        comment: row.comment,
+      });
+      answersByDate.set(row.candidateDateId, list);
+    }
+
+    const candidateDatesResult: LobbyCandidateDateWithAnswers[] = dateRows.map(
+      (d) => ({
+        id: d.id,
+        date: d.date,
+        timeLabel: d.timeLabel,
+        answers: answersByDate.get(d.id) ?? [],
+      }),
+    );
+
+    return {
+      id: pollRow.id,
+      lobbyId: pollRow.lobbyId,
+      candidateDates: candidateDatesResult,
+      createdAt: pollRow.createdAt.toISOString(),
     };
+  },
+
+  async createSchedulePollWithDates(
+    lobbyId,
+    dates,
+  ): Promise<LobbySchedulePoll> {
+    return db.transaction(async (tx) => {
+      const pollResult = await tx
+        .insert(schedulePolls)
+        .values({ lobbyId })
+        .returning();
+
+      const pollRow = pollResult[0];
+      if (!pollRow) throw new Error('日程調整の作成に失敗しました');
+
+      const inserted =
+        dates.length === 0
+          ? []
+          : await tx
+              .insert(candidateDates)
+              .values(
+                dates.map((entry) => ({
+                  pollId: pollRow.id,
+                  date: entry.date,
+                  timeLabel: entry.timeLabel,
+                })),
+              )
+              .returning({
+                id: candidateDates.id,
+                date: candidateDates.date,
+                timeLabel: candidateDates.timeLabel,
+              });
+
+      const sorted = [...inserted].sort((a, b) => a.date.localeCompare(b.date));
+
+      return {
+        id: pollRow.id,
+        lobbyId,
+        candidateDates: sorted.map((d) => ({
+          id: d.id,
+          date: d.date,
+          timeLabel: d.timeLabel,
+          // 新規作成なので回答は必ず空配列
+          answers: [],
+        })),
+        createdAt: pollRow.createdAt.toISOString(),
+      };
+    });
+  },
+
+  async findCandidateDatesByPollId(
+    pollId: string,
+  ): Promise<LobbyCandidateDate[]> {
+    return db
+      .select({
+        id: candidateDates.id,
+        date: candidateDates.date,
+        timeLabel: candidateDates.timeLabel,
+      })
+      .from(candidateDates)
+      .where(eq(candidateDates.pollId, pollId))
+      .orderBy(asc(candidateDates.date));
+  },
+
+  async findCandidateDateIdsByPollId(pollId: string): Promise<string[]> {
+    const rows = await db
+      .select({ id: candidateDates.id })
+      .from(candidateDates)
+      .where(eq(candidateDates.pollId, pollId));
+    return rows.map((row) => row.id);
+  },
+
+  async applyCandidateDateChanges(
+    pollId: string,
+    diff: CandidateDateDiff,
+  ): Promise<void> {
+    // 残る候補日の行は触らない（DELETE→INSERT の全置換にすると行 ID が変わり、
+    // schedule_answers が onDelete: cascade で消えてしまう）
+    await db.transaction(async (tx) => {
+      if (diff.dateIdsToRemove.length > 0) {
+        await tx
+          .delete(candidateDates)
+          .where(
+            and(
+              eq(candidateDates.pollId, pollId),
+              inArray(candidateDates.id, diff.dateIdsToRemove),
+            ),
+          );
+      }
+
+      if (diff.datesToAdd.length > 0) {
+        await tx.insert(candidateDates).values(
+          diff.datesToAdd.map((entry) => ({
+            pollId,
+            date: entry.date,
+            timeLabel: entry.timeLabel,
+          })),
+        );
+      }
+
+      // 残る候補日の時間帯だけを更新する。行を作り直さないので回答は保持される
+      for (const item of diff.timeLabelsToUpdate) {
+        await tx
+          .update(candidateDates)
+          .set({ timeLabel: item.timeLabel })
+          .where(
+            and(
+              eq(candidateDates.pollId, pollId),
+              eq(candidateDates.id, item.id),
+            ),
+          );
+      }
+    });
+  },
+
+  async upsertScheduleAnswers(
+    entryId: string,
+    items: readonly ScheduleAnswerItem[],
+  ): Promise<LobbyScheduleAnswer[]> {
+    return db.transaction(async (tx) => {
+      const results: LobbyScheduleAnswer[] = [];
+
+      for (const item of items) {
+        const result = await tx
+          .insert(scheduleAnswers)
+          .values({
+            candidateDateId: item.candidateDateId,
+            lobbyEntryId: entryId,
+            answer: item.answer,
+            comment: item.comment ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [
+              scheduleAnswers.candidateDateId,
+              scheduleAnswers.lobbyEntryId,
+            ],
+            set: {
+              answer: item.answer,
+              comment: item.comment ?? null,
+            },
+          })
+          .returning();
+
+        const row = result[0];
+        if (!row) throw new Error('回答の登録に失敗しました');
+
+        results.push({
+          id: row.id,
+          entryId: row.lobbyEntryId,
+          answer: row.answer as LobbyScheduleAnswer['answer'],
+          comment: row.comment,
+        });
+      }
+
+      return results;
+    });
   },
 });

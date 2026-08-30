@@ -241,8 +241,8 @@ export type LobbySchedulePoll = z.infer<typeof LobbySchedulePollSchema>;
 export const LobbyDetailSchema = LobbySchema.extend({
   /** 参加者。**脱退者も含めて全件返す**（leftAt で見分ける）。ホストが先頭、以降 joinedAt 昇順 */
   entries: z.array(LobbyEntrySchema),
-  /** 日程調整の履歴。createdAt 降順で先頭が最新 */
-  schedulePolls: z.array(LobbySchedulePollSummarySchema).optional(),
+  /** 日程調整の履歴。createdAt 降順で先頭が最新。調整が1件も無ければ空配列 */
+  schedulePolls: z.array(LobbySchedulePollSummarySchema),
 });
 export type LobbyDetail = z.infer<typeof LobbyDetailSchema>;
 

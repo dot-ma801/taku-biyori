@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { Lobby, CreateLobbyInput } from '@taku-biyori/shared';
-import { normalizeDateNote } from '@taku-biyori/shared';
+import { normalizeTimeLabel } from '@taku-biyori/shared';
 import type { CandidateDateEntry } from '@/lobby/domain/candidate-date-diff';
 
 export interface CreateLobbyRepository {
@@ -31,10 +31,10 @@ export const createLobby = async (
     location: input.location,
     maxPlayers: input.maxPlayers,
     openUntil: input.openUntil,
-    // ひとことは空白のみを null に寄せてから渡す（DB に空文字を残さない）
+    // 時間帯は空白のみを null に寄せてから渡す（DB に空文字を残さない）
     candidateDates: (input.candidateDates ?? []).map((entry) => ({
       date: entry.date,
-      dateNote: normalizeDateNote(entry.dateNote),
+      timeLabel: normalizeTimeLabel(entry.timeLabel),
     })),
     guestLinkToken,
   });

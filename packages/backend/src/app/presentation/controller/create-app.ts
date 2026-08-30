@@ -14,7 +14,7 @@ import { registerProfileRoute } from '@/profile/presentation/controller/routes/p
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
 import { registerEntryRoute as registerLobbyEntryRoute } from '@/lobby/presentation/controller/routes/entry-route';
 import { registerGuestLinkRoute as registerLobbyGuestLinkRoute } from '@/lobby/presentation/controller/routes/guest-link-route';
-import { registerAvailabilityDateRoute as registerLobbyAvailabilityDateRoute } from '@/lobby/presentation/controller/routes/availability-date-route';
+import { registerSchedulePollRoute as registerLobbySchedulePollRoute } from '@/lobby/presentation/controller/routes/schedule-poll-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -83,14 +83,14 @@ export const createApp = (options: CreateAppOptions) => {
     getGuestLink: options.lobby.getGuestLink,
     regenerateGuestLink: options.lobby.regenerateGuestLink,
   });
-  registerLobbyAvailabilityDateRoute(app, {
+  registerLobbySchedulePollRoute(app, {
     getSession: options.getSession,
-    listAvailabilityDates: options.lobby.listAvailabilityDates,
-    bulkUpdateAvailabilityDates: options.lobby.bulkUpdateAvailabilityDates,
-    updateAvailabilityDateResponse:
-      options.lobby.updateAvailabilityDateResponse,
-    updateGuestAvailabilityDateResponse:
-      options.lobby.updateGuestAvailabilityDateResponse,
+    listSchedulePolls: options.lobby.listSchedulePolls,
+    getSchedulePoll: options.lobby.getSchedulePoll,
+    createSchedulePoll: options.lobby.createSchedulePoll,
+    replaceCandidateDates: options.lobby.replaceCandidateDates,
+    upsertScheduleAnswers: options.lobby.upsertScheduleAnswers,
+    upsertGuestScheduleAnswers: options.lobby.upsertGuestScheduleAnswers,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,

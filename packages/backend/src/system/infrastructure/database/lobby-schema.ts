@@ -220,13 +220,16 @@ export const candidateDatesRelations = relations(
   }),
 );
 
-export const scheduleAnswersRelations = relations(scheduleAnswers, ({ one }) => ({
-  candidateDate: one(candidateDates, {
-    fields: [scheduleAnswers.candidateDateId],
-    references: [candidateDates.id],
+export const scheduleAnswersRelations = relations(
+  scheduleAnswers,
+  ({ one }) => ({
+    candidateDate: one(candidateDates, {
+      fields: [scheduleAnswers.candidateDateId],
+      references: [candidateDates.id],
+    }),
+    entry: one(lobbyEntries, {
+      fields: [scheduleAnswers.lobbyEntryId],
+      references: [lobbyEntries.id],
+    }),
   }),
-  entry: one(lobbyEntries, {
-    fields: [scheduleAnswers.lobbyEntryId],
-    references: [lobbyEntries.id],
-  }),
-}));
+);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LobbyAvailabilityDate } from '@taku-biyori/shared';
+import type { CandidateDateModel } from '@/models/schedule-poll';
 import type { LobbyEntryModel } from '@/models/lobby';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
@@ -7,47 +7,47 @@ import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useSchedul
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName } from '@/utils/memberDisplayName';
-import { computed, toRef } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps<{
-  availabilityDates: LobbyAvailabilityDate[];
+  candidateDates: CandidateDateModel[];
   members: LobbyEntryModel[];
-  myMemberId: string | null;
+  myEntryId: string | null;
   // いま編集可能なメンバー列の id 一覧
-  editableMemberIds: string[];
-  // 編集中ドラフト。`${memberId}::${dateId}` → 回答
+  editableEntryIds: string[];
+  // 編集中ドラフト。`${entryId}::${dateId}` → 回答
   draftAnswers: Map<string, Answer>;
 }>();
 
 const emit = defineEmits<{
-  cellClick: [memberId: string, dateId: string];
+  cellClick: [entryId: string, dateId: string];
 }>();
 
-const { getAnswer, hasAnyDateNote } = useScheduleView(
-  toRef(props, 'editableMemberIds'),
-  toRef(props, 'draftAnswers'),
-  toRef(props, 'availabilityDates'),
+const { getAnswer, hasAnyTimeLabel } = useScheduleView(
+  () => props.editableEntryIds,
+  () => props.draftAnswers,
+  () => props.candidateDates,
 );
 
 const { isEditing, editHint } = useScheduleEditHint(
-  () => props.editableMemberIds,
-  () => props.myMemberId,
+  () => props.editableEntryIds,
+  () => props.myEntryId,
   'table',
 );
 
 // 空行の colspan（候補日列 + ひとこと列? + メンバー列）
 const emptyRowColspan = computed(
-  () => props.members.length + 1 + (hasAnyDateNote.value ? 1 : 0),
+  () => props.members.length + 1 + (hasAnyTimeLabel.value ? 1 : 0),
 );
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
 function isMe(member: LobbyEntryModel): boolean {
-  return member.id === props.myMemberId;
+  return member.id === props.myEntryId;
 }
 
 // このメンバー列のセルがいま編集可能か
 function isCellEditable(member: LobbyEntryModel): boolean {
-  return props.editableMemberIds.includes(member.id);
+  return props.editableEntryIds.includes(member.id);
 }
 
 // 編集可能なセルに付与するアクセシビリティ属性
@@ -81,7 +81,7 @@ function onCellKeydown(
       <thead>
         <tr>
           <th scope="col" class="th th--date">候補日程</th>
-          <th v-if="hasAnyDateNote" scope="col" class="th th--note">
+          <th v-if="hasAnyTimeLabel" scope="col" class="th th--note">
             ひとこと
           </th>
           <th
@@ -96,10 +96,10 @@ function onCellKeydown(
         </tr>
       </thead>
       <tbody>
-        <tr v-for="date in availabilityDates" :key="date.id" class="tr">
+        <tr v-for="date in candidateDates" :key="date.id" class="tr">
           <td class="td td--date">{{ formatDateWithWeekday(date.date) }}</td>
-          <td v-if="hasAnyDateNote" class="td td--note">
-            <span class="note-text">{{ date.dateNote }}</span>
+          <td v-if="hasAnyTimeLabel" class="td td--note">
+            <span class="note-text">{{ date.timeLabel }}</span>
           </td>
           <td
             v-for="member in members"
@@ -113,7 +113,7 @@ function onCellKeydown(
             <AnswerCell :answer="getAnswer(date, member.id)" />
           </td>
         </tr>
-        <tr v-if="availabilityDates.length === 0">
+        <tr v-if="candidateDates.length === 0">
           <td :colspan="emptyRowColspan" class="td td--empty">
             候補日が登録されていません
           </td>

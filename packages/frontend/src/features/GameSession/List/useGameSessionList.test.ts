@@ -1,15 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
+import type { GameSessionListItemModel } from '@/models/game-session';
 
-vi.mock('@/api/legacy-game-session', () => ({
+vi.mock('@/api/game-session', () => ({
   listGameSessions: vi.fn(),
 }));
 
-import { listGameSessions } from '@/api/legacy-game-session';
+vi.mock('@/stores/auth', () => ({ useAuthStore: vi.fn() }));
+
+import { listGameSessions } from '@/api/game-session';
+import { useAuthStore } from '@/stores/auth';
 import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
 
 const mockListGameSessions = vi.mocked(listGameSessions);
+
+const MY_USER_ID = 'my-user-id';
+const OTHER_USER_ID = 'other-user-id';
+
+/**
+ * v0.2 の `role` に相当する立ち位置。
+ * v2 のレスポンスは `hostUserId` と着席者の `userId` を返すだけで role を持たないため、
+ * テストの意図（自分がホスト / 着席者 / 無関係）をこの別名で表す。
+ */
+type Involvement = 'host' | 'member' | null;
 
 /**
  * 今日から n 日後の日付を `YYYY-MM-DD` で返す。
@@ -25,25 +39,33 @@ function daysFromToday(n: number): string {
 }
 
 function makeSession(
-  overrides: Partial<LegacyGameSessionListItem> = {},
-): LegacyGameSessionListItem {
+  overrides: Partial<GameSessionListItemModel> & { role?: Involvement } = {},
+): GameSessionListItemModel {
+  const { role = null, ...rest } = overrides;
   return {
     id: crypto.randomUUID(),
-    title: 'テストセッション',
+    lobbyId: 'lobby-1',
+    title: 'テスト開催',
     scenarioName: null,
-    status: GameSessionStatus.draft,
-    isPublished: false,
-    memberCount: 1,
+    timeLabel: null,
+    status: GameSessionStatus.scheduled,
     scheduledAt: '2026-08-01',
-    role: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...overrides,
+    seatCount: 1,
+    // 自分がホストのロビーか、自分が着席しているかで「自分の開催」を判定する
+    hostUserId: role === 'host' ? MY_USER_ID : OTHER_USER_ID,
+    seatUserIds: role === 'member' ? [MY_USER_ID] : [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...rest,
   };
 }
 
 beforeEach(() => {
+  setActivePinia(createPinia());
   vi.clearAllMocks();
+  vi.mocked(useAuthStore).mockReturnValue({
+    currentUser: { id: MY_USER_ID },
+  } as unknown as ReturnType<typeof useAuthStore>);
 });
 
 describe('useGameSessionList', () => {
@@ -105,7 +127,7 @@ describe('useGameSessionList', () => {
       await fetch();
 
       // Assert
-      expect(errorMessage.value).toBe('セッション一覧の取得に失敗しました');
+      expect(errorMessage.value).toBe('開催一覧の取得に失敗しました');
     });
 
     it('取得失敗時は loading が false に戻る', async () => {
@@ -196,12 +218,12 @@ describe('useGameSessionList', () => {
       const near = makeSession({
         scheduledAt: daysFromToday(1),
         role: 'host',
-        status: GameSessionStatus.confirmed,
+        status: GameSessionStatus.scheduled,
       });
       const far = makeSession({
         scheduledAt: daysFromToday(7),
         role: 'host',
-        status: GameSessionStatus.confirmed,
+        status: GameSessionStatus.scheduled,
       });
       mockListGameSessions.mockResolvedValue([far, near]);
 
@@ -303,11 +325,11 @@ describe('useGameSessionList', () => {
       // Arrange
       const mySession = makeSession({
         role: 'host',
-        status: GameSessionStatus.draft,
+        status: GameSessionStatus.scheduled,
       });
       const publicSession = makeSession({
         role: null,
-        status: GameSessionStatus.draft,
+        status: GameSessionStatus.scheduled,
       });
       mockListGameSessions.mockResolvedValue([mySession, publicSession]);
 
@@ -321,32 +343,32 @@ describe('useGameSessionList', () => {
 
     it('statuses を指定した場合は自分のセッションのうち該当ステータスのみ返す', async () => {
       // Arrange
-      const myConfirmedSession = makeSession({
+      const myScheduledSession = makeSession({
         role: 'host',
-        status: GameSessionStatus.confirmed,
+        status: GameSessionStatus.scheduled,
       });
-      const myDraftSession = makeSession({
+      const myCompletedSession = makeSession({
         role: 'host',
-        status: GameSessionStatus.draft,
+        status: GameSessionStatus.completed,
       });
-      const publicConfirmedSession = makeSession({
+      const publicScheduledSession = makeSession({
         role: null,
-        status: GameSessionStatus.confirmed,
+        status: GameSessionStatus.scheduled,
       });
       mockListGameSessions.mockResolvedValue([
-        myConfirmedSession,
-        myDraftSession,
-        publicConfirmedSession,
+        myScheduledSession,
+        myCompletedSession,
+        publicScheduledSession,
       ]);
 
       // Act
       const { filteredMySessions, fetch } = useGameSessionList({
-        statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
+        statuses: [GameSessionStatus.scheduled, GameSessionStatus.today],
       });
       await fetch();
 
       // Assert
-      expect(filteredMySessions.value).toEqual([myConfirmedSession]);
+      expect(filteredMySessions.value).toEqual([myScheduledSession]);
     });
   });
 
@@ -355,11 +377,11 @@ describe('useGameSessionList', () => {
       // Arrange
       const mySession = makeSession({
         role: 'host',
-        status: GameSessionStatus.draft,
+        status: GameSessionStatus.scheduled,
       });
       const publicSession = makeSession({
         role: null,
-        status: GameSessionStatus.draft,
+        status: GameSessionStatus.scheduled,
       });
       mockListGameSessions.mockResolvedValue([mySession, publicSession]);
 
@@ -373,32 +395,32 @@ describe('useGameSessionList', () => {
 
     it('statuses を指定した場合は公開セッションのうち該当ステータスのみ返す', async () => {
       // Arrange
-      const publicConfirmedSession = makeSession({
+      const publicScheduledSession = makeSession({
         role: null,
-        status: GameSessionStatus.confirmed,
+        status: GameSessionStatus.scheduled,
       });
-      const publicDraftSession = makeSession({
+      const publicCompletedSession = makeSession({
         role: null,
-        status: GameSessionStatus.draft,
+        status: GameSessionStatus.completed,
       });
-      const myConfirmedSession = makeSession({
+      const myScheduledSession = makeSession({
         role: 'host',
-        status: GameSessionStatus.confirmed,
+        status: GameSessionStatus.scheduled,
       });
       mockListGameSessions.mockResolvedValue([
-        publicConfirmedSession,
-        publicDraftSession,
-        myConfirmedSession,
+        publicScheduledSession,
+        publicCompletedSession,
+        myScheduledSession,
       ]);
 
       // Act
       const { filteredPublicSessions, fetch } = useGameSessionList({
-        statuses: [GameSessionStatus.confirmed, GameSessionStatus.today],
+        statuses: [GameSessionStatus.scheduled, GameSessionStatus.today],
       });
       await fetch();
 
       // Assert
-      expect(filteredPublicSessions.value).toEqual([publicConfirmedSession]);
+      expect(filteredPublicSessions.value).toEqual([publicScheduledSession]);
     });
   });
 
@@ -484,7 +506,7 @@ describe('useGameSessionList', () => {
 
       // Act
       const { hasFilteredSessions, fetch } = useGameSessionList({
-        statuses: [GameSessionStatus.draft],
+        statuses: [GameSessionStatus.scheduled],
       });
       await fetch();
 
@@ -495,12 +517,12 @@ describe('useGameSessionList', () => {
     it('該当ステータスの自分のセッションがある場合は true になる', async () => {
       // Arrange
       mockListGameSessions.mockResolvedValue([
-        makeSession({ role: 'host', status: GameSessionStatus.draft }),
+        makeSession({ role: 'host', status: GameSessionStatus.scheduled }),
       ]);
 
       // Act
       const { hasFilteredSessions, fetch } = useGameSessionList({
-        statuses: [GameSessionStatus.draft],
+        statuses: [GameSessionStatus.scheduled],
       });
       await fetch();
 
@@ -511,12 +533,12 @@ describe('useGameSessionList', () => {
     it('該当ステータスの公開セッションがある場合は true になる', async () => {
       // Arrange
       mockListGameSessions.mockResolvedValue([
-        makeSession({ role: null, status: GameSessionStatus.confirmed }),
+        makeSession({ role: null, status: GameSessionStatus.scheduled }),
       ]);
 
       // Act
       const { hasFilteredSessions, fetch } = useGameSessionList({
-        statuses: [GameSessionStatus.confirmed],
+        statuses: [GameSessionStatus.scheduled],
       });
       await fetch();
 
@@ -527,13 +549,13 @@ describe('useGameSessionList', () => {
     it('statuses に該当するセッションが無い場合は false になる', async () => {
       // Arrange
       mockListGameSessions.mockResolvedValue([
-        makeSession({ role: 'host', status: GameSessionStatus.confirmed }),
+        makeSession({ role: 'host', status: GameSessionStatus.scheduled }),
         makeSession({ role: null, status: GameSessionStatus.completed }),
       ]);
 
       // Act
       const { hasFilteredSessions, fetch } = useGameSessionList({
-        statuses: [GameSessionStatus.draft],
+        statuses: [GameSessionStatus.cancelled],
       });
       await fetch();
 

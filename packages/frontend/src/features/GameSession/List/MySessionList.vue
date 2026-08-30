@@ -4,7 +4,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
+import type { GameSessionListItemModel } from '@/models/game-session';
 import {
   Bookmark,
   Calendar,
@@ -16,22 +16,20 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const props = defineProps<{
-  mySessions: LegacyGameSessionListItem[];
+  mySessions: GameSessionListItemModel[];
 }>();
 
 const router = useRouter();
 
 /**
- * 卓が取りうるステータスの並び順。
- * `open` は募集枠（lobby）へ移管したため卓では扱わない（公開遷移のリクエスト値としてのみ残る）。
- * 旧経路で作られた卓が残っていても落とさずに末尾へ送る。
+ * 開催が取りうるステータスの並び順（design-v2 §4-2 の4値）。
+ * 想定外の値が来ても落とさずに末尾へ送る。
  */
 const STATUS_ORDER = new Map<GameSessionStatus, number>([
   [GameSessionStatus.today, 0],
-  [GameSessionStatus.confirmed, 1],
-  [GameSessionStatus.draft, 2],
-  [GameSessionStatus.completed, 3],
-  [GameSessionStatus.cancelled, 4],
+  [GameSessionStatus.scheduled, 1],
+  [GameSessionStatus.completed, 2],
+  [GameSessionStatus.cancelled, 3],
 ]);
 const UNKNOWN_STATUS_ORDER = Number.MAX_SAFE_INTEGER;
 
@@ -47,8 +45,8 @@ const formattedMySessions = computed(() =>
     .sort((a, b) => orderOf(a.status) - orderOf(b.status))
     .map((item) => ({
       ...item,
-      formattedDate: item.scheduledAt ?? '未設定',
-      formattedMaxMembers: item.maxMembers ?? '-',
+      formattedDate: item.scheduledAt,
+      formattedTimeLabel: item.timeLabel ?? '',
     })),
 );
 
@@ -65,12 +63,10 @@ const hiddenCount = computed(
 const hasMore = computed(() => hiddenCount.value > 0);
 const isEmpty = computed(() => formattedMySessions.value.length === 0);
 
-const onClickOpen = (id: string) => {
+const onClickOpen = (item: GameSessionListItemModel) => {
   router.push({
     name: 'game-sessions-detail',
-    params: {
-      gameSessionId: id,
-    },
+    params: { lobbyId: item.lobbyId, gameSessionId: item.id },
   });
 };
 </script>
@@ -78,12 +74,10 @@ const onClickOpen = (id: string) => {
 <template>
   <BaseCard>
     <BaseSectionHeading class="card-header" level="h3" :icon="Bookmark">
-      あなたのセッション
+      あなたの開催
     </BaseSectionHeading>
 
-    <p v-if="isEmpty" class="empty-message">
-      まだ参加しているセッションはありません
-    </p>
+    <p v-if="isEmpty" class="empty-message">まだ参加している開催はありません</p>
 
     <div v-for="item in visibleSessions" :key="item.id" class="item">
       <div>
@@ -93,15 +87,18 @@ const onClickOpen = (id: string) => {
             <Calendar :size="16" />
             <p>{{ item.formattedDate }}</p>
           </span>
+          <span v-if="item.formattedTimeLabel" class="meta-group">
+            <p>{{ item.formattedTimeLabel }}</p>
+          </span>
           <span class="meta-group">
             <UsersRound :size="16" />
-            <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
+            <p>{{ item.seatCount }}人</p>
           </span>
         </div>
       </div>
       <div class="right-area">
         <GameSessionStatusBadge :status="item.status" />
-        <BaseButton variant="secondary" @click="onClickOpen(item.id)">
+        <BaseButton variant="secondary" @click="onClickOpen(item)">
           開く
         </BaseButton>
       </div>

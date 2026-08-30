@@ -1,22 +1,37 @@
-import { ref, onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { getGameSession, updateGameSession } from '@/api/legacy-game-session';
+import { getGameSession, updateGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
-import {
-  parseMaxMembers,
-  getMaxMembersError,
-} from '@/features/GameSession/Edit/maxMembersValidation';
 
-export const useUpdateGameSession = (id: string) => {
+/**
+ * 開催の編集フォーム。
+ *
+ * **初期値には解決済みの表示値ではなく `overrides` の生値を使う**（design-v2 §5-5）。
+ * 解決済みの値を入れると、上書きしていない項目にもロビーの値が見え、そのまま保存すると
+ * 意図しない上書きが発生して以後ロビーを改名しても追随しなくなる。
+ *
+ * 保存時は「空欄 → `null`」で送る。`null` は上書きの解除を意味する。
+ */
+export const useUpdateGameSession = (lobbyId: string, id: string) => {
   const router = useRouter();
 
+  // 上書き項目。空文字は「上書きしない」を表す
   const title = ref('');
   const scenarioName = ref('');
-  const maxMembers = ref('');
+  const location = ref('');
+  const timeLabel = ref('');
+
+  // 上書きではないセッション固有のファクト
   const description = ref('');
   const scheduledAt = ref('');
-  const location = ref('');
+
+  /** ロビーの既定値。プレースホルダで「未入力ならこれが出る」と示すために持つ */
+  const lobbyDefaults = ref<{
+    title: string;
+    scenarioName: string | null;
+    location: string | null;
+  } | null>(null);
 
   const loading = ref(false);
   const errorMessage = ref('');
@@ -26,20 +41,24 @@ export const useUpdateGameSession = (id: string) => {
     errorMessage.value = '';
 
     try {
-      const gameSession = await getGameSession(id);
-      title.value = gameSession.title;
-      scenarioName.value = gameSession.scenarioName ?? '';
-      maxMembers.value =
-        gameSession.maxMembers != null ? String(gameSession.maxMembers) : '';
+      const gameSession = await getGameSession(lobbyId, id);
+      // 生値をそのまま入れる。null は空欄（＝上書きなし）
+      title.value = gameSession.overrides.title ?? '';
+      scenarioName.value = gameSession.overrides.scenarioName ?? '';
+      location.value = gameSession.overrides.location ?? '';
+      timeLabel.value = gameSession.overrides.timeLabel ?? '';
+
       description.value = gameSession.description ?? '';
-      scheduledAt.value = gameSession.scheduledAt ?? '';
-      location.value = gameSession.location ?? '';
+      scheduledAt.value = gameSession.scheduledAt;
+
+      lobbyDefaults.value = {
+        title: gameSession.lobby.title,
+        scenarioName: gameSession.lobby.scenarioName,
+        location: gameSession.lobby.location,
+      };
     } catch (err) {
-      if (err instanceof ApiError) {
-        errorMessage.value = err.message;
-      } else {
-        errorMessage.value = 'エラーが発生しました';
-      }
+      errorMessage.value =
+        err instanceof ApiError ? err.message : 'エラーが発生しました';
     } finally {
       loading.value = false;
     }
@@ -47,16 +66,13 @@ export const useUpdateGameSession = (id: string) => {
 
   onMounted(fetchInitialValues);
 
+  /** 空欄は null（上書きの解除）として送る */
+  const orNull = (value: string): string | null => value.trim() || null;
+
   async function submit() {
     errorMessage.value = '';
 
-    const maxMembersError = getMaxMembersError(maxMembers.value);
-    if (maxMembersError) {
-      errorMessage.value = maxMembersError;
-      return;
-    }
-
-    // 卓は日程が確定した状態でのみ存在する（design-v1.1 §8）
+    // 開催は必ず日程を持つ（design-v2 §3-7）
     if (!scheduledAt.value) {
       errorMessage.value = '開催日を選択してください';
       return;
@@ -65,35 +81,22 @@ export const useUpdateGameSession = (id: string) => {
     loading.value = true;
 
     try {
-      const parsedMaxMembers = parseMaxMembers(maxMembers.value);
-
-      await updateGameSession(id, {
-        ...(title.value?.trim() ? { title: title.value } : {}),
-        ...(scenarioName.value
-          ? { scenarioName: scenarioName.value }
-          : { scenarioName: null }),
-        ...(parsedMaxMembers !== null
-          ? { maxMembers: parsedMaxMembers }
-          : { maxMembers: null }),
-        ...(description.value
-          ? { description: description.value }
-          : { description: null }),
-        // openUntil は募集枠の関心事なので編集フォームから外した。
-        // 送らないことでサーバ側の値（作成時にセットした締め切り日）を保持する。
+      await updateGameSession(lobbyId, id, {
         scheduledAt: scheduledAt.value,
-        ...(location.value ? { location: location.value } : { location: null }),
+        title: orNull(title.value),
+        scenarioName: orNull(scenarioName.value),
+        location: orNull(location.value),
+        timeLabel: orNull(timeLabel.value),
+        description: orNull(description.value),
       });
 
       router.push({
         name: 'game-sessions-detail',
-        params: { gameSessionId: id },
+        params: { lobbyId, gameSessionId: id },
       });
     } catch (err) {
-      if (err instanceof ApiError) {
-        errorMessage.value = err.message;
-      } else {
-        errorMessage.value = 'エラーが発生しました';
-      }
+      errorMessage.value =
+        err instanceof ApiError ? err.message : 'エラーが発生しました';
     } finally {
       loading.value = false;
     }
@@ -104,12 +107,14 @@ export const useUpdateGameSession = (id: string) => {
   }
 
   return {
+    fetchInitialValues,
     title,
     scenarioName,
-    maxMembers,
+    location,
+    timeLabel,
     description,
     scheduledAt,
-    location,
+    lobbyDefaults,
     loading,
     errorMessage,
     submit,

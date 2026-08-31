@@ -45,13 +45,21 @@ const onClickCreateDirect = () => {
     <div v-if="hasTitle" class="section-header">
       <h2 class="section-title">{{ title }}</h2>
       <div v-if="showCreateButton" class="create-actions">
-        <BaseButton :left-icon="Plus" @click="onClickCreate">ロビーを作成</BaseButton>
-        <BaseButton variant="secondary" @click="onClickCreateDirect">直接卓を立てる</BaseButton>
+        <BaseButton :left-icon="Plus" @click="onClickCreate"
+          >ロビーを作成</BaseButton
+        >
+        <BaseButton variant="secondary" @click="onClickCreateDirect"
+          >直接卓を立てる</BaseButton
+        >
       </div>
     </div>
     <div v-else-if="showCreateButton" class="create-actions create-btn">
-      <BaseButton :left-icon="Plus" @click="onClickCreate">ロビーを作成</BaseButton>
-      <BaseButton variant="secondary" @click="onClickCreateDirect">直接卓を立てる</BaseButton>
+      <BaseButton :left-icon="Plus" @click="onClickCreate"
+        >ロビーを作成</BaseButton
+      >
+      <BaseButton variant="secondary" @click="onClickCreateDirect"
+        >直接卓を立てる</BaseButton
+      >
     </div>
     <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
     <PublicLobbyList

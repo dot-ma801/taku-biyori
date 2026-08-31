@@ -127,16 +127,16 @@ describe('canViewShared', () => {
     },
   );
 
-  it.each([
-    GameSessionStatus.scheduled,
-    GameSessionStatus.today,
-  ])('%s なら false（他メンバーのメモは読めない）', (status) => {
-    // Arrange & Act
-    const { canViewShared } = setup(makeGameSession({ status }));
+  it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
+    '%s なら false（他メンバーのメモは読めない）',
+    (status) => {
+      // Arrange & Act
+      const { canViewShared } = setup(makeGameSession({ status }));
 
-    // Assert
-    expect(canViewShared.value).toBe(false);
-  });
+      // Assert
+      expect(canViewShared.value).toBe(false);
+    },
+  );
 
   it('卓がまだ読み込まれていなければ false', () => {
     // Arrange & Act
@@ -157,17 +157,17 @@ describe('自動取得', () => {
     expect(listSharedPlayMemos).toHaveBeenCalledWith(SESSION_ID);
   });
 
-  it.each([
-    GameSessionStatus.scheduled,
-    GameSessionStatus.today,
-  ])('%s では取得しない（1件も返らない時期に通信しない）', async (status) => {
-    // Arrange & Act
-    setup(makeGameSession({ status }));
-    await flushPromises();
+  it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
+    '%s では取得しない（1件も返らない時期に通信しない）',
+    async (status) => {
+      // Arrange & Act
+      setup(makeGameSession({ status }));
+      await flushPromises();
 
-    // Assert
-    expect(listSharedPlayMemos).not.toHaveBeenCalled();
-  });
+      // Assert
+      expect(listSharedPlayMemos).not.toHaveBeenCalled();
+    },
+  );
 
   it('卓が後から届いても、完了していれば取得する', async () => {
     // Arrange

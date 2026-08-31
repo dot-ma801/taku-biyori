@@ -8,7 +8,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
-import { seats } from '@/system/infrastructure/database/game-session-schema';
+import {
+  gameSessions,
+  seats,
+} from '@/system/infrastructure/database/game-session-schema';
 import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
 import { dateFromToday } from '@/system/domain/date-from-today';
 import { getTestDatabase, withRollback } from '@test/helpers/test-database';
@@ -204,6 +207,27 @@ describe('findByLobbyId', () => {
     });
   });
 
+  it('scheduledAt が同じ開催は id 昇順で返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const laterId = '00000000-0000-4000-8000-000000000002';
+      const earlierId = '00000000-0000-4000-8000-000000000001';
+      await db.insert(gameSessions).values([
+        { id: laterId, lobbyId, scheduledAt: '2026-09-01' },
+        { id: earlierId, lobbyId, scheduledAt: '2026-09-01' },
+      ]);
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const list = await repo.findByLobbyId(lobbyId);
+
+      // Assert
+      expect(list.map((item) => item.id)).toEqual([earlierId, laterId]);
+    });
+  });
+
   it('一覧では解決済みの表示値と着席の参照だけを返す', async () => {
     await withRollback(async (db) => {
       // Arrange
@@ -311,7 +335,7 @@ describe('findByUserId', () => {
     });
   });
 
-  it('公開ロビーでも終わった他人の開催は含まれない', async () => {
+  it('第三者の公開ロビーの開催は、active でも含まれない', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -319,16 +343,37 @@ describe('findByUserId', () => {
       const lobbyId = await insertLobby(db, host.id, {
         publishedAt: new Date(),
       });
-      const completed = await insertGameSession(db, lobbyId, {
-        completedAt: new Date(),
-      });
+      const active = await insertGameSession(db, lobbyId);
+      const completed = await insertGameSession(db, lobbyId, { completedAt: new Date() });
       const repo = createGameSessionRepository(db);
 
       // Act
       const list = await repo.findByUserId(stranger.id);
 
       // Assert
+      expect(list.map((item) => item.id)).not.toContain(active);
       expect(list.map((item) => item.id)).not.toContain(completed);
+    });
+  });
+
+  it('scheduledAt が同じ開催は id 昇順で返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const laterId = '00000000-0000-4000-8000-000000000004';
+      const earlierId = '00000000-0000-4000-8000-000000000003';
+      await db.insert(gameSessions).values([
+        { id: laterId, lobbyId, scheduledAt: '2026-09-01' },
+        { id: earlierId, lobbyId, scheduledAt: '2026-09-01' },
+      ]);
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const list = await repo.findByUserId(host.id);
+
+      // Assert
+      expect(list.map((item) => item.id)).toEqual([earlierId, laterId]);
     });
   });
 });

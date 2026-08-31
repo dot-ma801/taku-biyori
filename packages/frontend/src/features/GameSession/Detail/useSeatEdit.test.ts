@@ -94,6 +94,20 @@ describe('canEditCharacterName', () => {
     // Assert
     expect(canEditCharacterName.value).toBe(false);
   });
+
+  it('一般の着席ユーザーは自分のキャラクター名を編集できる', () => {
+    // Arrange / Act
+    const { canEditCharacterName, canEditSeat } = setup(
+      [makeSeat('self'), makeSeat('other')],
+      GameSessionStatus.scheduled,
+      'user-self',
+    );
+
+    // Assert
+    expect(canEditCharacterName.value).toBe(true);
+    expect(canEditSeat(makeSeat('self'))).toBe(true);
+    expect(canEditSeat(makeSeat('other'))).toBe(false);
+  });
 });
 
 describe('ドラフト', () => {
@@ -153,6 +167,28 @@ describe('ドラフト', () => {
 });
 
 describe('submitEdit', () => {
+  it('一般参加者は自席の変更だけを送信する', async () => {
+    // Arrange
+    vi.mocked(updateSeat).mockResolvedValue(makeSeat('self', '自分'));
+    const { startEdit, setDraft, submitEdit } = setup(
+      [makeSeat('self'), makeSeat('other')],
+      GameSessionStatus.scheduled,
+      'user-self',
+    );
+    startEdit();
+    setDraft('self', '自分');
+    setDraft('other', '他人');
+
+    // Act
+    await submitEdit();
+
+    // Assert
+    expect(updateSeat).toHaveBeenCalledTimes(1);
+    expect(updateSeat).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, 'self', {
+      characterName: '自分',
+    });
+  });
+
   it('変更のあった席だけを送信する', async () => {
     // Arrange
     const updated = makeSeat('seat-1', 'ベアトリス');

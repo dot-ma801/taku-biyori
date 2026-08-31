@@ -57,9 +57,20 @@ export const useSeatEdit = (
    */
   const canEditCharacterName = computed(() => {
     const currentStatus = toValue(status);
-    if (!isHost.value || currentStatus === undefined) return false;
-    return canPerform(GameSessionAction.assignCharacter, currentStatus, 'host');
+    if (currentStatus === undefined) return false;
+    const userId = authStore.currentUser?.id;
+    if (!userId) return false;
+    const role = isHost.value ? 'host' : 'member';
+    return (
+      canPerform(GameSessionAction.assignCharacter, currentStatus, role) &&
+      (isHost.value || toValue(seats).some((seat) => seat.userId === userId))
+    );
   });
+
+  /** ホストは全席、一般参加者は自席だけを編集できる。 */
+  function canEditSeat(seat: SeatModel): boolean {
+    return isHost.value || seat.userId === authStore.currentUser?.id;
+  }
 
   /** サーバ由来のキャラクター名（基準値・空文字フォールバック） */
   function baselineOf(seat: SeatModel) {
@@ -99,7 +110,7 @@ export const useSeatEdit = (
 
     try {
       const changed = toValue(seats).filter(
-        (seat) => draftOf(seat.id) !== baselineOf(seat),
+        (seat) => canEditSeat(seat) && draftOf(seat.id) !== baselineOf(seat),
       );
       for (const seat of changed) {
         const updated = await updateSeat(lobbyId, gameSessionId, seat.id, {
@@ -118,6 +129,7 @@ export const useSeatEdit = (
 
   return {
     canEditCharacterName,
+    canEditSeat,
     isEditing,
     isDirty,
     loading,

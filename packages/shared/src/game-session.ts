@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { GameSessionStatus } from '@/game-session/status';
 import { LobbyStatus } from '@/lobby/status';
 import { SeatRefSchema, SeatSchema } from '@/game-session/seat';
+import { todayDateString } from '@/date';
 
 export { GameSessionStatus };
 
@@ -147,21 +148,26 @@ export type GameSessionSummary = z.infer<typeof GameSessionSummarySchema>;
  *
  * 上書き項目は渡したときだけ保存し、既定値は書き込まない。
  */
-export const CreateGameSessionInputSchema = z.object({
-  /** 開催日 */
-  scheduledAt: z.iso.date(),
-  /**
-   * 着席させる LobbyEntry の ID の配列。1件以上必須。
-   * このロビーのものでない ID、または脱退済み（`leftAt != null`）の ID を含むと 422。
-   * v0.2 の `memberIds` の改名。
-   */
-  entryIds: z.array(z.string().uuid()).min(1),
-  title: z.string().min(1).max(100).optional(),
-  scenarioName: z.string().max(200).optional(),
-  location: z.string().max(200).optional(),
-  timeLabel: z.string().max(20).optional(),
-  description: z.string().max(1000).optional(),
-});
+export const CreateGameSessionInputSchema = z
+  .object({
+    /** 開催日。**今日以降**（過ぎた日に新しい開催は作らせない） */
+    scheduledAt: z.iso.date(),
+    /**
+     * 着席させる LobbyEntry の ID の配列。1件以上必須。
+     * このロビーのものでない ID、または脱退済み（`leftAt != null`）の ID を含むと 422。
+     * v0.2 の `memberIds` の改名。
+     */
+    entryIds: z.array(z.string().uuid()).min(1),
+    title: z.string().min(1).max(100).optional(),
+    scenarioName: z.string().max(200).optional(),
+    location: z.string().max(200).optional(),
+    timeLabel: z.string().max(20).optional(),
+    description: z.string().max(1000).optional(),
+  })
+  .refine((input) => input.scheduledAt >= todayDateString(), {
+    message: '開催日には今日以降の日付を指定してください',
+    path: ['scheduledAt'],
+  });
 export type CreateGameSessionInput = z.infer<
   typeof CreateGameSessionInputSchema
 >;

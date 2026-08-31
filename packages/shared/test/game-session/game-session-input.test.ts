@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CreateGameSessionInputSchema,
   UpdateGameSessionInputSchema,
@@ -7,7 +7,16 @@ import {
 
 const ENTRY_ID = '22222222-2222-4222-8222-222222222222';
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('CreateGameSessionInputSchema', () => {
+  // 開催日の下限は「今日」なので、日付に依存しないよう時刻を固定する
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2026-08-01T00:00:00'));
+  });
+
   it('開催日と着席させる entryIds があれば通る', () => {
     // Arrange
     const input = { scheduledAt: '2026-09-01', entryIds: [ENTRY_ID] };
@@ -95,6 +104,41 @@ describe('CreateGameSessionInputSchema', () => {
 
     // Assert
     expect(result.success).toBe(false);
+  });
+
+  describe('過去日の禁止', () => {
+    it('scheduledAt が今日なら通る', () => {
+      // Arrange
+      const input = { scheduledAt: '2026-08-01', entryIds: [ENTRY_ID] };
+
+      // Act
+      const result = CreateGameSessionInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('scheduledAt が過去日なら弾く', () => {
+      // Arrange
+      const input = { scheduledAt: '2026-07-31', entryIds: [ENTRY_ID] };
+
+      // Act
+      const result = CreateGameSessionInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+
+    it('過去日のエラーは scheduledAt に紐づく', () => {
+      // Arrange
+      const input = { scheduledAt: '2020-01-01', entryIds: [ENTRY_ID] };
+
+      // Act
+      const result = CreateGameSessionInputSchema.safeParse(input);
+
+      // Assert
+      expect(result.error?.issues[0]?.path).toEqual(['scheduledAt']);
+    });
   });
 });
 

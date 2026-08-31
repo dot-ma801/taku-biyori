@@ -40,10 +40,10 @@ const {
   getEntryAnswer,
   goNext,
   goBack,
-  reset,
   confirm,
 } = useConfirmFlow(
   () => props.lobby,
+  () => model.value,
   (gameSession) => {
     model.value = false;
     emit('created', gameSession);
@@ -52,12 +52,6 @@ const {
 const isNextDisabled = computed(() =>
   step.value === 1 ? !canProceedCandidate.value : !canProceedEntries.value,
 );
-
-async function handleModelUpdate(open: boolean) {
-  if (open) {
-    await reset();
-  }
-}
 
 function handleNext() {
   if (step.value === 2 && capacityMismatch.value) {
@@ -78,11 +72,7 @@ function updateDraft(next: GameSessionDraft) {
 </script>
 
 <template>
-  <BaseDialog
-    v-model="model"
-    title="開催を追加する"
-    @update:model-value="handleModelUpdate"
-  >
+  <BaseDialog v-model="model" title="開催を追加する">
     <BaseStepper :steps="STEP_LABELS" :current="step" label="開催追加の手順" />
     <CandidateStep
       v-if="step === 1"

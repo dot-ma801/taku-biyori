@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
 import { useConfirmFlow } from '@/features/Lobby/Detail/Schedule/ConfirmFlow/useConfirmFlow';
 import type { LobbyDetailModel } from '@/models/lobby';
 
@@ -45,9 +46,28 @@ beforeEach(() => {
 });
 
 describe('useConfirmFlow', () => {
+  it('ダイアログが開いたら最新の候補日を読み込む', async () => {
+    // Arrange
+    const isOpen = ref(false);
+    const flow = useConfirmFlow(() => lobby, isOpen, vi.fn());
+
+    // Act
+    isOpen.value = true;
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(getSchedulePoll).toHaveBeenCalledWith('lobby-1', 'poll-1');
+      expect(flow.candidateOptions.value).toHaveLength(1);
+    });
+  });
+
   it('候補日を選ぶと ok / maybe の在籍 entry を既定で選ぶ', async () => {
     // Arrange
-    const flow = useConfirmFlow(() => lobby, vi.fn());
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
     await flow.reset();
 
     // Act
@@ -64,7 +84,11 @@ describe('useConfirmFlow', () => {
 
   it('候補日が未選択のあいだは次のステップへ進めない', async () => {
     // Arrange
-    const flow = useConfirmFlow(() => lobby, vi.fn());
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
     await flow.reset();
 
     // Act
@@ -78,7 +102,11 @@ describe('useConfirmFlow', () => {
 
   it('開催日は選択した候補日から導出する', async () => {
     // Arrange
-    const flow = useConfirmFlow(() => lobby, vi.fn());
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
     await flow.reset();
     flow.selectCandidate('candidate-1');
 
@@ -93,7 +121,11 @@ describe('useConfirmFlow', () => {
   it('空欄の上書き項目を省略して createGameSession を呼ぶ', async () => {
     // Arrange
     const onCreated = vi.fn();
-    const flow = useConfirmFlow(() => lobby, onCreated);
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      onCreated,
+    );
     await flow.reset();
     flow.selectCandidate('candidate-1');
     vi.mocked(createGameSession).mockResolvedValue({

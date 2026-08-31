@@ -344,7 +344,9 @@ describe('findByUserId', () => {
         publishedAt: new Date(),
       });
       const active = await insertGameSession(db, lobbyId);
-      const completed = await insertGameSession(db, lobbyId, { completedAt: new Date() });
+      const completed = await insertGameSession(db, lobbyId, {
+        completedAt: new Date(),
+      });
       const repo = createGameSessionRepository(db);
 
       // Act

@@ -19,7 +19,31 @@ const props = defineProps<{ lobby: LobbyDetailModel }>();
 const emit = defineEmits<{ created: [gameSession: GameSessionModel] }>();
 const model = defineModel<boolean>({ default: false });
 const showCapacityDialog = ref(false);
-const flow = useConfirmFlow(
+// template 内で ref を自動アンラップさせるため、composable の戻り値は分割代入で受ける
+const {
+  step,
+  loading,
+  loadingPoll,
+  selectedCandidateId,
+  scheduledAt,
+  selectedEntryIds,
+  selectedEntries,
+  selectedCount,
+  candidateOptions,
+  draft,
+  canProceedDate,
+  canProceedEntries,
+  capacityMismatch,
+  selectCandidate,
+  setScheduledAt,
+  toggleEntry,
+  isWarnedEntry,
+  getEntryAnswer,
+  goNext,
+  goBack,
+  reset,
+  confirm,
+} = useConfirmFlow(
   () => props.lobby,
   (gameSession) => {
     model.value = false;
@@ -27,30 +51,30 @@ const flow = useConfirmFlow(
   },
 );
 const isNextDisabled = computed(() =>
-  flow.step.value === 1
-    ? !flow.canProceedDate.value
-    : !flow.canProceedEntries.value,
+  step.value === 1 ? !canProceedDate.value : !canProceedEntries.value,
 );
 
 async function handleModelUpdate(open: boolean) {
-  if (open) await flow.reset();
+  if (open) {
+    await reset();
+  }
 }
 
 function handleNext() {
-  if (flow.step.value === 2 && flow.capacityMismatch.value) {
+  if (step.value === 2 && capacityMismatch.value) {
     showCapacityDialog.value = true;
     return;
   }
-  flow.goNext();
+  goNext();
 }
 
 function confirmCapacity() {
   showCapacityDialog.value = false;
-  flow.goNext();
+  goNext();
 }
 
-function updateDraft(draft: GameSessionDraft) {
-  flow.draft.value = draft;
+function updateDraft(next: GameSessionDraft) {
+  draft.value = next;
 }
 </script>
 
@@ -60,53 +84,44 @@ function updateDraft(draft: GameSessionDraft) {
     title="開催を追加する"
     @update:model-value="handleModelUpdate"
   >
-    <BaseStepper
-      :steps="STEP_LABELS"
-      :current="flow.step"
-      label="開催追加の手順"
-    />
+    <BaseStepper :steps="STEP_LABELS" :current="step" label="開催追加の手順" />
     <CandidateStep
-      v-if="flow.step === 1"
-      :candidate-options="flow.candidateOptions"
-      :selected-candidate-id="flow.selectedCandidateId"
-      :scheduled-at="flow.scheduledAt"
-      :loading="flow.loadingPoll"
-      @select="flow.selectCandidate"
-      @update:scheduled-at="flow.setScheduledAt"
+      v-if="step === 1"
+      :candidate-options="candidateOptions"
+      :selected-candidate-id="selectedCandidateId"
+      :scheduled-at="scheduledAt"
+      :loading="loadingPoll"
+      @select="selectCandidate"
+      @update:scheduled-at="setScheduledAt"
     />
     <MemberSelectStep
-      v-else-if="flow.step === 2"
+      v-else-if="step === 2"
       :entries="lobby.activeEntries"
-      :selected-entry-ids="flow.selectedEntryIds"
-      :is-warned-entry="flow.isWarnedEntry"
-      :get-entry-answer="flow.getEntryAnswer"
-      @toggle="flow.toggleEntry"
+      :selected-entry-ids="selectedEntryIds"
+      :is-warned-entry="isWarnedEntry"
+      :get-entry-answer="getEntryAnswer"
+      @toggle="toggleEntry"
     />
     <ReviewStep
       v-else
-      :scheduled-at="flow.scheduledAt"
-      :selected-entries="flow.selectedEntries"
-      :draft="flow.draft"
+      :scheduled-at="scheduledAt"
+      :selected-entries="selectedEntries"
+      :draft="draft"
       @update:draft="updateDraft"
     />
     <div class="footer">
-      <BaseButton v-if="flow.step > 1" variant="ghost" @click="flow.goBack">
+      <BaseButton v-if="step > 1" variant="ghost" @click="goBack">
         戻る
       </BaseButton>
       <span class="spacer" />
       <BaseButton
-        v-if="flow.step < 3"
+        v-if="step < 3"
         :disabled="isNextDisabled"
         @click="handleNext"
       >
         次へ
       </BaseButton>
-      <BaseButton
-        v-else
-        variant="primary"
-        :loading="flow.loading"
-        @click="flow.confirm"
-      >
+      <BaseButton v-else variant="primary" :loading="loading" @click="confirm">
         追加する
       </BaseButton>
     </div>
@@ -114,7 +129,7 @@ function updateDraft(draft: GameSessionDraft) {
   <CapacityMismatchDialog
     v-model="showCapacityDialog"
     :max-players="lobby.maxPlayers"
-    :selected-count="flow.selectedCount"
+    :selected-count="selectedCount"
     @confirm="confirmCapacity"
   />
 </template>

@@ -19,7 +19,11 @@ const emit = defineEmits<{
   'update:scheduled-at': [date: string];
 }>();
 
-function handleScheduledAtUpdate(value: string | string[]) {
+function handleScheduledAtUpdate(value: string | string[] | undefined) {
+  if (value === undefined) {
+    emit('update:scheduled-at', '');
+    return;
+  }
   emit('update:scheduled-at', Array.isArray(value) ? (value[0] ?? '') : value);
 }
 </script>

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import { formatDateWithWeekday } from '@/utils/date';
 
 defineProps<{
@@ -10,35 +9,21 @@ defineProps<{
     counts: { ok: number; maybe: number; ng: number };
   }[];
   selectedCandidateId: string | null;
-  scheduledAt: string;
   loading: boolean;
 }>();
 
 const emit = defineEmits<{
   select: [id: string];
-  'update:scheduled-at': [date: string];
 }>();
-
-function handleScheduledAtUpdate(value: string | string[] | undefined) {
-  if (value === undefined) {
-    emit('update:scheduled-at', '');
-    return;
-  }
-  emit('update:scheduled-at', Array.isArray(value) ? (value[0] ?? '') : value);
-}
 </script>
 
 <template>
-  <p class="step-label">候補日から選ぶか、開催日を直接指定してください</p>
-  <BaseDatePicker
-    :model-value="scheduledAt"
-    label="開催日"
-    disable-past
-    required
-    @update:model-value="handleScheduledAtUpdate"
-  />
-  <p v-if="loading" class="loading">候補日を読み込んでいます…</p>
-  <ul v-else-if="candidateOptions.length > 0" class="candidate-list">
+  <p class="step-label">日程調整の候補日から開催日を選んでください</p>
+  <p v-if="loading" class="empty">候補日を読み込んでいます…</p>
+  <p v-else-if="candidateOptions.length === 0" class="empty">
+    候補日がありません。先に日程調整で候補日を追加してください
+  </p>
+  <ul v-else class="candidate-list">
     <li v-for="option in candidateOptions" :key="option.id">
       <button
         type="button"
@@ -68,7 +53,7 @@ function handleScheduledAtUpdate(value: string | string[] | undefined) {
 
 <style scoped>
 .step-label,
-.loading {
+.empty {
   font-size: 13px;
   color: var(--color-text-muted);
   margin: 0 0 var(--space-3);

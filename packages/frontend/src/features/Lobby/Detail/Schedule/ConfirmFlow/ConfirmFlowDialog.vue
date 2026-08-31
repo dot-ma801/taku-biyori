@@ -14,7 +14,7 @@ import type { GameSessionModel } from '@/models/game-session';
 import type { LobbyDetailModel } from '@/models/lobby';
 import { computed, ref } from 'vue';
 
-const STEP_LABELS = ['開催日選択', '参加者選択', '確認'] as const;
+const STEP_LABELS = ['候補日選択', '参加者選択', '確認'] as const;
 const props = defineProps<{ lobby: LobbyDetailModel }>();
 const emit = defineEmits<{ created: [gameSession: GameSessionModel] }>();
 const model = defineModel<boolean>({ default: false });
@@ -31,11 +31,10 @@ const {
   selectedCount,
   candidateOptions,
   draft,
-  canProceedDate,
+  canProceedCandidate,
   canProceedEntries,
   capacityMismatch,
   selectCandidate,
-  setScheduledAt,
   toggleEntry,
   isWarnedEntry,
   getEntryAnswer,
@@ -51,7 +50,7 @@ const {
   },
 );
 const isNextDisabled = computed(() =>
-  step.value === 1 ? !canProceedDate.value : !canProceedEntries.value,
+  step.value === 1 ? !canProceedCandidate.value : !canProceedEntries.value,
 );
 
 async function handleModelUpdate(open: boolean) {
@@ -89,10 +88,8 @@ function updateDraft(next: GameSessionDraft) {
       v-if="step === 1"
       :candidate-options="candidateOptions"
       :selected-candidate-id="selectedCandidateId"
-      :scheduled-at="scheduledAt"
       :loading="loadingPoll"
       @select="selectCandidate"
-      @update:scheduled-at="setScheduledAt"
     />
     <MemberSelectStep
       v-else-if="step === 2"

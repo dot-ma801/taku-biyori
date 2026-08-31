@@ -1,4 +1,4 @@
-import { computed, ref, toValue } from 'vue';
+import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { createGameSession } from '@/api/game-session';
 import { getSchedulePoll } from '@/api/lobby';
@@ -36,6 +36,7 @@ const emptyDraft = (): GameSessionDraft => ({
  */
 export const useConfirmFlow = (
   lobby: MaybeRefOrGetter<LobbyDetailModel>,
+  isOpen: MaybeRefOrGetter<boolean>,
   onCreated: (gameSession: GameSessionModel) => void,
 ) => {
   const toast = useToast();
@@ -158,6 +159,18 @@ export const useConfirmFlow = (
     draft.value = emptyDraft();
     await loadLatestPoll();
   }
+
+  // 親が v-model を true にして開くケースでは BaseDialog（Dialog.Root）から
+  // update:model-value が返ってこないため、開閉そのものを監視して初期化する。
+  watch(
+    () => toValue(isOpen),
+    (open) => {
+      if (open) {
+        void reset();
+      }
+    },
+    { immediate: true },
+  );
 
   function createInput() {
     const values = draft.value;

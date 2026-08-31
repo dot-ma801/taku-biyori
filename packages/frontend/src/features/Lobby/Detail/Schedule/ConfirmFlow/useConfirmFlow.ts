@@ -49,7 +49,6 @@ export const useConfirmFlow = (
   const loadingPoll = ref(false);
   const loading = ref(false);
   const selectedCandidateId = ref<string | null>(null);
-  const scheduledAt = ref('');
   const selectedEntryIds = ref<Set<string>>(new Set());
   const draft = ref<GameSessionDraft>(emptyDraft());
 
@@ -73,11 +72,15 @@ export const useConfirmFlow = (
         (date) => date.id === selectedCandidateId.value,
       ) ?? null,
   );
+  // 開催日は日程調整の候補日から決めるため、選択中の候補日から導出する
+  const scheduledAt = computed(() => selectedCandidateDate.value?.date ?? '');
   const selectedEntries = computed(() =>
     entries.value.filter((entry) => selectedEntryIds.value.has(entry.id)),
   );
   const selectedCount = computed(() => selectedEntryIds.value.size);
-  const canProceedDate = computed(() => scheduledAt.value !== '');
+  const canProceedCandidate = computed(
+    () => selectedCandidateId.value !== null,
+  );
   const canProceedEntries = computed(() => selectedCount.value > 0);
   const capacityMismatch = computed(() => {
     const maxPlayers = toValue(lobby).maxPlayers;
@@ -99,19 +102,7 @@ export const useConfirmFlow = (
     const date = candidateDates.value.find((candidate) => candidate.id === id);
     if (!date) return;
     selectedCandidateId.value = id;
-    scheduledAt.value = date.date;
     selectedEntryIds.value = defaultEntryIds(date);
-  }
-
-  function setScheduledAt(date: string) {
-    scheduledAt.value = date;
-    const candidate = candidateDates.value.find((item) => item.date === date);
-    if (candidate) {
-      selectCandidate(candidate.id);
-      return;
-    }
-    selectedCandidateId.value = null;
-    selectedEntryIds.value = new Set();
   }
 
   function toggleEntry(id: string) {
@@ -134,7 +125,7 @@ export const useConfirmFlow = (
   }
 
   function goNext() {
-    if (step.value === 1 && canProceedDate.value) step.value = 2;
+    if (step.value === 1 && canProceedCandidate.value) step.value = 2;
     else if (step.value === 2 && canProceedEntries.value) step.value = 3;
   }
 
@@ -163,7 +154,6 @@ export const useConfirmFlow = (
   async function reset() {
     step.value = 1;
     selectedCandidateId.value = null;
-    scheduledAt.value = '';
     selectedEntryIds.value = new Set();
     draft.value = emptyDraft();
     await loadLatestPoll();
@@ -183,7 +173,7 @@ export const useConfirmFlow = (
   }
 
   async function confirm() {
-    if (loading.value || !canProceedDate.value || !canProceedEntries.value)
+    if (loading.value || !canProceedCandidate.value || !canProceedEntries.value)
       return;
     loading.value = true;
     try {
@@ -215,11 +205,10 @@ export const useConfirmFlow = (
     selectedCount,
     candidateOptions,
     draft,
-    canProceedDate,
+    canProceedCandidate,
     canProceedEntries,
     capacityMismatch,
     selectCandidate,
-    setScheduledAt,
     toggleEntry,
     isWarnedEntry,
     getEntryAnswer,

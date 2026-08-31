@@ -62,18 +62,32 @@ describe('useConfirmFlow', () => {
     expect(flow.isWarnedEntry('entry-ng')).toBe(true);
   });
 
-  it('直接日付の指定では候補日選択と回答由来の既定選択を解除する', async () => {
+  it('候補日が未選択のあいだは次のステップへ進めない', async () => {
+    // Arrange
+    const flow = useConfirmFlow(() => lobby, vi.fn());
+    await flow.reset();
+
+    // Act
+    const beforeSelect = flow.canProceedCandidate.value;
+    flow.selectCandidate('candidate-1');
+
+    // Assert
+    expect(beforeSelect).toBe(false);
+    expect(flow.canProceedCandidate.value).toBe(true);
+  });
+
+  it('開催日は選択した候補日から導出する', async () => {
     // Arrange
     const flow = useConfirmFlow(() => lobby, vi.fn());
     await flow.reset();
     flow.selectCandidate('candidate-1');
 
     // Act
-    flow.setScheduledAt('2026-09-21');
+    await flow.reset();
 
     // Assert
     expect(flow.selectedCandidateId.value).toBeNull();
-    expect(flow.selectedEntryIds.value.size).toBe(0);
+    expect(flow.scheduledAt.value).toBe('');
   });
 
   it('空欄の上書き項目を省略して createGameSession を呼ぶ', async () => {

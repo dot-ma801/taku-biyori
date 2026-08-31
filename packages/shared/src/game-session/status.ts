@@ -22,6 +22,19 @@ export enum GameSessionStatus {
 }
 
 /**
+ * `getGameSessionStatus()` が導出しうる値。
+ *
+ * enum には移行期間中だけ `draft` / `open` / `confirmed` が残っているが、v2 で
+ * 導出されるのはこの4値だけ（design-v2 §4-2）。v2 の DTO（`GameSessionStatusSchema`）も
+ * この4値しか受け付けないため、導出関数の戻り値を先に絞って型で噛み合わせる。
+ */
+export type DerivedGameSessionStatus =
+  | GameSessionStatus.scheduled
+  | GameSessionStatus.today
+  | GameSessionStatus.completed
+  | GameSessionStatus.cancelled;
+
+/**
  * ステータス導出のもとになるファクト。
  *
  * `completedAt` / `cancelledAt` は有無だけを見るため、Date（backend の DB 行）と
@@ -56,7 +69,7 @@ export type GameSessionStatusFacts = {
 export const getGameSessionStatus = (
   facts: GameSessionStatusFacts,
   today: string = todayDateString(),
-): GameSessionStatus => {
+): DerivedGameSessionStatus => {
   if (facts.cancelledAt) return GameSessionStatus.cancelled;
   if (facts.completedAt) return GameSessionStatus.completed;
   if (facts.scheduledAt === today) return GameSessionStatus.today;

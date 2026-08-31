@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GameSessionStatus, getGameSessionStatus } from '@/game-session/status';
+import type { DerivedGameSessionStatus } from '@/game-session/status';
 
 // design-v2 §4-2 の導出表をそのまま写したもの。**先頭一致**で判定する。
 //
@@ -180,5 +181,24 @@ describe('getGameSessionStatus', () => {
       GameSessionStatus.scheduled,
       GameSessionStatus.today,
     ]);
+  });
+});
+
+describe('DerivedGameSessionStatus', () => {
+  it('導出される4値だけを型として受け付ける', () => {
+    // Arrange
+    // 型レベルの取り決めなので、実行時ではなくコンパイルで落ちることを担保する。
+    // enum に残る draft / open / confirmed は v2 では導出されない（design-v2 §4-2）
+    const derived: DerivedGameSessionStatus = getGameSessionStatus(
+      { scheduledAt: TODAY, completedAt: null, cancelledAt: null },
+      TODAY,
+    );
+
+    // @ts-expect-error 移行期の値は導出されないので代入できない
+    const deprecated: DerivedGameSessionStatus = GameSessionStatus.confirmed;
+
+    // Act / Assert
+    expect(derived).toBe(GameSessionStatus.today);
+    expect(deprecated).toBe(GameSessionStatus.confirmed);
   });
 });

@@ -51,6 +51,7 @@ export {
 export {
   getGameSessionStatus,
   type GameSessionStatusFacts,
+  type DerivedGameSessionStatus,
 } from './game-session/status.js';
 export {
   resolveGameSessionDisplay,

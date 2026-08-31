@@ -416,9 +416,8 @@ export const createGameSessionRepository = (
     /**
      * ダッシュボードの横断一覧（GET /api/me/game-sessions）。
      *
-     * 「自分が着席している」「自分がホストのロビー」「公開ロビー」のセッションを返す。
-     * 公開ロビーのブランチにだけ終端（完了・中止）の除外を付ける。自分のロビー・
-     * 自分が着席したセッションは終わっていても履歴として出す（v0.2 の方針を継続）。
+     * 「自分が着席している」「自分がホストのロビー」のセッションを返す。
+     * どちらも終端（完了・中止）を履歴として含める（v0.2 の方針を継続）。
      */
     async findByUserId(userId: string): Promise<GameSessionListItem[]> {
       const rows = await db
@@ -434,15 +433,9 @@ export const createGameSessionRepository = (
               WHERE s.game_session_id = ${gameSessions.id}
                 AND e.user_id = ${userId}
             )
-            OR (
-              ${lobbies.publishedAt} IS NOT NULL
-              AND ${lobbies.disbandedAt} IS NULL
-              AND ${gameSessions.completedAt} IS NULL
-              AND ${gameSessions.cancelledAt} IS NULL
-            )
           )`,
         )
-        .orderBy(asc(gameSessions.scheduledAt));
+        .orderBy(asc(gameSessions.scheduledAt), asc(gameSessions.id));
 
       const seatRefs = await loadSeatRefs(rows.map((r) => r.id));
       return rows.map((row) =>
@@ -450,14 +443,14 @@ export const createGameSessionRepository = (
       );
     },
 
-    /** ロビー配下の開催一覧。中止・完了も含めて全件、scheduled_at 昇順（design-v2 §6-5） */
+    /** ロビー配下の開催一覧。中止・完了も含めて全件、scheduled_at・id 昇順（design-v2 §6-5） */
     async findByLobbyId(lobbyId: string): Promise<GameSessionListItem[]> {
       const rows = await db
         .select({ ...gameSessionColumns, ...lobbyColumns })
         .from(gameSessions)
         .innerJoin(lobbies, eq(lobbies.id, gameSessions.lobbyId))
         .where(eq(gameSessions.lobbyId, lobbyId))
-        .orderBy(asc(gameSessions.scheduledAt));
+        .orderBy(asc(gameSessions.scheduledAt), asc(gameSessions.id));
 
       const seatRefs = await loadSeatRefs(rows.map((r) => r.id));
       return rows.map((row) =>

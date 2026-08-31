@@ -2,9 +2,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { listLobbyGameSessions } from '@/game-session/application/list-lobby-game-sessions';
 import type { ListLobbyGameSessionsRepository } from '@/game-session/application/list-lobby-game-sessions';
 import type { GameSessionListItem } from '@taku-biyori/shared';
-import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 
 const LOBBY_ID = 'lobby-1';
+
+/**
+ * 閲覧可否はロビーの `published_at` ファクトで決まる（design-v2 §6-13-4）。
+ * 導出ステータスで判定すると、一度も公開せず解散したロビーが draft 判定を
+ * すり抜けて第三者に見えてしまう。
+ */
+const publishedLobby = {
+  hostUserId: 'user-host',
+  publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+};
+const unpublishedLobby = { hostUserId: 'user-host', publishedAt: null };
 
 const item = (id: string): GameSessionListItem => ({
   id,
@@ -23,9 +34,7 @@ const item = (id: string): GameSessionListItem => ({
 const makeRepo = (
   overrides: Partial<ListLobbyGameSessionsRepository> = {},
 ): ListLobbyGameSessionsRepository => ({
-  findLobbyForViewing: vi
-    .fn()
-    .mockResolvedValue({ hostUserId: 'user-host', status: LobbyStatus.open }),
+  findLobbyForViewing: vi.fn().mockResolvedValue(publishedLobby),
   findByLobbyId: vi.fn().mockResolvedValue([item('session-1')]),
   ...overrides,
 });
@@ -55,13 +64,10 @@ describe('listLobbyGameSessions', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('下書きロビーはホスト以外に forbidden を返す', async () => {
+  it('未公開ロビーはホスト以外に forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyForViewing: vi.fn().mockResolvedValue({
-        hostUserId: 'user-host',
-        status: LobbyStatus.draft,
-      }),
+      findLobbyForViewing: vi.fn().mockResolvedValue(unpublishedLobby),
     });
 
     // Act
@@ -71,13 +77,10 @@ describe('listLobbyGameSessions', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('下書きロビーでもホストなら取得できる', async () => {
+  it('未公開ロビーでもホストなら取得できる', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyForViewing: vi.fn().mockResolvedValue({
-        hostUserId: 'user-host',
-        status: LobbyStatus.draft,
-      }),
+      findLobbyForViewing: vi.fn().mockResolvedValue(unpublishedLobby),
     });
 
     // Act

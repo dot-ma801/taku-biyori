@@ -278,7 +278,7 @@ export interface GameSessionRepository {
   gameSessionExists(id: string): Promise<boolean>;
   findLobbyForViewing(
     lobbyId: string,
-  ): Promise<{ hostUserId: string; status: LobbyStatus } | null>;
+  ): Promise<{ hostUserId: string; publishedAt: Date | null } | null>;
   findLobbyForHost(
     lobbyId: string,
   ): Promise<{ hostUserId: string; status: LobbyStatus } | null>;
@@ -378,10 +378,14 @@ export const createGameSessionRepository = (
     return byId;
   };
 
-  /** ロビーのホストと導出ステータス。閲覧・操作の可否判定に使う */
-  const loadLobbyStatus = async (
+  /** ロビーのホスト・公開ファクト・導出ステータス。閲覧と操作の可否判定に使う */
+  const loadLobby = async (
     lobbyId: string,
-  ): Promise<{ hostUserId: string; status: LobbyStatus } | null> => {
+  ): Promise<{
+    hostUserId: string;
+    publishedAt: Date | null;
+    status: LobbyStatus;
+  } | null> => {
     const rows = await db
       .select({
         hostUserId: lobbies.hostUserId,
@@ -398,6 +402,10 @@ export const createGameSessionRepository = (
     if (!row) return null;
     return {
       hostUserId: row.hostUserId,
+      // 閲覧可否は導出ステータスではなく publishedAt ファクトで判定する。
+      // 一度も公開せずに解散したロビーは status が disbanded になり、
+      // `status === draft` の判定をすり抜けてしまう（design-v2 §6-13-4）
+      publishedAt: row.publishedAt,
       status: getLobbyStatus(row),
     };
   };
@@ -527,15 +535,22 @@ export const createGameSessionRepository = (
     /**
      * ロビーの閲覧可否・操作可否の判定材料。
      *
-     * findLobbyForViewing と findLobbyForHost は同じクエリだが、呼び出し側の関心が
-     * 「閲覧してよいか」と「ホストとして操作してよいか」で違うため名前を分けている。
+     * findLobbyForViewing と findLobbyForHost は同じクエリだが、返す材料が違う。
+     * 閲覧は公開ファクト（publishedAt）、ホスト操作はステータス軸のポリシー（§4-5）で
+     * 判定するため、それぞれ必要な分だけを返して取り違えを型で防ぐ。
      */
     async findLobbyForViewing(lobbyId: string) {
-      return loadLobbyStatus(lobbyId);
+      const lobby = await loadLobby(lobbyId);
+      if (!lobby) return null;
+      // 導出ステータスは意図的に落とす。閲覧可否を status で判定すると、
+      // 一度も公開せず解散したロビーが draft 判定をすり抜ける（design-v2 §6-13-4）
+      return { hostUserId: lobby.hostUserId, publishedAt: lobby.publishedAt };
     },
 
     async findLobbyForHost(lobbyId: string) {
-      return loadLobbyStatus(lobbyId);
+      const lobby = await loadLobby(lobbyId);
+      if (!lobby) return null;
+      return { hostUserId: lobby.hostUserId, status: lobby.status };
     },
 
     // ---------- 書き込み ----------

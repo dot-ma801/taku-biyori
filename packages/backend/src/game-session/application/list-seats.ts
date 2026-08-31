@@ -1,11 +1,10 @@
-import type { LobbyStatus, Seat } from '@taku-biyori/shared';
-import { LobbyStatus as LobbyStatusEnum } from '@taku-biyori/shared';
+import type { Seat } from '@taku-biyori/shared';
 
 export interface ListSeatsRepository {
   findLobbyId(id: string): Promise<string | null>;
   findLobbyForViewing(
     lobbyId: string,
-  ): Promise<{ hostUserId: string; status: LobbyStatus } | null>;
+  ): Promise<{ hostUserId: string; publishedAt: Date | null } | null>;
   findSeatsByGameSessionId(gameSessionId: string): Promise<Seat[]>;
 }
 
@@ -33,8 +32,10 @@ export const listSeats = async (
   const lobby = await repo.findLobbyForViewing(actualLobbyId);
   if (!lobby) return { type: 'notFound' };
 
-  const isDraft = lobby.status === LobbyStatusEnum.draft;
-  if (isDraft && lobby.hostUserId !== userId) return { type: 'forbidden' };
+  // 導出ステータスではなく published_at で判定する（design-v2 §6-13-4）
+  if (lobby.publishedAt === null && lobby.hostUserId !== userId) {
+    return { type: 'forbidden' };
+  }
 
   const seats = await repo.findSeatsByGameSessionId(gameSessionId);
   return { type: 'ok', seats };

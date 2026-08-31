@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { listSharedPlayMemos } from '@/game-session/application/list-shared-play-memos';
 import type { ListSharedPlayMemosRepository } from '@/game-session/application/list-shared-play-memos';
 import type { SharedGameSessionPlayMemo } from '@taku-biyori/shared';
-import { LobbyStatus } from '@taku-biyori/shared';
 
 const today = '2026-08-02';
 const LOBBY_ID = 'lobby-1';
@@ -29,16 +28,23 @@ const completedFields = {
   cancelledAt: null,
 };
 
-/** 公開はロビーの関心事に移ったので、閲覧可否の材料は lobby.status になった（design-v2 §4-2） */
-const openLobby = { hostUserId: 'host-1', status: LobbyStatus.open };
-const draftLobby = { hostUserId: 'host-1', status: LobbyStatus.draft };
+/**
+ * 公開はロビーの関心事に移った（design-v2 §4-2）。判定材料は導出ステータスではなく
+ * `published_at` ファクト。ステータスで見ると、一度も公開せず解散したロビーが
+ * draft 判定をすり抜けてメモが第三者に読める（§6-13-4）
+ */
+const publishedLobby = {
+  hostUserId: 'host-1',
+  publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+};
+const unpublishedLobby = { hostUserId: 'host-1', publishedAt: null };
 
 const makeRepo = (
   overrides: Partial<ListSharedPlayMemosRepository> = {},
 ): ListSharedPlayMemosRepository => ({
   findStatusFields: vi.fn().mockResolvedValue(completedFields),
   findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
-  findLobbyForViewing: vi.fn().mockResolvedValue(openLobby),
+  findLobbyForViewing: vi.fn().mockResolvedValue(publishedLobby),
   findSharedPlayMemos: vi.fn().mockResolvedValue(sharedPlayMemos),
   ...overrides,
 });
@@ -103,7 +109,7 @@ describe('listSharedPlayMemos', () => {
 
   // ⚠️ 下書きロビーのまま中止された開催は cancelled に導出される。
   // ロビーの公開制御を先に噛ませないと、下書きロビーのメモが第三者に読める（design-v1.2 §4 手順2）
-  it('下書きロビーのまま中止された開催は、ホスト以外に forbidden を返す', async () => {
+  it('未公開のまま中止された開催は、ホスト以外に forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -111,7 +117,7 @@ describe('listSharedPlayMemos', () => {
         completedAt: null,
         cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
       }),
-      findLobbyForViewing: vi.fn().mockResolvedValue(draftLobby),
+      findLobbyForViewing: vi.fn().mockResolvedValue(unpublishedLobby),
     });
 
     // Act
@@ -127,7 +133,7 @@ describe('listSharedPlayMemos', () => {
     expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
-  it('下書きロビーの開催は未ログインの閲覧者にも forbidden を返す', async () => {
+  it('未公開ロビーの開催は未ログインの閲覧者にも forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -135,7 +141,7 @@ describe('listSharedPlayMemos', () => {
         completedAt: null,
         cancelledAt: new Date('2026-08-02T00:00:00.000Z'),
       }),
-      findLobbyForViewing: vi.fn().mockResolvedValue(draftLobby),
+      findLobbyForViewing: vi.fn().mockResolvedValue(unpublishedLobby),
     });
 
     // Act

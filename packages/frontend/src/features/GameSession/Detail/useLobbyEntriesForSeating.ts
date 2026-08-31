@@ -35,8 +35,16 @@ export const useLobbyEntriesForSeating = (
     }
   }
 
-  // 詳細が届いて hostUserId が確定した時点で1回引く
-  watch(() => toValue(hostUserId), fetch, { immediate: true });
+  // 詳細または認証復元のどちらが後でも、ホストと確定した時点で候補を取得する。
+  // 復元前に一度失敗した fetch を、hostUserId だけの watch では再試行できない。
+  watch(
+    () => ({
+      hostUserId: toValue(hostUserId),
+      currentUserId: authStore.currentUser?.id,
+    }),
+    fetch,
+    { immediate: true },
+  );
 
   return { activeEntries, fetch };
 };

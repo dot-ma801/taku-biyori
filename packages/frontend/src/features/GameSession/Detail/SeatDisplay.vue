@@ -41,6 +41,7 @@ const emit = defineEmits<{
 
 const {
   canEditCharacterName,
+  canEditSeat,
   isEditing,
   loading,
   draftOf,
@@ -110,7 +111,7 @@ const seatableOptions = computed(() =>
           :model-value="draftOf(row.id)"
           @update:model-value="(v) => setDraft(row.id, v)"
           placeholder="キャラクター名を入力"
-          :disabled="loading"
+          :disabled="loading || !canEditSeat(row.seat)"
         >
         </BaseTextBox>
         <span class="user-name">@ {{ row.userName }}</span>

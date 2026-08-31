@@ -167,6 +167,30 @@ describe('canComplete / canCancel', () => {
   });
 });
 
+describe('canEdit', () => {
+  it.each([
+    GameSessionStatus.scheduled,
+    GameSessionStatus.today,
+    GameSessionStatus.completed,
+  ])('%s のときホストは開催を編集できる', (status) => {
+    // Arrange / Act
+    const { canEdit } = setup(makeGameSession({ status }));
+
+    // Assert
+    expect(canEdit.value).toBe(true);
+  });
+
+  it('中止した開催はホストでも編集できない', () => {
+    // Arrange / Act
+    const { canEdit } = setup(
+      makeGameSession({ status: GameSessionStatus.cancelled }),
+    );
+
+    // Assert
+    expect(canEdit.value).toBe(false);
+  });
+});
+
 describe('canDelete', () => {
   it('中止した開催は着席者がいても削除できる', () => {
     // Arrange / Act

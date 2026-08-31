@@ -15,6 +15,7 @@ import type { GameSessionModel } from '@/models/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import { Album, UsersRound, MapPin } from '@lucide/vue';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const props = defineProps<{ lobbyId: string }>();
 
@@ -34,7 +35,9 @@ const location = computed(() => lobby.value?.location ?? '未設定');
 const authStore = useAuthStore();
 const router = useRouter();
 const canCreateGameSession = computed(
-  () => lobby.value?.hostUserId === authStore.currentUser?.id,
+  () =>
+    lobby.value?.status === LobbyStatus.open &&
+    lobby.value.hostUserId === authStore.currentUser?.id,
 );
 const isCreateGameSessionOpen = ref(false);
 const gameSessionList = ref<InstanceType<typeof GameSessionList> | null>(null);

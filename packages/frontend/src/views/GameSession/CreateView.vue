@@ -10,6 +10,7 @@ import { createGameSession } from '@/api/game-session';
 import { createLobby, getLobby } from '@/api/lobby';
 import { ApiError } from '@/lib/api-client';
 import { ref } from 'vue';
+import type { LobbyModel } from '@/models/lobby';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -21,6 +22,9 @@ const timeLabel = ref('');
 const description = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
+// ロビー作成後に開催作成が失敗しても、再試行で新しい下書きロビーを量産しない。
+// 作成済みロビーはこの画面を離れるまで保持し、後続処理だけを再試行する。
+const createdLobby = ref<LobbyModel | null>(null);
 
 async function submit() {
   if (!title.value.trim() || !scheduledAt.value) {
@@ -31,11 +35,14 @@ async function submit() {
   errorMessage.value = '';
   try {
     // 直接卓立ても必ずロビーを作る。候補日を省略した下書きロビーなので受付は開かない。
-    const lobby = await createLobby({
-      title: title.value,
-      ...(scenarioName.value && { scenarioName: scenarioName.value }),
-      ...(location.value && { location: location.value }),
-    });
+    const lobby =
+      createdLobby.value ??
+      (await createLobby({
+        title: title.value,
+        ...(scenarioName.value && { scenarioName: scenarioName.value }),
+        ...(location.value && { location: location.value }),
+      }));
+    createdLobby.value = lobby;
     const detail = await getLobby(lobby.id);
     const hostEntry = detail.activeEntries.find(
       (entry) => entry.userId === detail.hostUserId,

@@ -96,7 +96,10 @@ watch(
     if (isMyMemo.value) return;
     void router.replace({
       name: 'game-sessions-detail',
-      params: { gameSessionId: props.gameSessionId },
+      params: {
+        lobbyId: props.lobbyId,
+        gameSessionId: props.gameSessionId,
+      },
     });
   },
 );

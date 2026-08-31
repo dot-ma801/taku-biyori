@@ -27,7 +27,7 @@ const cancelSessionDialogModel = ref(false);
 const onRefresh = () => emit('sessionChanged');
 
 const {
-  isHost,
+  canEdit,
   canComplete,
   canCancel,
   canDelete,
@@ -61,7 +61,7 @@ function onClickEdit() {
       削除
     </BaseButton>
     <BaseButton
-      v-if="isHost"
+      v-if="canEdit"
       :left-icon="SquarePen"
       variant="secondary"
       @click="onClickEdit"

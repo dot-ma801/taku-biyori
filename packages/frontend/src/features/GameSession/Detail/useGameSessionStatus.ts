@@ -46,6 +46,7 @@ export const useGameSessionStatus = (
     allows(GameSessionAction.completeGameSession),
   );
   const canCancel = computed(() => allows(GameSessionAction.cancelGameSession));
+  const canEdit = computed(() => allows(GameSessionAction.editGameSession));
 
   /**
    * 削除可能か。「`cancelled`」**または**「着席者がホスト本人のみ」（design-v2 §4-3）。
@@ -113,6 +114,7 @@ export const useGameSessionStatus = (
     isHost,
     canComplete,
     canCancel,
+    canEdit,
     canDelete,
     loading,
     loadingDelete,

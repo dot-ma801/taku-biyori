@@ -37,13 +37,6 @@ export const updateGameSession = async (
   userId: string,
   input: UpdateGameSessionInput,
 ): Promise<UpdateGameSessionResult> => {
-  if (
-    input.scheduledAt !== undefined &&
-    input.scheduledAt < todayDateString()
-  ) {
-    return { type: 'pastScheduledAt' };
-  }
-
   const actualLobbyId = await repo.findLobbyId(id);
   if (actualLobbyId === null) return { type: 'notFound' };
   // 入れ子パスの代償。存在を漏らさないよう 404 にする（design-v2 §6-5）
@@ -54,6 +47,16 @@ export const updateGameSession = async (
 
   const facts = await repo.findStatusFields(id);
   if (!facts) return { type: 'notFound' };
+
+  // 完了済み開催の連絡事項だけを更新する場合、保持している過去の開催日を
+  // 再検証して拒否しない。開催日を実際に変更するときだけ未来日を要求する。
+  if (
+    input.scheduledAt !== undefined &&
+    input.scheduledAt !== facts.scheduledAt &&
+    input.scheduledAt < todayDateString()
+  ) {
+    return { type: 'pastScheduledAt' };
+  }
 
   const status = getGameSessionStatus(facts);
   if (!canPerform(GameSessionAction.editGameSession, status, 'host')) {

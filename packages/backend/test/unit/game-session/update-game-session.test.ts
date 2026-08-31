@@ -166,6 +166,26 @@ describe('updateGameSession', () => {
     expect(result.type).toBe('ok');
   });
 
+  it('過去日の完了済み開催は開催日を変えずに更新できる', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        scheduledAt: '2000-01-01',
+        completedAt: new Date('2000-01-01T22:00:00.000Z'),
+        cancelledAt: null,
+      }),
+    });
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      scheduledAt: '2000-01-01',
+      description: '記録を追記しました',
+    });
+
+    // Assert
+    expect(result.type).toBe('ok');
+  });
+
   it('上書き項目の null（解除）をそのままリポジトリへ渡す', async () => {
     // Arrange
     // null と「キーの省略」を潰すと、上書き解除ができなくなる（design-v2 §6-13-5）

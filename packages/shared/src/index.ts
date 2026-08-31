@@ -30,6 +30,7 @@ export {
   UpdateGameSessionStatusInputSchema,
   type UpdateGameSessionStatusInput,
   // v0.2 契約（移行期間中だけ残す）
+  LegacyGameSessionStatusSchema,
   LegacyGameSessionSchema,
   type LegacyGameSession,
   LegacyGameSessionDetailSchema,

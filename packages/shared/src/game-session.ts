@@ -4,7 +4,20 @@ import { LobbyStatus } from '@/lobby/status';
 import { SeatRefSchema, SeatSchema } from '@/game-session/seat';
 
 export { GameSessionStatus };
-export const GameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
+
+/**
+ * v2 レスポンスのステータス。`getGameSessionStatus()` が導出する4値だけを許す（design-v2 §4-2）。
+ *
+ * `GameSessionStatus` enum には移行期間中だけ `draft` / `open` / `confirmed` が残っているが、
+ * v2 では導出されない値なので v2 の DTO では受け付けない。
+ * 旧 DTO は `LegacyGameSessionStatusSchema` を使う。
+ */
+export const GameSessionStatusSchema = z.enum([
+  GameSessionStatus.scheduled,
+  GameSessionStatus.today,
+  GameSessionStatus.completed,
+  GameSessionStatus.cancelled,
+]);
 
 // ============================================================
 // v2 契約（design-v2 §5-5 / §6-5 / §6-13-5）
@@ -199,12 +212,19 @@ export type UpdateGameSessionStatusInput = z.infer<
 // 旧 UI を置き換える PR でまとめて削除する。新しい実装からは参照しないこと。
 // ============================================================
 
+/**
+ * 旧 DTO のステータス。移行期の `draft` / `open` / `confirmed` を含む enum 全体を受ける。
+ *
+ * @deprecated v2 の4ステータス（`GameSessionStatusSchema`）へ移行する
+ */
+export const LegacyGameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
+
 /** @deprecated `GameSessionListItem` へ移行する */
 export const LegacyGameSessionListItemSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   scenarioName: z.string().nullable().optional(),
-  status: GameSessionStatusSchema,
+  status: LegacyGameSessionStatusSchema,
   isPublished: z.boolean(),
   memberCount: z.number().int(),
   maxMembers: z.number().int().nullable().optional(),
@@ -225,7 +245,7 @@ export const LegacyGameSessionSchema = z.object({
   description: z.string().nullable().optional(),
   scenarioName: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
-  status: GameSessionStatusSchema,
+  status: LegacyGameSessionStatusSchema,
   isPublished: z.boolean(),
   scheduledAt: z.string(),
   completedAt: z.string().nullable().optional(),

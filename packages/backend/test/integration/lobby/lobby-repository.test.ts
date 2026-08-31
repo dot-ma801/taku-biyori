@@ -21,6 +21,7 @@ import {
 import { closeTestDatabase, withRollback } from '@test/helpers/test-database';
 import {
   insertCandidateDate,
+  insertGameSession,
   insertLobby,
   insertLobbyEntry,
   insertSchedulePoll,
@@ -479,6 +480,45 @@ describe('countOtherEntries', () => {
 
       // Act
       const count = await repo.countOtherEntries(lobbyId, host.id);
+
+      // Assert
+      expect(count).toBe(0);
+    });
+  });
+});
+
+describe('countGameSessions', () => {
+  it('中止・完了も含めてぶら下がっている開催を数える', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      // lobby_id が ON DELETE CASCADE なので、開催が残っているロビーは消させない
+      // （design-v2 §6-13-3）。「終わった開催なら消してよい」ではない
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      await insertGameSession(db, lobbyId);
+      await insertGameSession(db, lobbyId, { completedAt: new Date() });
+      await insertGameSession(db, lobbyId, { cancelledAt: new Date() });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const count = await repo.countGameSessions(lobbyId);
+
+      // Assert
+      expect(count).toBe(3);
+    });
+  });
+
+  it('他のロビーの開催は数えない', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const otherLobbyId = await insertLobby(db, host.id);
+      await insertGameSession(db, otherLobbyId);
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const count = await repo.countGameSessions(lobbyId);
 
       // Assert
       expect(count).toBe(0);

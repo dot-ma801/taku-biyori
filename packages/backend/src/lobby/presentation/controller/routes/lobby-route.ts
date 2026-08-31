@@ -132,6 +132,9 @@ export const registerLobbyRoute = (
     if (result.type === 'hasMember') {
       return c.json({ error: 'Cannot delete lobby with members' }, 409);
     }
+    if (result.type === 'hasGameSession') {
+      return c.json({ error: 'Cannot delete lobby with game sessions' }, 409);
+    }
     return new Response(null, { status: 204 });
   });
 

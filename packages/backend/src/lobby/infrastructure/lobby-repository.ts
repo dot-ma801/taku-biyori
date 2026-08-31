@@ -37,6 +37,7 @@ import {
   scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import { user } from '@/system/infrastructure/database/schema';
+import { gameSessions } from '@/system/infrastructure/database/game-session-schema';
 import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
 import type { ListLobbiesRepository } from '@/lobby/application/list-lobbies';
 import type { CreateLobbyRepository } from '@/lobby/application/create-lobby';
@@ -317,6 +318,16 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
           ),
         ),
       );
+    return result[0]?.cnt ?? 0;
+  },
+
+  async countGameSessions(id: string): Promise<number> {
+    // 中止・完了も数える。lobby_id が ON DELETE CASCADE なので、
+    // ロビーを消すと過去の開催記録ごと連鎖して消える（design-v2 §6-13-3）
+    const result = await db
+      .select({ cnt: count() })
+      .from(gameSessions)
+      .where(eq(gameSessions.lobbyId, id));
     return result[0]?.cnt ?? 0;
   },
 

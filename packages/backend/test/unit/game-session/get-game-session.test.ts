@@ -39,11 +39,25 @@ const detail = (
   ...overrides,
 });
 
+const PUBLISHED = new Date('2026-08-01T00:00:00.000Z');
+
+/**
+ * 閲覧可否はロビーの `published_at` ファクトで決まる（design-v2 §6-13-4）。
+ * detail 側の `lobby.status` は表示用の導出値でしかないので、
+ * ここは findLobbyForViewing の戻り値だけで組み立てる。
+ */
 const repoWith = (
   value: GameSessionDetail | null,
+  lobby: { hostUserId: string; publishedAt: Date | null } | null = {
+    hostUserId: 'user-host',
+    publishedAt: PUBLISHED,
+  },
 ): GetGameSessionRepository => ({
   findDetailById: vi.fn().mockResolvedValue(value),
+  findLobbyForViewing: vi.fn().mockResolvedValue(lobby),
 });
+
+const unpublished = { hostUserId: 'user-host', publishedAt: null };
 
 describe('getGameSession', () => {
   it('公開ロビーの開催は未ログインでも取得できる', async () => {
@@ -84,7 +98,7 @@ describe('getGameSession', () => {
   it('下書きロビーの開催はホストなら取得できる', async () => {
     // Arrange
     const gameSession = detail({}, { status: LobbyStatus.draft });
-    const repo = repoWith(gameSession);
+    const repo = repoWith(gameSession, unpublished);
 
     // Act
     const result = await getGameSession(
@@ -100,7 +114,10 @@ describe('getGameSession', () => {
 
   it('下書きロビーの開催はホスト以外だと forbidden を返す', async () => {
     // Arrange
-    const repo = repoWith(detail({}, { status: LobbyStatus.draft }));
+    const repo = repoWith(
+      detail({}, { status: LobbyStatus.draft }),
+      unpublished,
+    );
 
     // Act
     const result = await getGameSession(repo, LOBBY_ID, 'session-1', 'user-2');
@@ -111,7 +128,10 @@ describe('getGameSession', () => {
 
   it('下書きロビーの開催は未ログインだと forbidden を返す', async () => {
     // Arrange
-    const repo = repoWith(detail({}, { status: LobbyStatus.draft }));
+    const repo = repoWith(
+      detail({}, { status: LobbyStatus.draft }),
+      unpublished,
+    );
 
     // Act
     const result = await getGameSession(repo, LOBBY_ID, 'session-1', null);
@@ -130,6 +150,50 @@ describe('getGameSession', () => {
 
     // Assert
     expect(result).toEqual({ type: 'ok', gameSession });
+  });
+
+  it('一度も公開せず解散したロビーの開催はホスト以外だと forbidden を返す', async () => {
+    // Arrange
+    // 導出ステータスは disbanded になるため、status で判定するとすり抜ける。
+    // published_at が null のままかどうかで判定する（design-v2 §6-13-4）
+    const repo = repoWith(
+      detail({}, { status: LobbyStatus.disbanded }),
+      unpublished,
+    );
+
+    // Act
+    const result = await getGameSession(repo, LOBBY_ID, 'session-1', 'user-2');
+
+    // Assert
+    expect(result).toEqual({ type: 'forbidden' });
+  });
+
+  it('一度も公開せず解散したロビーの開催でもホストなら取得できる', async () => {
+    // Arrange
+    const gameSession = detail({}, { status: LobbyStatus.disbanded });
+    const repo = repoWith(gameSession, unpublished);
+
+    // Act
+    const result = await getGameSession(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      'user-host',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'ok', gameSession });
+  });
+
+  it('ロビーが引けなければ notFound を返す', async () => {
+    // Arrange
+    const repo = repoWith(detail(), null);
+
+    // Act
+    const result = await getGameSession(repo, LOBBY_ID, 'session-1', null);
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
   });
 
   it('解決済みの表示値は返さず、上書きの生値とロビーをそのまま返す', async () => {

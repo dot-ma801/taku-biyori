@@ -25,6 +25,9 @@ beforeAll(() => {
   getTestDatabase();
 });
 
+/** どのテーブルにも存在しない UUID。「見つからない」経路の入力に使う */
+const NOT_FOUND_ID = '00000000-0000-4000-8000-000000000000';
+
 describe('findDetailById', () => {
   it('上書きの生値とロビーの既定値を両方返す（解決済みの値は返さない）', async () => {
     await withRollback(async (db) => {
@@ -124,9 +127,7 @@ describe('findDetailById', () => {
       const repo = createGameSessionRepository(db);
 
       // Act
-      const detail = await repo.findDetailById(
-        '00000000-0000-4000-8000-000000000000',
-      );
+      const detail = await repo.findDetailById(NOT_FOUND_ID);
 
       // Assert
       expect(detail).toBeNull();
@@ -391,20 +392,72 @@ describe('findHostUserId / findLobbyId / findStatusFields', () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createGameSessionRepository(db);
-      const missing = '00000000-0000-4000-8000-000000000000';
 
       // Act / Assert
-      expect(await repo.findHostUserId(missing)).toBeNull();
-      expect(await repo.findLobbyId(missing)).toBeNull();
-      expect(await repo.findStatusFields(missing)).toBeNull();
+      expect(await repo.findHostUserId(NOT_FOUND_ID)).toBeNull();
+      expect(await repo.findLobbyId(NOT_FOUND_ID)).toBeNull();
+      expect(await repo.findStatusFields(NOT_FOUND_ID)).toBeNull();
     });
   });
 });
 
 describe('findLobbyForViewing', () => {
-  it('ロビーのファクトから導出したステータスを返す', async () => {
+  it('公開ファクト（published_at）とホストを返す', async () => {
     await withRollback(async (db) => {
       // Arrange
+      // 閲覧可否は導出ステータスではなく published_at で決まる（design-v2 §6-13-4）
+      const host = await insertUser(db);
+      const publishedAt = new Date('2026-08-01T00:00:00.000Z');
+      const draftId = await insertLobby(db, host.id, { publishedAt: null });
+      const openId = await insertLobby(db, host.id, { publishedAt });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const draft = await repo.findLobbyForViewing(draftId);
+      const open = await repo.findLobbyForViewing(openId);
+
+      // Assert
+      expect(draft).toEqual({ hostUserId: host.id, publishedAt: null });
+      expect(open).toEqual({ hostUserId: host.id, publishedAt });
+    });
+  });
+
+  it('一度も公開せず解散したロビーは publishedAt が null のままになる', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      // 導出ステータスは disbanded になり draft 判定をすり抜けるため、
+      // ファクトが残っていることをここで担保する
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: null,
+        disbandedAt: new Date(),
+      });
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const lobby = await repo.findLobbyForViewing(lobbyId);
+
+      // Assert
+      expect(lobby).toEqual({ hostUserId: host.id, publishedAt: null });
+    });
+  });
+
+  it('存在しないロビーでは null を返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const repo = createGameSessionRepository(db);
+
+      // Act / Assert
+      expect(await repo.findLobbyForViewing(NOT_FOUND_ID)).toBeNull();
+    });
+  });
+});
+
+describe('findLobbyForHost', () => {
+  it('ホスト操作の可否判定に使う導出ステータスを返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      // 閲覧と違い、ホスト操作のポリシーはステータス軸で決まる（design-v2 §4-5）
       const host = await insertUser(db);
       const draftId = await insertLobby(db, host.id, { publishedAt: null });
       const openId = await insertLobby(db, host.id, {
@@ -417,15 +470,16 @@ describe('findLobbyForViewing', () => {
       const repo = createGameSessionRepository(db);
 
       // Act / Assert
-      expect((await repo.findLobbyForViewing(draftId))?.status).toBe(
+      expect((await repo.findLobbyForHost(draftId))?.status).toBe(
         LobbyStatus.draft,
       );
-      expect((await repo.findLobbyForViewing(openId))?.status).toBe(
+      expect((await repo.findLobbyForHost(openId))?.status).toBe(
         LobbyStatus.open,
       );
-      expect((await repo.findLobbyForViewing(disbandedId))?.status).toBe(
+      expect((await repo.findLobbyForHost(disbandedId))?.status).toBe(
         LobbyStatus.disbanded,
       );
+      expect(await repo.findLobbyForHost(NOT_FOUND_ID)).toBeNull();
     });
   });
 });
@@ -590,10 +644,7 @@ describe('updateById', () => {
       const repo = createGameSessionRepository(db);
 
       // Act
-      const updated = await repo.updateById(
-        '00000000-0000-4000-8000-000000000000',
-        { title: 'x' },
-      );
+      const updated = await repo.updateById(NOT_FOUND_ID, { title: 'x' });
 
       // Assert
       expect(updated).toBeNull();

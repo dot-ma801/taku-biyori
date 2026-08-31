@@ -1,10 +1,8 @@
 import type {
   GameSessionStatusFacts,
-  LobbyStatus,
   SharedGameSessionPlayMemo,
 } from '@taku-biyori/shared';
 import {
-  LobbyStatus as LobbyStatusEnum,
   canViewSharedPlayMemos,
   getGameSessionStatus,
   todayDateString,
@@ -14,7 +12,7 @@ export interface ListSharedPlayMemosRepository {
   findLobbyId(id: string): Promise<string | null>;
   findLobbyForViewing(
     lobbyId: string,
-  ): Promise<{ hostUserId: string; status: LobbyStatus } | null>;
+  ): Promise<{ hostUserId: string; publishedAt: Date | null } | null>;
   findStatusFields(id: string): Promise<GameSessionStatusFacts | null>;
   findSharedPlayMemos(
     gameSessionId: string,
@@ -34,7 +32,7 @@ export type ListSharedPlayMemosResult =
  * 「自分のを除く」のような閲覧者による分岐を作らない）。
  *
  * ⚠️ **ロビーの公開制御を先に噛ませる点が要。** 公開はロビーの関心事に移ったので
- * 判定材料は lobby.status になった（design-v2 §4-2）。下書きのまま中止された開催は
+ * 判定材料はロビーの `published_at` になった（design-v2 §4-2 / §6-13-4）。未公開のまま中止された開催は
  * セッション側では `cancelled` に導出されるため、素朴に「完了・中止ならメモを返す」と
  * 書くと下書きロビーのメモが第三者に読めてしまう。
  */
@@ -54,7 +52,10 @@ export const listSharedPlayMemos = async (
   const lobby = await repo.findLobbyForViewing(lobbyId);
   if (!lobby) return { type: 'notFound' };
 
-  if (lobby.status === LobbyStatusEnum.draft) {
+  // 導出ステータスではなく published_at で判定する（design-v2 §6-13-4）。
+  // 一度も公開せずに解散したロビーは status が disbanded になるため、
+  // status で判定すると未公開のメモが第三者に読めてしまう
+  if (lobby.publishedAt === null) {
     // 未ログイン（userId === null）は決してホストになりえない。
     // userId === null を先に弾かないと「未ログイン同士の null 一致」で素通りしてしまう
     if (userId === null || lobby.hostUserId !== userId) {

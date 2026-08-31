@@ -2,9 +2,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { listSeats } from '@/game-session/application/list-seats';
 import type { ListSeatsRepository } from '@/game-session/application/list-seats';
 import type { Seat } from '@taku-biyori/shared';
-import { LobbyStatus } from '@taku-biyori/shared';
 
 const LOBBY_ID = 'lobby-1';
+
+/** 閲覧可否はロビーの `published_at` ファクトで決まる（design-v2 §6-13-4） */
+const publishedLobby = {
+  hostUserId: 'user-host',
+  publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+};
+const unpublishedLobby = { hostUserId: 'user-host', publishedAt: null };
 const seat: Seat = {
   id: 'seat-1',
   entryId: 'entry-1',
@@ -19,9 +25,7 @@ const makeRepo = (
   overrides: Partial<ListSeatsRepository> = {},
 ): ListSeatsRepository => ({
   findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
-  findLobbyForViewing: vi
-    .fn()
-    .mockResolvedValue({ hostUserId: 'user-host', status: LobbyStatus.open }),
+  findLobbyForViewing: vi.fn().mockResolvedValue(publishedLobby),
   findSeatsByGameSessionId: vi.fn().mockResolvedValue([seat]),
   ...overrides,
 });
@@ -60,13 +64,10 @@ describe('listSeats', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('下書きロビーはホスト以外に forbidden を返す', async () => {
+  it('未公開ロビーはホスト以外に forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyForViewing: vi.fn().mockResolvedValue({
-        hostUserId: 'user-host',
-        status: LobbyStatus.draft,
-      }),
+      findLobbyForViewing: vi.fn().mockResolvedValue(unpublishedLobby),
     });
 
     // Act

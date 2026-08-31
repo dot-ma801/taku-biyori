@@ -50,8 +50,14 @@ defineExpose({ fetchSessions });
 <template>
   <BaseCard>
     <div class="header">
-      <BaseSectionHeading level="h3" :icon="Calendar">開催一覧</BaseSectionHeading>
-      <BaseButton v-if="props.canCreate" :left-icon="Plus" @click="emit('create')">
+      <BaseSectionHeading level="h3" :icon="Calendar"
+        >開催一覧</BaseSectionHeading
+      >
+      <BaseButton
+        v-if="props.canCreate"
+        :left-icon="Plus"
+        @click="emit('create')"
+      >
         開催を追加する
       </BaseButton>
     </div>
@@ -81,11 +87,50 @@ defineExpose({ fetchSessions });
 </template>
 
 <style scoped>
-.header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
-.message { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
-.error { color: var(--color-error); }
-.session { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; background: transparent; border: 0; border-top: 1px solid var(--color-border); color: var(--color-text); text-align: left; cursor: pointer; }
-.session-main { display: flex; flex-direction: column; gap: var(--space-1); }
-.session-meta { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-sm); }
-.session-meta > span { display: inline-flex; align-items: center; gap: 2px; }
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.message {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+.error {
+  color: var(--color-error);
+}
+.session {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.session-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+.session-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
 </style>

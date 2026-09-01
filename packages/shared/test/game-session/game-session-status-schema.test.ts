@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GameSessionStatus,
   GameSessionStatusSchema,
   GameSessionSchema,
   GameSessionListItemSchema,

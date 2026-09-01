@@ -5,8 +5,6 @@ import {
   GameSessionSchema,
   GameSessionListItemSchema,
   GameSessionSummarySchema,
-  LegacyGameSessionStatusSchema,
-  LegacyGameSessionSchema,
 } from '@/game-session';
 
 const GAME_SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -66,17 +64,6 @@ const makeGameSessionSummary = (status: string) => ({
   title: '第1回',
   timeLabel: null,
   seats: [{ id: SEAT_ID, userId: 'user-1' }],
-});
-
-const makeLegacyGameSession = (status: string) => ({
-  id: GAME_SESSION_ID,
-  title: '第1回',
-  status,
-  isPublished: true,
-  scheduledAt: '2026-09-01',
-  createdBy: 'user-1',
-  createdAt: '2026-08-01T00:00:00.000Z',
-  updatedAt: '2026-08-01T00:00:00.000Z',
 });
 
 describe('GameSessionStatusSchema', () => {
@@ -156,45 +143,4 @@ describe('v2 レスポンス契約のステータス', () => {
       expect(result.success).toBe(false);
     },
   );
-});
-
-describe('LegacyGameSessionStatusSchema', () => {
-  it.each([...V2_STATUSES, ...LEGACY_ONLY_STATUSES])(
-    '移行期間中の値として %s を受け付ける',
-    (status) => {
-      // Arrange
-      const input = status;
-
-      // Act
-      const result = LegacyGameSessionStatusSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    },
-  );
-
-  it.each(LEGACY_ONLY_STATUSES)(
-    'LegacyGameSessionSchema は %s を受け付ける（旧経路が使う）',
-    (status) => {
-      // Arrange
-      const input = makeLegacyGameSession(status);
-
-      // Act
-      const result = LegacyGameSessionSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    },
-  );
-
-  it('enum の値がそのまま通る', () => {
-    // Arrange
-    const input = GameSessionStatus.confirmed;
-
-    // Act
-    const result = LegacyGameSessionStatusSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(true);
-  });
 });

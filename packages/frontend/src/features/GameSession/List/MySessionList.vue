@@ -4,7 +4,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type { GameSessionListItem } from '@taku-biyori/shared';
+import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 import {
   Bookmark,
   Calendar,
@@ -16,7 +16,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const props = defineProps<{
-  mySessions: GameSessionListItem[];
+  mySessions: LegacyGameSessionListItem[];
 }>();
 
 const router = useRouter();

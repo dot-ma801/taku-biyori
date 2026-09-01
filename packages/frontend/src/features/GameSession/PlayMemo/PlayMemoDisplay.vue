@@ -8,10 +8,10 @@ import MyPlayMemoCard from '@/features/GameSession/PlayMemo/MyPlayMemoCard.vue';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { useAuthStore } from '@/stores/auth';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 
 const props = defineProps<{
-  gameSession: GameSessionDetail;
+  gameSession: LegacyGameSessionDetail;
 }>();
 
 const authStore = useAuthStore();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import GameSessionDetail from '@/features/GameSession/Detail/index.vue';
+import GameSessionDetailPage from '@/features/GameSession/Detail/index.vue';
 import PageContainer from '@/components/layout/PageContainer/PageContainer.vue';
 
 const props = defineProps<{ gameSessionId: string }>();
@@ -7,9 +7,9 @@ const props = defineProps<{ gameSessionId: string }>();
 
 <template>
   <PageContainer>
-    <GameSessionDetail
+    <GameSessionDetailPage
       :game-session-id="props.gameSessionId"
-    ></GameSessionDetail>
+    ></GameSessionDetailPage>
   </PageContainer>
 </template>
 

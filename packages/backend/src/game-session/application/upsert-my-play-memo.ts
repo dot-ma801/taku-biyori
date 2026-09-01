@@ -2,7 +2,7 @@ import type {
   GameSessionPlayMemo,
   UpsertGameSessionPlayMemoInput,
 } from '@taku-biyori/shared';
-import { GameSessionAction, canPerform } from '@taku-biyori/shared';
+import { LegacyGameSessionAction, canPerformLegacy } from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 import type { GameSessionStatusInput } from '@/game-session/domain/game-session-status';
 import { getGameSessionStatus } from '@/game-session/domain/game-session-status';
@@ -47,7 +47,7 @@ export const upsertMyPlayMemo = async (
   const role = hostUserId === userId ? 'host' : 'member';
   const status = getGameSessionStatus(fields, now);
 
-  if (!canPerform(GameSessionAction.editPlayMemo, status, role)) {
+  if (!canPerformLegacy(LegacyGameSessionAction.editPlayMemo, status, role)) {
     return { type: 'statusLocked' };
   }
 

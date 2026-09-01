@@ -5,7 +5,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type {
-  GameSessionDetail,
+  LegacyGameSessionDetail,
   GameSessionMember,
   MyGameSessionPlayMemo,
 } from '@taku-biyori/shared';
@@ -42,8 +42,8 @@ function makeMember(
 }
 
 function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
+  overrides: Partial<LegacyGameSessionDetail> = {},
+): LegacyGameSessionDetail {
   return {
     id: SESSION_ID,
     title: 'テストセッション',
@@ -79,7 +79,9 @@ function mockCurrentUser(userId: string | null) {
   } as unknown as ReturnType<typeof useAuthStore>);
 }
 
-function setup(gameSession: GameSessionDetail | null = makeGameSession()) {
+function setup(
+  gameSession: LegacyGameSessionDetail | null = makeGameSession(),
+) {
   return useMyPlayMemo(SESSION_ID, () => gameSession);
 }
 
@@ -90,8 +92,10 @@ function setup(gameSession: GameSessionDetail | null = makeGameSession()) {
  * useMyPlayMemo 内部の watch が発火しないため、この経路を検証するには
  * ref で渡し、テスト側で途中から値を差し替えられるようにする必要がある。
  */
-function setupWithGameSessionRef(initial: GameSessionDetail | null = null) {
-  const gameSession = ref<GameSessionDetail | null>(initial);
+function setupWithGameSessionRef(
+  initial: LegacyGameSessionDetail | null = null,
+) {
+  const gameSession = ref<LegacyGameSessionDetail | null>(initial);
   return { ...useMyPlayMemo(SESSION_ID, gameSession), gameSession };
 }
 
@@ -100,7 +104,7 @@ function setupWithGameSessionRef(initial: GameSessionDetail | null = null) {
  * fetch を明示的に呼ぶテストが、自動取得の分と混ざらないようにするためのヘルパー。
  */
 async function setupSettled(
-  gameSession: GameSessionDetail | null = makeGameSession(),
+  gameSession: LegacyGameSessionDetail | null = makeGameSession(),
 ) {
   const result = setup(gameSession);
   await flushPromises();

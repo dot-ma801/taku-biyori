@@ -3,53 +3,69 @@ import { canPerform, GameSessionAction } from '@/game-session/permissions';
 import type { GameSessionRole } from '@/game-session/permissions';
 import { GameSessionStatus } from '@/game-session';
 
+// v2 で導出されるステータスは4つ（design-v2 §4-2）。
+// 移行期間中の enum には旧値（draft / open / confirmed）も残るが、どのアクションも許可しない。
+const DERIVED_STATUSES: GameSessionStatus[] = [
+  GameSessionStatus.scheduled,
+  GameSessionStatus.today,
+  GameSessionStatus.completed,
+  GameSessionStatus.cancelled,
+];
+const LEGACY_STATUSES: GameSessionStatus[] = [
+  GameSessionStatus.draft,
+  GameSessionStatus.open,
+  GameSessionStatus.confirmed,
+];
 const ALL_STATUSES: GameSessionStatus[] = Object.values(GameSessionStatus);
 const ALL_ROLES: GameSessionRole[] = ['host', 'member'];
 
-// 期待マトリクス: action → 許可される [role, status] の組み合わせ
-// 段階6b で募集を募集枠（lobby）へ移したため、卓では open を導出しない。
-// open を列挙していたポリシーは confirmed（公開済み・実施前）へ読み替えている。
+const on = (
+  roles: readonly GameSessionRole[],
+  statuses: readonly GameSessionStatus[],
+): { role: GameSessionRole; status: GameSessionStatus }[] =>
+  roles.flatMap((role) => statuses.map((status) => ({ role, status })));
+
+const BEFORE_END = [
+  GameSessionStatus.scheduled,
+  GameSessionStatus.today,
+] as const;
+const NOT_CANCELLED = [
+  GameSessionStatus.scheduled,
+  GameSessionStatus.today,
+  GameSessionStatus.completed,
+] as const;
+
+// 期待マトリクス: action → 許可される [role, status] の組み合わせ。
+// docs/design-v2.md §4-3「操作可否」の表をそのまま写したもの
+// （UI でのボタン表示はこれより狭めてよいが、契約側は歪めない）
 const ALLOWED: Record<
   GameSessionAction,
   { role: GameSessionRole; status: GameSessionStatus }[]
 > = {
-  // 参加条件は「公開済み・未完了・実施日当日まで」（design-v1.1 §8）
-  [GameSessionAction.joinSession]: [
-    { role: 'member', status: GameSessionStatus.confirmed },
-    { role: 'member', status: GameSessionStatus.today },
-  ],
-  // 退出条件は参加条件と対称に保つ（当日参加したユーザーが同日中に退出できるよう today を含める）
-  [GameSessionAction.leaveSession]: [
-    { role: 'member', status: GameSessionStatus.confirmed },
-    { role: 'member', status: GameSessionStatus.today },
-    { role: 'member', status: GameSessionStatus.scheduling },
-  ],
-  [GameSessionAction.editSession]: [
-    { role: 'host', status: GameSessionStatus.draft },
-    { role: 'host', status: GameSessionStatus.confirmed },
-    { role: 'host', status: GameSessionStatus.scheduling },
-  ],
-  [GameSessionAction.publishSession]: [
-    { role: 'host', status: GameSessionStatus.draft },
-  ],
-  [GameSessionAction.completeSession]: [
-    { role: 'host', status: GameSessionStatus.today },
-  ],
-  // 確定（scheduled_at 確定 = confirmed 以降）の卓は削除不可。中止が受け皿になる（design-v1.1 §6）
-  [GameSessionAction.deleteSession]: [
-    { role: 'host', status: GameSessionStatus.draft },
-    { role: 'host', status: GameSessionStatus.scheduling },
-  ],
-  // プレイメモの本文編集。ホストもプレイヤーとして自分のメモを持つため両ロールを許可し、
-  // 終端状態（完了・中止）では編集できない（design-v1.2 §4）
-  [GameSessionAction.editPlayMemo]: [
-    { role: 'host', status: GameSessionStatus.draft },
-    { role: 'host', status: GameSessionStatus.confirmed },
-    { role: 'host', status: GameSessionStatus.today },
-    { role: 'member', status: GameSessionStatus.draft },
-    { role: 'member', status: GameSessionStatus.confirmed },
-    { role: 'member', status: GameSessionStatus.today },
-  ],
+  [GameSessionAction.editGameSession]: on(['host'], NOT_CANCELLED),
+  [GameSessionAction.completeGameSession]: on(['host'], BEFORE_END),
+  [GameSessionAction.cancelGameSession]: on(['host'], BEFORE_END),
+  // 「または着席者がホスト本人のみ」は件数条件なので表には入らない（§4-5）
+  [GameSessionAction.deleteGameSession]: on(
+    ['host'],
+    [GameSessionStatus.cancelled],
+  ),
+  // 着席させられるのはホストだけ（§6-6）
+  [GameSessionAction.seatEntry]: on(['host'], BEFORE_END),
+  // 「本人またはホスト」の本人性は use case 側で判定する
+  [GameSessionAction.unseat]: on(['host', 'member'], BEFORE_END),
+  // 完了後にキャラ名を埋める運用があるため completed でも許可する
+  [GameSessionAction.assignCharacter]: on(['host', 'member'], NOT_CANCELLED),
+  [GameSessionAction.editSeatPlayMemo]: on(['host', 'member'], BEFORE_END),
+  // 公開切替は本文の保存と違いステータス非依存（常時）
+  [GameSessionAction.toggleSeatPlayMemoVisibility]: on(
+    ['host', 'member'],
+    DERIVED_STATUSES,
+  ),
+  [GameSessionAction.viewSharedSeatPlayMemos]: on(
+    ['host', 'member'],
+    [GameSessionStatus.completed, GameSessionStatus.cancelled],
+  ),
 };
 
 describe('canPerform', () => {
@@ -69,46 +85,80 @@ describe('canPerform', () => {
   }
 });
 
-describe('leaveSession と joinSession の対称性', () => {
-  // 参加できるステータスでは必ず退出もできる必要がある。
-  // 当日（today）に参加したユーザーがその日のうちに退出できなくなる非対称を防ぐ。
-  it.each(ALL_STATUSES)('%s で参加できるなら退出もできる', (status) => {
+describe('v2 のポリシー表', () => {
+  it.each(LEGACY_STATUSES)(
+    '廃止した %s ではどのアクションも許可しない',
+    (status) => {
+      // Arrange
+      const actions = Object.values(GameSessionAction);
+
+      // Act
+      const allowed = actions.flatMap((action) =>
+        ALL_ROLES.filter((role) => canPerform(action, status, role)).map(
+          (role) => `${action}:${role}`,
+        ),
+      );
+
+      // Assert
+      expect(allowed).toEqual([]);
+    },
+  );
+
+  it('中止した開催は編集も完了もできない（記録として凍結する）', () => {
     // Arrange
-    const canJoin = canPerform(GameSessionAction.joinSession, status, 'member');
+    const status = GameSessionStatus.cancelled;
 
-    // Act
-    const canLeave = canPerform(
-      GameSessionAction.leaveSession,
-      status,
-      'member',
+    // Act / Assert
+    expect(canPerform(GameSessionAction.editGameSession, status, 'host')).toBe(
+      false,
     );
-
-    // Assert
-    if (canJoin) expect(canLeave).toBe(true);
+    expect(
+      canPerform(GameSessionAction.completeGameSession, status, 'host'),
+    ).toBe(false);
   });
 
-  it('today のメンバーは退出できる', () => {
+  it('完了と中止は同じ条件で許可する（どちらも scheduled / today から）', () => {
     // Arrange / Act
-    const result = canPerform(
-      GameSessionAction.leaveSession,
-      GameSessionStatus.today,
-      'member',
+    const complete = ALL_STATUSES.filter((status) =>
+      canPerform(GameSessionAction.completeGameSession, status, 'host'),
+    );
+    const cancel = ALL_STATUSES.filter((status) =>
+      canPerform(GameSessionAction.cancelGameSession, status, 'host'),
     );
 
     // Assert
-    expect(result).toBe(true);
+    expect(cancel).toEqual(complete);
   });
-});
 
-describe('GameSessionAction', () => {
-  // 卓の日程調整 API は段階6b で廃止し、募集枠（lobby）へ一本化した
-  it('募集専用アクション（日程回答・候補日追加・日程確定）を持たない', () => {
+  it('着席させられるのはホストだけで、参加者は自分で着席できない（§6-6）', () => {
+    // Arrange / Act
+    const memberCanSeat = ALL_STATUSES.some((status) =>
+      canPerform(GameSessionAction.seatEntry, status, 'member'),
+    );
+
+    // Assert
+    expect(memberCanSeat).toBe(false);
+  });
+
+  it('公開メモを読めるのは終わった開催だけ', () => {
+    // Arrange / Act
+    const readable = DERIVED_STATUSES.filter((status) =>
+      canPerform(GameSessionAction.viewSharedSeatPlayMemos, status, 'member'),
+    );
+
+    // Assert
+    expect(readable).toEqual([
+      GameSessionStatus.completed,
+      GameSessionStatus.cancelled,
+    ]);
+  });
+
+  it('公開・募集に関するアクションを持たない（ロビーの関心事へ移った）', () => {
     // Arrange / Act
     const actions: string[] = Object.values(GameSessionAction);
 
     // Assert
-    expect(actions).not.toContain('inputScheduleResponse');
-    expect(actions).not.toContain('addCandidates');
-    expect(actions).not.toContain('confirmSchedule');
+    expect(actions).not.toContain('publishSession');
+    expect(actions).not.toContain('joinSession');
   });
 });

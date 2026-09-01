@@ -1,10 +1,10 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
-  type GameSessionDetail,
+  type LegacyGameSessionDetail,
   type MyGameSessionPlayMemo,
-  GameSessionAction,
-  canPerform,
+  LegacyGameSessionAction,
+  canPerformLegacy,
 } from '@taku-biyori/shared';
 import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
@@ -28,7 +28,7 @@ export const useMyPlayMemo = (
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
-  gameSession: MaybeRefOrGetter<GameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>,
 ) => {
   const authStore = useAuthStore();
   const playMemo = ref<MyGameSessionPlayMemo | null>(null);
@@ -60,14 +60,14 @@ export const useMyPlayMemo = (
   /**
    * 本文を編集できるか。
    *
-   * 判定は shared の ACTION_POLICIES に委ね、バックエンドの 409 と同じ表を使う
+   * 判定は shared の LEGACY_ACTION_POLICIES に委ね、バックエンドの 409 と同じ表を使う
    * （完了・中止で false になる）。公開・非公開の切り替えはこの判定に依存しない。
    */
   const canEditBody = computed(() => {
     const status = toValue(gameSession)?.status;
     if (!isMyMemo.value || status === undefined) return false;
-    return canPerform(
-      GameSessionAction.editPlayMemo,
+    return canPerformLegacy(
+      LegacyGameSessionAction.editPlayMemo,
       status,
       isHost.value ? 'host' : 'member',
     );

@@ -1,11 +1,14 @@
 import { ref, onMounted } from 'vue';
 import { getGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
-import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import type {
+  LegacyGameSessionDetail,
+  GameSessionMember,
+} from '@taku-biyori/shared';
 import { useRouter } from 'vue-router';
 
 export const useGetGameSessionDetail = (id: string) => {
-  const gameSession = ref<GameSessionDetail | null>(null);
+  const gameSession = ref<LegacyGameSessionDetail | null>(null);
   const loading = ref(false);
   const errorMessage = ref('');
 
@@ -29,8 +32,8 @@ export const useGetGameSessionDetail = (id: string) => {
   onMounted(fetch);
 
   // Partial にすることで、変化したフィールドだけを渡せる（例: confirmDate は status と scheduledAt のみ更新）
-  // 所有している実体は GameSessionDetail なので members などの詳細フィールドも差し替えられる。
-  function patchGameSession(patch: Partial<GameSessionDetail>) {
+  // 所有している実体は LegacyGameSessionDetail なので members などの詳細フィールドも差し替えられる。
+  function patchGameSession(patch: Partial<LegacyGameSessionDetail>) {
     if (gameSession.value) {
       gameSession.value = { ...gameSession.value, ...patch };
     }

@@ -4,14 +4,17 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import type { GameSessionDetail, GameSessionMember } from '@taku-biyori/shared';
+import type {
+  LegacyGameSessionDetail,
+  GameSessionMember,
+} from '@taku-biyori/shared';
 import { UsersRound, SquarePen, Check } from '@lucide/vue';
 import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  gameSession: GameSessionDetail;
+  gameSession: LegacyGameSessionDetail;
 }>();
 
 const displayMembers = computed(() =>

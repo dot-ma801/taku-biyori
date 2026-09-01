@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { listGameSessions } from '@/game-session/application/list-game-sessions';
 import type { ListGameSessionsRepository } from '@/game-session/application/list-game-sessions';
-import type { GameSessionListItem } from '@taku-biyori/shared';
+import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 
-const mockListItem: GameSessionListItem = {
+const mockListItem: LegacyGameSessionListItem = {
   id: 'session-1',
   title: 'テスト卓',
   status: GameSessionStatus.draft,

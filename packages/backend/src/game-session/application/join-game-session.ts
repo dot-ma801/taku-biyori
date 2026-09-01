@@ -3,7 +3,7 @@ import type {
   GameSessionStatus,
   JoinGameSessionInput,
 } from '@taku-biyori/shared';
-import { GameSessionAction, canPerform } from '@taku-biyori/shared';
+import { LegacyGameSessionAction, canPerformLegacy } from '@taku-biyori/shared';
 
 export interface JoinGameSessionRepository {
   // null はセッションが存在しないことを表す
@@ -36,8 +36,10 @@ export const joinGameSession = async (
   const status = await repo.findGameSessionStatus(gameSessionId);
   if (status === null) return { type: 'notFound' };
   // 参加条件は「公開済み・未完了・実施日当日まで」（design-v1.1 §8）。
-  // フロントの参加ボタン表示制御と同じ ACTION_POLICIES を使う。
-  if (!canPerform(GameSessionAction.joinSession, status, 'member')) {
+  // フロントの参加ボタン表示制御と同じ LEGACY_ACTION_POLICIES を使う。
+  if (
+    !canPerformLegacy(LegacyGameSessionAction.joinSession, status, 'member')
+  ) {
     return { type: 'sessionNotOpen' };
   }
 

@@ -16,11 +16,11 @@ import DeleteDialog from '@/features/GameSession/Detail/Dialog/DeleteDialog.vue'
 import CancelSessionDialog from '@/features/GameSession/Detail/Dialog/CancelSessionDialog.vue';
 import { useGameSessionStatus } from '@/features/GameSession/Detail/useGameSessionStatus';
 import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameSessionMembership';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 
 const props = defineProps<{
   gameSessionId: string;
-  gameSession: GameSessionDetail | null;
+  gameSession: LegacyGameSessionDetail | null;
 }>();
 
 const emit = defineEmits<{

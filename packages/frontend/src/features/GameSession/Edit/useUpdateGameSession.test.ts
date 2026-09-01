@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUpdateGameSession } from '@/features/GameSession/Edit/useUpdateGameSession';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/game-session', () => ({
@@ -17,7 +17,7 @@ import { getGameSession, updateGameSession } from '@/api/game-session';
 const SESSION_ID = 'session-1';
 const SCHEDULED_AT = '2025-06-15';
 
-const mockGameSessionDetail: GameSessionDetail = {
+const mockGameSessionDetail: LegacyGameSessionDetail = {
   id: SESSION_ID,
   title: 'テスト卓',
   scenarioName: null,

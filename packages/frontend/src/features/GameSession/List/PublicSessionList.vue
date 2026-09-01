@@ -3,11 +3,11 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { Calendar, UsersRound } from '@lucide/vue';
-import type { GameSessionListItem } from '@taku-biyori/shared';
+import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  publicSessions: GameSessionListItem[];
+  publicSessions: LegacyGameSessionListItem[];
 }>();
 
 const formattedPublishSessions = computed(() => {

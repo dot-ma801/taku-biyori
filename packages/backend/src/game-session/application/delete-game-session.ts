@@ -1,7 +1,7 @@
 import {
-  GameSessionAction,
+  LegacyGameSessionAction,
   GameSessionStatus,
-  canPerform,
+  canPerformLegacy,
 } from '@taku-biyori/shared';
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 
@@ -47,7 +47,9 @@ export const deleteGameSession = async (
     if (status === null) {
       return { type: 'notFound' };
     }
-    if (!canPerform(GameSessionAction.deleteSession, status, 'host')) {
+    if (
+      !canPerformLegacy(LegacyGameSessionAction.deleteSession, status, 'host')
+    ) {
       return { type: 'invalidStatus' };
     }
 

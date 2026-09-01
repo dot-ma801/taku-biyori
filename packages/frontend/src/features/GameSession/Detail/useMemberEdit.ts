@@ -2,7 +2,7 @@ import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import type { GameSessionMember } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import { updateMember } from '@/api/game-session';
+import { updateMember } from '@/api/legacy-game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 

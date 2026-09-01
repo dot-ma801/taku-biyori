@@ -8,7 +8,7 @@ import type {
   GameSessionMember,
 } from '@taku-biyori/shared';
 
-vi.mock('@/api/game-session', () => ({
+vi.mock('@/api/legacy-game-session', () => ({
   updateGameSessionStatus: vi.fn(),
   deleteGameSession: vi.fn(),
 }));
@@ -28,7 +28,10 @@ vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({ push: mockRouterPush })),
 }));
 
-import { updateGameSessionStatus, deleteGameSession } from '@/api/game-session';
+import {
+  updateGameSessionStatus,
+  deleteGameSession,
+} from '@/api/legacy-game-session';
 import { useAuthStore } from '@/stores/auth';
 
 const HOST_USER_ID = 'host-user-id';

@@ -3,7 +3,7 @@ import { useUpdateGameSession } from '@/features/GameSession/Edit/useUpdateGameS
 import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 import { GameSessionStatus } from '@taku-biyori/shared';
 
-vi.mock('@/api/game-session', () => ({
+vi.mock('@/api/legacy-game-session', () => ({
   getGameSession: vi.fn(),
   updateGameSession: vi.fn(),
 }));
@@ -12,7 +12,7 @@ vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), back: vi.fn() })),
 }));
 
-import { getGameSession, updateGameSession } from '@/api/game-session';
+import { getGameSession, updateGameSession } from '@/api/legacy-game-session';
 
 const SESSION_ID = 'session-1';
 const SCHEDULED_AT = '2025-06-15';

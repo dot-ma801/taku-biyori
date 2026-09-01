@@ -6,7 +6,7 @@ import { useGameSessionMembership } from '@/features/GameSession/Detail/useGameS
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
 
-vi.mock('@/api/game-session', () => ({
+vi.mock('@/api/legacy-game-session', () => ({
   joinGameSession: vi.fn(),
   leaveGameSession: vi.fn(),
 }));
@@ -19,7 +19,7 @@ vi.mock('@/composables/useToast', () => ({
   useToast: vi.fn(() => ({ error: vi.fn() })),
 }));
 
-import { joinGameSession, leaveGameSession } from '@/api/game-session';
+import { joinGameSession, leaveGameSession } from '@/api/legacy-game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 

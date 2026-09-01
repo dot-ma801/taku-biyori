@@ -4,7 +4,7 @@ import { useMemberEdit } from '@/features/GameSession/Detail/useMemberEdit';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type { GameSessionMember } from '@taku-biyori/shared';
 
-vi.mock('@/api/game-session', () => ({
+vi.mock('@/api/legacy-game-session', () => ({
   updateMember: vi.fn(),
 }));
 
@@ -16,7 +16,7 @@ vi.mock('@/composables/useToast', () => ({
   useToast: vi.fn(() => ({ error: vi.fn() })),
 }));
 
-import { updateMember } from '@/api/game-session';
+import { updateMember } from '@/api/legacy-game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 

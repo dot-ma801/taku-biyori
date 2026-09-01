@@ -1,7 +1,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { getGameSession, updateGameSession } from '@/api/game-session';
+import { getGameSession, updateGameSession } from '@/api/legacy-game-session';
 import { ApiError } from '@/lib/api-client';
 import {
   parseMaxMembers,

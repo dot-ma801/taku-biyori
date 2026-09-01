@@ -3,12 +3,11 @@ import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
-const NOW = new Date('2026-08-02T10:00:00.000Z');
+const TODAY = '2026-08-02';
 
-/** 公開済み・実施前（confirmed）の卓 */
-const confirmedFields = {
-  isPublished: true,
-  scheduledAt: new Date('2026-09-01'),
+/** 開催予定（scheduled）のセッション */
+const scheduledFields = {
+  scheduledAt: '2026-09-01',
   completedAt: null,
   cancelledAt: null,
 };
@@ -23,9 +22,9 @@ const mockPlayMemo: GameSessionPlayMemo = {
 const makeRepo = (
   overrides: Partial<UpsertMyPlayMemoRepository> = {},
 ): UpsertMyPlayMemoRepository => ({
-  findStatusFields: vi.fn().mockResolvedValue(confirmedFields),
+  findStatusFields: vi.fn().mockResolvedValue(scheduledFields),
   findHostUserId: vi.fn().mockResolvedValue('user-host'),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
+  findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
   upsertPlayMemo: vi.fn().mockResolvedValue(mockPlayMemo),
   ...overrides,
 });
@@ -41,7 +40,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-1',
       { body: '書き換えたメモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -62,7 +61,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-host',
       { body: '書き換えたメモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -80,7 +79,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-1',
       { body: '' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -93,7 +92,7 @@ describe('upsertMyPlayMemo', () => {
     const repo = makeRepo({
       findStatusFields: vi
         .fn()
-        .mockResolvedValue({ ...confirmedFields, isPublished: false }),
+        .mockResolvedValue({ ...scheduledFields, isPublished: false }),
     });
 
     // Act
@@ -102,7 +101,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -113,8 +112,8 @@ describe('upsertMyPlayMemo', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
-        scheduledAt: new Date('2026-08-02'),
+        ...scheduledFields,
+        scheduledAt: '2026-08-02',
       }),
     });
 
@@ -124,7 +123,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -143,7 +142,7 @@ describe('upsertMyPlayMemo', () => {
       'nonexistent',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -155,7 +154,7 @@ describe('upsertMyPlayMemo', () => {
   it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -164,7 +163,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-9',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -176,7 +175,7 @@ describe('upsertMyPlayMemo', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
+        ...scheduledFields,
         completedAt: new Date('2026-08-01T00:00:00.000Z'),
       }),
     });
@@ -187,7 +186,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -199,7 +198,7 @@ describe('upsertMyPlayMemo', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
+        ...scheduledFields,
         cancelledAt: new Date('2026-08-01T00:00:00.000Z'),
       }),
     });
@@ -210,7 +209,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -223,10 +222,10 @@ describe('upsertMyPlayMemo', () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
+        ...scheduledFields,
         completedAt: new Date('2026-08-01T00:00:00.000Z'),
       }),
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
@@ -235,7 +234,7 @@ describe('upsertMyPlayMemo', () => {
       'session-1',
       'user-9',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert

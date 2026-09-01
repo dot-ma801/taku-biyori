@@ -30,9 +30,9 @@ import {
   lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
-  gameSessionMembers,
   gameSessionPlayMemos,
   gameSessions,
+  seats,
 } from '@/system/infrastructure/database/game-session-schema';
 
 if (process.env.NODE_ENV === 'production') {
@@ -82,11 +82,8 @@ const clearPreviousSeed = async (database: Database): Promise<void> => {
 
   const userIds = seededUsers.map((row) => row.id);
 
-  // 卓 → ロビー → ユーザーの順に消す。メンバー・候補日・回答・メモは
-  // FK の ON DELETE CASCADE で一緒に消える
-  await database
-    .delete(gameSessions)
-    .where(inArray(gameSessions.hostUserId, userIds));
+  // ロビー → ユーザーの順に消す。開催・着席・候補日・回答・メモは
+  // FK の ON DELETE CASCADE で一緒に消える（開催はロビーにぶら下がるようになった）
   await database.delete(lobbies).where(inArray(lobbies.hostUserId, userIds));
   await database.delete(user).where(inArray(user.id, userIds));
 
@@ -189,6 +186,57 @@ const addCandidateDate = async (
     .returning({ id: candidateDates.id });
 
   return firstRow(rows, 'addCandidateDate').id;
+};
+
+const addGameSession = async (
+  database: Database,
+  values: {
+    lobbyId: string;
+    scheduledAt: string;
+    title?: string | null;
+    scenarioName?: string | null;
+    description?: string | null;
+    location?: string | null;
+    timeLabel?: string | null;
+    completedAt?: Date | null;
+    cancelledAt?: Date | null;
+  },
+): Promise<string> => {
+  const rows = await database
+    .insert(gameSessions)
+    .values({
+      lobbyId: values.lobbyId,
+      scheduledAt: values.scheduledAt,
+      title: values.title ?? null,
+      scenarioName: values.scenarioName ?? null,
+      description: values.description ?? null,
+      location: values.location ?? null,
+      timeLabel: values.timeLabel ?? null,
+      completedAt: values.completedAt ?? null,
+      cancelledAt: values.cancelledAt ?? null,
+    })
+    .returning({ id: gameSessions.id });
+
+  return firstRow(rows, 'addGameSession').id;
+};
+
+const addSeats = async (
+  database: Database,
+  gameSessionId: string,
+  values: { lobbyEntryId: string; characterName?: string | null }[],
+): Promise<string[]> => {
+  const rows = await database
+    .insert(seats)
+    .values(
+      values.map((seat) => ({
+        gameSessionId,
+        lobbyEntryId: seat.lobbyEntryId,
+        characterName: seat.characterName ?? null,
+      })),
+    )
+    .returning({ id: seats.id });
+
+  return rows.map((row) => row.id);
 };
 
 const main = async (): Promise<void> => {
@@ -341,135 +389,105 @@ const main = async (): Promise<void> => {
     },
   ]);
 
-  const scheduledSessionRows = await db
-    .insert(gameSessions)
-    .values({
-      hostUserId: haruId,
-      title: 'TRPG「はじめての探索」',
-      scenarioName: 'はじめての探索',
-      description: '19:00 集合、19:15 開始予定です。',
-      location: 'オンライン',
-      maxPlayers: 4,
-      guestLinkToken: 'seed-session-confirmed',
-      isPublished: true,
-      scheduledAt: dateFromToday(3),
-    })
-    .returning({ id: gameSessions.id });
-  const scheduledSessionId = firstRow(
-    scheduledSessionRows,
-    '開催予定の卓の作成',
-  ).id;
+  // --- ロビー2 の開催（開催予定） ---
+  // 上書き項目（title / scenarioName / location）は**あえて入れない**。
+  // 未設定ならロビーの値を表示する導出を、シードでそのまま確認できるようにするため（design-v2 §5-5）
+  const scheduledSessionId = await addGameSession(db, {
+    lobbyId: closedLobbyId,
+    scheduledAt: dateFromToday(3),
+    description: '19:00 集合、19:15 開始予定です。',
+    timeLabel: '19:00〜',
+  });
+  const scheduledSeatIds = await addSeats(db, scheduledSessionId, [
+    { lobbyEntryId: closedHostMemberId },
+    { lobbyEntryId: closedYukiMemberId, characterName: '探索者A' },
+    { lobbyEntryId: closedAkiMemberId, characterName: '探索者B' },
+  ]);
+  console.log('締め切り済みのロビーと、開催予定の開催を作成しました');
 
-  const scheduledMemberRows = await db
-    .insert(gameSessionMembers)
-    .values([
-      {
-        gameSessionId: scheduledSessionId,
-        userId: haruId,
-        characterName: null,
-      },
-      {
-        gameSessionId: scheduledSessionId,
-        userId: yukiId,
-        characterName: '探索者A',
-      },
-      {
-        gameSessionId: scheduledSessionId,
-        userId: akiId,
-        characterName: '探索者B',
-      },
-    ])
-    .returning({
-      id: gameSessionMembers.id,
-      userId: gameSessionMembers.userId,
-    });
-  console.log('締め切り済みのロビーと、開催予定の卓を作成しました');
+  // --- ロビー4: 完了済み（プレイメモつき） ---
+  // セッションは必ずロビーに属するため、完了済みの開催にもロビーを作る（design-v2 §9-3）
+  const completedLobbyId = await insertLobby(db, {
+    hostUserId: yukiId,
+    title: 'クローズド「灯台の夜」',
+    scenarioName: '灯台の夜',
+    description: '身内で遊んだ回です。',
+    location: 'オンライン',
+    maxPlayers: 4,
+    guestLinkToken: 'seed-lobby-completed',
+    isPublished: true,
+    openUntil: dateFromToday(-10),
+  });
+  const completedYukiEntryId = await addLobbyMember(db, completedLobbyId, {
+    userId: yukiId,
+  });
+  const completedNatsuEntryId = await addLobbyMember(db, completedLobbyId, {
+    userId: natsuId,
+  });
+  const completedGuestEntryId = await addLobbyMember(db, completedLobbyId, {
+    guestName: 'みなと（ゲスト）',
+  });
 
-  // --- 完了済みの卓（プレイメモつき） ---
-  const completedSessionRows = await db
-    .insert(gameSessions)
-    .values({
-      hostUserId: yukiId,
-      title: 'クローズド「灯台の夜」',
-      scenarioName: '灯台の夜',
-      description: 'おつかれさまでした。',
-      location: 'オンライン',
-      maxPlayers: 4,
-      guestLinkToken: 'seed-session-completed',
-      isPublished: true,
-      scheduledAt: dateFromToday(-7),
-      completedAt: daysAgo(7),
-    })
-    .returning({ id: gameSessions.id });
-  const completedSessionId = firstRow(
-    completedSessionRows,
-    '完了済み卓の作成',
-  ).id;
-
-  const completedMemberRows = await db
-    .insert(gameSessionMembers)
-    .values([
-      {
-        gameSessionId: completedSessionId,
-        userId: yukiId,
-        characterName: '灯台守',
-      },
-      {
-        gameSessionId: completedSessionId,
-        userId: natsuId,
-        characterName: '訪問者',
-      },
-      {
-        gameSessionId: completedSessionId,
-        userId: null,
-        guestName: 'みなと（ゲスト）',
-        characterName: '船乗り',
-      },
-    ])
-    .returning({ id: gameSessionMembers.id });
-
-  const [lighthouseKeeperMember, visitorMember] = completedMemberRows;
-  if (!lighthouseKeeperMember || !visitorMember) {
-    throw new Error(
-      'completedMemberRows の取得結果が想定（3件）より少ないです',
-    );
+  const completedSessionId = await addGameSession(db, {
+    lobbyId: completedLobbyId,
+    scheduledAt: dateFromToday(-7),
+    description: 'おつかれさまでした。',
+    completedAt: daysAgo(7),
+  });
+  const [lighthouseKeeperSeatId, visitorSeatId] = await addSeats(
+    db,
+    completedSessionId,
+    [
+      { lobbyEntryId: completedYukiEntryId, characterName: '灯台守' },
+      { lobbyEntryId: completedNatsuEntryId, characterName: '訪問者' },
+      { lobbyEntryId: completedGuestEntryId, characterName: '船乗り' },
+    ],
+  );
+  if (!lighthouseKeeperSeatId || !visitorSeatId) {
+    throw new Error('完了済みの開催の着席が想定（3件）より少ないです');
   }
 
   await db.insert(gameSessionPlayMemos).values([
     {
-      memberId: lighthouseKeeperMember.id,
+      seatId: lighthouseKeeperSeatId,
       body: '灯台守視点のメモ。序盤に鍵の話を振れたのがよかった。',
       sharedAt: daysAgo(6),
     },
     {
-      memberId: visitorMember.id,
+      seatId: visitorSeatId,
       body: '（非公開）次に同じシナリオを回すときのための覚え書き。',
       sharedAt: null,
     },
   ]);
-  console.log('完了済みの卓とプレイメモを作成しました');
+  console.log('完了済みの開催とプレイメモを作成しました');
 
-  // --- ロビーに紐づかない単独の卓 ---
-  const directSessionRows = await db
-    .insert(gameSessions)
-    .values({
-      hostUserId: natsuId,
-      title: '身内卓「週末セッション」',
-      scenarioName: null,
-      description: '固定メンバーで遊ぶ卓です。',
-      location: 'カフェ・オンライン併用',
-      maxPlayers: 6,
-      guestLinkToken: 'seed-session-direct',
-      isPublished: true,
-      scheduledAt: dateFromToday(30),
-    })
-    .returning({ id: gameSessions.id });
-  const directSessionId = firstRow(directSessionRows, '単独の卓の作成').id;
-  await db.insert(gameSessionMembers).values([
-    { gameSessionId: directSessionId, userId: natsuId },
-    { gameSessionId: directSessionId, userId: akiId, characterName: 'PC2' },
+  // --- ロビー5: 直接卓立て（受付を開かないロビーに開催が1つ） ---
+  // 下書きのまま公開せず、ホストが知っている相手だけを着席させた形（design-v2 §5-3）
+  const directLobbyId = await insertLobby(db, {
+    hostUserId: natsuId,
+    title: '身内卓「週末セッション」',
+    scenarioName: null,
+    description: '固定メンバーで遊ぶ卓です。',
+    location: 'カフェ・オンライン併用',
+    maxPlayers: 6,
+    guestLinkToken: 'seed-lobby-direct',
+    isPublished: false,
+  });
+  const directNatsuEntryId = await addLobbyMember(db, directLobbyId, {
+    userId: natsuId,
+  });
+  const directAkiEntryId = await addLobbyMember(db, directLobbyId, {
+    userId: akiId,
+  });
+  const directSessionId = await addGameSession(db, {
+    lobbyId: directLobbyId,
+    scheduledAt: dateFromToday(30),
+  });
+  await addSeats(db, directSessionId, [
+    { lobbyEntryId: directNatsuEntryId },
+    { lobbyEntryId: directAkiEntryId, characterName: 'PC2' },
   ]);
-  console.log('単独の卓を作成しました');
+  console.log('直接卓立てのロビーと開催を作成しました');
 
   // --- ロビー3: 下書き（ホストにしか見えない） ---
   const draftLobbyId = await insertLobby(db, {
@@ -488,14 +506,13 @@ const main = async (): Promise<void> => {
   console.log('下書きのロビーを作成しました');
 
   // 集計を出しておくと、スキーマ変更でシードが壊れたときに気づきやすい
-  const seededMemberIds = scheduledMemberRows.map((row) => row.id);
-  const memberCheck = await db
-    .select({ id: gameSessionMembers.id })
-    .from(gameSessionMembers)
+  const seatCheck = await db
+    .select({ id: seats.id })
+    .from(seats)
     .where(
       and(
-        eq(gameSessionMembers.gameSessionId, scheduledSessionId),
-        inArray(gameSessionMembers.id, seededMemberIds),
+        eq(seats.gameSessionId, scheduledSessionId),
+        inArray(seats.id, scheduledSeatIds),
       ),
     );
 
@@ -503,9 +520,11 @@ const main = async (): Promise<void> => {
   console.log('シード完了');
   console.log(`  ユーザー: 4（パスワードはすべて ${SEED_PASSWORD}）`);
   console.log('    ユーザー名でログインできます: yuki / haru / natsu / aki');
-  console.log('  ロビー: 3（公開・募集中 / 日程調整中 / 下書き）');
-  console.log('  卓: 3（開催予定 / 完了済み / 単独作成）');
-  console.log(`  開催予定の卓のメンバー: ${memberCheck.length}`);
+  console.log(
+    '  ロビー: 5（公開・募集中 / 日程調整中 / 下書き / 完了済み / 直接卓立て）',
+  );
+  console.log('  開催: 3（開催予定 / 完了済み / 直接卓立て）');
+  console.log(`  開催予定の開催の着席: ${seatCheck.length}`);
   console.log('');
   console.log(
     '公開中のロビー・卓は role: null で誰の一覧にも出るため、Google ログインでも確認できます',

@@ -17,9 +17,9 @@ import {
   scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
-  gameSessionMembers,
   gameSessionPlayMemos,
   gameSessions,
+  seats,
 } from '@/system/infrastructure/database/game-session-schema';
 
 export const insertUser = async (
@@ -147,34 +147,37 @@ export const insertScheduleAnswer = async (
 };
 
 export interface InsertGameSessionOverrides {
-  title?: string;
+  /** 未指定なら null。上書きしない＝ロビーの値を表示する（design-v2 §5-5） */
+  title?: string | null;
   scenarioName?: string | null;
   description?: string | null;
   location?: string | null;
-  maxPlayers?: number | null;
-  guestLinkToken?: string;
-  isPublished?: boolean;
+  timeLabel?: string | null;
   scheduledAt?: string;
   completedAt?: Date | null;
   cancelledAt?: Date | null;
 }
 
+/**
+ * セッションは必ずロビーに属するため lobbyId が必須（design-v2 §9-3）。
+ *
+ * 上書き項目は既定で null にしてある。既定値をコピーしないのが v2 の要点なので、
+ * フィクスチャでも「未設定」を既定にしておく。
+ */
 export const insertGameSession = async (
   db: Database,
-  hostUserId: string,
+  lobbyId: string,
   overrides: InsertGameSessionOverrides = {},
 ): Promise<string> => {
   const rows = await db
     .insert(gameSessions)
     .values({
-      hostUserId,
-      title: overrides.title ?? 'テスト卓',
+      lobbyId,
+      title: overrides.title ?? null,
       scenarioName: overrides.scenarioName ?? null,
       description: overrides.description ?? null,
       location: overrides.location ?? null,
-      maxPlayers: overrides.maxPlayers ?? null,
-      guestLinkToken: overrides.guestLinkToken ?? `token-${randomUUID()}`,
-      isPublished: overrides.isPublished ?? false,
+      timeLabel: overrides.timeLabel ?? null,
       scheduledAt: overrides.scheduledAt ?? '2999-12-31',
       completedAt: overrides.completedAt ?? null,
       cancelledAt: overrides.cancelledAt ?? null,
@@ -184,35 +187,32 @@ export const insertGameSession = async (
   return firstRow(rows, 'insertGameSession').id;
 };
 
-export const insertGameSessionMember = async (
+/** 着席。紐付けは lobby_entry_id 1本になった（design-v2 §3-8） */
+export const insertSeat = async (
   db: Database,
   gameSessionId: string,
-  member: {
-    userId?: string | null;
-    guestName?: string | null;
-    characterName?: string | null;
-  } = {},
+  lobbyEntryId: string,
+  seat: { characterName?: string | null } = {},
 ): Promise<string> => {
   const rows = await db
-    .insert(gameSessionMembers)
+    .insert(seats)
     .values({
       gameSessionId,
-      userId: member.userId ?? null,
-      guestName: member.guestName ?? null,
-      characterName: member.characterName ?? null,
+      lobbyEntryId,
+      characterName: seat.characterName ?? null,
     })
-    .returning({ id: gameSessionMembers.id });
+    .returning({ id: seats.id });
 
-  return firstRow(rows, 'insertGameSessionMember').id;
+  return firstRow(rows, 'insertSeat').id;
 };
 
 export const insertPlayMemo = async (
   db: Database,
-  memberId: string,
+  seatId: string,
   memo: { body?: string; sharedAt?: Date | null } = {},
 ): Promise<void> => {
   await db.insert(gameSessionPlayMemos).values({
-    memberId,
+    seatId,
     body: memo.body ?? '',
     sharedAt: memo.sharedAt ?? null,
   });

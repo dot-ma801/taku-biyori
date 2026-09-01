@@ -13,6 +13,7 @@ function makeRepo(
   const repo: DeleteLobbyRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
     countOtherEntries: vi.fn().mockResolvedValue(0),
+    countGameSessions: vi.fn().mockResolvedValue(0),
     deleteById: vi.fn().mockResolvedValue(undefined),
     executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
     ...overrides,
@@ -75,6 +76,39 @@ describe('deleteLobby', () => {
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
 
+  it('開催が1件でもあるとき hasGameSession を返す', async () => {
+    // Arrange
+    // lobby_id が ON DELETE CASCADE になったため、ロビーを消すと過去の開催記録・
+    // 着席・プレイメモまで連鎖して消える（design-v2 §6-13-3）
+    const repo = makeRepo({
+      countGameSessions: vi.fn().mockResolvedValue(1),
+      deleteById: vi.fn(),
+    });
+
+    // Act
+    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
+
+    // Assert
+    expect(result).toEqual({ type: 'hasGameSession' });
+    expect(repo.deleteById).not.toHaveBeenCalled();
+  });
+
+  it('中止・完了した開催も数に入れる', async () => {
+    // Arrange
+    // 「終わった開催なら消してよい」ではない。記録として残す（design-v2 §4-4）
+    const repo = makeRepo({
+      countGameSessions: vi.fn().mockResolvedValue(3),
+      deleteById: vi.fn(),
+    });
+
+    // Act
+    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
+
+    // Assert
+    expect(result).toEqual({ type: 'hasGameSession' });
+    expect(repo.countGameSessions).toHaveBeenCalledWith('lobby-1');
+  });
+
   describe('TOCTOU 対策（トランザクション + 行ロック）', () => {
     it('検証と削除を `executeWithLock` の中で 1 回のスコープにまとめる', async () => {
       // Arrange
@@ -106,6 +140,7 @@ describe('deleteLobby', () => {
       expect(result).toEqual({ type: 'notFound' });
       expect(repo.findHostUserId).not.toHaveBeenCalled();
       expect(repo.countOtherEntries).not.toHaveBeenCalled();
+      expect(repo.countGameSessions).not.toHaveBeenCalled();
       expect(repo.deleteById).not.toHaveBeenCalled();
     });
   });

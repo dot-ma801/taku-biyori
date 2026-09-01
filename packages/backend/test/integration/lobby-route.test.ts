@@ -603,6 +603,22 @@ describe('DELETE /api/lobbies/:id', () => {
     // Assert
     expect(response.status).toBe(409);
   });
+
+  it('開催がぶら下がっている募集枠は 409 を返す', async () => {
+    // Arrange
+    // 消すと過去の開催記録まで連鎖して消えるため（design-v2 §6-13-3）
+    const app = makeApp({
+      deleteLobby: vi.fn().mockResolvedValue({ type: 'hasGameSession' }),
+    });
+
+    // Act
+    const response = await app.request('/api/lobbies/lobby-1', {
+      method: 'DELETE',
+    });
+
+    // Assert
+    expect(response.status).toBe(409);
+  });
 });
 
 describe('PATCH /api/lobbies/:id/status', () => {

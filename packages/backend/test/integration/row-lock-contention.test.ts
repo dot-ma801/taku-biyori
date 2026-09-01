@@ -16,17 +16,22 @@ import { eq } from 'drizzle-orm';
 import { deleteLobby } from '@/lobby/application/delete-lobby';
 import { replaceCandidateDates } from '@/lobby/application/replace-candidate-dates';
 import { deleteGameSession } from '@/game-session/application/delete-game-session';
+import { createGameSession } from '@/game-session/application/create-game-session';
 import { createLobbyRepository } from '@/lobby/infrastructure/lobby-repository';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
 import type { ReplaceCandidateDatesRepository } from '@/lobby/application/replace-candidate-dates';
 import { createGameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
-import { candidateDates } from '@/system/infrastructure/database/lobby-schema';
+import {
+  candidateDates,
+  lobbyEntries,
+} from '@/system/infrastructure/database/lobby-schema';
+import { dateFromToday } from '@/system/domain/date-from-today';
 import { closeTestDatabase, withCommitted } from '@test/helpers/test-database';
 import {
   insertGameSession,
-  insertGameSessionMember,
   insertLobby,
   insertLobbyEntry,
+  insertSeat,
   insertUser,
 } from '@test/helpers/fixtures';
 
@@ -153,22 +158,24 @@ describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
 });
 
 describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
-  it('同じ卓への並行削除は直列化され、成功するのは1つだけ', async () => {
+  it('同じ開催への並行削除は直列化され、成功するのは1つだけ', async () => {
     await withCommitted(async (db, track) => {
       // Arrange
       const host = await insertUser(db);
       track('user', host.id);
-      const gameSessionId = await insertGameSession(db, host.id, {
-        isPublished: false,
+      const lobbyId = await insertLobby(db, host.id);
+      track('lobby', lobbyId);
+      const hostEntryId = await insertLobbyEntry(db, lobbyId, {
+        userId: host.id,
       });
-      track('gameSession', gameSessionId);
-      await insertGameSessionMember(db, gameSessionId, { userId: host.id });
+      const gameSessionId = await insertGameSession(db, lobbyId);
+      await insertSeat(db, gameSessionId, hostEntryId);
       const repo = createGameSessionRepository(db);
 
       // Act
       const results = await Promise.all([
-        deleteGameSession(repo, gameSessionId, host.id),
-        deleteGameSession(repo, gameSessionId, host.id),
+        deleteGameSession(repo, lobbyId, gameSessionId, host.id),
+        deleteGameSession(repo, lobbyId, gameSessionId, host.id),
       ]);
 
       // Assert
@@ -180,17 +187,21 @@ describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
     });
   });
 
-  it('ロック保持中の参加はブロックされ、削除コミット後は FK 違反で弾かれる', async () => {
+  it('ロック保持中の着席はブロックされ、削除コミット後は FK 違反で弾かれる', async () => {
     await withCommitted(async (db, track) => {
       // Arrange
       const host = await insertUser(db);
       track('user', host.id);
-      const joiner = await insertUser(db);
-      track('user', joiner.id);
-      const gameSessionId = await insertGameSession(db, host.id, {
-        isPublished: true,
+      const player = await insertUser(db);
+      track('user', player.id);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
       });
-      track('gameSession', gameSessionId);
+      track('lobby', lobbyId);
+      const playerEntryId = await insertLobbyEntry(db, lobbyId, {
+        userId: player.id,
+      });
+      const gameSessionId = await insertGameSession(db, lobbyId);
       const repo = createGameSessionRepository(db);
 
       const locked = createDeferred();
@@ -209,13 +220,13 @@ describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
       // throw した場合に testTimeout までハングせず即座に検知できる。
       await Promise.race([locked.promise, deleting]);
 
-      const joining = repo.addMember(gameSessionId, joiner.id, {});
-      const joiningSettled = joining.then(
+      const seating = repo.addSeat(gameSessionId, playerEntryId);
+      const seatingSettled = seating.then(
         () => 'settled',
         () => 'settled',
       );
       const raced = await Promise.race([
-        joiningSettled,
+        seatingSettled,
         sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
       ]);
 
@@ -224,8 +235,109 @@ describe('delete-game-session の TOCTOU（FOR UPDATE 競合）', () => {
 
       release.resolve();
       await deleting;
-      await expect(joining).rejects.toThrow();
+      await expect(seating).rejects.toThrow();
       expect(await repo.gameSessionExists(gameSessionId)).toBe(false);
+    });
+  });
+});
+
+describe('create-game-session のロック（FOR UPDATE + FOR KEY SHARE）', () => {
+  it('ロビーを FOR UPDATE で押さえるので、同じロビーへの並行作成は直列化される', async () => {
+    await withCommitted(async (db, track) => {
+      // Arrange
+      const host = await insertUser(db);
+      track('user', host.id);
+      const lobbyId = await insertLobby(db, host.id);
+      track('lobby', lobbyId);
+      const entryId = await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      const repo = createGameSessionRepository(db);
+
+      const locked = createDeferred();
+      const release = createDeferred();
+
+      // Act
+      // 先行トランザクションがロビー行のロックを保持したまま待つ
+      const leading = repo.executeWithLobbyLock(
+        lobbyId,
+        [entryId],
+        async () => {
+          locked.resolve();
+          await release.promise;
+        },
+      );
+      await Promise.race([locked.promise, leading]);
+
+      const following = createGameSession(repo, lobbyId, host.id, {
+        scheduledAt: dateFromToday(3),
+        entryIds: [entryId],
+      });
+      const followingSettled = following.then(
+        () => 'settled',
+        () => 'settled',
+      );
+      const raced = await Promise.race([
+        followingSettled,
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
+      ]);
+
+      // Assert
+      expect(raced).toBe('blocked');
+
+      release.resolve();
+      await leading;
+      const result = await following;
+      expect(result.type).toBe('ok');
+      if (result.type === 'ok') {
+        track('gameSession', result.gameSession.id);
+      }
+    });
+  });
+
+  it('着席させる entry を FOR KEY SHARE で押さえるので、検証後の脱退で参照が切れない', async () => {
+    await withCommitted(async (db, track) => {
+      // Arrange
+      // FOR KEY SHARE は行の削除・キー変更だけをブロックする。
+      // 回答の更新など他の書き込みまで止める必要は無いため share に留めている
+      const host = await insertUser(db);
+      track('user', host.id);
+      const lobbyId = await insertLobby(db, host.id);
+      track('lobby', lobbyId);
+      const entryId = await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      const repo = createGameSessionRepository(db);
+
+      const locked = createDeferred();
+      const release = createDeferred();
+
+      // Act
+      const creating = repo.executeWithLobbyLock(
+        lobbyId,
+        [entryId],
+        async () => {
+          locked.resolve();
+          await release.promise;
+        },
+      );
+      await Promise.race([locked.promise, creating]);
+
+      // ロック保持中は entry 行を消せない
+      const deleting = db
+        .delete(lobbyEntries)
+        .where(eq(lobbyEntries.id, entryId));
+      const deletingSettled = deleting.then(
+        () => 'settled',
+        () => 'settled',
+      );
+      const raced = await Promise.race([
+        deletingSettled,
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
+      ]);
+
+      // Assert
+      expect(raced).toBe('blocked');
+
+      release.resolve();
+      await creating;
+      await deleting;
     });
   });
 });

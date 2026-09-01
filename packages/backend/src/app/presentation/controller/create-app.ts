@@ -8,7 +8,7 @@ import { getHealth } from '@/health/application/get-health';
 import { registerAuthRoute } from '@/auth/presentation/controller/routes/auth-route';
 import { registerHealthRoute } from '@/health/presentation/controller/routes/health-route';
 import { registerGameSessionRoute } from '@/game-session/presentation/controller/routes/game-session-route';
-import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
+import { registerSeatRoute } from '@/game-session/presentation/controller/routes/seat-route';
 import { registerPlayMemoRoute } from '@/game-session/presentation/controller/routes/play-memo-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
@@ -43,17 +43,19 @@ export const createApp = (options: CreateAppOptions) => {
   registerGameSessionRoute(app, {
     getSession: options.getSession,
     listGameSessions: options.gameSession.listGameSessions,
+    listLobbyGameSessions: options.gameSession.listLobbyGameSessions,
     getGameSession: options.gameSession.getGameSession,
+    createGameSession: options.gameSession.createGameSession,
     updateGameSession: options.gameSession.updateGameSession,
     deleteGameSession: options.gameSession.deleteGameSession,
     updateGameSessionStatus: options.gameSession.updateGameSessionStatus,
   });
-  registerMemberRoute(app, {
+  registerSeatRoute(app, {
     getSession: options.getSession,
-    listMembers: options.gameSession.listMembers,
-    joinGameSession: options.gameSession.joinGameSession,
-    updateMember: options.gameSession.updateMember,
-    leaveGameSession: options.gameSession.leaveGameSession,
+    listSeats: options.gameSession.listSeats,
+    createSeat: options.gameSession.createSeat,
+    updateSeat: options.gameSession.updateSeat,
+    deleteSeat: options.gameSession.deleteSeat,
   });
   registerPlayMemoRoute(app, {
     getSession: options.getSession,

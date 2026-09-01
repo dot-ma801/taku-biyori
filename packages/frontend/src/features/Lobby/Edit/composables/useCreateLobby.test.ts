@@ -40,7 +40,8 @@ beforeEach(() => {
 
 describe('useCreateLobby', () => {
   describe('候補日のバリデーション', () => {
-    it('候補日が0件だと送信をブロックしエラーメッセージを表示する', async () => {
+    // 候補日の編集はロビー編集画面から外れたため、作成時点では0件を許容する
+    it('候補日が0件でも送信できる', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '募集枠';
@@ -50,8 +51,10 @@ describe('useCreateLobby', () => {
       await submit();
 
       // Assert
-      expect(createLobby).not.toHaveBeenCalled();
-      expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
+      expect(errorMessages.value).toEqual([]);
+      expect(createLobby).toHaveBeenCalledWith(
+        expect.objectContaining({ candidateDates: [] }),
+      );
     });
 
     // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
@@ -138,11 +141,13 @@ describe('useCreateLobby', () => {
   });
 
   describe('複数のバリデーションエラー', () => {
-    it('タイトル未入力かつ候補日0件のとき、両方のエラーメッセージを表示する', async () => {
+    it('タイトル未入力かつ募集人数が範囲外のとき、両方のエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      const { title, maxMembers, pendingDates, errorMessages, submit } =
+        useCreateLobby();
       title.value = '';
-      pendingDates.value = [];
+      maxMembers.value = '1';
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -151,7 +156,7 @@ describe('useCreateLobby', () => {
       expect(createLobby).not.toHaveBeenCalled();
       expect(errorMessages.value).toEqual([
         'タイトルを入力してください',
-        '候補日を1件以上指定してください',
+        '募集人数は2〜20人の範囲で入力してください',
       ]);
     });
   });
@@ -296,7 +301,7 @@ describe('useCreateLobby', () => {
     it('候補日を変更した場合も errorMessages がクリアされる', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = '';
       pendingDates.value = [];
       await submit();
       expect(errorMessages.value).not.toEqual([]);

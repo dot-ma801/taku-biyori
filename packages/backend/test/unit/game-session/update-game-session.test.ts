@@ -133,6 +133,20 @@ describe('updateGameSession', () => {
     expect(result).toEqual({ type: 'invalidStatus' });
   });
 
+  it('開催日を過去日へ更新できない', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      scheduledAt: '2000-01-01',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'pastScheduledAt' });
+    expect(repo.updateById).not.toHaveBeenCalled();
+  });
+
   it('完了した開催は編集できる（あとから連絡事項を直す運用があるため）', async () => {
     // Arrange
     const repo = makeRepo({
@@ -146,6 +160,26 @@ describe('updateGameSession', () => {
     // Act
     const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
       description: 'おつかれさまでした',
+    });
+
+    // Assert
+    expect(result.type).toBe('ok');
+  });
+
+  it('過去日の完了済み開催は開催日を変えずに更新できる', async () => {
+    // Arrange
+    const repo = makeRepo({
+      findStatusFields: vi.fn().mockResolvedValue({
+        scheduledAt: '2000-01-01',
+        completedAt: new Date('2000-01-01T22:00:00.000Z'),
+        cancelledAt: null,
+      }),
+    });
+
+    // Act
+    const result = await updateGameSession(repo, LOBBY_ID, 'session-1', HOST, {
+      scheduledAt: '2000-01-01',
+      description: '記録を追記しました',
     });
 
     // Assert

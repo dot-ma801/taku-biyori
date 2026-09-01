@@ -75,9 +75,6 @@ export {
   GameSessionAction,
   ACTION_POLICIES,
   canPerform,
-  LegacyGameSessionAction,
-  LEGACY_ACTION_POLICIES,
-  canPerformLegacy,
 } from './game-session/permissions.js';
 export { isGuestMember } from './game-session/member.js';
 export {

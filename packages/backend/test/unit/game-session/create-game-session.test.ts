@@ -109,6 +109,21 @@ describe('createGameSession', () => {
     expect(result).toEqual({ type: 'invalidStatus' });
   });
 
+  it('過去日には開催を作れない', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await createGameSession(repo, LOBBY_ID, HOST, {
+      ...input,
+      scheduledAt: '2000-01-01',
+    });
+
+    // Assert
+    expect(result).toEqual({ type: 'pastScheduledAt' });
+    expect(repo.createGameSession).not.toHaveBeenCalled();
+  });
+
   it('受付を閉じたロビーにも開催を作れる（受付と開催は独立）', async () => {
     // Arrange
     const repo = makeRepo({

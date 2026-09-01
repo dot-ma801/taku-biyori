@@ -4,6 +4,7 @@ import {
   GameSessionAction,
   canPerform,
   getGameSessionStatus,
+  todayDateString,
 } from '@taku-biyori/shared';
 
 export interface UpdateGameSessionRepository {
@@ -20,7 +21,8 @@ export type UpdateGameSessionResult =
   | { type: 'ok'; gameSession: GameSession }
   | { type: 'notFound' }
   | { type: 'forbidden' }
-  | { type: 'invalidStatus' };
+  | { type: 'invalidStatus' }
+  | { type: 'pastScheduledAt' };
 
 /**
  * 開催日・上書き項目・当日の連絡事項を更新する（design-v2 §6-13-5）。
@@ -45,6 +47,16 @@ export const updateGameSession = async (
 
   const facts = await repo.findStatusFields(id);
   if (!facts) return { type: 'notFound' };
+
+  // 完了済み開催の連絡事項だけを更新する場合、保持している過去の開催日を
+  // 再検証して拒否しない。開催日を実際に変更するときだけ未来日を要求する。
+  if (
+    input.scheduledAt !== undefined &&
+    input.scheduledAt !== facts.scheduledAt &&
+    input.scheduledAt < todayDateString()
+  ) {
+    return { type: 'pastScheduledAt' };
+  }
 
   const status = getGameSessionStatus(facts);
   if (!canPerform(GameSessionAction.editGameSession, status, 'host')) {

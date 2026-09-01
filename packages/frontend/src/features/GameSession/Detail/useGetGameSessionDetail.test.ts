@@ -1,17 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
-import { GameSessionStatus } from '@taku-biyori/shared';
-import type {
-  LegacyGameSessionDetail,
-  GameSessionMember,
-} from '@taku-biyori/shared';
+import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
+import { ApiError } from '@/lib/api-client';
 
-vi.mock('@/api/legacy-game-session', () => ({
+vi.mock('@/api/game-session', () => ({
   getGameSession: vi.fn(),
-}));
-
-vi.mock('vue-router', () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
 // composable を component 外で呼ぶため onMounted は no-op にし、
@@ -21,159 +15,190 @@ vi.mock('vue', async (importOriginal) => {
   return { ...actual, onMounted: vi.fn() };
 });
 
-import { getGameSession } from '@/api/legacy-game-session';
+import { getGameSession } from '@/api/game-session';
 
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
 
-function makeMember(id: string): GameSessionMember {
-  return {
-    id,
-    userId: null,
-    userName: null,
-    guestName: 'ゲスト',
-    characterName: null,
-    joinedAt: '2024-01-01T00:00:00Z',
-  };
-}
+const makeSeat = (id: string): SeatModel => ({
+  id,
+  entryId: `entry-${id}`,
+  userId: null,
+  userName: null,
+  guestName: 'ゲスト',
+  characterName: null,
+  seatedAt: new Date('2026-08-30T10:00:00.000Z'),
+  isGuest: true,
+});
 
-function makeGameSession(
-  overrides: Partial<LegacyGameSessionDetail> = {},
-): LegacyGameSessionDetail {
-  return {
-    id: SESSION_ID,
-    title: 'テストセッション',
-    status: GameSessionStatus.open,
-    isPublished: true,
-    scheduledAt: '2026-08-01',
-    createdBy: 'host-1',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [],
-    ...overrides,
-  };
-}
-
-// gameSession を初期ロード済みの状態にした composable を返すヘルパー
-async function setupLoaded(gameSession: LegacyGameSessionDetail) {
-  vi.mocked(getGameSession).mockResolvedValue(gameSession);
-  const detail = useGetGameSessionDetail(SESSION_ID);
-  await detail.fetch();
-  return detail;
-}
+const makeGameSession = (
+  overrides: Partial<GameSessionDetailModel> = {},
+): GameSessionDetailModel => ({
+  id: SESSION_ID,
+  lobbyId: LOBBY_ID,
+  scheduledAt: '2999-12-31',
+  status: GameSessionStatus.scheduled,
+  description: null,
+  title: 'ロビーの題名',
+  scenarioName: null,
+  location: null,
+  timeLabel: null,
+  overrides: {
+    title: null,
+    scenarioName: null,
+    location: null,
+    timeLabel: null,
+  },
+  lobby: {
+    id: LOBBY_ID,
+    title: 'ロビーの題名',
+    scenarioName: null,
+    location: null,
+    maxPlayers: null,
+    hostUserId: 'user-host',
+    status: LobbyStatus.open,
+  },
+  completedAt: null,
+  cancelledAt: null,
+  createdAt: new Date('2026-08-01T00:00:00.000Z'),
+  updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+  seats: [],
+  ...overrides,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe('fetch', () => {
-  it('取得したセッションを gameSession に格納する', async () => {
+  it('取得に成功すると gameSession に model が入る', async () => {
     // Arrange
-    const gameSession = makeGameSession({ members: [makeMember('m1')] });
+    const model = makeGameSession();
+    vi.mocked(getGameSession).mockResolvedValue(model);
+    const { gameSession, fetch, loading } = useGetGameSessionDetail(
+      LOBBY_ID,
+      SESSION_ID,
+    );
 
     // Act
-    const { gameSession: state } = await setupLoaded(gameSession);
+    await fetch();
 
     // Assert
-    expect(getGameSession).toHaveBeenCalledWith(SESSION_ID);
-    expect(state.value).toEqual(gameSession);
+    expect(getGameSession).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
+    expect(gameSession.value).toEqual(model);
+    expect(loading.value).toBe(false);
+  });
+
+  it('ApiError のメッセージをそのまま errorMessage に入れる', async () => {
+    // Arrange
+    vi.mocked(getGameSession).mockRejectedValue(
+      new ApiError(404, '見つかりません'),
+    );
+    const { errorMessage, fetch } = useGetGameSessionDetail(
+      LOBBY_ID,
+      SESSION_ID,
+    );
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(errorMessage.value).toBe('見つかりません');
+  });
+
+  it('ApiError 以外は汎用メッセージにする', async () => {
+    // Arrange
+    vi.mocked(getGameSession).mockRejectedValue(new Error('boom'));
+    const { errorMessage, fetch } = useGetGameSessionDetail(
+      LOBBY_ID,
+      SESSION_ID,
+    );
+
+    // Act
+    await fetch();
+
+    // Assert
+    expect(errorMessage.value).toBe('エラーが発生しました');
   });
 });
 
-describe('addMember', () => {
-  it('members の末尾に新メンバーを追加する', async () => {
+describe('seats の加工', () => {
+  const setup = async (seats: SeatModel[]) => {
+    vi.mocked(getGameSession).mockResolvedValue(makeGameSession({ seats }));
+    const composable = useGetGameSessionDetail(LOBBY_ID, SESSION_ID);
+    await composable.fetch();
+    return composable;
+  };
+
+  it('addSeat で着席を追加する', async () => {
     // Arrange
-    const { gameSession, addMember } = await setupLoaded(
-      makeGameSession({ members: [makeMember('m1')] }),
-    );
-    const newMember = makeMember('m2');
+    const { gameSession, addSeat } = await setup([makeSeat('seat-1')]);
 
     // Act
-    addMember(newMember);
+    addSeat(makeSeat('seat-2'));
 
     // Assert
-    expect(gameSession.value?.members.map((m) => m.id)).toEqual(['m1', 'm2']);
+    expect(gameSession.value?.seats.map((s) => s.id)).toEqual([
+      'seat-1',
+      'seat-2',
+    ]);
   });
 
-  it('既存メンバーを書き換えず新しい配列を生成する（不変更新）', async () => {
+  it('removeSeat で着席を取り除く', async () => {
     // Arrange
-    const { gameSession, addMember } = await setupLoaded(
-      makeGameSession({ members: [makeMember('m1')] }),
-    );
-    const before = gameSession.value!.members;
+    const { gameSession, removeSeat } = await setup([
+      makeSeat('seat-1'),
+      makeSeat('seat-2'),
+    ]);
 
     // Act
-    addMember(makeMember('m2'));
+    removeSeat('seat-1');
 
     // Assert
-    expect(gameSession.value?.members).not.toBe(before);
-    expect(before.map((m) => m.id)).toEqual(['m1']);
+    expect(gameSession.value?.seats.map((s) => s.id)).toEqual(['seat-2']);
   });
 
-  it('gameSession 未ロード時は何もしない', () => {
-    // Arrange: fetch せずに呼ぶ
-    const { gameSession, addMember } = useGetGameSessionDetail(SESSION_ID);
+  it('updateSeat で既存の着席を差し替える', async () => {
+    // Arrange
+    const { gameSession, updateSeat } = await setup([makeSeat('seat-1')]);
 
     // Act
-    addMember(makeMember('m1'));
+    updateSeat({ ...makeSeat('seat-1'), characterName: 'アルベルト' });
+
+    // Assert
+    expect(gameSession.value?.seats[0]?.characterName).toBe('アルベルト');
+  });
+
+  it('未取得のときは何もしない', async () => {
+    // Arrange
+    const { gameSession, addSeat, removeSeat, updateSeat } =
+      useGetGameSessionDetail(LOBBY_ID, SESSION_ID);
+
+    // Act
+    addSeat(makeSeat('seat-1'));
+    removeSeat('seat-1');
+    updateSeat(makeSeat('seat-1'));
 
     // Assert
     expect(gameSession.value).toBeNull();
   });
 });
 
-describe('removeMember', () => {
-  it('指定 id のメンバーを削除する', async () => {
+describe('patchGameSession', () => {
+  it('変化したフィールドだけを差し替える', async () => {
     // Arrange
-    const { gameSession, removeMember } = await setupLoaded(
-      makeGameSession({ members: [makeMember('m1'), makeMember('m2')] }),
+    vi.mocked(getGameSession).mockResolvedValue(makeGameSession());
+    const { gameSession, fetch, patchGameSession } = useGetGameSessionDetail(
+      LOBBY_ID,
+      SESSION_ID,
     );
+    await fetch();
 
     // Act
-    removeMember('m1');
+    patchGameSession({ status: GameSessionStatus.completed });
 
     // Assert
-    expect(gameSession.value?.members.map((m) => m.id)).toEqual(['m2']);
-  });
-
-  it('存在しない id のときはメンバーを変更しない', async () => {
-    // Arrange
-    const { gameSession, removeMember } = await setupLoaded(
-      makeGameSession({ members: [makeMember('m1')] }),
-    );
-
-    // Act
-    removeMember('not-exist');
-
-    // Assert
-    expect(gameSession.value?.members.map((m) => m.id)).toEqual(['m1']);
-  });
-});
-
-describe('updateMember', () => {
-  it('同じ id の既存メンバーを差し替える', async () => {
-    // Arrange
-    const { gameSession, updateMember } = await setupLoaded(
-      makeGameSession({ members: [makeMember('m1'), makeMember('m2')] }),
-    );
-    const updated = { ...makeMember('m1'), characterName: '探索者A' };
-
-    // Act
-    updateMember(updated);
-
-    // Assert
-    expect(gameSession.value?.members).toEqual([updated, makeMember('m2')]);
-  });
-
-  it('一覧に無い id のときは追加せず変更しない', async () => {
-    // Arrange
-    const { gameSession, updateMember } = await setupLoaded(
-      makeGameSession({ members: [makeMember('m1')] }),
-    );
-
-    // Act
-    updateMember({ ...makeMember('ghost'), characterName: '幽霊' });
-
-    // Assert
-    expect(gameSession.value?.members.map((m) => m.id)).toEqual(['m1']);
+    expect(gameSession.value?.status).toBe(GameSessionStatus.completed);
+    expect(gameSession.value?.id).toBe(SESSION_ID);
   });
 });

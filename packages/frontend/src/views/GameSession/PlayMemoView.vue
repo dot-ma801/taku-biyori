@@ -14,7 +14,7 @@ import { usePlayMemoSelection } from '@/features/GameSession/PlayMemo/usePlayMem
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { useAuthStore } from '@/stores/auth';
 
-const props = defineProps<{ gameSessionId: string }>();
+const props = defineProps<{ lobbyId: string; gameSessionId: string }>();
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -23,7 +23,7 @@ const {
   gameSession,
   loading: loadingDetail,
   errorMessage,
-} = useGetGameSessionDetail(props.gameSessionId);
+} = useGetGameSessionDetail(props.lobbyId, props.gameSessionId);
 
 const {
   playMemo,
@@ -96,7 +96,10 @@ watch(
     if (isMyMemo.value) return;
     void router.replace({
       name: 'game-sessions-detail',
-      params: { gameSessionId: props.gameSessionId },
+      params: {
+        lobbyId: props.lobbyId,
+        gameSessionId: props.gameSessionId,
+      },
     });
   },
 );

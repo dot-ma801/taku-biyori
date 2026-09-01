@@ -6,10 +6,16 @@ import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
 import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
 import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
+import GameSessionList from '@/features/Lobby/Detail/GameSessionList.vue';
+import ConfirmFlowDialog from '@/features/Lobby/Detail/Schedule/ConfirmFlow/ConfirmFlowDialog.vue';
 import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import type { GameSessionModel } from '@/models/game-session';
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
 import { Album, UsersRound, MapPin } from '@lucide/vue';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const props = defineProps<{ lobbyId: string }>();
 
@@ -26,6 +32,31 @@ const capacityText = computed(() => {
 });
 
 const location = computed(() => lobby.value?.location ?? '未設定');
+const authStore = useAuthStore();
+const router = useRouter();
+const canCreateGameSession = computed(
+  () =>
+    lobby.value?.status === LobbyStatus.open &&
+    lobby.value.hostUserId === authStore.currentUser?.id,
+);
+const isCreateGameSessionOpen = ref(false);
+const gameSessionList = ref<InstanceType<typeof GameSessionList> | null>(null);
+
+function openCreateGameSession() {
+  isCreateGameSessionOpen.value = true;
+}
+
+function handleGameSessionCreated(_gameSession: GameSessionModel) {
+  isCreateGameSessionOpen.value = false;
+  void gameSessionList.value?.fetchSessions();
+  void router.push({
+    name: 'game-sessions-detail',
+    params: {
+      lobbyId: _gameSession.lobbyId,
+      gameSessionId: _gameSession.id,
+    },
+  });
+}
 </script>
 
 <template>
@@ -59,8 +90,19 @@ const location = computed(() => lobby.value?.location ?? '未設定');
       v-if="lobby.description"
       :text="lobby.description ?? undefined"
     />
+    <GameSessionList
+      ref="gameSessionList"
+      :lobby-id="lobby.id"
+      :can-create="canCreateGameSession"
+      @create="openCreateGameSession"
+    />
     <ScheduleDisplay :lobby="lobby" @stale="fetch" @restarted="fetch" />
     <MemberDisplay :lobby="lobby" @member-removed="removeEntry" />
+    <ConfirmFlowDialog
+      v-model="isCreateGameSessionOpen"
+      :lobby="lobby"
+      @created="handleGameSessionCreated"
+    />
   </div>
 </template>
 

@@ -1,12 +1,11 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
-  type LegacyGameSessionDetail,
-  type GameSessionMember,
   type SharedGameSessionPlayMemo,
   canViewSharedPlayMemos,
-  isGuestMember,
+  isGuestSeat,
 } from '@taku-biyori/shared';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
 import { listSharedPlayMemos } from '@/api/game-session';
 import { memberBaseName } from '@/utils/memberDisplayName';
 
@@ -50,7 +49,7 @@ export interface PlayMemoMemberEntry {
  */
 export const useSharedPlayMemos = (
   gameSessionId: string,
-  gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
   // メンバーでない閲覧者（未ログイン・ゲスト）は null
   myMemberId: MaybeRefOrGetter<string | null | undefined>,
 ) => {
@@ -121,11 +120,11 @@ export const useSharedPlayMemos = (
    * ゲストは `user_id = null` でメモを持てないため、公開メモの有無を見るまでもなく
    * ゲストのタグに倒す。自分だけは非公開でも開ける（本人はいつでも読める）。
    */
-  function toEntry(member: GameSessionMember): PlayMemoMemberEntry {
+  function toEntry(member: SeatModel): PlayMemoMemberEntry {
     const isMe = member.id === toValue(myMemberId);
     const sharedPlayMemo =
       sharedPlayMemoByMemberId.value.get(member.id) ?? null;
-    const isGuest = isGuestMember(member);
+    const isGuest = isGuestSeat(member);
 
     // タグが「ゲスト」を示すので、名前には「（ゲスト）」を付けない（重複するため）
     const userLabel = memberBaseName(member);
@@ -145,7 +144,7 @@ export const useSharedPlayMemos = (
 
   /** サイドバーに並べる参加メンバー全員。読めない相手も理由（タグ）付きで並べる */
   const entries = computed<PlayMemoMemberEntry[]>(
-    () => toValue(gameSession)?.members.map(toEntry) ?? [],
+    () => toValue(gameSession)?.seats.map(toEntry) ?? [],
   );
 
   /**

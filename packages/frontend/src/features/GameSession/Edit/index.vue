@@ -12,6 +12,15 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessage: string;
+  /**
+   * ロビーの既定値。上書き欄のプレースホルダに出し、
+   * 「空欄のままならこの値が表示される」ことを伝える（design-v2 §5-5）
+   */
+  lobbyDefaults?: {
+    title: string;
+    scenarioName: string | null;
+    location: string | null;
+  } | null;
 }>();
 
 const submitButtonLabel = computed(() =>
@@ -25,7 +34,7 @@ const emit = defineEmits<{
 
 const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
-const maxMembers = defineModel<string>('maxMembers', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
 const description = defineModel<string>('description', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const location = defineModel<string>('location', { default: '' });
@@ -45,11 +54,13 @@ const canSubmit = computed(
     <InputBasicInfo
       v-model:title="title"
       v-model:scenarioName="scenarioName"
-      v-model:maxMembers="maxMembers"
+      :lobby-defaults="props.lobbyDefaults"
     ></InputBasicInfo>
     <InputScheduleInfo
       v-model:scheduledAt="scheduledAt"
       v-model:location="location"
+      v-model:timeLabel="timeLabel"
+      :lobby-location="props.lobbyDefaults?.location ?? null"
     ></InputScheduleInfo>
     <InputMemo v-model:description="description"></InputMemo>
   </div>

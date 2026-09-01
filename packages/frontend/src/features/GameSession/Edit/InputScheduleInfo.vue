@@ -5,12 +5,25 @@ import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue'
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import { CalendarDays } from '@lucide/vue';
 
+import { computed } from 'vue';
+
 /**
- * 卓は日程が確定した状態でのみ存在するため、開催日は必須入力とする（design-v1.1 §8）。
- * 候補日・募集締め切りは募集枠（lobby）の関心事なのでこの画面では扱わない。
+ * 開催は生まれた時点で日程が決まっているため、開催日は必須入力とする（design-v2 §3-7）。
+ * 候補日・受付の締め切りはロビーの関心事なのでこの画面では扱わない。
+ *
+ * 実施場所はこの開催だけの上書き。空欄ならロビーの値に追随する（design-v2 §5-5）。
  */
+const props = defineProps<{ lobbyLocation?: string | null }>();
+
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const location = defineModel<string>('location', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
+
+const locationPlaceholder = computed(() =>
+  props.lobbyLocation
+    ? `未入力なら「${props.lobbyLocation}」`
+    : '例：Discord + ココフォリア',
+);
 </script>
 
 <template>
@@ -31,9 +44,16 @@ const location = defineModel<string>('location', { default: '' });
         ></BaseDatePicker>
 
         <BaseTextBox
+          v-model="timeLabel"
+          label="時間帯"
+          placeholder="例：19:00〜"
+          maxlength="20"
+        ></BaseTextBox>
+
+        <BaseTextBox
           v-model="location"
           label="実施場所"
-          placeholder="例：Discord + ココフォリア"
+          :placeholder="locationPlaceholder"
         ></BaseTextBox>
       </div>
     </template>

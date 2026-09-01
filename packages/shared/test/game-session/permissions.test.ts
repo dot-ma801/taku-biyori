@@ -3,20 +3,12 @@ import { canPerform, GameSessionAction } from '@/game-session/permissions';
 import type { GameSessionRole } from '@/game-session/permissions';
 import { GameSessionStatus } from '@/game-session';
 
-// v2 で導出されるステータスは4つ（design-v2 §4-2）。
-// 移行期間中の enum には旧値（draft / open / confirmed）も残るが、どのアクションも許可しない。
 const DERIVED_STATUSES: GameSessionStatus[] = [
   GameSessionStatus.scheduled,
   GameSessionStatus.today,
   GameSessionStatus.completed,
   GameSessionStatus.cancelled,
 ];
-const LEGACY_STATUSES: GameSessionStatus[] = [
-  GameSessionStatus.draft,
-  GameSessionStatus.open,
-  GameSessionStatus.confirmed,
-];
-const ALL_STATUSES: GameSessionStatus[] = Object.values(GameSessionStatus);
 const ALL_ROLES: GameSessionRole[] = ['host', 'member'];
 
 const on = (
@@ -72,7 +64,7 @@ describe('canPerform', () => {
   for (const action of Object.values(GameSessionAction)) {
     describe(`action: ${action}`, () => {
       for (const role of ALL_ROLES) {
-        for (const status of ALL_STATUSES) {
+        for (const status of DERIVED_STATUSES) {
           const expected = ALLOWED[action].some(
             (a) => a.role === role && a.status === status,
           );
@@ -86,23 +78,8 @@ describe('canPerform', () => {
 });
 
 describe('v2 のポリシー表', () => {
-  it.each(LEGACY_STATUSES)(
-    '廃止した %s ではどのアクションも許可しない',
-    (status) => {
-      // Arrange
-      const actions = Object.values(GameSessionAction);
-
-      // Act
-      const allowed = actions.flatMap((action) =>
-        ALL_ROLES.filter((role) => canPerform(action, status, role)).map(
-          (role) => `${action}:${role}`,
-        ),
-      );
-
-      // Assert
-      expect(allowed).toEqual([]);
-    },
-  );
+  // 廃止した draft / open / confirmed を弾くテストは置かない。
+  // enum から値ごと消したため、渡すこと自体が型エラーになる（design-v2 §4-2）
 
   it('中止した開催は編集も完了もできない（記録として凍結する）', () => {
     // Arrange
@@ -119,10 +96,10 @@ describe('v2 のポリシー表', () => {
 
   it('完了と中止は同じ条件で許可する（どちらも scheduled / today から）', () => {
     // Arrange / Act
-    const complete = ALL_STATUSES.filter((status) =>
+    const complete = DERIVED_STATUSES.filter((status) =>
       canPerform(GameSessionAction.completeGameSession, status, 'host'),
     );
-    const cancel = ALL_STATUSES.filter((status) =>
+    const cancel = DERIVED_STATUSES.filter((status) =>
       canPerform(GameSessionAction.cancelGameSession, status, 'host'),
     );
 
@@ -132,7 +109,7 @@ describe('v2 のポリシー表', () => {
 
   it('着席させられるのはホストだけで、参加者は自分で着席できない（§6-6）', () => {
     // Arrange / Act
-    const memberCanSeat = ALL_STATUSES.some((status) =>
+    const memberCanSeat = DERIVED_STATUSES.some((status) =>
       canPerform(GameSessionAction.seatEntry, status, 'member'),
     );
 

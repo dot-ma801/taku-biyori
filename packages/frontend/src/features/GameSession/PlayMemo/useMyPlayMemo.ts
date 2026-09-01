@@ -1,11 +1,11 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import {
-  type LegacyGameSessionDetail,
   type MyGameSessionPlayMemo,
-  LegacyGameSessionAction,
-  canPerformLegacy,
+  GameSessionAction,
+  canPerform,
 } from '@taku-biyori/shared';
+import type { GameSessionDetailModel } from '@/models/game-session';
 import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
@@ -28,7 +28,7 @@ export const useMyPlayMemo = (
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
-  gameSession: MaybeRefOrGetter<LegacyGameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
 ) => {
   const authStore = useAuthStore();
   const playMemo = ref<MyGameSessionPlayMemo | null>(null);
@@ -44,7 +44,7 @@ export const useMyPlayMemo = (
   const myMember = computed(() => {
     const userId = authStore.currentUser?.id;
     if (!userId) return undefined;
-    return toValue(gameSession)?.members.find((m) => m.userId === userId);
+    return toValue(gameSession)?.seats.find((m) => m.userId === userId);
   });
 
   /** メモ機能の対象者か（ログイン済みかつその卓のメンバー） */
@@ -54,7 +54,7 @@ export const useMyPlayMemo = (
   const showLoginPrompt = computed(() => !authStore.isAuthenticated);
 
   const isHost = computed(
-    () => toValue(gameSession)?.createdBy === authStore.currentUser?.id,
+    () => toValue(gameSession)?.lobby.hostUserId === authStore.currentUser?.id,
   );
 
   /**
@@ -66,8 +66,8 @@ export const useMyPlayMemo = (
   const canEditBody = computed(() => {
     const status = toValue(gameSession)?.status;
     if (!isMyMemo.value || status === undefined) return false;
-    return canPerformLegacy(
-      LegacyGameSessionAction.editPlayMemo,
+    return canPerform(
+      GameSessionAction.editSeatPlayMemo,
       status,
       isHost.value ? 'host' : 'member',
     );

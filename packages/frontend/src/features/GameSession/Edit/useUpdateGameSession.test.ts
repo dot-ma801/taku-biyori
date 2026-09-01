@@ -1,180 +1,247 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUpdateGameSession } from '@/features/GameSession/Edit/useUpdateGameSession';
-import type { LegacyGameSessionDetail } from '@taku-biyori/shared';
-import { GameSessionStatus } from '@taku-biyori/shared';
+import { makeGameSessionDetailModel } from '@/models/__fixtures__/game-session';
+import { ApiError } from '@/lib/api-client';
 
-vi.mock('@/api/legacy-game-session', () => ({
+vi.mock('@/api/game-session', () => ({
   getGameSession: vi.fn(),
   updateGameSession: vi.fn(),
 }));
 
+const mockRouterPush = vi.fn();
+const mockRouterBack = vi.fn();
 vi.mock('vue-router', () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn(), back: vi.fn() })),
+  useRouter: () => ({ push: mockRouterPush, back: mockRouterBack }),
 }));
 
-import { getGameSession, updateGameSession } from '@/api/legacy-game-session';
+// composable を component 外で呼ぶため onMounted は no-op にする
+vi.mock('vue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue')>();
+  return { ...actual, onMounted: vi.fn() };
+});
 
+import { getGameSession, updateGameSession } from '@/api/game-session';
+
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
-const SCHEDULED_AT = '2025-06-15';
-
-const mockGameSessionDetail: LegacyGameSessionDetail = {
-  id: SESSION_ID,
-  title: 'テスト卓',
-  scenarioName: null,
-  description: null,
-  location: null,
-  maxMembers: 4,
-  status: GameSessionStatus.draft,
-  isPublished: false,
-  scheduledAt: SCHEDULED_AT,
-  completedAt: null,
-  createdBy: 'user-1',
-  createdAt: '2025-01-01T00:00:00.000Z',
-  updatedAt: '2025-01-01T00:00:00.000Z',
-  members: [],
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(getGameSession).mockResolvedValue(mockGameSessionDetail);
-  vi.mocked(updateGameSession).mockResolvedValue(mockGameSessionDetail);
+  vi.mocked(updateGameSession).mockResolvedValue(
+    {} as Awaited<ReturnType<typeof updateGameSession>>,
+  );
 });
 
-describe('useUpdateGameSession', () => {
-  describe('募集人数のバリデーション', () => {
-    it('1（下限未満）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
-      // Arrange
-      const { scheduledAt, maxMembers, errorMessage, submit } =
-        useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
-      maxMembers.value = '1';
+describe('fetchInitialValues', () => {
+  it('上書きしていない項目は空欄で開く', async () => {
+    // Arrange
+    // 解決済みの表示値を初期値にすると、そのまま保存したときに
+    // 意図しない上書きが発生する（design-v2 §5-5）
+    vi.mocked(getGameSession).mockResolvedValue(
+      makeGameSessionDetailModel({
+        title: 'ロビーの題名',
+        scenarioName: 'ロビーのシナリオ',
+        location: 'オンライン',
+        overrides: {
+          title: null,
+          scenarioName: null,
+          location: null,
+          timeLabel: null,
+        },
+      }),
+    );
+    const form = useUpdateGameSession(LOBBY_ID, SESSION_ID);
 
-      // Act
-      await submit();
+    // Act
+    await form.fetchInitialValues();
 
-      // Assert
-      expect(updateGameSession).not.toHaveBeenCalled();
-      expect(errorMessage.value).toBe(
-        '募集人数は2〜20人の範囲で入力してください',
-      );
-    });
+    // Assert
+    expect(form.title.value).toBe('');
+    expect(form.scenarioName.value).toBe('');
+    expect(form.location.value).toBe('');
+    expect(form.timeLabel.value).toBe('');
+  });
 
-    it('21（上限超過）を入力すると送信をブロックしエラーメッセージを表示する', async () => {
-      // Arrange
-      const { scheduledAt, maxMembers, errorMessage, submit } =
-        useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
-      maxMembers.value = '21';
+  it('上書きしている項目は生値で開く', async () => {
+    // Arrange
+    vi.mocked(getGameSession).mockResolvedValue(
+      makeGameSessionDetailModel({
+        title: '第2回',
+        location: 'カフェ〇〇',
+        overrides: {
+          title: '第2回',
+          scenarioName: null,
+          location: 'カフェ〇〇',
+          timeLabel: '13:00〜',
+        },
+      }),
+    );
+    const form = useUpdateGameSession(LOBBY_ID, SESSION_ID);
 
-      // Act
-      await submit();
+    // Act
+    await form.fetchInitialValues();
 
-      // Assert
-      expect(updateGameSession).not.toHaveBeenCalled();
-      expect(errorMessage.value).toBe(
-        '募集人数は2〜20人の範囲で入力してください',
-      );
-    });
+    // Assert
+    expect(form.title.value).toBe('第2回');
+    expect(form.location.value).toBe('カフェ〇〇');
+    expect(form.timeLabel.value).toBe('13:00〜');
+    expect(form.scenarioName.value).toBe('');
+  });
 
-    it('2（下限）を入力すると maxMembers: 2 で送信する', async () => {
-      // Arrange
-      const { scheduledAt, maxMembers, submit } =
-        useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
-      maxMembers.value = '2';
+  it('ロビーの既定値をプレースホルダ用に保持する', async () => {
+    // Arrange
+    vi.mocked(getGameSession).mockResolvedValue(makeGameSessionDetailModel());
+    const form = useUpdateGameSession(LOBBY_ID, SESSION_ID);
 
-      // Act
-      await submit();
+    // Act
+    await form.fetchInitialValues();
 
-      // Assert
-      expect(updateGameSession).toHaveBeenCalledWith(
-        SESSION_ID,
-        expect.objectContaining({ maxMembers: 2 }),
-      );
-    });
+    // Assert
+    expect(form.lobbyDefaults.value?.title).toBe('テストロビー');
+  });
 
-    it('20（上限）を入力すると maxMembers: 20 で送信する', async () => {
-      // Arrange
-      const { scheduledAt, maxMembers, submit } =
-        useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
-      maxMembers.value = '20';
+  it('取得に失敗するとエラーメッセージを出す', async () => {
+    // Arrange
+    vi.mocked(getGameSession).mockRejectedValue(new ApiError(404, '無い'));
+    const form = useUpdateGameSession(LOBBY_ID, SESSION_ID);
 
-      // Act
-      await submit();
+    // Act
+    await form.fetchInitialValues();
 
-      // Assert
-      expect(updateGameSession).toHaveBeenCalledWith(
-        SESSION_ID,
-        expect.objectContaining({ maxMembers: 20 }),
-      );
-    });
+    // Assert
+    expect(form.errorMessage.value).toBe('無い');
+  });
+});
 
-    it('未入力なら maxMembers: null で送信する', async () => {
-      // Arrange
-      const { scheduledAt, maxMembers, submit } =
-        useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
-      maxMembers.value = '';
+describe('submit', () => {
+  const setup = () => useUpdateGameSession(LOBBY_ID, SESSION_ID);
 
-      // Act
-      await submit();
+  it('開催日が空なら送信せずエラーにする', async () => {
+    // Arrange
+    const form = setup();
+    form.scheduledAt.value = '';
 
-      // Assert
-      expect(updateGameSession).toHaveBeenCalledWith(
-        SESSION_ID,
-        expect.objectContaining({ maxMembers: null }),
-      );
+    // Act
+    await form.submit();
+
+    // Assert
+    expect(updateGameSession).not.toHaveBeenCalled();
+    expect(form.errorMessage.value).toBe('開催日を選択してください');
+  });
+
+  it('空欄の上書き項目は null（解除）として送る', async () => {
+    // Arrange
+    const form = setup();
+    form.scheduledAt.value = '2026-09-01';
+    form.title.value = '';
+    form.scenarioName.value = '';
+    form.location.value = '';
+    form.timeLabel.value = '';
+    form.description.value = '';
+
+    // Act
+    await form.submit();
+
+    // Assert
+    expect(updateGameSession).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, {
+      scheduledAt: '2026-09-01',
+      title: null,
+      scenarioName: null,
+      location: null,
+      timeLabel: null,
+      description: null,
     });
   });
 
-  describe('開催日（日程必須）', () => {
-    it('開催日が未入力なら送信をブロックしエラーメッセージを表示する', async () => {
-      // Arrange
-      const { scheduledAt, errorMessage, submit } =
-        useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = '';
+  it('入力のある項目は値を送る', async () => {
+    // Arrange
+    const form = setup();
+    form.scheduledAt.value = '2026-09-01';
+    form.title.value = '第2回';
+    form.location.value = 'カフェ〇〇';
+    form.timeLabel.value = '13:00〜';
 
-      // Act
-      await submit();
+    // Act
+    await form.submit();
 
-      // Assert
-      expect(updateGameSession).not.toHaveBeenCalled();
-      expect(errorMessage.value).toBe('開催日を選択してください');
-    });
-
-    it('開催日を入力すると scheduledAt を含めて送信する', async () => {
-      // Arrange
-      const { scheduledAt, submit } = useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
-
-      // Act
-      await submit();
-
-      // Assert
-      expect(updateGameSession).toHaveBeenCalledWith(
-        SESSION_ID,
-        expect.objectContaining({ scheduledAt: SCHEDULED_AT }),
-      );
+    // Assert
+    expect(updateGameSession).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, {
+      scheduledAt: '2026-09-01',
+      title: '第2回',
+      scenarioName: null,
+      location: 'カフェ〇〇',
+      timeLabel: '13:00〜',
+      description: null,
     });
   });
 
-  describe('募集締め切り（openUntil）', () => {
-    // 募集は募集枠（lobby）の関心事。卓の編集では openUntil を送らず、
-    // サーバ側の値をそのまま保持する（送ると null 化されて open へ戻ってしまう）
-    it('openUntil を送信しない', async () => {
-      // Arrange
-      const { scheduledAt, submit } = useUpdateGameSession(SESSION_ID);
-      scheduledAt.value = SCHEDULED_AT;
+  it('空白だけの入力は上書きとして扱わない', async () => {
+    // Arrange
+    const form = setup();
+    form.scheduledAt.value = '2026-09-01';
+    form.title.value = '   ';
 
-      // Act
-      await submit();
+    // Act
+    await form.submit();
 
-      // Assert
-      expect(updateGameSession).toHaveBeenCalledWith(
-        SESSION_ID,
-        expect.not.objectContaining({ openUntil: expect.anything() }),
-      );
+    // Assert
+    expect(updateGameSession).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      expect.objectContaining({ title: null }),
+    );
+  });
+
+  it('成功すると開催の詳細へ戻る', async () => {
+    // Arrange
+    const form = setup();
+    form.scheduledAt.value = '2026-09-01';
+
+    // Act
+    await form.submit();
+
+    // Assert
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      name: 'game-sessions-detail',
+      params: { lobbyId: LOBBY_ID, gameSessionId: SESSION_ID },
     });
+  });
+
+  it('ApiError のメッセージをそのまま出す', async () => {
+    // Arrange
+    vi.mocked(updateGameSession).mockRejectedValue(
+      new ApiError(422, '中止した開催は編集できません'),
+    );
+    const form = setup();
+    form.scheduledAt.value = '2026-09-01';
+
+    // Act
+    await form.submit();
+
+    // Assert
+    expect(form.errorMessage.value).toBe('中止した開催は編集できません');
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('定員（maxMembers）はフォームから消えている', () => {
+    // Arrange / Act
+    const form = setup();
+
+    // Assert
+    // 定員はロビーの関心事へ移った（design-v2 §3-7）
+    expect('maxMembers' in form).toBe(false);
+  });
+});
+
+describe('cancel', () => {
+  it('前の画面へ戻る', () => {
+    // Arrange
+    const form = useUpdateGameSession(LOBBY_ID, SESSION_ID);
+
+    // Act
+    form.cancel();
+
+    // Assert
+    expect(mockRouterBack).toHaveBeenCalled();
   });
 });

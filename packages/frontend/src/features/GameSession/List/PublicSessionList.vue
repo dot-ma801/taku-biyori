@@ -3,32 +3,35 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 import { Calendar, UsersRound } from '@lucide/vue';
-import type { LegacyGameSessionListItem } from '@taku-biyori/shared';
+import type { GameSessionListItemModel } from '@/models/game-session';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  publicSessions: LegacyGameSessionListItem[];
+  publicSessions: GameSessionListItemModel[];
 }>();
 
 const formattedPublishSessions = computed(() => {
   return [...props.publicSessions].map((item) => ({
     ...item,
-    formattedDate: item.scheduledAt ?? '未設定',
-    formattedMaxMembers: item.maxMembers ?? '-',
-    formattedRemainingMembers:
-      item.maxMembers != null ? item.maxMembers - item.memberCount : null,
+    formattedDate: item.scheduledAt,
+    formattedTimeLabel: item.timeLabel ?? '',
   }));
 });
 
-const sessionLink = (item: { id: string; title: string }) => ({
-  to: { name: 'game-sessions-detail', params: { gameSessionId: item.id } },
+// 定員はロビーの関心事になり、一覧の契約からは外れた（design-v2 §6-11）。
+// 残枠を出したい画面はロビーの一覧を見る
+const sessionLink = (item: { id: string; lobbyId: string; title: string }) => ({
+  to: {
+    name: 'game-sessions-detail',
+    params: { lobbyId: item.lobbyId, gameSessionId: item.id },
+  },
   label: `${item.title} の詳細を見る`,
 });
 </script>
 
 <template>
   <BaseSectionHeading class="card-header" level="h2">
-    公開中のセッション
+    公開中の開催
   </BaseSectionHeading>
 
   <BaseCard
@@ -44,14 +47,6 @@ const sessionLink = (item: { id: string; title: string }) => ({
         ></GameSessionStatusBadge>
         <BaseSectionHeading level="h3">{{ item.title }}</BaseSectionHeading>
       </div>
-
-      <p v-if="item.formattedRemainingMembers != null" class="remaining">
-        残り
-        <span class="remaining-member-number">
-          {{ item.formattedRemainingMembers }}
-        </span>
-        枠
-      </p>
     </div>
 
     <div class="content-area">
@@ -60,9 +55,12 @@ const sessionLink = (item: { id: string; title: string }) => ({
           <Calendar :size="16" />
           <p>{{ item.formattedDate }}</p>
         </span>
+        <span v-if="item.formattedTimeLabel" class="meta-group">
+          <p>{{ item.formattedTimeLabel }}</p>
+        </span>
         <span class="meta-group">
           <UsersRound :size="16" />
-          <p>{{ item.memberCount }}/{{ item.formattedMaxMembers }}</p>
+          <p>{{ item.seatCount }}人</p>
         </span>
       </div>
     </div>

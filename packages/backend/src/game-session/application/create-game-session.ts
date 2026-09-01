@@ -3,7 +3,11 @@ import type {
   GameSession,
   LobbyStatus,
 } from '@taku-biyori/shared';
-import { LobbyAction, canPerformLobbyAction } from '@taku-biyori/shared';
+import {
+  LobbyAction,
+  canPerformLobbyAction,
+  todayDateString,
+} from '@taku-biyori/shared';
 
 export interface CreateGameSessionRepository {
   findLobbyForHost(
@@ -33,7 +37,8 @@ export type CreateGameSessionResult =
   | { type: 'notFound' }
   | { type: 'forbidden' }
   | { type: 'invalidStatus' }
-  | { type: 'invalidEntries' };
+  | { type: 'invalidEntries' }
+  | { type: 'pastScheduledAt' };
 
 /**
  * セッションを開く（design-v2 §5-2）。v0.2 の「卓確定」の後継。
@@ -53,6 +58,8 @@ export const createGameSession = async (
   userId: string,
   input: CreateGameSessionInput,
 ): Promise<CreateGameSessionResult> => {
+  if (input.scheduledAt < todayDateString()) return { type: 'pastScheduledAt' };
+
   // 重複を除いてからロックを取る。同じ entry を2回渡されても着席は1つ
   const entryIds = [...new Set(input.entryIds)];
 

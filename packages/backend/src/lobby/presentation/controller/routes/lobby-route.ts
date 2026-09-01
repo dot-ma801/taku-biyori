@@ -129,11 +129,8 @@ export const registerLobbyRoute = (
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
-    if (result.type === 'hasMember' || result.type === 'hasGameSession') {
-      return c.json(
-        { error: 'Cannot delete lobby with members or sessions' },
-        409,
-      );
+    if (result.type === 'hasMember') {
+      return c.json({ error: 'Cannot delete lobby with members' }, 409);
     }
     if (result.type === 'hasGameSession') {
       return c.json({ error: 'Cannot delete lobby with game sessions' }, 409);

@@ -8,13 +8,13 @@ const LOBBY_ID = 'lobby-1';
 
 const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
   {
-    memberId: 'member-1',
+    seatId: 'member-1',
     body: '一人目のメモ',
     sharedAt: '2026-08-02T10:00:00.000Z',
     updatedAt: '2026-08-02T10:00:00.000Z',
   },
   {
-    memberId: 'member-2',
+    seatId: 'member-2',
     body: '二人目のメモ',
     sharedAt: '2026-08-02T11:00:00.000Z',
     updatedAt: '2026-08-02T11:00:00.000Z',

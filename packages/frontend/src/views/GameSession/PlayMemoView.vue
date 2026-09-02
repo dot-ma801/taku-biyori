@@ -50,7 +50,7 @@ const {
   () => myMember.value?.id ?? null,
 );
 
-const { selectedEntry, selectedMemberId, isMineSelected, select } =
+const { selectedEntry, selectedSeatId, isMineSelected, select } =
   usePlayMemoSelection(entries);
 
 const gameSessionTitle = computed(() => gameSession.value?.title ?? '');
@@ -138,7 +138,7 @@ async function onVisibilityChange(shared: boolean) {
       <PlayMemoSidebar
         v-if="showSidebar"
         :entries="entries"
-        :selected-member-id="selectedMemberId"
+        :selected-seat-id="selectedSeatId"
         @select="select"
       />
 

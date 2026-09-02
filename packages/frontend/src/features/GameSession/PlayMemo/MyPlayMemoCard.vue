@@ -5,13 +5,13 @@ import { NotebookPen, Lock, Eye, ArrowRight } from '@lucide/vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import type { PlayMemoMemberEntry } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { formatDateTimeShort } from '@/utils/date';
 
 const props = defineProps<{
   gameSessionId: string;
-  playMemo: MyGameSessionPlayMemo | null;
+  playMemo: MyPlayMemoModel | null;
   /** playMemo の取得中か。true の間はまだ内容が確定していない */
   loading: boolean;
   canEditBody: boolean;
@@ -59,8 +59,8 @@ const memoRoute = computed(() => ({
 }));
 
 /** そのメンバーのメモを開いた状態でメモ画面へ入る */
-function memberRoute(memberId: string) {
-  return { ...memoRoute.value, query: { member: memberId } };
+function memberRoute(seatId: string) {
+  return { ...memoRoute.value, query: { member: seatId } };
 }
 
 // ---------- 実施前・当日（書く面） ----------
@@ -124,8 +124,8 @@ const readingEmptyMessage = computed(() => {
     <template v-if="hasSharedEntries">
       <p class="shared-label">公開しているメンバー</p>
       <ul class="chips">
-        <li v-for="entry in props.sharedEntries" :key="entry.memberId">
-          <RouterLink :to="memberRoute(entry.memberId)" class="chip">
+        <li v-for="entry in props.sharedEntries" :key="entry.seatId">
+          <RouterLink :to="memberRoute(entry.seatId)" class="chip">
             <UserAvatar
               :size="24"
               :user-id="entry.userId"

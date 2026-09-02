@@ -86,9 +86,6 @@ export const seats = gameSessionSchema.table(
     lobbyEntryId: uuid('lobby_entry_id')
       .notNull()
       .references(() => lobbyEntries.id, { onDelete: 'cascade' }),
-    // キャラクター名は character_assignments へ切り出す予定だが（design-v2 §3-9）、
-    // それはタスク6（#116）の担当。ここでは列のまま保持する
-    characterName: text('character_name'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()
@@ -112,19 +109,15 @@ export const seats = gameSessionSchema.table(
  * セッションの紐付けは seats 経由で辿る。game_session_id を非正規化して持つと
  * 「メモの開催」と「着席の開催」が二重管理になり権限判定が壊れるため持たない。
  */
-export const gameSessionPlayMemos = gameSessionSchema.table(
-  'game_session_play_memos',
+export const characterAssignments = gameSessionSchema.table(
+  'character_assignments',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // unique 制約が「1着席1メモ」を保証し、upsert の衝突キーにもなる。
-    // unique index がそのまま検索インデックスとして働くため追加のインデックスは不要。
     seatId: uuid('seat_id')
       .notNull()
       .unique()
       .references(() => seats.id, { onDelete: 'cascade' }),
-    body: text('body').notNull().default(''),
-    // 公開日時。null なら非公開（design-v1.2 §4）
-    sharedAt: timestamp('shared_at'),
+    characterName: text('character_name').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at')
       .notNull()
@@ -132,6 +125,24 @@ export const gameSessionPlayMemos = gameSessionSchema.table(
       .$onUpdate(() => new Date()),
   },
 );
+
+export const playMemos = gameSessionSchema.table('play_memos', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // unique 制約が「1着席1メモ」を保証し、upsert の衝突キーにもなる。
+  // unique index がそのまま検索インデックスとして働くため追加のインデックスは不要。
+  seatId: uuid('seat_id')
+    .notNull()
+    .unique()
+    .references(() => seats.id, { onDelete: 'cascade' }),
+  body: text('body').notNull().default(''),
+  // 公開日時。null なら非公開（design-v1.2 §4）
+  sharedAt: timestamp('shared_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const gameSessionsRelations = relations(
   gameSessions,
@@ -153,18 +164,19 @@ export const seatsRelations = relations(seats, ({ one }) => ({
     fields: [seats.lobbyEntryId],
     references: [lobbyEntries.id],
   }),
-  playMemo: one(gameSessionPlayMemos, {
+  playMemo: one(playMemos, {
     fields: [seats.id],
-    references: [gameSessionPlayMemos.seatId],
+    references: [playMemos.seatId],
+  }),
+  characterAssignment: one(characterAssignments, {
+    fields: [seats.id],
+    references: [characterAssignments.seatId],
   }),
 }));
 
-export const gameSessionPlayMemosRelations = relations(
-  gameSessionPlayMemos,
-  ({ one }) => ({
-    seat: one(seats, {
-      fields: [gameSessionPlayMemos.seatId],
-      references: [seats.id],
-    }),
+export const playMemosRelations = relations(playMemos, ({ one }) => ({
+  seat: one(seats, {
+    fields: [playMemos.seatId],
+    references: [seats.id],
   }),
-);
+}));

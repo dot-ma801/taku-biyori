@@ -29,7 +29,8 @@ import {
 import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
-  gameSessionPlayMemos,
+  playMemos,
+  characterAssignments,
   seats,
 } from '@/system/infrastructure/database/game-session-schema';
 import {
@@ -212,16 +213,14 @@ export const toListItem = (
 };
 
 type PlayMemoRow = {
-  memberId: string;
+  seatId: string;
   body: string;
   sharedAt: Date | null;
   updatedAt: Date;
 };
 
-// memberId というキー名は shared の契約（GameSessionPlayMemo）のまま据え置く。
-// 中身は seats.id で、seatId への改名はタスク6（#116）で行う（design-v2 §6-15）
 const toPlayMemo = (row: PlayMemoRow): GameSessionPlayMemo => ({
-  memberId: row.memberId,
+  seatId: row.seatId,
   body: row.body,
   sharedAt: row.sharedAt?.toISOString() ?? null,
   updatedAt: row.updatedAt.toISOString(),
@@ -235,7 +234,7 @@ const seatSelection = {
   userId: lobbyEntries.userId,
   userName: user.name,
   guestName: lobbyEntries.guestName,
-  characterName: seats.characterName,
+  characterName: characterAssignments.characterName,
   createdAt: seats.createdAt,
 };
 
@@ -468,6 +467,10 @@ export const createGameSessionRepository = (
       const seatRows = await db
         .select(seatSelection)
         .from(seats)
+        .leftJoin(
+          characterAssignments,
+          eq(characterAssignments.seatId, seats.id),
+        )
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.gameSessionId, id))
@@ -764,6 +767,10 @@ export const createGameSessionRepository = (
       const rows = await db
         .select(seatSelection)
         .from(seats)
+        .leftJoin(
+          characterAssignments,
+          eq(characterAssignments.seatId, seats.id),
+        )
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.gameSessionId, gameSessionId))
@@ -775,6 +782,10 @@ export const createGameSessionRepository = (
       const rows = await db
         .select(seatSelection)
         .from(seats)
+        .leftJoin(
+          characterAssignments,
+          eq(characterAssignments.seatId, seats.id),
+        )
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.id, seatId))
@@ -853,15 +864,23 @@ export const createGameSessionRepository = (
       seatId: string,
       characterName: string | null,
     ): Promise<Seat | null> {
-      const result = await db
-        .update(seats)
-        .set({ characterName })
-        .where(eq(seats.id, seatId))
-        .returning({ id: seats.id });
+      const seat = await repository.findSeatById(seatId);
+      if (!seat) return null;
+      if (characterName === null) {
+        await db
+          .delete(characterAssignments)
+          .where(eq(characterAssignments.seatId, seatId));
+      } else {
+        await db
+          .insert(characterAssignments)
+          .values({ seatId, characterName })
+          .onConflictDoUpdate({
+            target: characterAssignments.seatId,
+            set: { characterName },
+          });
+      }
 
-      const row = result[0];
-      if (!row) return null;
-      return repository.findSeatById(row.id);
+      return repository.findSeatById(seatId);
     },
 
     async deleteSeatById(seatId: string): Promise<void> {
@@ -878,13 +897,13 @@ export const createGameSessionRepository = (
     ): Promise<GameSessionPlayMemo | null> {
       const rows = await db
         .select({
-          memberId: gameSessionPlayMemos.seatId,
-          body: gameSessionPlayMemos.body,
-          sharedAt: gameSessionPlayMemos.sharedAt,
-          updatedAt: gameSessionPlayMemos.updatedAt,
+          seatId: playMemos.seatId,
+          body: playMemos.body,
+          sharedAt: playMemos.sharedAt,
+          updatedAt: playMemos.updatedAt,
         })
-        .from(gameSessionPlayMemos)
-        .where(eq(gameSessionPlayMemos.seatId, seatId))
+        .from(playMemos)
+        .where(eq(playMemos.seatId, seatId))
         .limit(1);
 
       const row = rows[0];
@@ -897,17 +916,17 @@ export const createGameSessionRepository = (
       body: string,
     ): Promise<GameSessionPlayMemo> {
       const result = await db
-        .insert(gameSessionPlayMemos)
+        .insert(playMemos)
         .values({ seatId, body })
         .onConflictDoUpdate({
-          target: gameSessionPlayMemos.seatId,
+          target: playMemos.seatId,
           set: { body },
         })
         .returning();
 
       const row = result[0];
       if (!row) throw new Error('プレイメモの保存に失敗しました');
-      return toPlayMemo({ ...row, memberId: row.seatId });
+      return toPlayMemo({ ...row, seatId: row.seatId });
     },
 
     /** body は書き換えない。更新対象が無い＝メモ未作成で、呼び出し側が 404 にする */
@@ -916,14 +935,14 @@ export const createGameSessionRepository = (
       sharedAt: Date | null,
     ): Promise<GameSessionPlayMemo | null> {
       const result = await db
-        .update(gameSessionPlayMemos)
+        .update(playMemos)
         .set({ sharedAt })
-        .where(eq(gameSessionPlayMemos.seatId, seatId))
+        .where(eq(playMemos.seatId, seatId))
         .returning();
 
       const row = result[0];
       if (!row) return null;
-      return toPlayMemo({ ...row, memberId: row.seatId });
+      return toPlayMemo({ ...row, seatId: row.seatId });
     },
 
     /**
@@ -935,20 +954,20 @@ export const createGameSessionRepository = (
     ): Promise<SharedGameSessionPlayMemo[]> {
       const rows = await db
         .select({
-          memberId: gameSessionPlayMemos.seatId,
-          body: gameSessionPlayMemos.body,
-          sharedAt: gameSessionPlayMemos.sharedAt,
-          updatedAt: gameSessionPlayMemos.updatedAt,
+          seatId: playMemos.seatId,
+          body: playMemos.body,
+          sharedAt: playMemos.sharedAt,
+          updatedAt: playMemos.updatedAt,
         })
-        .from(gameSessionPlayMemos)
-        .innerJoin(seats, eq(seats.id, gameSessionPlayMemos.seatId))
+        .from(playMemos)
+        .innerJoin(seats, eq(seats.id, playMemos.seatId))
         .where(
           and(
             eq(seats.gameSessionId, gameSessionId),
-            isNotNull(gameSessionPlayMemos.sharedAt),
+            isNotNull(playMemos.sharedAt),
           ),
         )
-        .orderBy(asc(gameSessionPlayMemos.sharedAt));
+        .orderBy(asc(playMemos.sharedAt));
 
       // where で公開済みに絞っているが型には反映されないため、ここでも null を落とす
       return rows

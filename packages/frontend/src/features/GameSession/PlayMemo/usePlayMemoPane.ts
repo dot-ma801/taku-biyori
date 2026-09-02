@@ -1,6 +1,6 @@
 import { computed, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import type { PlayMemoMemberEntry } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 
 /**
@@ -18,7 +18,7 @@ export const usePlayMemoPane = (params: {
   loadingMemo: MaybeRefOrGetter<boolean>;
   loadingSharedPlayMemos: MaybeRefOrGetter<boolean>;
   isMyMemo: MaybeRefOrGetter<boolean>;
-  playMemo: MaybeRefOrGetter<MyGameSessionPlayMemo | null>;
+  playMemo: MaybeRefOrGetter<MyPlayMemoModel | null>;
   canViewShared: MaybeRefOrGetter<boolean>;
   selectedEntry: MaybeRefOrGetter<PlayMemoMemberEntry | null>;
   isMineSelected: MaybeRefOrGetter<boolean>;

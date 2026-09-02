@@ -9,7 +9,7 @@ import {
   makeSeatModel,
 } from '@/models/__fixtures__/game-session';
 import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 
 vi.mock('@/api/game-session', () => ({
   getMyPlayMemo: vi.fn(),
@@ -52,13 +52,13 @@ const makeGameSession = (
   });
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: MY_MEMBER_ID,
+    seatId: MY_MEMBER_ID,
     body: '書斎の鍵は青木さんが持っていた',
     sharedAt: null,
-    updatedAt: '2026-08-03T12:04:00Z',
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
@@ -445,7 +445,7 @@ describe('isShared', () => {
   it('sharedAt があれば true', async () => {
     // Arrange
     vi.mocked(getMyPlayMemo).mockResolvedValue(
-      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     );
 
     // Act
@@ -507,7 +507,7 @@ describe('canToggleVisibility', () => {
 describe('setShared', () => {
   it('公開に切り替えると API を呼び、サーバ値で playMemo を差し替える', async () => {
     // Arrange
-    const shared = makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' });
+    const shared = makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') });
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);
     const { playMemo, isShared, setShared } = await setupSettled();
 
@@ -525,7 +525,7 @@ describe('setShared', () => {
   it('非公開に戻せる', async () => {
     // Arrange
     vi.mocked(getMyPlayMemo).mockResolvedValue(
-      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     );
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(makePlayMemo());
     const { isShared, setShared } = await setupSettled();
@@ -543,7 +543,7 @@ describe('setShared', () => {
 
   it('完了した卓でも切り替えられる（本文編集と独立）', async () => {
     // Arrange
-    const shared = makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' });
+    const shared = makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') });
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);
     const { setShared } = await setupSettled(
       makeGameSession({ status: GameSessionStatus.completed }),
@@ -590,7 +590,7 @@ describe('setShared', () => {
   it('実際に PATCH を送ったときは true を返す', async () => {
     // Arrange
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(
-      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     );
     const { setShared } = await setupSettled();
 
@@ -623,7 +623,7 @@ describe('setShared', () => {
     vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
       new Promise((resolve) => {
         resolveUpdate = () =>
-          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+          resolve(makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }));
       }),
     );
 
@@ -659,7 +659,7 @@ describe('setShared', () => {
     vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
       new Promise((resolve) => {
         resolveUpdate = () =>
-          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+          resolve(makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }));
       }),
     );
 

@@ -5,7 +5,6 @@ import type {
   UpdateGameSessionInput,
   UpdateGameSessionPlayMemoVisibilityInput,
   UpdateGameSessionStatusInput,
-  UpdateSeatInput,
   UpsertGameSessionPlayMemoInput,
 } from '@taku-biyori/shared';
 import type { GameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
@@ -17,7 +16,6 @@ import type { DeleteGameSessionResult } from '@/game-session/application/delete-
 import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
 import type { ListSeatsResult } from '@/game-session/application/list-seats';
 import type { CreateSeatResult } from '@/game-session/application/create-seat';
-import type { UpdateSeatResult } from '@/game-session/application/update-seat';
 import type { DeleteSeatResult } from '@/game-session/application/delete-seat';
 import type { GetMyPlayMemoResult } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoResult } from '@/game-session/application/upsert-my-play-memo';
@@ -32,7 +30,7 @@ import { deleteGameSession } from '@/game-session/application/delete-game-sessio
 import { updateGameSessionStatus } from '@/game-session/application/update-game-session-status';
 import { listSeats } from '@/game-session/application/list-seats';
 import { createSeat } from '@/game-session/application/create-seat';
-import { updateSeat } from '@/game-session/application/update-seat';
+import { updateCharacterAssignment } from '@/game-session/application/update-character-assignment';
 import { deleteSeat } from '@/game-session/application/delete-seat';
 import { getMyPlayMemo } from '@/game-session/application/get-my-play-memo';
 import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo';
@@ -83,13 +81,14 @@ export interface GameSessionUseCases {
     userId: string,
     input: CreateSeatInput,
   ): Promise<CreateSeatResult>;
-  updateSeat(
-    lobbyId: string,
+  updateCharacterAssignment(
     gameSessionId: string,
     seatId: string,
     userId: string,
-    input: UpdateSeatInput,
-  ): Promise<UpdateSeatResult>;
+    characterName: string | null,
+  ): Promise<
+    import('@/game-session/application/update-character-assignment').UpdateCharacterAssignmentResult
+  >;
   deleteSeat(
     lobbyId: string,
     gameSessionId: string,
@@ -136,8 +135,10 @@ export const createGameSessionUseCases = (
     listSeats(repo, lobbyId, gameSessionId, userId),
   createSeat: (lobbyId, gameSessionId, userId, input) =>
     createSeat(repo, lobbyId, gameSessionId, userId, input),
-  updateSeat: (lobbyId, gameSessionId, seatId, userId, input) =>
-    updateSeat(repo, lobbyId, gameSessionId, seatId, userId, input),
+  updateCharacterAssignment: (gameSessionId, seatId, userId, characterName) =>
+    updateCharacterAssignment(repo, gameSessionId, seatId, userId, {
+      characterName,
+    }),
   deleteSeat: (lobbyId, gameSessionId, seatId, userId) =>
     deleteSeat(repo, lobbyId, gameSessionId, seatId, userId),
   getMyPlayMemo: (gameSessionId, userId) =>

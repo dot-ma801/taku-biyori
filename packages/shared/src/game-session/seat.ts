@@ -61,12 +61,6 @@ export type CreateSeatInput = z.infer<typeof CreateSeatInputSchema>;
  * `required` にしているのは、キーの有無で「変更しない」と「解除する」を区別させないため。
  * `null` は明示的な解除であって未指定ではない。
  */
-export const UpdateSeatInputSchema = z.object({
-  /** 割り当てるキャラクター名。`null` で解除する。空文字は不可（解除の意図は `null` で表す） */
-  characterName: z.string().min(1).max(100).nullable(),
-});
-export type UpdateSeatInput = z.infer<typeof UpdateSeatInputSchema>;
-
 /** ゲストの着席（アカウントを持たず招待リンクからロビーに参加した人）かどうかを判定する */
 export const isGuestSeat = (seat: Pick<Seat, 'userId'>): boolean =>
   seat.userId === null;

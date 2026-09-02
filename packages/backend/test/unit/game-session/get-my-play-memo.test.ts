@@ -4,7 +4,7 @@ import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '今日のセッションのメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T00:00:00.000Z',
@@ -45,7 +45,7 @@ describe('getMyPlayMemo', () => {
     expect(result).toEqual({
       type: 'ok',
       playMemo: {
-        memberId: 'member-1',
+        seatId: 'member-1',
         body: '',
         sharedAt: null,
         updatedAt: null,

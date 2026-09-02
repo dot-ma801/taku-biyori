@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import PlayMemoEditor from '@/features/GameSession/PlayMemo/PlayMemoEditor.vue';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: 'member-1',
+    seatId: 'member-1',
     body: '',
     sharedAt: null,
     updatedAt: null,

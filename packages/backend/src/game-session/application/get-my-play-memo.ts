@@ -42,9 +42,7 @@ export const getMyPlayMemo = async (
   return {
     type: 'ok',
     playMemo: playMemo ?? {
-      // memberId というキー名は契約のまま据え置く。中身は seats.id で、
-      // seatId への改名はタスク6（#116）で行う（design-v2 §6-15）
-      memberId: seatId,
+      seatId,
       body: '',
       sharedAt: null,
       updatedAt: null,

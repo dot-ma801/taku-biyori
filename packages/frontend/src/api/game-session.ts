@@ -7,7 +7,6 @@ import type {
   Seat,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
-  UpdateSeatInput,
   MyGameSessionPlayMemo,
   SharedGameSessionPlayMemo,
   UpdateGameSessionPlayMemoVisibilityInput,
@@ -20,6 +19,8 @@ import type {
   GameSessionModel,
   SeatModel,
 } from '@/models/game-session';
+import type { MyPlayMemoModel, SharedPlayMemoModel } from '@/models/play-memo';
+import { toMyPlayMemoModel, toSharedPlayMemoModel } from '@/models/play-memo';
 import {
   toGameSessionDetailModel,
   toGameSessionListItemModel,
@@ -154,15 +155,33 @@ export async function createSeat(
 }
 
 /** キャラクター名の割り当て・解除。`null` で解除する。本人またはホスト */
-export async function updateSeat(
+/** CharacterAssignment 専用 API。 */
+export async function assignCharacter(
   lobbyId: string,
   gameSessionId: string,
   seatId: string,
-  input: UpdateSeatInput,
+  characterName: string,
 ): Promise<SeatModel> {
   const dto = (await apiRequest<Seat>(
-    `${seatsPath(lobbyId, gameSessionId)}/${seatId}`,
-    { method: 'PATCH', body: input },
+    `${seatsPath(lobbyId, gameSessionId)}/${seatId}/character`,
+    {
+      method: 'PUT',
+      body: { characterName },
+    },
+  ))!;
+  return toSeatModel(dto);
+}
+
+export async function unassignCharacter(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+): Promise<SeatModel> {
+  const dto = (await apiRequest<Seat>(
+    `${seatsPath(lobbyId, gameSessionId)}/${seatId}/character`,
+    {
+      method: 'DELETE',
+    },
   ))!;
   return toSeatModel(dto);
 }
@@ -188,10 +207,12 @@ export function deleteSeat(
  */
 export async function getMyPlayMemo(
   gameSessionId: string,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me`,
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `/api/game-sessions/${gameSessionId}/play-memos/me`,
+    ))!,
+  );
 }
 
 /**
@@ -202,11 +223,13 @@ export async function getMyPlayMemo(
 export async function upsertMyPlayMemo(
   gameSessionId: string,
   input: UpsertGameSessionPlayMemoInput,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me`,
-    { method: 'PUT', body: input },
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `/api/game-sessions/${gameSessionId}/play-memos/me`,
+      { method: 'PUT', body: input },
+    ))!,
+  );
 }
 
 /**
@@ -218,24 +241,26 @@ export async function upsertMyPlayMemo(
 export async function updateMyPlayMemoVisibility(
   gameSessionId: string,
   input: UpdateGameSessionPlayMemoVisibilityInput,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me/visibility`,
-    { method: 'PATCH', body: input },
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `/api/game-sessions/${gameSessionId}/play-memos/me/visibility`,
+      { method: 'PATCH', body: input },
+    ))!,
+  );
 }
 
 /**
  * 卓の公開プレイメモを一覧する。
  *
  * 認証は不要（未ログイン・ゲストでも読める。要求 §3-4）。レスポンスは閲覧者で分岐せず、
- * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは memberId だけが返るため、
+ * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは seatId だけが返るため、
  * 表示名は卓のメンバー一覧と突き合わせて解決する。
  */
 export async function listSharedPlayMemos(
   gameSessionId: string,
-): Promise<SharedGameSessionPlayMemo[]> {
+): Promise<SharedPlayMemoModel[]> {
   return (await apiRequest<SharedGameSessionPlayMemo[]>(
     `/api/game-sessions/${gameSessionId}/play-memos`,
-  ))!;
+  ))!.map(toSharedPlayMemoModel);
 }

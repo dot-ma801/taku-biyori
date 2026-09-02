@@ -13,12 +13,12 @@ import BaseSwitch from '@/components/form/BaseSwitch/BaseSwitch.vue';
 import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
 import { usePlayMemoEdit } from '@/features/GameSession/PlayMemo/usePlayMemoEdit';
 import type { PlayMemoVisibilityStatus } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 
 const props = defineProps<{
   gameSessionId: string;
   gameSessionTitle: string;
-  playMemo: MyGameSessionPlayMemo | null;
+  playMemo: MyPlayMemoModel | null;
   canEditBody: boolean;
   isShared: boolean;
   canToggleVisibility: boolean;
@@ -26,7 +26,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  saved: [saved: MyGameSessionPlayMemo];
+  saved: [saved: MyPlayMemoModel];
   // 公開状態の所有者は useMyPlayMemo なので、ここでは切替を依頼するだけ
   'visibility-change': [shared: boolean];
 }>();

@@ -77,7 +77,7 @@ const mockSeat: Seat = {
 };
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: SEAT_ID,
+  seatId: SEAT_ID,
   body: 'メモ',
   sharedAt: null,
   updatedAt: '2026-08-02T00:00:00.000Z',
@@ -117,8 +117,8 @@ const makeApp = (
     createSeat:
       overrides.createSeat ??
       vi.fn().mockResolvedValue({ type: 'ok', seat: mockSeat }),
-    updateSeat:
-      overrides.updateSeat ??
+    updateCharacterAssignment:
+      overrides.updateCharacterAssignment ??
       vi.fn().mockResolvedValue({ type: 'ok', seat: mockSeat }),
     deleteSeat:
       overrides.deleteSeat ?? vi.fn().mockResolvedValue({ type: 'ok' }),
@@ -543,14 +543,14 @@ describe('着席のルート', () => {
     expect(response.status).toBe(409);
   });
 
-  it('PATCH は characterName の省略を許さない（400）', async () => {
+  it('PUT は characterName の省略を許さない（400）', async () => {
     // Arrange
     // キーの有無で「変更しない」と「解除」を区別させないため required にしている
     const app = makeApp();
 
     // Act
-    const response = await app.request(`${seatsPath}/${SEAT_ID}`, {
-      method: 'PATCH',
+    const response = await app.request(`${seatsPath}/${SEAT_ID}/character`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
@@ -559,28 +559,25 @@ describe('着席のルート', () => {
     expect(response.status).toBe(400);
   });
 
-  it('PATCH で null を渡すと割り当てを解除する', async () => {
+  it('DELETE でキャラクター割り当てを解除する', async () => {
     // Arrange
-    const updateSeat = vi
+    const updateCharacterAssignment = vi
       .fn()
       .mockResolvedValue({ type: 'ok', seat: mockSeat });
-    const app = makeApp({ updateSeat });
+    const app = makeApp({ updateCharacterAssignment });
 
     // Act
-    const response = await app.request(`${seatsPath}/${SEAT_ID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ characterName: null }),
+    const response = await app.request(`${seatsPath}/${SEAT_ID}/character`, {
+      method: 'DELETE',
     });
 
     // Assert
     expect(response.status).toBe(200);
-    expect(updateSeat).toHaveBeenCalledWith(
-      LOBBY_ID,
+    expect(updateCharacterAssignment).toHaveBeenCalledWith(
       SESSION_ID,
       SEAT_ID,
       'user-1',
-      { characterName: null },
+      null,
     );
   });
 

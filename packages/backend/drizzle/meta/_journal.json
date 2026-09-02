@@ -127,6 +127,13 @@
       "when": 1788128641447,
       "tag": "0017_ordinary_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788320000000,
+      "tag": "0018_character_assignments_play_memos",
+      "breakpoints": true
     }
   ]
 }

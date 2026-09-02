@@ -1,11 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import {
-  type MyGameSessionPlayMemo,
-  GameSessionAction,
-  canPerform,
-} from '@taku-biyori/shared';
+import { GameSessionAction, canPerform } from '@taku-biyori/shared';
 import type { GameSessionDetailModel } from '@/models/game-session';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
@@ -31,7 +28,7 @@ export const useMyPlayMemo = (
   gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
 ) => {
   const authStore = useAuthStore();
-  const playMemo = ref<MyGameSessionPlayMemo | null>(null);
+  const playMemo = ref<MyPlayMemoModel | null>(null);
   const loading = ref(false);
 
   /**
@@ -105,7 +102,7 @@ export const useMyPlayMemo = (
   }
 
   /** 保存後のサーバ値を反映する。playMemo の所有者はこの composable */
-  function applySaved(saved: MyGameSessionPlayMemo) {
+  function applySaved(saved: MyPlayMemoModel) {
     playMemo.value = saved;
   }
 

@@ -66,10 +66,14 @@ export {
   type SeatRef,
   CreateSeatInputSchema,
   type CreateSeatInput,
-  UpdateSeatInputSchema,
-  type UpdateSeatInput,
   isGuestSeat,
 } from './game-session/seat.js';
+export {
+  CharacterAssignmentSchema,
+  type CharacterAssignment,
+  CharacterAssignmentInputSchema,
+  type CharacterAssignmentInput,
+} from './game-session/character-assignment.js';
 export {
   type GameSessionRole,
   GameSessionAction,

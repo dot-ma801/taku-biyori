@@ -13,7 +13,7 @@ const scheduledFields = {
 };
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '書き換えたメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T10:00:00.000Z',

@@ -6,7 +6,7 @@ import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 const now = new Date('2026-08-02T12:00:00.000Z');
 
 const sharedPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '今日のセッションのメモ',
   sharedAt: now.toISOString(),
   updatedAt: now.toISOString(),

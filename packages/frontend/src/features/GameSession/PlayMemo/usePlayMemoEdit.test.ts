@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { usePlayMemoEdit } from '@/features/GameSession/PlayMemo/usePlayMemoEdit';
 import { GAME_SESSION_PLAY_MEMO_MAX_LENGTH } from '@taku-biyori/shared';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 
 vi.mock('@/api/game-session', () => ({
   upsertMyPlayMemo: vi.fn(),
@@ -16,13 +16,13 @@ const MEMBER_ID = 'member-1';
 const SERVER_BODY = '書斎の鍵は青木さんが持っていた';
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: MEMBER_ID,
+    seatId: MEMBER_ID,
     body: SERVER_BODY,
     sharedAt: null,
-    updatedAt: '2026-08-03T12:04:00Z',
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
@@ -35,17 +35,17 @@ function makePlayMemo(
  */
 function setup(
   opts: {
-    playMemo?: MyGameSessionPlayMemo | null;
-    onSaved?: (saved: MyGameSessionPlayMemo) => void;
+    playMemo?: MyPlayMemoModel | null;
+    onSaved?: (saved: MyPlayMemoModel) => void;
   } = {},
 ) {
   // playMemo は null を明示的に渡すケースがあるため、?? ではなくキー有無で判定する
-  const initial: MyGameSessionPlayMemo | null =
+  const initial: MyPlayMemoModel | null =
     'playMemo' in opts ? (opts.playMemo ?? null) : makePlayMemo();
   const serverMemo = ref(initial);
   const onSaved =
     opts.onSaved ??
-    ((saved: MyGameSessionPlayMemo) => {
+    ((saved: MyPlayMemoModel) => {
       serverMemo.value = saved;
     });
 

@@ -318,14 +318,3 @@ export const JoinGameSessionInputSchema = z.object({
 });
 /** @deprecated 自分で着席する経路は廃止した（design-v2 §6-6） */
 export type JoinGameSessionInput = z.infer<typeof JoinGameSessionInputSchema>;
-
-/** @deprecated `UpdateSeatInput` へ移行する */
-export const UpdateMemberInputSchema = z
-  .object({
-    characterName: z.string().max(100).nullable().optional(),
-  })
-  .refine((input) => Object.keys(input).length > 0, {
-    message: '少なくとも1つのフィールドが必要です',
-  });
-/** @deprecated `UpdateSeatInput` へ移行する */
-export type UpdateMemberInput = z.infer<typeof UpdateMemberInputSchema>;

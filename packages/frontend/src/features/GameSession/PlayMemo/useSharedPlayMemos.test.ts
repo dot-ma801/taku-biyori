@@ -8,7 +8,7 @@ import {
   makeSeatModel,
 } from '@/models/__fixtures__/game-session';
 import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
-import type { SharedGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { SharedPlayMemoModel } from '@/models/play-memo';
 
 vi.mock('@/api/game-session', () => ({
   listSharedPlayMemos: vi.fn(),
@@ -66,26 +66,26 @@ const makeGameSession = (
   });
 
 function makeSharedMemo(
-  memberId: string,
-  overrides: Partial<SharedGameSessionPlayMemo> = {},
-): SharedGameSessionPlayMemo {
+  seatId: string,
+  overrides: Partial<SharedPlayMemoModel> = {},
+): SharedPlayMemoModel {
   return {
-    memberId,
+    seatId,
     body: '書斎の鍵は青木さんが持っていた',
-    sharedAt: '2026-08-04T09:00:00Z',
-    updatedAt: '2026-08-03T12:04:00Z',
+    sharedAt: new Date('2026-08-04T09:00:00Z'),
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
 
 function setup(
   gameSession: GameSessionDetailModel | null = makeGameSession(),
-  myMemberId: string | null = MY_MEMBER_ID,
+  mySeatId: string | null = MY_MEMBER_ID,
 ) {
   return useSharedPlayMemos(
     SESSION_ID,
     () => gameSession,
-    () => myMemberId,
+    () => mySeatId,
   );
 }
 
@@ -102,9 +102,9 @@ function setupWithGameSessionRef(
 
 function findEntry(
   entries: ReturnType<typeof setup>['entries'],
-  memberId: string,
+  seatId: string,
 ) {
-  return entries.value.find((entry) => entry.memberId === memberId);
+  return entries.value.find((entry) => entry.seatId === seatId);
 }
 
 beforeEach(() => {
@@ -224,7 +224,7 @@ describe('entries', () => {
     await flushPromises();
 
     // Assert
-    expect(entries.value.map((entry) => entry.memberId)).toEqual([
+    expect(entries.value.map((entry) => entry.seatId)).toEqual([
       MY_MEMBER_ID,
       OTHER_MEMBER_ID,
       PRIVATE_MEMBER_ID,
@@ -359,7 +359,7 @@ describe('entries', () => {
     await flushPromises();
 
     // Assert
-    expect(sharedEntries.value.map((entry) => entry.memberId)).toEqual([
+    expect(sharedEntries.value.map((entry) => entry.seatId)).toEqual([
       MY_MEMBER_ID,
       OTHER_MEMBER_ID,
     ]);

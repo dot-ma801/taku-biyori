@@ -1,13 +1,13 @@
-import type { Hono } from 'hono';
-import type { CreateSeatInput, UpdateSeatInput } from '@taku-biyori/shared';
+import type { Context, Hono } from 'hono';
+import type { CreateSeatInput } from '@taku-biyori/shared';
 import {
   CreateSeatInputSchema,
-  UpdateSeatInputSchema,
+  CharacterAssignmentInputSchema,
 } from '@taku-biyori/shared';
 import type { ListSeatsResult } from '@/game-session/application/list-seats';
 import type { CreateSeatResult } from '@/game-session/application/create-seat';
-import type { UpdateSeatResult } from '@/game-session/application/update-seat';
 import type { DeleteSeatResult } from '@/game-session/application/delete-seat';
+import type { UpdateCharacterAssignmentResult } from '@/game-session/application/update-character-assignment';
 
 export interface RegisterSeatRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
@@ -22,13 +22,12 @@ export interface RegisterSeatRouteOptions {
     userId: string,
     input: CreateSeatInput,
   ) => Promise<CreateSeatResult>;
-  updateSeat: (
-    lobbyId: string,
+  updateCharacterAssignment: (
     gameSessionId: string,
     seatId: string,
     userId: string,
-    input: UpdateSeatInput,
-  ) => Promise<UpdateSeatResult>;
+    characterName: string | null,
+  ) => Promise<UpdateCharacterAssignmentResult>;
   deleteSeat: (
     lobbyId: string,
     gameSessionId: string,
@@ -49,6 +48,37 @@ export const registerSeatRoute = (
   app: Hono,
   options: RegisterSeatRouteOptions,
 ): void => {
+  // CharacterAssignment の専用経路（#116）。Seat 更新経路と同じ認可・状態判定を共有する。
+  const updateCharacter = async (c: Context, characterName: string | null) => {
+    const authSession = await options.getSession(c.req.raw.headers);
+    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
+    const result = await options.updateCharacterAssignment(
+      c.req.param('id'),
+      c.req.param('seatId'),
+      authSession.user.id,
+      characterName,
+    );
+    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'invalidStatus')
+      return c.json({ error: 'Game session is cancelled' }, 422);
+    return c.json(result.seat);
+  };
+  app.put(`${BASE}/:seatId/character`, async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'Invalid JSON' }, 400);
+    }
+    const parsed = CharacterAssignmentInputSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
+    return updateCharacter(c, parsed.data.characterName);
+  });
+  app.delete(`${BASE}/:seatId/character`, async (c) =>
+    updateCharacter(c, null),
+  );
+
   app.get(BASE, async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     const userId = authSession?.user.id ?? null;
@@ -104,36 +134,6 @@ export const registerSeatRoute = (
       );
     }
     return c.json(result.seat, 201);
-  });
-
-  app.patch(`${BASE}/:seatId`, async (c) => {
-    const authSession = await options.getSession(c.req.raw.headers);
-    if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
-
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ error: 'Invalid JSON' }, 400);
-    }
-
-    const parsed = UpdateSeatInputSchema.safeParse(body);
-    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
-
-    const result = await options.updateSeat(
-      c.req.param('lobbyId'),
-      c.req.param('id'),
-      c.req.param('seatId'),
-      authSession.user.id,
-      parsed.data,
-    );
-
-    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
-    if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
-    if (result.type === 'invalidStatus') {
-      return c.json({ error: 'Game session is cancelled' }, 422);
-    }
-    return c.json(result.seat);
   });
 
   app.delete(`${BASE}/:seatId`, async (c) => {

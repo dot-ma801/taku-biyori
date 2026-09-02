@@ -1,11 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import {
-  type SharedGameSessionPlayMemo,
-  canViewSharedPlayMemos,
-  isGuestSeat,
-} from '@taku-biyori/shared';
+import { canViewSharedPlayMemos, isGuestSeat } from '@taku-biyori/shared';
 import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
+import type { SharedPlayMemoModel } from '@/models/play-memo';
 import { listSharedPlayMemos } from '@/api/game-session';
 import { memberBaseName } from '@/utils/memberDisplayName';
 
@@ -19,7 +16,7 @@ export type PlayMemoMemberTag = 'shared' | 'private' | 'guest';
 
 /** メンバー切り替えサイドバーの1行 */
 export interface PlayMemoMemberEntry {
-  memberId: string;
+  seatId: string;
   /** 主ラベル。キャラ名、無ければユーザー名 */
   primaryLabel: string;
   /** 副ラベル。ユーザー名を主ラベルへ繰り上げた行では null */
@@ -38,7 +35,7 @@ export interface PlayMemoMemberEntry {
   readable: boolean;
   isMe: boolean;
   /** その人の公開メモ。非公開・ゲストは null（自分の非公開メモもここには載らない） */
-  sharedPlayMemo: SharedGameSessionPlayMemo | null;
+  sharedPlayMemo: SharedPlayMemoModel | null;
 }
 
 /**
@@ -53,7 +50,7 @@ export const useSharedPlayMemos = (
   // メンバーでない閲覧者（未ログイン・ゲスト）は null
   myMemberId: MaybeRefOrGetter<string | null | undefined>,
 ) => {
-  const sharedPlayMemos = ref<SharedGameSessionPlayMemo[]>([]);
+  const sharedPlayMemos = ref<SharedPlayMemoModel[]>([]);
   const loading = ref(false);
 
   // 世代カウンタ。公開切替の連打などで fetch が重複起動したとき、後から
@@ -110,8 +107,8 @@ export const useSharedPlayMemos = (
     { immediate: true },
   );
 
-  const sharedPlayMemoByMemberId = computed(
-    () => new Map(sharedPlayMemos.value.map((memo) => [memo.memberId, memo])),
+  const sharedPlayMemoBySeatId = computed(
+    () => new Map(sharedPlayMemos.value.map((memo) => [memo.seatId, memo])),
   );
 
   /**
@@ -122,15 +119,14 @@ export const useSharedPlayMemos = (
    */
   function toEntry(member: SeatModel): PlayMemoMemberEntry {
     const isMe = member.id === toValue(myMemberId);
-    const sharedPlayMemo =
-      sharedPlayMemoByMemberId.value.get(member.id) ?? null;
+    const sharedPlayMemo = sharedPlayMemoBySeatId.value.get(member.id) ?? null;
     const isGuest = isGuestSeat(member);
 
     // タグが「ゲスト」を示すので、名前には「（ゲスト）」を付けない（重複するため）
     const userLabel = memberBaseName(member);
 
     return {
-      memberId: member.id,
+      seatId: member.id,
       primaryLabel: member.characterName ?? userLabel,
       secondaryLabel: member.characterName ? userLabel : null,
       userId: member.userId,
@@ -164,7 +160,7 @@ export const useSharedPlayMemos = (
   const othersSharedCount = computed(
     () =>
       sharedPlayMemos.value.filter(
-        (memo) => memo.memberId !== toValue(myMemberId),
+        (memo) => memo.seatId !== toValue(myMemberId),
       ).length,
   );
 

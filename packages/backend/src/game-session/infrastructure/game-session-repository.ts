@@ -219,6 +219,8 @@ type PlayMemoRow = {
   updatedAt: Date;
 };
 
+// memberId というキー名は shared の契約（GameSessionPlayMemo）のまま据え置く。
+// 中身は seats.id で、seatId への改名はタスク6（#116）で行う（design-v2 §6-15）
 const toPlayMemo = (row: PlayMemoRow): GameSessionPlayMemo => ({
   seatId: row.seatId,
   body: row.body,

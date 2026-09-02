@@ -3,7 +3,7 @@ import { canPerform, GameSessionAction } from '@/game-session/permissions';
 import type { GameSessionRole } from '@/game-session/permissions';
 import { GameSessionStatus } from '@/game-session';
 
-const ALL_STATUSES: GameSessionStatus[] = [
+const DERIVED_STATUSES: GameSessionStatus[] = [
   GameSessionStatus.scheduled,
   GameSessionStatus.today,
   GameSessionStatus.completed,

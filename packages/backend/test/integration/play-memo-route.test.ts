@@ -12,7 +12,7 @@ import type {
 const mockSession = { user: { id: 'user-1' } };
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: '00000000-0000-4000-8000-000000000001',
+  seatId: '00000000-0000-4000-8000-000000000001',
   body: '今日のセッションのメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T00:00:00.000Z',
@@ -20,7 +20,7 @@ const mockPlayMemo: GameSessionPlayMemo = {
 
 /** メモ未作成のメンバーに返す空メモ（design-v1.2 §8） */
 const emptyPlayMemo: MyGameSessionPlayMemo = {
-  memberId: '00000000-0000-4000-8000-000000000001',
+  seatId: '00000000-0000-4000-8000-000000000001',
   body: '',
   sharedAt: null,
   updatedAt: null,
@@ -28,13 +28,13 @@ const emptyPlayMemo: MyGameSessionPlayMemo = {
 
 const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
   {
-    memberId: '00000000-0000-4000-8000-000000000001',
+    seatId: '00000000-0000-4000-8000-000000000001',
     body: '一人目のメモ',
     sharedAt: '2026-08-02T10:00:00.000Z',
     updatedAt: '2026-08-02T10:00:00.000Z',
   },
   {
-    memberId: '00000000-0000-4000-8000-000000000002',
+    seatId: '00000000-0000-4000-8000-000000000002',
     body: '二人目のメモ',
     sharedAt: '2026-08-02T11:00:00.000Z',
     updatedAt: '2026-08-02T11:00:00.000Z',

@@ -1007,7 +1007,7 @@ describe('プレイメモ', () => {
       const memos = await repo.findSharedPlayMemos(sessionId);
 
       // Assert
-      expect(memos.map((memo) => memo.memberId)).toEqual([hostSeatId]);
+      expect(memos.map((memo) => memo.seatId)).toEqual([hostSeatId]);
     });
   });
 });

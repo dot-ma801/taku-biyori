@@ -45,8 +45,6 @@ export {
   type GameSessionMember,
   JoinGameSessionInputSchema,
   type JoinGameSessionInput,
-  UpdateMemberInputSchema,
-  type UpdateMemberInput,
 } from './game-session.js';
 export {
   getGameSessionStatus,

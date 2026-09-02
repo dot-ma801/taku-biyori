@@ -74,7 +74,7 @@ describe('公開トグルの説明文', () => {
       isShared: false,
       playMemo: makePlayMemo({
         body: '本文あり',
-        updatedAt: '2026-08-01T00:00:00Z',
+        updatedAt: new Date('2026-08-01T00:00:00Z'),
       }),
     });
 

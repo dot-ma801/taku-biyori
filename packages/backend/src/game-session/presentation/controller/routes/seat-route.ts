@@ -52,9 +52,14 @@ export const registerSeatRoute = (
   const updateCharacter = async (c: Context, characterName: string | null) => {
     const authSession = await options.getSession(c.req.raw.headers);
     if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
+    const gameSessionId = c.req.param('id');
+    const seatId = c.req.param('seatId');
+    if (gameSessionId === undefined || seatId === undefined) {
+      return c.json({ error: 'Not Found' }, 404);
+    }
     const result = await options.updateCharacterAssignment(
-      c.req.param('id'),
-      c.req.param('seatId'),
+      gameSessionId,
+      seatId,
       authSession.user.id,
       characterName,
     );

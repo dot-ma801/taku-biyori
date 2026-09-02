@@ -17,8 +17,9 @@ import {
   scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
-  gameSessionPlayMemos,
+  characterAssignments,
   gameSessions,
+  playMemos,
   seats,
 } from '@/system/infrastructure/database/game-session-schema';
 
@@ -199,11 +200,17 @@ export const insertSeat = async (
     .values({
       gameSessionId,
       lobbyEntryId,
-      characterName: seat.characterName ?? null,
     })
     .returning({ id: seats.id });
 
-  return firstRow(rows, 'insertSeat').id;
+  const id = firstRow(rows, 'insertSeat').id;
+  if (seat.characterName !== undefined && seat.characterName !== null) {
+    await db.insert(characterAssignments).values({
+      seatId: id,
+      characterName: seat.characterName,
+    });
+  }
+  return id;
 };
 
 export const insertPlayMemo = async (
@@ -211,7 +218,7 @@ export const insertPlayMemo = async (
   seatId: string,
   memo: { body?: string; sharedAt?: Date | null } = {},
 ): Promise<void> => {
-  await db.insert(gameSessionPlayMemos).values({
+  await db.insert(playMemos).values({
     seatId,
     body: memo.body ?? '',
     sharedAt: memo.sharedAt ?? null,

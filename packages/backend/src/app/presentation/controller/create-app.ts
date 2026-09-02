@@ -54,7 +54,7 @@ export const createApp = (options: CreateAppOptions) => {
     getSession: options.getSession,
     listSeats: options.gameSession.listSeats,
     createSeat: options.gameSession.createSeat,
-      updateCharacterAssignment: options.gameSession.updateCharacterAssignment,
+    updateCharacterAssignment: options.gameSession.updateCharacterAssignment,
     deleteSeat: options.gameSession.deleteSeat,
   });
   registerPlayMemoRoute(app, {

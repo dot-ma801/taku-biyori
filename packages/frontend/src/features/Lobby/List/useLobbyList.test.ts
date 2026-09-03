@@ -173,6 +173,40 @@ describe('useLobbyList', () => {
       expect(loading.value).toBe(false);
     });
 
+    it('skipMine のときは自分の一覧を取りに行かない', async () => {
+      // Arrange
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
+      mockListPublicLobbies.mockResolvedValue([publicLobby]);
+
+      // Act
+      const { myLobbies, publicLobbies, fetch } = useLobbyList(undefined, {
+        skipMine: true,
+      });
+      await fetch();
+
+      // Assert
+      expect(mockListMyLobbies).not.toHaveBeenCalled();
+      expect(myLobbies.value).toEqual([]);
+      expect(publicLobbies.value).toEqual([publicLobby]);
+    });
+
+    it('skipPublic のときは公開の一覧を取りに行かない', async () => {
+      // Arrange
+      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
+      mockListMyLobbies.mockResolvedValue([myLobby]);
+
+      // Act
+      const { myLobbies, publicLobbies, fetch } = useLobbyList(undefined, {
+        skipPublic: true,
+      });
+      await fetch();
+
+      // Assert
+      expect(mockListPublicLobbies).not.toHaveBeenCalled();
+      expect(publicLobbies.value).toEqual([]);
+      expect(myLobbies.value).toEqual([myLobby]);
+    });
+
     it('未ログインで自分の一覧が 401 でも公開の一覧は表示する', async () => {
       // Arrange
       const publicLobby = makeLobby({ status: LobbyStatus.open });

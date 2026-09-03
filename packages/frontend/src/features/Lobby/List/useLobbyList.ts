@@ -5,7 +5,17 @@ import { ApiError } from '@/lib/api-client';
 import type { LobbyListItemModel } from '@/models/lobby';
 import { useSession } from '@/lib/auth';
 
-export const useLobbyList = (statuses?: LobbyStatus[]) => {
+export type UseLobbyListOptions = {
+  /** 自分のロビーを取得しない（「探す」だけが要る呼び出し用） */
+  skipMine?: boolean;
+  /** 公開ロビーを取得しない（「自分のもの」だけが要る呼び出し用） */
+  skipPublic?: boolean;
+};
+
+export const useLobbyList = (
+  statuses?: LobbyStatus[],
+  options: UseLobbyListOptions = {},
+) => {
   /** 自分のロビー（ホスト or 在籍中の参加者） */
   const myLobbies = ref<LobbyListItemModel[]>([]);
 
@@ -80,6 +90,7 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
    * ログイン不要で見せたいのでエラーにせず空で扱う。
    */
   async function fetchMine(): Promise<LobbyListItemModel[]> {
+    if (options.skipMine) return [];
     try {
       return await listMyLobbies();
     } catch (e) {
@@ -88,15 +99,17 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
     }
   }
 
+  async function fetchPublic(): Promise<LobbyListItemModel[]> {
+    if (options.skipPublic) return [];
+    return listPublicLobbies();
+  }
+
   /** ロビー一覧を取得する（自分の分と公開の分を並行で取る） */
   async function fetch() {
     loading.value = true;
     errorMessage.value = '';
     try {
-      const [mine, publics] = await Promise.all([
-        fetchMine(),
-        listPublicLobbies(),
-      ]);
+      const [mine, publics] = await Promise.all([fetchMine(), fetchPublic()]);
       myLobbies.value = mine;
       fetchedPublicLobbies.value = publics;
     } catch {

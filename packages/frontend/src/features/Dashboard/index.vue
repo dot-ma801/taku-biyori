@@ -2,6 +2,7 @@
 defineOptions({ name: 'AppDashboard' });
 import GameSessionList from '@/features/GameSession/List/index.vue';
 import LobbyList from '@/features/Lobby/List/index.vue';
+import PublicLobbySection from '@/features/Lobby/List/PublicLobbySection.vue';
 import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
 </script>
 
@@ -16,10 +17,11 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       :statuses="[GameSessionStatus.scheduled, GameSessionStatus.today]"
       sort-by-scheduled-at
     />
-    <!-- 未参加の人向けの「募集中のロビー」も、このセクションの下に並ぶ -->
+    <!-- 自分が entry を持つロビーだけ。「探す」側は下の独立したセクションに出す -->
     <LobbyList
       title="参加中のロビー"
       :statuses="[LobbyStatus.open, LobbyStatus.closed]"
+      hide-public
     />
     <!-- 下書きのロビーはここからしか辿れないため、残っているときだけ表示する -->
     <LobbyList
@@ -27,6 +29,7 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       :statuses="[LobbyStatus.draft]"
       hide-when-empty
       hide-create-button
+      hide-public
     />
     <!--
       履歴。他人の終えた開催は出しても仕方がないので自分の分だけに絞る。
@@ -38,6 +41,11 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
       hide-when-empty
       hide-public
     />
+    <!--
+      §7-5 の4セクションはすべて「自分のもの」。未参加の人がロビーを探す導線は
+      関心が違うので、4セクションと混ぜず末尾に独立したセクションとして置く。
+    -->
+    <PublicLobbySection />
   </div>
 </template>
 

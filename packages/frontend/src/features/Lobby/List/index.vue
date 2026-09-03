@@ -16,11 +16,14 @@ const props = defineProps<{
   hideWhenEmpty?: boolean;
   /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
   hideCreateButton?: boolean;
+  /** 自分のロビーだけを出す（「探す」側の公開ロビーは描画しない） */
+  hidePublic?: boolean;
 }>();
 
 const router = useRouter();
+// 「探す」側を出さないセクションは、公開ロビーの取得自体を省く
 const { filteredMyLobbies, filteredPublicLobbies, hasFilteredLobbies } =
-  useLobbyList(props.statuses);
+  useLobbyList(props.statuses, { skipPublic: props.hidePublic });
 
 const hasTitle = computed(() => props.title != null);
 const isVisible = computed(

@@ -149,6 +149,11 @@ export const useCreateLobby = () => {
       return;
     }
 
+    // 送信中もフォームは編集できるので、モードは**送信開始時の値で固定**する。
+    // await をまたいで isFixedMode を読み直すと、ペイロードを組み立てたモードと
+    // その後の分岐が食い違いうる（候補日の無いロビーを poll として扱ってしまう等）。
+    const submittedAsFixed = isFixedMode.value;
+
     loading.value = true;
 
     try {
@@ -163,11 +168,11 @@ export const useCreateLobby = () => {
           ...(description.value && { description: description.value }),
           ...(openUntil.value && { openUntil: openUntil.value }),
           ...(location.value && { location: location.value }),
-          candidateDates: isFixedMode.value
+          candidateDates: submittedAsFixed
             ? []
             : toCandidateDateInputs(pendingDates.value),
         }));
-      if (!isFixedMode.value) {
+      if (!submittedAsFixed) {
         await router.push({
           name: 'lobbies-detail',
           params: { lobbyId: lobby.id },
@@ -175,8 +180,12 @@ export const useCreateLobby = () => {
         return;
       }
 
-      // 開催の作成は2ステップ目なので、ここで初めて保持する意味が出る
-      createdLobby.value = lobby;
+      // 開催の作成は2ステップ目なので、ここで初めて保持する意味が出る。
+      // ただし送信中にモードが変わっていたら、このロビーはもう今の入力と噛み合わない。
+      // watch が消したキャッシュをここで書き戻さない
+      if (isFixedMode.value === submittedAsFixed) {
+        createdLobby.value = lobby;
+      }
 
       const gameSessionId = await createFirstGameSession(lobby.id);
       await router.push({

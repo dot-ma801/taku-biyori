@@ -558,6 +558,70 @@ describe('useCreateLobby（日程が決まっているモード）', () => {
     );
   });
 
+  // 送信中もフォームは編集できる。await をまたいでモードを読み直すと、
+  // ペイロードの組み立てとその後の分岐が別のモードで動きうる
+  it('送信中にモードが変わっても送信開始時のモードで処理する', async () => {
+    // Arrange
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    const submitted = submit();
+    scheduleMode.value = 'poll';
+    resolveCreate?.(mockLobby);
+    await submitted;
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledOnce();
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'game-sessions-detail',
+      params: { lobbyId: 'lobby-1', gameSessionId: 'game-session-1' },
+    });
+  });
+
+  // watch がモード変更で消したキャッシュを、飛行中の submit が書き戻してはいけない
+  it('送信中にモードが変わったら作りかけのロビーをキャッシュしない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const { title, scheduleMode, scheduledAt, pendingDates, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    const submitted = submit();
+    scheduleMode.value = 'poll';
+    resolveCreate?.(mockLobby);
+    await submitted;
+    pendingDates.value = [{ date: '2099-10-01', timeLabel: '' }];
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        candidateDates: [{ date: '2099-10-01', timeLabel: null }],
+      }),
+    );
+  });
+
   it('候補日モードならロビーの詳細へ遷移し開催は作らない', async () => {
     // Arrange
     const { title, submit } = useCreateLobby();

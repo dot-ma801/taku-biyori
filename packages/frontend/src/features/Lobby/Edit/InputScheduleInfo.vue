@@ -4,6 +4,7 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
+import BaseRadioGroup from '@/components/form/BaseRadioGroup/BaseRadioGroup.vue';
 import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
@@ -12,10 +13,19 @@ import {
   getTimeLabelError,
   syncPendingDates,
 } from '@/utils/pendingCandidateDates';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/scheduleMode';
+import { SCHEDULE_MODE_OPTIONS } from '@/features/Lobby/Edit/composables/scheduleMode';
 import { computed } from 'vue';
 
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
+/**
+ * 日程の決め方。`showModeSwitch` が false のときは使われない（既定の `poll` のまま）。
+ */
+const scheduleMode = defineModel<ScheduleMode>('scheduleMode', {
+  default: 'poll',
+});
 /**
  * 候補日リスト。ローカル管理（pendingDates）とし、
  * 作成・更新のいずれのフローでも呼び出し元が一括で API に送信する。
@@ -26,9 +36,14 @@ const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
 const props = withDefaults(
   defineProps<{
     showCandidateDates?: boolean;
+    /** 「候補日から調整する / 日程が決まっている」の切り替えを出すか（作成画面のみ） */
+    showModeSwitch?: boolean;
   }>(),
-  { showCandidateDates: true },
+  { showCandidateDates: true, showModeSwitch: false },
 );
+
+/** 開催日が決まっているモードか。候補日ではなく開催日そのものを入力させる */
+const isFixedMode = computed(() => scheduleMode.value === 'fixed');
 
 // 日付ピッカーは日付の配列だけを扱う。ひとこととの突き合わせは composable に委ねる。
 // 候補日への入力（ユーザー操作起点の set のみ）で開催日を破棄する。
@@ -81,24 +96,52 @@ function updateTimeLabel(date: string, timeLabel: string) {
 
     <template #default>
       <div class="contents">
-        <BaseDatePicker
-          v-if="props.showCandidateDates"
-          v-model="openUntil"
-          label="募集締め切り日"
-          disable-past
-          clearable
-        ></BaseDatePicker>
+        <BaseRadioGroup
+          v-if="props.showModeSwitch"
+          v-model="scheduleMode"
+          label="日程の決め方"
+          direction="row"
+          :options="SCHEDULE_MODE_OPTIONS"
+        ></BaseRadioGroup>
 
-        <BaseDatePicker
-          label="候補日"
-          multiple
-          disable-past
-          required
-          v-model="selectedDates"
-        ></BaseDatePicker>
+        <template v-if="isFixedMode">
+          <BaseDatePicker
+            v-model="scheduledAt"
+            label="開催日"
+            disable-past
+            required
+          ></BaseDatePicker>
+
+          <BaseTextBox v-model="timeLabel" label="時間帯" />
+        </template>
+
+        <template v-else>
+          <BaseDatePicker
+            v-if="props.showCandidateDates"
+            v-model="openUntil"
+            label="募集締め切り日"
+            disable-past
+            clearable
+          ></BaseDatePicker>
+
+          <BaseDatePicker
+            label="候補日"
+            multiple
+            disable-past
+            required
+            v-model="selectedDates"
+          ></BaseDatePicker>
+        </template>
       </div>
 
-      <ul v-if="props.showCandidateDates && hasDates" class="dates">
+      <p v-if="isFixedMode" class="info">
+        ※ 参加者の受付は開かずにロビーを作り、開催を1件つくります。
+      </p>
+
+      <ul
+        v-if="!isFixedMode && props.showCandidateDates && hasDates"
+        class="dates"
+      >
         <li v-for="row in dateRows" :key="row.date" class="date-row">
           <!--
             日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
@@ -135,7 +178,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
         </li>
       </ul>
 
-      <p v-if="props.showCandidateDates" class="info">
+      <p v-if="!isFixedMode && props.showCandidateDates" class="info">
         ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
       </p>
     </template>

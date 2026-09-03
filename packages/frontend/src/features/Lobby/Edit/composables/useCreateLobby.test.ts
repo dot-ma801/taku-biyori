@@ -6,6 +6,11 @@ import { LobbyStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/lobby', () => ({
   createLobby: vi.fn(),
+  getLobby: vi.fn(),
+}));
+
+vi.mock('@/api/game-session', () => ({
+  createGameSession: vi.fn(),
 }));
 
 const pushMock = vi.fn();
@@ -14,7 +19,9 @@ vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({ push: pushMock, back: backMock })),
 }));
 
-import { createLobby } from '@/api/lobby';
+import { createLobby, getLobby } from '@/api/lobby';
+import { createGameSession } from '@/api/game-session';
+import type { LobbyDetailModel } from '@/models/lobby';
 
 const mockLobby: LobbyModel = {
   id: 'lobby-1',
@@ -33,9 +40,31 @@ const mockLobby: LobbyModel = {
   updatedAt: new Date('2025-01-01T00:00:00.000Z'),
 };
 
+const HOST_ENTRY_ID = 'entry-host';
+
+const mockLobbyDetail: LobbyDetailModel = {
+  ...mockLobby,
+  entries: [],
+  activeEntries: [
+    {
+      id: HOST_ENTRY_ID,
+      userId: 'user-1',
+      userName: 'ホスト',
+      guestName: null,
+      joinedAt: new Date('2025-01-01T00:00:00.000Z'),
+      leftAt: null,
+    },
+  ],
+  schedulePolls: [],
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(createLobby).mockResolvedValue(mockLobby);
+  vi.mocked(getLobby).mockResolvedValue(mockLobbyDetail);
+  vi.mocked(createGameSession).mockResolvedValue({
+    id: 'game-session-1',
+  } as never);
 });
 
 describe('useCreateLobby', () => {
@@ -359,6 +388,112 @@ describe('useCreateLobby', () => {
 
       // Assert
       expect(backMock).toHaveBeenCalled();
+    });
+  });
+});
+
+describe('useCreateLobby（日程が決まっているモード）', () => {
+  it('開催日が未入力なら送信をブロックする', async () => {
+    // Arrange
+    const { title, scheduleMode, errorMessages, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(errorMessages.value).toContain('開催日を入力してください');
+    expect(createLobby).not.toHaveBeenCalled();
+  });
+
+  it('候補日を送らずにロビーを作る', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, pendingDates, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    pendingDates.value = [{ date: '2099-10-01', timeLabel: '' }];
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledWith(
+      expect.objectContaining({ candidateDates: [] }),
+    );
+  });
+
+  it('ホストを着席者にして開催を1件つくる', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, timeLabel, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    timeLabel.value = '19:00〜';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith('lobby-1', {
+      scheduledAt: '2099-09-01',
+      entryIds: [HOST_ENTRY_ID],
+      timeLabel: '19:00〜',
+    });
+  });
+
+  it('作成後は開催の詳細へ遷移する', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'game-sessions-detail',
+      params: { lobbyId: 'lobby-1', gameSessionId: 'game-session-1' },
+    });
+  });
+
+  it('開催の作成に失敗しても再送信でロビーを作り直さない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledOnce();
+    expect(createGameSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('候補日モードならロビーの詳細へ遷移し開催は作らない', async () => {
+    // Arrange
+    const { title, submit } = useCreateLobby();
+    title.value = 'ロビー';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createGameSession).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'lobbies-detail',
+      params: { lobbyId: 'lobby-1' },
     });
   });
 });

@@ -11,6 +11,9 @@ const {
   openUntil,
   location,
   pendingDates,
+  scheduleMode,
+  scheduledAt,
+  timeLabel,
   loading,
   errorMessages,
   submit,
@@ -30,7 +33,11 @@ const {
       v-model:openUntil="openUntil"
       v-model:location="location"
       v-model:pendingDates="pendingDates"
+      v-model:scheduleMode="scheduleMode"
+      v-model:scheduledAt="scheduledAt"
+      v-model:timeLabel="timeLabel"
       :show-candidate-dates="true"
+      :show-schedule-mode-switch="true"
       :loading="loading"
       :error-messages="errorMessages"
       @submit="submit"

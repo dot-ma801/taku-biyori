@@ -41,6 +41,14 @@ Accepted
 **リポジトリ層のテストは `TEST_DATABASE_URL` が指す実 PostgreSQL に対して実行する。**
 
 - 各テストはトランザクションで包み、終了時にロールバックする（`test/helpers/test-database.ts` の `withRollback`）
+- **例外: 排他ロックの競合テストは `withCommitted` を使う。**
+  `SELECT ... FOR UPDATE` の競合は同一トランザクション内では再現できない（自分のロックとは競合しない）ため、
+  本当にコミットしてから後片付けを明示的に行う（`row-lock-contention.test.ts`）。
+  ロールバックしないぶん、次の2点が要件になる
+  - 作った行は `TrackFixture` に登録し、テスト終了時に必ず削除する
+  - **コミットした行は他のテストファイル・他ワーカーからも見える。** vitest はファイルを並行に走らせるので、
+    一覧の件数を `toHaveLength(N)` で assert してはいけない。必ず `find` / `filter` で
+    自分が作った fixture の ID に絞ってからアサートする
 - テスト DB の作成とマイグレーション適用は `pnpm --filter @taku-biyori/backend db:test:setup` に集約する
 - 接続先は `TEST_DATABASE_URL` **のみ**で切り替える。ローカルと CI で同じコードが動く
 - 開発用 DB とは別のデータベースを指すこと（ロールバックするとはいえ、接続先は分けておく）

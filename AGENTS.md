@@ -7,15 +7,18 @@
 
 ## 設計ドキュメント
 
-実装に必要な設計情報はすべて `docs/design-v*.md` にまとまっています。
+実装に必要な設計情報は **[`docs/design-v2.md`](docs/design-v2.md)** にまとまっています。
 **APIを実装する前に必ず参照してください。**
 
 特に以下のセクションを確認してください。
 
-- DBスキーマ（テーブル定義・カラム型・リレーション）
-- ステータス設計（`getGameSessionStatus` の導出ロジック）
-- API設計（エンドポイント一覧・方針）
-- 命名規則（`gameSession` プレフィックス・スネークケース等）
+- §2 命名（日本語ラベルの対応表を含む）
+- §3 DBスキーマ（テーブル定義・カラム型・リレーション）
+- §4 ステータス設計（`getLobbyStatus` / `getGameSessionStatus` の導出ロジック）
+- §6 API設計（エンドポイント一覧・方針）
+- §7 画面構成（ルート・ダッシュボード）
+
+`docs/design-v1.md` / `v1.1` / `v1.2` は **superseded**（履歴）です。実装の根拠には使わないでください。
 
 ---
 
@@ -82,17 +85,38 @@ backend・frontend ともに同じ規則です。
 ## 命名規則
 
 - ファイル名は **kebab-case**（例: `create-game-session.ts`, `game-session-route.ts`）
-- 卓（セッション）に関する識別子はすべて **`game` プレフィックス**を付ける
+- 開催（セッション）に関する識別子はすべて **`game` プレフィックス**を付ける
   - 変数名: `gameSession`
   - 型名: `GameSession`
   - 理由: Better Auth の `session` と衝突するため
 - DB カラム名は **スネークケース**（例: `host_user_id`, `scheduled_at`）
+
+### 日本語ラベル（design-v2 §2-2）
+
+UI に出す文言は次の語に揃えること。
+
+| 概念 | UI 表記 |
+|---|---|
+| Lobby | ロビー（「募集枠」とは書かない） |
+| LobbyEntry | 参加 / 参加者 |
+| SchedulePoll | 日程調整 |
+| GameSession | 開催 / セッション（1回の開催を「卓」とは書かない） |
+| Seat | 着席 / 着席者 |
+| `disbanded_at` | 解散 |
+| `cancelled_at`（session） | 中止 |
+
+「確定」という概念は v2 で消えている。`features/Landing/` のマーケティング文言に出てくる
+「卓」は、サービス全体を語る文脈なので意図的に残している。
+「直接卓立て」は design-v2 §5-3 / §7-3 が用語として使っているのでそのまま。
+
+これは**これから書くコードが従う規約**。既存 UI 文言の置換は移行タスク7（issue #117）で行う。
 
 ---
 
 ## DB スキーマの変更手順
 
 **新しいテーブル・enum は機能ごとの PostgreSQL スキーマに置くこと**（`docs/adr/0005-postgresql-schema-per-feature.md` 参照）。
+**開催（`GameSession`）は必ずロビーに属する**（`lobby_id` は NOT NULL。`docs/adr/0008-game-session-belongs-to-lobby.md`）。
 `pgTable()` / `pgEnum()` は使わず、`pgSchema('{機能名}')` 経由で定義する
 （例: `gameSessionSchema.table(...)`。機能ディレクトリ名の kebab-case はスキーマ名では snake_case に読み替える）。
 
@@ -126,6 +150,18 @@ expect(result).toEqual(...)
 - ユースケース（`application/`）は純粋関数寄りに実装し、単体テストを書きやすくする
 - HTTP 層（`presentation/`）は注入した依存を使って検証する
 - テストは `test/unit/` と `test/integration/` に分けて配置する
+- **リポジトリ層（`infrastructure/`）は実 DB に対してテストする**
+  （`docs/adr/0009-repository-tests-against-real-database.md`）。
+  drizzle のメソッドチェーンをモックしない。接続先は `TEST_DATABASE_URL` で切り替え、
+  各ケースはトランザクションでロールバックする
+
+```bash
+# テスト DB の作成 + マイグレーション適用（初回・スキーマ変更後）
+pnpm --filter @taku-biyori/backend db:test:setup
+```
+
+> インテグレーションテストが `relation "auth.user" does not exist` やフックのタイムアウトで
+> まとめて落ちたら、コードではなく **PostgreSQL が止まっていないか**を先に疑う（`pg_isready`）。
 
 ```bash
 # 全テスト
@@ -167,7 +203,7 @@ pnpm --filter @taku-biyori/backend test:integration
 
 ## 新しい API を追加する手順
 
-1. `docs/design-v*.md` でエンドポイント仕様・DBスキーマを確認する
+1. `docs/design-v2.md` でエンドポイント仕様・DBスキーマを確認する
 2. **`packages/shared` にリクエスト型・レスポンス型を定義する**（実装より先に行うこと）
 3. **テストを先に書く**（TDD: Red → Green → Refactor）
 4. `src/{機能名}/` ディレクトリを作成し、レイヤーごとにファイルを分ける
@@ -267,7 +303,20 @@ pnpm --filter @taku-biyori/backend dev
 
 `@taku-biyori/shared` の型は **API との通信契約（DTO）** であって、フロントエンド内部で扱う
 データ構造ではない。DTO を見てよいのは `src/api/` と `src/models/` だけで、
-composable / component は model だけを受け取る。
+composable / component は model だけを受け取る
+（`docs/adr/0010-frontend-separates-dto-and-model.md`）。
+
+```plaintext
+packages/frontend/src/
+├── api/          # DTO ⇄ model の境界。fetch して model を返す
+├── models/       # FE の内部型と、DTO からの変換関数（+ *.test.ts）
+├── components/   # ドメイン知識を持たない汎用 UI
+├── features/     # 機能ごとの画面・composable
+├── views/        # ルートに対応する画面。features を組み立てる
+├── router/
+├── stores/
+└── utils/
+```
 
 ```ts
 // ❌ NG — composable が DTO をそのまま持つ
@@ -290,6 +339,8 @@ model 側で引き受けること。
 - 日付のみの値（`YYYY-MM-DD`）は `Date` にしない。タイムゾーンで日付がずれるため文字列のまま持つ
 - 表示用のフォールバック文言（`'未設定'` など）は UI の関心事なので model に入れない
 - 変換関数（`toXxxModel()`）には**テストを先に書く**
+- **enum・`*Input` 型・権限関数・ステータス導出関数は shared から直接 import してよい。**
+  これらは通信契約ではなく、FE と BE が同じ規則で動くための共有定義そのもの
 - 参考: `src/models/lobby.ts` / `src/models/lobby.test.ts`
 
 ### template 内の式は computed に切り出す

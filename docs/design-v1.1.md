@@ -9,6 +9,8 @@
 > コード中に残る `design-v1.x §…` という参照は、**v2 が引き継いだ判断の出典**を示すもの。
 > 現行の仕様そのものは design-v2 を見ること。
 
+<!-- MD028: superseded 注記と元のメタ情報を別の blockquote として保つ -->
+
 > **最終更新**: 2026-07-11
 > **元要求**: [docs/requirements/recruitment-separation.md](./requirements/recruitment-separation.md)
 > **位置づけ**: [design-v1.md](./design-v1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針など）は design-v1 を踏襲する。

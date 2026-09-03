@@ -11,6 +11,8 @@
 > 本書の §4（操作可否）・§5（エラー表）・§8 は現在も**その挙動の記録として有効**であり、
 > コード中の `design-v1.2 §…` という参照はこの意味で残している。
 
+<!-- MD028: superseded 注記と元のメタ情報を別の blockquote として保つ -->
+
 > **最終更新**: 2026-08-03
 > **元要求**: [docs/requirements/play-memo.md](./requirements/play-memo.md)
 > **位置づけ**: [design-v1.md](./design-v1.md) / [design-v1.1.md](./design-v1.1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針、卓のステータス導出など）は design-v1 / design-v1.1 を踏襲する。

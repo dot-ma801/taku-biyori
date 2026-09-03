@@ -17,8 +17,9 @@ import {
   scheduleAnswers,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
-  gameSessionPlayMemos,
+  characterAssignments,
   gameSessions,
+  playMemos,
   seats,
 } from '@/system/infrastructure/database/game-session-schema';
 
@@ -188,22 +189,36 @@ export const insertGameSession = async (
 };
 
 /** 着席。紐付けは lobby_entry_id 1本になった（design-v2 §3-8） */
+/**
+ * 着席を作る。
+ *
+ * `createdAt` を明示できるようにしてあるのは、既定の `now()` が
+ * **トランザクション開始時刻で固定される**ため。`withRollback` の中では
+ * 何件入れても `created_at` が同じ値になり、`seatedAt` 昇順を検証できない。
+ */
 export const insertSeat = async (
   db: Database,
   gameSessionId: string,
   lobbyEntryId: string,
-  seat: { characterName?: string | null } = {},
+  seat: { characterName?: string | null; createdAt?: Date } = {},
 ): Promise<string> => {
   const rows = await db
     .insert(seats)
     .values({
       gameSessionId,
       lobbyEntryId,
-      characterName: seat.characterName ?? null,
+      ...(seat.createdAt ? { createdAt: seat.createdAt } : {}),
     })
     .returning({ id: seats.id });
 
-  return firstRow(rows, 'insertSeat').id;
+  const id = firstRow(rows, 'insertSeat').id;
+  if (seat.characterName !== undefined && seat.characterName !== null) {
+    await db.insert(characterAssignments).values({
+      seatId: id,
+      characterName: seat.characterName,
+    });
+  }
+  return id;
 };
 
 export const insertPlayMemo = async (
@@ -211,7 +226,7 @@ export const insertPlayMemo = async (
   seatId: string,
   memo: { body?: string; sharedAt?: Date | null } = {},
 ): Promise<void> => {
-  await db.insert(gameSessionPlayMemos).values({
+  await db.insert(playMemos).values({
     seatId,
     body: memo.body ?? '',
     sharedAt: memo.sharedAt ?? null,

@@ -1,10 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import {
-  type MyGameSessionPlayMemo,
-  GAME_SESSION_PLAY_MEMO_MAX_LENGTH,
-} from '@taku-biyori/shared';
+import { GAME_SESSION_PLAY_MEMO_MAX_LENGTH } from '@taku-biyori/shared';
 import { upsertMyPlayMemo } from '@/api/game-session';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import { ApiError } from '@/lib/api-client';
 
 /**
@@ -35,11 +33,12 @@ export type PlayMemoSaveStatus =
  * 内部で `.value =` してよい（CLAUDE.md の例外）。サーバ値は所有せず getter で読む。
  */
 export const usePlayMemoEdit = (
+  lobbyId: string,
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。サーバ値の所有者は useMyPlayMemo 側。
-  playMemo: MaybeRefOrGetter<MyGameSessionPlayMemo | null>,
+  playMemo: MaybeRefOrGetter<MyPlayMemoModel | null>,
   // NOTE: 保存後のサーバ値は callback で所有者へ返す。ここでは書き換えない。
-  onSaved: (saved: MyGameSessionPlayMemo) => void,
+  onSaved: (saved: MyPlayMemoModel) => void,
 ) => {
   /** 編集ドラフト。この composable が所有するので v-model 可 */
   const draftBody = ref('');
@@ -116,7 +115,9 @@ export const usePlayMemoEdit = (
 
     const request = (async () => {
       try {
-        const saved = await upsertMyPlayMemo(gameSessionId, { body: sending });
+        const saved = await upsertMyPlayMemo(lobbyId, gameSessionId, {
+          body: sending,
+        });
         // 基準値は「送った本文」ではなく「サーバが保存した本文」に合わせる。
         // 上の watch はこの baseline との一致でエコーを判定するため、サーバが
         // 本文を正規化して返すと（前後の空白除去など）送信内容とはズレる。

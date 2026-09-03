@@ -4,7 +4,7 @@ import type {
 } from '@taku-biyori/shared';
 
 export interface UpdateMyPlayMemoVisibilityRepository {
-  gameSessionExists(id: string): Promise<boolean>;
+  findLobbyId(id: string): Promise<string | null>;
   findSeatByUserId(
     gameSessionId: string,
     userId: string,
@@ -29,13 +29,17 @@ export type UpdateMyPlayMemoVisibilityResult =
  */
 export const updateMyPlayMemoVisibility = async (
   repo: UpdateMyPlayMemoVisibilityRepository,
+  lobbyId: string,
   gameSessionId: string,
   userId: string,
   input: UpdateGameSessionPlayMemoVisibilityInput,
   now: Date = new Date(),
 ): Promise<UpdateMyPlayMemoVisibilityResult> => {
-  const exists = await repo.gameSessionExists(gameSessionId);
-  if (!exists) return { type: 'notFound' };
+  // URL のロビーがこの開催のロビーでなければ 404（入れ子のパスは親も検証する）
+  const actualLobbyId = await repo.findLobbyId(gameSessionId);
+  if (actualLobbyId === null || actualLobbyId !== lobbyId) {
+    return { type: 'notFound' };
+  }
 
   // 認証ユーザー ID で着席を引く。ゲストは LobbyEntry の user_id = null のため
   // 構造上ヒットせず、ゲスト除外の専用分岐は不要（design-v1.2 §4）

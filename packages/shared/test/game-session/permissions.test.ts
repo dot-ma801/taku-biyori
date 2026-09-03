@@ -78,8 +78,8 @@ describe('canPerform', () => {
 });
 
 describe('v2 のポリシー表', () => {
-  // 廃止した draft / open / confirmed を弾くテストは置かない。
-  // enum から値ごと消したため、渡すこと自体が型エラーになる（design-v2 §4-2）
+  // v0.2 の draft / open / confirmed は enum ごと消えたため、
+  // 「廃止したステータスでは何も許可しない」は型で担保される（ここでは検証しない）
 
   it('中止した開催は編集も完了もできない（記録として凍結する）', () => {
     // Arrange

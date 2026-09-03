@@ -4,7 +4,7 @@ import type {
 } from '@taku-biyori/shared';
 
 export interface GetMyPlayMemoRepository {
-  gameSessionExists(id: string): Promise<boolean>;
+  findLobbyId(id: string): Promise<string | null>;
   findSeatByUserId(
     gameSessionId: string,
     userId: string,
@@ -25,11 +25,15 @@ export type GetMyPlayMemoResult =
  */
 export const getMyPlayMemo = async (
   repo: GetMyPlayMemoRepository,
+  lobbyId: string,
   gameSessionId: string,
   userId: string,
 ): Promise<GetMyPlayMemoResult> => {
-  const exists = await repo.gameSessionExists(gameSessionId);
-  if (!exists) return { type: 'notFound' };
+  // URL のロビーがこの開催のロビーでなければ 404（入れ子のパスは親も検証する）
+  const actualLobbyId = await repo.findLobbyId(gameSessionId);
+  if (actualLobbyId === null || actualLobbyId !== lobbyId) {
+    return { type: 'notFound' };
+  }
 
   // 認証ユーザー ID で着席を引く。ゲストは LobbyEntry の user_id = null のため
   // 構造上ヒットせず、ゲスト除外の専用分岐は不要（design-v1.2 §4）
@@ -42,9 +46,7 @@ export const getMyPlayMemo = async (
   return {
     type: 'ok',
     playMemo: playMemo ?? {
-      // memberId というキー名は契約のまま据え置く。中身は seats.id で、
-      // seatId への改名はタスク6（#116）で行う（design-v2 §6-15）
-      memberId: seatId,
+      seatId,
       body: '',
       sharedAt: null,
       updatedAt: null,

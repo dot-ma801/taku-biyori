@@ -7,7 +7,6 @@ import type {
   Seat,
   UpdateGameSessionInput,
   UpdateGameSessionStatusInput,
-  UpdateSeatInput,
   MyGameSessionPlayMemo,
   SharedGameSessionPlayMemo,
   UpdateGameSessionPlayMemoVisibilityInput,
@@ -20,6 +19,8 @@ import type {
   GameSessionModel,
   SeatModel,
 } from '@/models/game-session';
+import type { MyPlayMemoModel, SharedPlayMemoModel } from '@/models/play-memo';
+import { toMyPlayMemoModel, toSharedPlayMemoModel } from '@/models/play-memo';
 import {
   toGameSessionDetailModel,
   toGameSessionListItemModel,
@@ -46,6 +47,9 @@ const sessionPath = (lobbyId: string, id: string): string =>
 
 const seatsPath = (lobbyId: string, gameSessionId: string): string =>
   `${sessionPath(lobbyId, gameSessionId)}/seats`;
+
+const playMemosPath = (lobbyId: string, gameSessionId: string): string =>
+  `${sessionPath(lobbyId, gameSessionId)}/play-memos`;
 
 /**
  * 自分に関係する開催の横断一覧。
@@ -153,18 +157,42 @@ export async function createSeat(
   return toSeatModel(dto);
 }
 
-/** キャラクター名の割り当て・解除。`null` で解除する。本人またはホスト */
-export async function updateSeat(
+/**
+ * 着席を更新する。更新できるのはキャラクター名だけで、`null` が解除を表す。
+ * 本人またはホストが操作できる（design-v2 §6-11）。
+ *
+ * 実体は `character_assignments` に分かれているが、API から見た更新対象は Seat のまま。
+ * `.../seats/:seatId/character` のようなサブリソースは持たない。
+ */
+function updateSeat(
   lobbyId: string,
   gameSessionId: string,
   seatId: string,
-  input: UpdateSeatInput,
+  characterName: string | null,
 ): Promise<SeatModel> {
-  const dto = (await apiRequest<Seat>(
-    `${seatsPath(lobbyId, gameSessionId)}/${seatId}`,
-    { method: 'PATCH', body: input },
-  ))!;
-  return toSeatModel(dto);
+  return apiRequest<Seat>(`${seatsPath(lobbyId, gameSessionId)}/${seatId}`, {
+    method: 'PATCH',
+    body: { characterName },
+  }).then((dto) => toSeatModel(dto!));
+}
+
+/** キャラクター名を割り当てる。本人またはホスト */
+export function assignCharacter(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+  characterName: string,
+): Promise<SeatModel> {
+  return updateSeat(lobbyId, gameSessionId, seatId, characterName);
+}
+
+/** キャラクター名の割り当てを解除する。未割り当てでも成功する（冪等） */
+export function unassignCharacter(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+): Promise<SeatModel> {
+  return updateSeat(lobbyId, gameSessionId, seatId, null);
 }
 
 /** 離席。本人またはホスト */
@@ -187,11 +215,14 @@ export function deleteSeat(
  * （design-v1.2 §8）。呼び出し側に「未作成」の分岐は不要。
  */
 export async function getMyPlayMemo(
+  lobbyId: string,
   gameSessionId: string,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me`,
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `${playMemosPath(lobbyId, gameSessionId)}/me`,
+    ))!,
+  );
 }
 
 /**
@@ -200,13 +231,16 @@ export async function getMyPlayMemo(
  * 卓が完了・中止していると 409（ApiError.status）が返る。
  */
 export async function upsertMyPlayMemo(
+  lobbyId: string,
   gameSessionId: string,
   input: UpsertGameSessionPlayMemoInput,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me`,
-    { method: 'PUT', body: input },
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `${playMemosPath(lobbyId, gameSessionId)}/me`,
+      { method: 'PUT', body: input },
+    ))!,
+  );
 }
 
 /**
@@ -216,26 +250,30 @@ export async function upsertMyPlayMemo(
  * 本文を一度も保存していないメモには 404 が返るため、呼び出し側は保存済みのときだけ叩く。
  */
 export async function updateMyPlayMemoVisibility(
+  lobbyId: string,
   gameSessionId: string,
   input: UpdateGameSessionPlayMemoVisibilityInput,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me/visibility`,
-    { method: 'PATCH', body: input },
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `${playMemosPath(lobbyId, gameSessionId)}/me/visibility`,
+      { method: 'PATCH', body: input },
+    ))!,
+  );
 }
 
 /**
  * 卓の公開プレイメモを一覧する。
  *
  * 認証は不要（未ログイン・ゲストでも読める。要求 §3-4）。レスポンスは閲覧者で分岐せず、
- * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは memberId だけが返るため、
+ * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは seatId だけが返るため、
  * 表示名は卓のメンバー一覧と突き合わせて解決する。
  */
 export async function listSharedPlayMemos(
+  lobbyId: string,
   gameSessionId: string,
-): Promise<SharedGameSessionPlayMemo[]> {
+): Promise<SharedPlayMemoModel[]> {
   return (await apiRequest<SharedGameSessionPlayMemo[]>(
-    `/api/game-sessions/${gameSessionId}/play-memos`,
-  ))!;
+    playMemosPath(lobbyId, gameSessionId),
+  ))!.map(toSharedPlayMemoModel);
 }

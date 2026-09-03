@@ -4,6 +4,8 @@ import type { CreateGameSessionRepository } from '@/game-session/application/cre
 import type { CreateGameSessionInput, GameSession } from '@taku-biyori/shared';
 import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
 
+/** 実行日に依存させないため、開催日の検証に渡す「今日」を固定する */
+const TODAY = '2026-08-02';
 const LOBBY_ID = 'lobby-1';
 const HOST = 'user-host';
 const ENTRY_A = 'entry-a';
@@ -63,7 +65,7 @@ describe('createGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, input);
+    const result = await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(result).toEqual({ type: 'ok', gameSession: created });
@@ -76,7 +78,7 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, input);
+    const result = await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -87,7 +89,13 @@ describe('createGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, 'user-2', input);
+    const result = await createGameSession(
+      repo,
+      LOBBY_ID,
+      'user-2',
+      input,
+      TODAY,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -103,7 +111,7 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, input);
+    const result = await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(result).toEqual({ type: 'invalidStatus' });
@@ -114,10 +122,16 @@ describe('createGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, {
-      ...input,
-      scheduledAt: '2000-01-01',
-    });
+    const result = await createGameSession(
+      repo,
+      LOBBY_ID,
+      HOST,
+      {
+        ...input,
+        scheduledAt: '2000-01-01',
+      },
+      TODAY,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'pastScheduledAt' });
@@ -133,7 +147,7 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, input);
+    const result = await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(result.type).toBe('ok');
@@ -148,7 +162,7 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, input);
+    const result = await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(result.type).toBe('ok');
@@ -162,7 +176,7 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, input);
+    const result = await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(result).toEqual({ type: 'invalidEntries' });
@@ -177,10 +191,16 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, {
-      ...input,
-      entryIds: [ENTRY_A, ENTRY_B],
-    });
+    const result = await createGameSession(
+      repo,
+      LOBBY_ID,
+      HOST,
+      {
+        ...input,
+        entryIds: [ENTRY_A, ENTRY_B],
+      },
+      TODAY,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'invalidEntries' });
@@ -193,10 +213,16 @@ describe('createGameSession', () => {
     });
 
     // Act
-    const result = await createGameSession(repo, LOBBY_ID, HOST, {
-      ...input,
-      entryIds: [ENTRY_A, ENTRY_A],
-    });
+    const result = await createGameSession(
+      repo,
+      LOBBY_ID,
+      HOST,
+      {
+        ...input,
+        entryIds: [ENTRY_A, ENTRY_A],
+      },
+      TODAY,
+    );
 
     // Assert
     expect(result.type).toBe('ok');
@@ -210,7 +236,7 @@ describe('createGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    await createGameSession(repo, LOBBY_ID, HOST, input);
+    await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     // ロビーを FOR UPDATE、entry を FOR KEY SHARE で押さえる（design-v2 §5-2）
@@ -226,13 +252,19 @@ describe('createGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    await createGameSession(repo, LOBBY_ID, HOST, {
-      ...input,
-      title: '第2回',
-      location: 'カフェ〇〇',
-      timeLabel: '13:00〜',
-      description: '13:50 に VC 集合',
-    });
+    await createGameSession(
+      repo,
+      LOBBY_ID,
+      HOST,
+      {
+        ...input,
+        title: '第2回',
+        location: 'カフェ〇〇',
+        timeLabel: '13:00〜',
+        description: '13:50 に VC 集合',
+      },
+      TODAY,
+    );
 
     // Assert
     expect(repo.createGameSession).toHaveBeenCalledWith({
@@ -253,7 +285,7 @@ describe('createGameSession', () => {
     const repo = makeRepo();
 
     // Act
-    await createGameSession(repo, LOBBY_ID, HOST, input);
+    await createGameSession(repo, LOBBY_ID, HOST, input, TODAY);
 
     // Assert
     expect(repo.createGameSession).toHaveBeenCalledWith(

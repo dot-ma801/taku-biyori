@@ -77,7 +77,7 @@ const mockSeat: Seat = {
 };
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: SEAT_ID,
+  seatId: SEAT_ID,
   body: 'メモ',
   sharedAt: null,
   updatedAt: '2026-08-02T00:00:00.000Z',
@@ -117,8 +117,8 @@ const makeApp = (
     createSeat:
       overrides.createSeat ??
       vi.fn().mockResolvedValue({ type: 'ok', seat: mockSeat }),
-    updateSeat:
-      overrides.updateSeat ??
+    updateCharacterAssignment:
+      overrides.updateCharacterAssignment ??
       vi.fn().mockResolvedValue({ type: 'ok', seat: mockSeat }),
     deleteSeat:
       overrides.deleteSeat ?? vi.fn().mockResolvedValue({ type: 'ok' }),
@@ -559,12 +559,37 @@ describe('着席のルート', () => {
     expect(response.status).toBe(400);
   });
 
-  it('PATCH で null を渡すと割り当てを解除する', async () => {
+  it('PATCH でキャラクター名を割り当てる', async () => {
     // Arrange
-    const updateSeat = vi
+    const updateCharacterAssignment = vi
       .fn()
       .mockResolvedValue({ type: 'ok', seat: mockSeat });
-    const app = makeApp({ updateSeat });
+    const app = makeApp({ updateCharacterAssignment });
+
+    // Act
+    const response = await app.request(`${seatsPath}/${SEAT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterName: 'アルベルト' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(updateCharacterAssignment).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      SEAT_ID,
+      'user-1',
+      { characterName: 'アルベルト' },
+    );
+  });
+
+  it('PATCH に null を渡すとキャラクター割り当てを解除する', async () => {
+    // Arrange
+    const updateCharacterAssignment = vi
+      .fn()
+      .mockResolvedValue({ type: 'ok', seat: mockSeat });
+    const app = makeApp({ updateCharacterAssignment });
 
     // Act
     const response = await app.request(`${seatsPath}/${SEAT_ID}`, {
@@ -575,13 +600,32 @@ describe('着席のルート', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(updateSeat).toHaveBeenCalledWith(
+    expect(updateCharacterAssignment).toHaveBeenCalledWith(
       LOBBY_ID,
       SESSION_ID,
       SEAT_ID,
       'user-1',
       { characterName: null },
     );
+  });
+
+  it('PATCH は URL のロビーが開催のロビーでなければ 404 を返す', async () => {
+    // Arrange
+    const app = makeApp({
+      updateCharacterAssignment: vi
+        .fn()
+        .mockResolvedValue({ type: 'notFound' }),
+    });
+
+    // Act
+    const response = await app.request(`${seatsPath}/${SEAT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterName: 'x' }),
+    });
+
+    // Assert
+    expect(response.status).toBe(404);
   });
 
   it('DELETE が成功すると 204 を返す', async () => {

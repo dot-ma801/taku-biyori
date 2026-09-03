@@ -60,9 +60,12 @@ export type CreateSeatInput = z.infer<typeof CreateSeatInputSchema>;
  *
  * `required` にしているのは、キーの有無で「変更しない」と「解除する」を区別させないため。
  * `null` は明示的な解除であって未指定ではない。
+ *
+ * 実体は `character_assignments` に分離されたが（design-v2 §9-4）、API から見た
+ * 更新対象は着席（Seat）のまま。`.../seats/:seatId/character` のようなサブリソースは
+ * 作らない（design-v2 §6-11 の「サブリソースにしない」）。
  */
 export const UpdateSeatInputSchema = z.object({
-  /** 割り当てるキャラクター名。`null` で解除する。空文字は不可（解除の意図は `null` で表す） */
   characterName: z.string().min(1).max(100).nullable(),
 });
 export type UpdateSeatInput = z.infer<typeof UpdateSeatInputSchema>;

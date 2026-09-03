@@ -9,7 +9,7 @@ import {
   makeSeatModel,
 } from '@/models/__fixtures__/game-session';
 import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 
 vi.mock('@/api/game-session', () => ({
   getMyPlayMemo: vi.fn(),
@@ -23,6 +23,7 @@ vi.mock('@/stores/auth', () => ({
 import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
 const HOST_USER_ID = 'user-host';
 const MEMBER_USER_ID = 'user-member';
@@ -52,13 +53,13 @@ const makeGameSession = (
   });
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: MY_MEMBER_ID,
+    seatId: MY_MEMBER_ID,
     body: '書斎の鍵は青木さんが持っていた',
     sharedAt: null,
-    updatedAt: '2026-08-03T12:04:00Z',
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
@@ -73,7 +74,7 @@ function mockCurrentUser(userId: string | null) {
 }
 
 function setup(gameSession: GameSessionDetailModel | null = makeGameSession()) {
-  return useMyPlayMemo(SESSION_ID, () => gameSession);
+  return useMyPlayMemo(LOBBY_ID, SESSION_ID, () => gameSession);
 }
 
 /**
@@ -87,7 +88,7 @@ function setupWithGameSessionRef(
   initial: GameSessionDetailModel | null = null,
 ) {
   const gameSession = ref<GameSessionDetailModel | null>(initial);
-  return { ...useMyPlayMemo(SESSION_ID, gameSession), gameSession };
+  return { ...useMyPlayMemo(LOBBY_ID, SESSION_ID, gameSession), gameSession };
 }
 
 /**
@@ -257,7 +258,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
     expect(state.value).toEqual(playMemo);
   });
 
@@ -281,7 +282,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
     expect(playMemo.value).not.toBeNull();
   });
 
@@ -317,7 +318,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 });
 
@@ -332,7 +333,7 @@ describe('fetch', () => {
     await fetch();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
     expect(state.value).toEqual(playMemo);
   });
 
@@ -445,7 +446,7 @@ describe('isShared', () => {
   it('sharedAt があれば true', async () => {
     // Arrange
     vi.mocked(getMyPlayMemo).mockResolvedValue(
-      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     );
 
     // Act
@@ -507,7 +508,7 @@ describe('canToggleVisibility', () => {
 describe('setShared', () => {
   it('公開に切り替えると API を呼び、サーバ値で playMemo を差し替える', async () => {
     // Arrange
-    const shared = makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' });
+    const shared = makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') });
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);
     const { playMemo, isShared, setShared } = await setupSettled();
 
@@ -515,9 +516,13 @@ describe('setShared', () => {
     await setShared(true);
 
     // Assert
-    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
-      shared: true,
-    });
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      {
+        shared: true,
+      },
+    );
     expect(playMemo.value).toEqual(shared);
     expect(isShared.value).toBe(true);
   });
@@ -525,7 +530,7 @@ describe('setShared', () => {
   it('非公開に戻せる', async () => {
     // Arrange
     vi.mocked(getMyPlayMemo).mockResolvedValue(
-      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     );
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(makePlayMemo());
     const { isShared, setShared } = await setupSettled();
@@ -535,15 +540,19 @@ describe('setShared', () => {
     await setShared(false);
 
     // Assert
-    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
-      shared: false,
-    });
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      {
+        shared: false,
+      },
+    );
     expect(isShared.value).toBe(false);
   });
 
   it('完了した卓でも切り替えられる（本文編集と独立）', async () => {
     // Arrange
-    const shared = makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' });
+    const shared = makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') });
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);
     const { setShared } = await setupSettled(
       makeGameSession({ status: GameSessionStatus.completed }),
@@ -553,9 +562,13 @@ describe('setShared', () => {
     await setShared(true);
 
     // Assert
-    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
-      shared: true,
-    });
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      {
+        shared: true,
+      },
+    );
   });
 
   it('メモが未作成なら API を呼ばない（404 を出さない）', async () => {
@@ -590,7 +603,7 @@ describe('setShared', () => {
   it('実際に PATCH を送ったときは true を返す', async () => {
     // Arrange
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(
-      makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     );
     const { setShared } = await setupSettled();
 
@@ -623,7 +636,7 @@ describe('setShared', () => {
     vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
       new Promise((resolve) => {
         resolveUpdate = () =>
-          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+          resolve(makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }));
       }),
     );
 
@@ -659,7 +672,7 @@ describe('setShared', () => {
     vi.mocked(updateMyPlayMemoVisibility).mockReturnValue(
       new Promise((resolve) => {
         resolveUpdate = () =>
-          resolve(makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }));
+          resolve(makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }));
       }),
     );
 

@@ -56,7 +56,7 @@ beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
   vi.mocked(getMyPlayMemo).mockResolvedValue({
-    memberId: 'member-1',
+    seatId: 'member-1',
     body: '',
     sharedAt: null,
     updatedAt: null,

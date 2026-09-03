@@ -3,7 +3,7 @@ import type { MaybeRefOrGetter } from 'vue';
 import { GameSessionAction, canPerform } from '@taku-biyori/shared';
 import type { GameSessionStatus } from '@taku-biyori/shared';
 import type { SeatModel } from '@/models/game-session';
-import { updateSeat } from '@/api/game-session';
+import { assignCharacter, unassignCharacter } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 
@@ -113,10 +113,14 @@ export const useSeatEdit = (
         (seat) => canEditSeat(seat) && draftOf(seat.id) !== baselineOf(seat),
       );
       for (const seat of changed) {
-        const updated = await updateSeat(lobbyId, gameSessionId, seat.id, {
-          // 空欄は解除（null）。空文字は API が受け付けない
-          characterName: draftOf(seat.id) || null,
-        });
+        const updated = draftOf(seat.id)
+          ? await assignCharacter(
+              lobbyId,
+              gameSessionId,
+              seat.id,
+              draftOf(seat.id),
+            )
+          : await unassignCharacter(lobbyId, gameSessionId, seat.id);
         onUpdated(updated);
       }
       isEditing.value = false;

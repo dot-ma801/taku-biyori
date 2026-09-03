@@ -2,17 +2,17 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mount, RouterLinkStub } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import MyPlayMemoCard from '@/features/GameSession/PlayMemo/MyPlayMemoCard.vue';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import type { PlayMemoMemberEntry } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: 'member-1',
+    seatId: 'member-1',
     body: '書斎の鍵は青木さんが持っていた',
     sharedAt: null,
-    updatedAt: '2026-08-03T12:04:00Z',
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
@@ -21,7 +21,7 @@ function makeSharedEntry(
   overrides: Partial<PlayMemoMemberEntry> = {},
 ): PlayMemoMemberEntry {
   return {
-    memberId: 'member-other',
+    seatId: 'member-other',
     primaryLabel: '青木',
     secondaryLabel: null,
     userId: 'user-other',
@@ -108,7 +108,7 @@ describe('取得済み（loading === false）の表示', () => {
     const wrapper = mountCard({
       loading: false,
       canViewShared: false,
-      playMemo: makePlayMemo({ sharedAt: '2026-08-04T09:00:00Z' }),
+      playMemo: makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') }),
     });
 
     // Assert

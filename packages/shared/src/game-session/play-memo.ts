@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { GameSessionStatus } from '@/game-session/status';
 
 export const GameSessionPlayMemoSchema = z.object({
-  memberId: z.string().uuid(),
+  seatId: z.string().uuid(),
   body: z.string(),
   /** 公開日時。null なら非公開 */
   sharedAt: z.string().nullable(),

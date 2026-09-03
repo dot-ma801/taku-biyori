@@ -1,11 +1,11 @@
 import type {
   CreateGameSessionInput,
   CreateSeatInput,
+  UpdateSeatInput,
   GameSessionListItem,
   UpdateGameSessionInput,
   UpdateGameSessionPlayMemoVisibilityInput,
   UpdateGameSessionStatusInput,
-  UpdateSeatInput,
   UpsertGameSessionPlayMemoInput,
 } from '@taku-biyori/shared';
 import type { GameSessionRepository } from '@/game-session/infrastructure/game-session-repository';
@@ -17,7 +17,6 @@ import type { DeleteGameSessionResult } from '@/game-session/application/delete-
 import type { UpdateGameSessionStatusResult } from '@/game-session/application/update-game-session-status';
 import type { ListSeatsResult } from '@/game-session/application/list-seats';
 import type { CreateSeatResult } from '@/game-session/application/create-seat';
-import type { UpdateSeatResult } from '@/game-session/application/update-seat';
 import type { DeleteSeatResult } from '@/game-session/application/delete-seat';
 import type { GetMyPlayMemoResult } from '@/game-session/application/get-my-play-memo';
 import type { UpsertMyPlayMemoResult } from '@/game-session/application/upsert-my-play-memo';
@@ -32,7 +31,7 @@ import { deleteGameSession } from '@/game-session/application/delete-game-sessio
 import { updateGameSessionStatus } from '@/game-session/application/update-game-session-status';
 import { listSeats } from '@/game-session/application/list-seats';
 import { createSeat } from '@/game-session/application/create-seat';
-import { updateSeat } from '@/game-session/application/update-seat';
+import { updateCharacterAssignment } from '@/game-session/application/update-character-assignment';
 import { deleteSeat } from '@/game-session/application/delete-seat';
 import { getMyPlayMemo } from '@/game-session/application/get-my-play-memo';
 import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo';
@@ -83,13 +82,15 @@ export interface GameSessionUseCases {
     userId: string,
     input: CreateSeatInput,
   ): Promise<CreateSeatResult>;
-  updateSeat(
+  updateCharacterAssignment(
     lobbyId: string,
     gameSessionId: string,
     seatId: string,
     userId: string,
     input: UpdateSeatInput,
-  ): Promise<UpdateSeatResult>;
+  ): Promise<
+    import('@/game-session/application/update-character-assignment').UpdateCharacterAssignmentResult
+  >;
   deleteSeat(
     lobbyId: string,
     gameSessionId: string,
@@ -97,20 +98,24 @@ export interface GameSessionUseCases {
     userId: string,
   ): Promise<DeleteSeatResult>;
   getMyPlayMemo(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
   ): Promise<GetMyPlayMemoResult>;
   upsertMyPlayMemo(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
     input: UpsertGameSessionPlayMemoInput,
   ): Promise<UpsertMyPlayMemoResult>;
   updateMyPlayMemoVisibility(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
     input: UpdateGameSessionPlayMemoVisibilityInput,
   ): Promise<UpdateMyPlayMemoVisibilityResult>;
   listSharedPlayMemos(
+    lobbyId: string,
     gameSessionId: string,
     userId: string | null,
   ): Promise<ListSharedPlayMemosResult>;
@@ -136,16 +141,23 @@ export const createGameSessionUseCases = (
     listSeats(repo, lobbyId, gameSessionId, userId),
   createSeat: (lobbyId, gameSessionId, userId, input) =>
     createSeat(repo, lobbyId, gameSessionId, userId, input),
-  updateSeat: (lobbyId, gameSessionId, seatId, userId, input) =>
-    updateSeat(repo, lobbyId, gameSessionId, seatId, userId, input),
+  updateCharacterAssignment: (lobbyId, gameSessionId, seatId, userId, input) =>
+    updateCharacterAssignment(
+      repo,
+      lobbyId,
+      gameSessionId,
+      seatId,
+      userId,
+      input,
+    ),
   deleteSeat: (lobbyId, gameSessionId, seatId, userId) =>
     deleteSeat(repo, lobbyId, gameSessionId, seatId, userId),
-  getMyPlayMemo: (gameSessionId, userId) =>
-    getMyPlayMemo(repo, gameSessionId, userId),
-  upsertMyPlayMemo: (gameSessionId, userId, input) =>
-    upsertMyPlayMemo(repo, gameSessionId, userId, input),
-  updateMyPlayMemoVisibility: (gameSessionId, userId, input) =>
-    updateMyPlayMemoVisibility(repo, gameSessionId, userId, input),
-  listSharedPlayMemos: (gameSessionId, userId) =>
-    listSharedPlayMemos(repo, gameSessionId, userId),
+  getMyPlayMemo: (lobbyId, gameSessionId, userId) =>
+    getMyPlayMemo(repo, lobbyId, gameSessionId, userId),
+  upsertMyPlayMemo: (lobbyId, gameSessionId, userId, input) =>
+    upsertMyPlayMemo(repo, lobbyId, gameSessionId, userId, input),
+  updateMyPlayMemoVisibility: (lobbyId, gameSessionId, userId, input) =>
+    updateMyPlayMemoVisibility(repo, lobbyId, gameSessionId, userId, input),
+  listSharedPlayMemos: (lobbyId, gameSessionId, userId) =>
+    listSharedPlayMemos(repo, lobbyId, gameSessionId, userId),
 });

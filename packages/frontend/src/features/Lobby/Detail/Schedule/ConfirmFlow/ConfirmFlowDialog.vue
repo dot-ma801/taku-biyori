@@ -14,7 +14,7 @@ import type { GameSessionModel } from '@/models/game-session';
 import type { LobbyDetailModel } from '@/models/lobby';
 import { computed, ref } from 'vue';
 
-const STEP_LABELS = ['候補日選択', '参加者選択', '確認'] as const;
+const STEP_LABELS = ['開催日を決める', '参加者選択', '確認'] as const;
 const props = defineProps<{ lobby: LobbyDetailModel }>();
 const emit = defineEmits<{ created: [gameSession: GameSessionModel] }>();
 const model = defineModel<boolean>({ default: false });
@@ -24,6 +24,8 @@ const {
   step,
   loading,
   loadingPoll,
+  dateMode,
+  directDate,
   selectedCandidateId,
   scheduledAt,
   selectedEntryIds,
@@ -35,6 +37,8 @@ const {
   canProceedEntries,
   capacityMismatch,
   selectCandidate,
+  setDateMode,
+  setDirectDate,
   toggleEntry,
   isWarnedEntry,
   getEntryAnswer,
@@ -78,8 +82,12 @@ function updateDraft(next: GameSessionDraft) {
       v-if="step === 1"
       :candidate-options="candidateOptions"
       :selected-candidate-id="selectedCandidateId"
+      :date-mode="dateMode"
+      :direct-date="directDate"
       :loading="loadingPoll"
       @select="selectCandidate"
+      @change-mode="setDateMode"
+      @change-direct-date="setDirectDate"
     />
     <MemberSelectStep
       v-else-if="step === 2"

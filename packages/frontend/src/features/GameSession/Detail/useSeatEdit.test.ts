@@ -5,7 +5,10 @@ import { useSeatEdit } from '@/features/GameSession/Detail/useSeatEdit';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import type { SeatModel } from '@/models/game-session';
 
-vi.mock('@/api/game-session', () => ({ updateSeat: vi.fn() }));
+vi.mock('@/api/game-session', () => ({
+  assignCharacter: vi.fn(),
+  unassignCharacter: vi.fn(),
+}));
 vi.mock('@/stores/auth', () => ({ useAuthStore: vi.fn() }));
 
 const mockToastError = vi.fn();
@@ -13,7 +16,7 @@ vi.mock('@/composables/useToast', () => ({
   useToast: () => ({ success: vi.fn(), error: mockToastError }),
 }));
 
-import { updateSeat } from '@/api/game-session';
+import { assignCharacter, unassignCharacter } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
 const HOST_USER_ID = 'host-user-id';
@@ -162,14 +165,15 @@ describe('ドラフト', () => {
 
     // Assert
     expect(isEditing.value).toBe(false);
-    expect(updateSeat).not.toHaveBeenCalled();
+    expect(assignCharacter).not.toHaveBeenCalled();
+    expect(unassignCharacter).not.toHaveBeenCalled();
   });
 });
 
 describe('submitEdit', () => {
   it('一般参加者は自席の変更だけを送信する', async () => {
     // Arrange
-    vi.mocked(updateSeat).mockResolvedValue(makeSeat('self', '自分'));
+    vi.mocked(assignCharacter).mockResolvedValue(makeSeat('self', '自分'));
     const { startEdit, setDraft, submitEdit } = setup(
       [makeSeat('self'), makeSeat('other')],
       GameSessionStatus.scheduled,
@@ -183,16 +187,19 @@ describe('submitEdit', () => {
     await submitEdit();
 
     // Assert
-    expect(updateSeat).toHaveBeenCalledTimes(1);
-    expect(updateSeat).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, 'self', {
-      characterName: '自分',
-    });
+    expect(assignCharacter).toHaveBeenCalledTimes(1);
+    expect(assignCharacter).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      'self',
+      '自分',
+    );
   });
 
   it('変更のあった席だけを送信する', async () => {
     // Arrange
     const updated = makeSeat('seat-1', 'ベアトリス');
-    vi.mocked(updateSeat).mockResolvedValue(updated);
+    vi.mocked(assignCharacter).mockResolvedValue(updated);
     const { startEdit, setDraft, submitEdit, onUpdated } = setup([
       makeSeat('seat-1', 'アルベルト'),
       makeSeat('seat-2', 'カミーユ'),
@@ -204,16 +211,19 @@ describe('submitEdit', () => {
     await submitEdit();
 
     // Assert
-    expect(updateSeat).toHaveBeenCalledTimes(1);
-    expect(updateSeat).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, 'seat-1', {
-      characterName: 'ベアトリス',
-    });
+    expect(assignCharacter).toHaveBeenCalledTimes(1);
+    expect(assignCharacter).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      'seat-1',
+      'ベアトリス',
+    );
     expect(onUpdated).toHaveBeenCalledWith(updated);
   });
 
   it('空欄にすると null（解除）を送る', async () => {
     // Arrange
-    vi.mocked(updateSeat).mockResolvedValue(makeSeat('seat-1', null));
+    vi.mocked(unassignCharacter).mockResolvedValue(makeSeat('seat-1', null));
     const { startEdit, setDraft, submitEdit } = setup([
       makeSeat('seat-1', 'アルベルト'),
     ]);
@@ -224,9 +234,11 @@ describe('submitEdit', () => {
     await submitEdit();
 
     // Assert
-    expect(updateSeat).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID, 'seat-1', {
-      characterName: null,
-    });
+    expect(unassignCharacter).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      'seat-1',
+    );
   });
 
   it('変更が無ければ API を呼ばず編集モードを閉じる', async () => {
@@ -240,13 +252,14 @@ describe('submitEdit', () => {
     await submitEdit();
 
     // Assert
-    expect(updateSeat).not.toHaveBeenCalled();
+    expect(assignCharacter).not.toHaveBeenCalled();
+    expect(unassignCharacter).not.toHaveBeenCalled();
     expect(isEditing.value).toBe(false);
   });
 
   it('失敗すると編集モードを維持したまま toast.error を出す', async () => {
     // Arrange
-    vi.mocked(updateSeat).mockRejectedValue(new Error('boom'));
+    vi.mocked(assignCharacter).mockRejectedValue(new Error('boom'));
     const { startEdit, setDraft, submitEdit, isEditing } = setup([
       makeSeat('seat-1', 'アルベルト'),
     ]);

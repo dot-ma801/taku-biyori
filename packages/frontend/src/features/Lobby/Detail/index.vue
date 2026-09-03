@@ -9,13 +9,12 @@ import MemoDisplay from '@/features/Lobby/Detail/MemoDisplay.vue';
 import GameSessionList from '@/features/Lobby/Detail/GameSessionList.vue';
 import ConfirmFlowDialog from '@/features/Lobby/Detail/Schedule/ConfirmFlow/ConfirmFlowDialog.vue';
 import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
+import { useCanOpenGameSession } from '@/features/Lobby/Detail/composables/useCanOpenGameSession';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
 import { computed, ref } from 'vue';
 import type { GameSessionModel } from '@/models/game-session';
-import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import { Album, UsersRound, MapPin } from '@lucide/vue';
-import { LobbyStatus } from '@taku-biyori/shared';
 
 const props = defineProps<{ lobbyId: string }>();
 
@@ -32,12 +31,9 @@ const capacityText = computed(() => {
 });
 
 const location = computed(() => lobby.value?.location ?? '未設定');
-const authStore = useAuthStore();
 const router = useRouter();
-const canCreateGameSession = computed(
-  () =>
-    lobby.value?.status === LobbyStatus.open &&
-    lobby.value.hostUserId === authStore.currentUser?.id,
+const { canOpenGameSession: canCreateGameSession } = useCanOpenGameSession(
+  () => lobby.value,
 );
 const isCreateGameSessionOpen = ref(false);
 const gameSessionList = ref<InstanceType<typeof GameSessionList> | null>(null);

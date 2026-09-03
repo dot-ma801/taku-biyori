@@ -45,8 +45,6 @@ export {
   type GameSessionMember,
   JoinGameSessionInputSchema,
   type JoinGameSessionInput,
-  UpdateMemberInputSchema,
-  type UpdateMemberInput,
 } from './game-session.js';
 export {
   getGameSessionStatus,
@@ -70,6 +68,10 @@ export {
   type UpdateSeatInput,
   isGuestSeat,
 } from './game-session/seat.js';
+export {
+  CharacterAssignmentSchema,
+  type CharacterAssignment,
+} from './game-session/character-assignment.js';
 export {
   type GameSessionRole,
   GameSessionAction,

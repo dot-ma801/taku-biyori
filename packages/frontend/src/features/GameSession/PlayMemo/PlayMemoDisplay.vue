@@ -23,9 +23,14 @@ const {
   isMyMemo,
   showLoginPrompt,
   canEditBody,
-} = useMyPlayMemo(props.gameSession.id, () => props.gameSession);
+} = useMyPlayMemo(
+  props.gameSession.lobbyId,
+  props.gameSession.id,
+  () => props.gameSession,
+);
 
 const { canViewShared, sharedEntries, othersSharedCount } = useSharedPlayMemos(
+  props.gameSession.lobbyId,
   props.gameSession.id,
   () => props.gameSession,
   () => myMember.value?.id ?? null,

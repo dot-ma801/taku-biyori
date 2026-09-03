@@ -6,7 +6,7 @@ import type { PlayMemoMemberEntry } from '@/features/GameSession/PlayMemo/useSha
 /**
  * メモ画面で「誰のメモを開いているか」を受け持つ composable。
  *
- * 選択は `?member=<memberId>` で URL に載せる（リロード・共有・戻るで同じメモに戻れる）。
+ * 選択は `?member=<seatId>` で URL に載せる（リロード・共有・戻るで同じメモに戻れる）。
  * 状態を自前で持たず URL を唯一の真実にするため、この composable は ref を所有しない。
  */
 export const usePlayMemoSelection = (
@@ -16,7 +16,7 @@ export const usePlayMemoSelection = (
   const router = useRouter();
 
   /** URL で指定されたメンバー。配列・空文字は指定なしとして扱う */
-  const requestedMemberId = computed(() => {
+  const requestedSeatId = computed(() => {
     const raw = route.query.member;
     return typeof raw === 'string' && raw.length > 0 ? raw : null;
   });
@@ -44,27 +44,25 @@ export const usePlayMemoSelection = (
    */
   const selectedEntry = computed(() => {
     const requested = toValue(entries).find(
-      (entry) => entry.memberId === requestedMemberId.value,
+      (entry) => entry.seatId === requestedSeatId.value,
     );
     return requested ?? defaultEntry.value;
   });
 
-  const selectedMemberId = computed(
-    () => selectedEntry.value?.memberId ?? null,
-  );
+  const selectedSeatId = computed(() => selectedEntry.value?.seatId ?? null);
 
   /** 自分のメモを開いているか。編集面と公開トグルを出すかの判断に使う */
   const isMineSelected = computed(() => !!selectedEntry.value?.isMe);
 
   /** メンバーを切り替える。履歴に積んでブラウザバックで前のメモに戻れるようにする */
-  function select(memberId: string): void {
-    void router.push({ query: { ...route.query, member: memberId } });
+  function select(seatId: string): void {
+    void router.push({ query: { ...route.query, member: seatId } });
   }
 
   // 卓に居ないメンバー ID を指定された場合は、実際の選択に URL を合わせる。
   // 履歴を汚さないよう replace で落とす（design-v1.2 §6）。
   watch(
-    [requestedMemberId, selectedMemberId, () => toValue(entries).length],
+    [requestedSeatId, selectedSeatId, () => toValue(entries).length],
     ([requested, selected, memberCount]) => {
       // メンバーがまだ届いていない間は「読めない相手」と区別できないため何もしない。
       // 読み込みが終われば entries の変化でこの watch がもう一度走る
@@ -84,7 +82,7 @@ export const usePlayMemoSelection = (
 
   return {
     selectedEntry,
-    selectedMemberId,
+    selectedSeatId,
     isMineSelected,
     select,
   };

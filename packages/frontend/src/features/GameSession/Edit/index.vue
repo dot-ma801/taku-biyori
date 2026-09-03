@@ -39,10 +39,14 @@ const description = defineModel<string>('description', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 
-/** 卓はタイトルと開催日が確定していないと作れない（design-v1.1 §8） */
-const canSubmit = computed(
-  () => !props.loading && !!title.value && !!scheduledAt.value,
-);
+/**
+ * 開催は日程が確定していないと作れない（design-v2 §3-7）。
+ *
+ * 呼び名（title）は**この開催だけの上書き**であり、空欄ならロビーの値に追随する
+ * （design-v2 §5-5）。必須にすると、上書きの無い通常の開催が日付・場所・説明を
+ * 保存できず、上書きを作らせることで以後のロビー改名への追随も壊れる。
+ */
+const canSubmit = computed(() => !props.loading && !!scheduledAt.value);
 </script>
 
 <template>

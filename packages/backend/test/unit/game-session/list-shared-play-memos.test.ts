@@ -8,13 +8,13 @@ const LOBBY_ID = 'lobby-1';
 
 const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
   {
-    memberId: 'member-1',
+    seatId: 'member-1',
     body: '一人目のメモ',
     sharedAt: '2026-08-02T10:00:00.000Z',
     updatedAt: '2026-08-02T10:00:00.000Z',
   },
   {
-    memberId: 'member-2',
+    seatId: 'member-2',
     body: '二人目のメモ',
     sharedAt: '2026-08-02T11:00:00.000Z',
     updatedAt: '2026-08-02T11:00:00.000Z',
@@ -57,6 +57,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       today,
@@ -80,6 +81,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       today,
@@ -87,6 +89,24 @@ describe('listSharedPlayMemos', () => {
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemos: sharedPlayMemos });
+  });
+
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await listSharedPlayMemos(
+      repo,
+      'lobby-other',
+      'session-1',
+      'user-1',
+      today,
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
   it('卓が存在しないと notFound を返す', async () => {
@@ -98,6 +118,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       today,
@@ -123,6 +144,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       today,
@@ -145,7 +167,13 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', null, today);
+    const result = await listSharedPlayMemos(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      null,
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
@@ -167,7 +195,13 @@ describe('listSharedPlayMemos', () => {
     });
 
     // Act
-    const result = await listSharedPlayMemos(repo, 'session-1', null, today);
+    const result = await listSharedPlayMemos(
+      repo,
+      LOBBY_ID,
+      'session-1',
+      null,
+      today,
+    );
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -187,6 +221,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'host-1',
       today,
@@ -210,6 +245,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       today,
@@ -233,6 +269,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       today,
@@ -256,6 +293,7 @@ describe('listSharedPlayMemos', () => {
     // Act
     const result = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'host-1',
       today,
@@ -273,18 +311,21 @@ describe('listSharedPlayMemos', () => {
     // Act
     const asHost = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'host-1',
       today,
     );
     const asMember = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       'member-user-1',
       today,
     );
     const asAnonymous = await listSharedPlayMemos(
       repo,
+      LOBBY_ID,
       'session-1',
       null,
       today,
@@ -301,7 +342,7 @@ describe('listSharedPlayMemos', () => {
     const repo = makeRepo();
 
     // Act
-    await listSharedPlayMemos(repo, 'session-1', 'user-9', today);
+    await listSharedPlayMemos(repo, LOBBY_ID, 'session-1', 'user-9', today);
 
     // Assert
     expect(repo.findSharedPlayMemos).toHaveBeenCalledWith('session-1');

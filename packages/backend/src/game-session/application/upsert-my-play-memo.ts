@@ -12,6 +12,7 @@ import {
 import type { GameSessionHostRepository } from '@/game-session/application/game-session-host-repository';
 
 export interface UpsertMyPlayMemoRepository extends GameSessionHostRepository {
+  findLobbyId(id: string): Promise<string | null>;
   findStatusFields(id: string): Promise<GameSessionStatusFacts | null>;
   findSeatByUserId(
     gameSessionId: string,
@@ -33,11 +34,18 @@ export type UpsertMyPlayMemoResult =
  */
 export const upsertMyPlayMemo = async (
   repo: UpsertMyPlayMemoRepository,
+  lobbyId: string,
   gameSessionId: string,
   userId: string,
   input: UpsertGameSessionPlayMemoInput,
   today: string = todayDateString(),
 ): Promise<UpsertMyPlayMemoResult> => {
+  // URL のロビーがこの開催のロビーでなければ 404（入れ子のパスは親も検証する）
+  const actualLobbyId = await repo.findLobbyId(gameSessionId);
+  if (actualLobbyId === null || actualLobbyId !== lobbyId) {
+    return { type: 'notFound' };
+  }
+
   const fields = await repo.findStatusFields(gameSessionId);
   if (!fields) return { type: 'notFound' };
 

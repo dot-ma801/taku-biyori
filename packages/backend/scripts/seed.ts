@@ -30,8 +30,9 @@ import {
   lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
-  gameSessionPlayMemos,
+  characterAssignments,
   gameSessions,
+  playMemos,
   seats,
 } from '@/system/infrastructure/database/game-session-schema';
 
@@ -220,6 +221,16 @@ const addGameSession = async (
   return firstRow(rows, 'addGameSession').id;
 };
 
+/**
+ * 着席と、そのキャラクター割り当てをまとめて作る。
+ *
+ * キャラクター名は `seats` のカラムではなく `character_assignments` の行なので
+ * （design-v2 §3-9）、着席を入れてから割り当てを別に入れる。
+ *
+ * `INSERT ... RETURNING` の行順は PostgreSQL では保証されないため、添字では
+ * 突き合わせない。`lobby_entry_id` を一緒に返して、それをキーに引き当てる
+ * （1開催の中では UNIQUE。§3-8）。返す配列も入力順に組み直す。
+ */
 const addSeats = async (
   database: Database,
   gameSessionId: string,
@@ -231,12 +242,32 @@ const addSeats = async (
       values.map((seat) => ({
         gameSessionId,
         lobbyEntryId: seat.lobbyEntryId,
-        characterName: seat.characterName ?? null,
       })),
     )
-    .returning({ id: seats.id });
+    .returning({ id: seats.id, lobbyEntryId: seats.lobbyEntryId });
 
-  return rows.map((row) => row.id);
+  const seatIdByEntryId = new Map(
+    rows.map((row) => [row.lobbyEntryId, row.id]),
+  );
+
+  const seatIds = values.map((seat) => {
+    const seatId = seatIdByEntryId.get(seat.lobbyEntryId);
+    if (seatId === undefined) {
+      throw new Error(`着席の作成に失敗しました: ${seat.lobbyEntryId}`);
+    }
+    return seatId;
+  });
+
+  const assignments = values.flatMap((seat, index) => {
+    const seatId = seatIds[index];
+    if (seatId === undefined || !seat.characterName) return [];
+    return [{ seatId, characterName: seat.characterName }];
+  });
+  if (assignments.length > 0) {
+    await database.insert(characterAssignments).values(assignments);
+  }
+
+  return seatIds;
 };
 
 const main = async (): Promise<void> => {
@@ -447,7 +478,7 @@ const main = async (): Promise<void> => {
     throw new Error('完了済みの開催の着席が想定（3件）より少ないです');
   }
 
-  await db.insert(gameSessionPlayMemos).values([
+  await db.insert(playMemos).values([
     {
       seatId: lighthouseKeeperSeatId,
       body: '灯台守視点のメモ。序盤に鍵の話を振れたのがよかった。',

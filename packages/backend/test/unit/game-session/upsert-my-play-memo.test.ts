@@ -4,6 +4,7 @@ import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upse
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
 const TODAY = '2026-08-02';
+const LOBBY_ID = 'lobby-1';
 
 /** 開催予定（scheduled）のセッション */
 const scheduledFields = {
@@ -13,7 +14,7 @@ const scheduledFields = {
 };
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '書き換えたメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T10:00:00.000Z',
@@ -22,6 +23,7 @@ const mockPlayMemo: GameSessionPlayMemo = {
 const makeRepo = (
   overrides: Partial<UpsertMyPlayMemoRepository> = {},
 ): UpsertMyPlayMemoRepository => ({
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
   findStatusFields: vi.fn().mockResolvedValue(scheduledFields),
   findHostUserId: vi.fn().mockResolvedValue('user-host'),
   findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
@@ -37,6 +39,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: '書き換えたメモ' },
@@ -58,6 +61,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-host',
       { body: '書き換えたメモ' },
@@ -76,6 +80,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: '' },
@@ -98,6 +103,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
@@ -120,6 +126,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
@@ -128,6 +135,25 @@ describe('upsertMyPlayMemo', () => {
 
     // Assert
     expect(result.type).toBe('ok');
+  });
+
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await upsertMyPlayMemo(
+      repo,
+      'lobby-other',
+      'session-1',
+      'user-1',
+      { body: 'メモ' },
+      TODAY,
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
   it('卓が存在しないと notFound を返す', async () => {
@@ -139,6 +165,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       { body: 'メモ' },
@@ -160,6 +187,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { body: 'メモ' },
@@ -183,6 +211,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
@@ -206,6 +235,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
@@ -231,6 +261,7 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { body: 'メモ' },

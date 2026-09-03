@@ -1,11 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import {
-  type MyGameSessionPlayMemo,
-  GameSessionAction,
-  canPerform,
-} from '@taku-biyori/shared';
+import { GameSessionAction, canPerform } from '@taku-biyori/shared';
 import type { GameSessionDetailModel } from '@/models/game-session';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
@@ -25,13 +22,14 @@ export type PlayMemoVisibilityStatus = 'idle' | 'saving' | 'failed';
  * 編集ドラフトは持たない（ドラフトの所有者は編集 UI 側。CLAUDE.md「サーバ値と編集ドラフトは別物」）。
  */
 export const useMyPlayMemo = (
+  lobbyId: string,
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
   gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
 ) => {
   const authStore = useAuthStore();
-  const playMemo = ref<MyGameSessionPlayMemo | null>(null);
+  const playMemo = ref<MyPlayMemoModel | null>(null);
   const loading = ref(false);
 
   /**
@@ -94,7 +92,7 @@ export const useMyPlayMemo = (
         return;
       }
 
-      playMemo.value = await getMyPlayMemo(gameSessionId);
+      playMemo.value = await getMyPlayMemo(lobbyId, gameSessionId);
     } catch {
       // 退出直後の 403 や通信エラー。トーストは出さずセクションを閉じる
       // （メモは卓詳細の主目的ではないため、失敗を前面に出さない）
@@ -105,7 +103,7 @@ export const useMyPlayMemo = (
   }
 
   /** 保存後のサーバ値を反映する。playMemo の所有者はこの composable */
-  function applySaved(saved: MyGameSessionPlayMemo) {
+  function applySaved(saved: MyPlayMemoModel) {
     playMemo.value = saved;
   }
 
@@ -149,9 +147,13 @@ export const useMyPlayMemo = (
     visibilityStatus.value = 'saving';
 
     try {
-      playMemo.value = await updateMyPlayMemoVisibility(gameSessionId, {
-        shared,
-      });
+      playMemo.value = await updateMyPlayMemoVisibility(
+        lobbyId,
+        gameSessionId,
+        {
+          shared,
+        },
+      );
       visibilityStatus.value = 'idle';
     } catch {
       // 通信エラー・退出直後の 403 など。状態は変えずに失敗だけを伝える

@@ -29,7 +29,8 @@ import {
 import type { Database } from '@/system/infrastructure/database/client';
 import {
   gameSessions,
-  gameSessionPlayMemos,
+  playMemos,
+  characterAssignments,
   seats,
 } from '@/system/infrastructure/database/game-session-schema';
 import {
@@ -212,7 +213,7 @@ export const toListItem = (
 };
 
 type PlayMemoRow = {
-  memberId: string;
+  seatId: string;
   body: string;
   sharedAt: Date | null;
   updatedAt: Date;
@@ -221,7 +222,7 @@ type PlayMemoRow = {
 // memberId というキー名は shared の契約（GameSessionPlayMemo）のまま据え置く。
 // 中身は seats.id で、seatId への改名はタスク6（#116）で行う（design-v2 §6-15）
 const toPlayMemo = (row: PlayMemoRow): GameSessionPlayMemo => ({
-  memberId: row.memberId,
+  seatId: row.seatId,
   body: row.body,
   sharedAt: row.sharedAt?.toISOString() ?? null,
   updatedAt: row.updatedAt.toISOString(),
@@ -235,7 +236,7 @@ const seatSelection = {
   userId: lobbyEntries.userId,
   userName: user.name,
   guestName: lobbyEntries.guestName,
-  characterName: seats.characterName,
+  characterName: characterAssignments.characterName,
   createdAt: seats.createdAt,
 };
 
@@ -368,7 +369,7 @@ export const createGameSessionRepository = (
       .from(seats)
       .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
       .where(inArray(seats.gameSessionId, gameSessionIds))
-      .orderBy(asc(seats.createdAt));
+      .orderBy(asc(seats.createdAt), asc(seats.id));
 
     for (const row of rows) {
       const list = byId.get(row.gameSessionId) ?? [];
@@ -468,10 +469,14 @@ export const createGameSessionRepository = (
       const seatRows = await db
         .select(seatSelection)
         .from(seats)
+        .leftJoin(
+          characterAssignments,
+          eq(characterAssignments.seatId, seats.id),
+        )
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.gameSessionId, id))
-        .orderBy(asc(seats.createdAt));
+        .orderBy(asc(seats.createdAt), asc(seats.id));
 
       return {
         ...toGameSession(row, toLobbyRow(row)),
@@ -764,10 +769,14 @@ export const createGameSessionRepository = (
       const rows = await db
         .select(seatSelection)
         .from(seats)
+        .leftJoin(
+          characterAssignments,
+          eq(characterAssignments.seatId, seats.id),
+        )
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.gameSessionId, gameSessionId))
-        .orderBy(asc(seats.createdAt));
+        .orderBy(asc(seats.createdAt), asc(seats.id));
       return rows.map(toSeat);
     },
 
@@ -775,6 +784,10 @@ export const createGameSessionRepository = (
       const rows = await db
         .select(seatSelection)
         .from(seats)
+        .leftJoin(
+          characterAssignments,
+          eq(characterAssignments.seatId, seats.id),
+        )
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.id, seatId))
@@ -849,19 +862,48 @@ export const createGameSessionRepository = (
       return rows[0]?.lobbyId ?? null;
     },
 
+    /**
+     * 着席のキャラクター名を割り当て・解除する。
+     *
+     * 存在確認と書き込みを1つのトランザクションにまとめ、`seats` の行を
+     * `FOR UPDATE` で押さえてから触る。ロック無しで存在確認すると、その直後に
+     * 離席が commit されたときに `character_assignments` の INSERT が FK 違反で
+     * 落ち、消えた席を 404 で表すはずの経路から 500 が漏れる。
+     * ロックを取れば、離席は待たされるか、先に commit 済みなら行が見つからず
+     * `null`（= 404）になる。
+     */
     async updateSeatCharacterName(
       seatId: string,
       characterName: string | null,
     ): Promise<Seat | null> {
-      const result = await db
-        .update(seats)
-        .set({ characterName })
-        .where(eq(seats.id, seatId))
-        .returning({ id: seats.id });
+      return db.transaction(async (tx) => {
+        const locked = await tx
+          .select({ id: seats.id })
+          .from(seats)
+          .where(eq(seats.id, seatId))
+          .for('update');
+        if (locked.length === 0) return null;
 
-      const row = result[0];
-      if (!row) return null;
-      return repository.findSeatById(row.id);
+        if (characterName === null) {
+          await tx
+            .delete(characterAssignments)
+            .where(eq(characterAssignments.seatId, seatId));
+        } else {
+          await tx
+            .insert(characterAssignments)
+            .values({ seatId, characterName })
+            .onConflictDoUpdate({
+              target: characterAssignments.seatId,
+              set: { characterName },
+            });
+        }
+
+        // 同じトランザクションから読み直す。外の repository で読むと
+        // ここでの書き込みが見えない
+        return createGameSessionRepository(
+          tx as unknown as Database,
+        ).findSeatById(seatId);
+      });
     },
 
     async deleteSeatById(seatId: string): Promise<void> {
@@ -878,13 +920,13 @@ export const createGameSessionRepository = (
     ): Promise<GameSessionPlayMemo | null> {
       const rows = await db
         .select({
-          memberId: gameSessionPlayMemos.seatId,
-          body: gameSessionPlayMemos.body,
-          sharedAt: gameSessionPlayMemos.sharedAt,
-          updatedAt: gameSessionPlayMemos.updatedAt,
+          seatId: playMemos.seatId,
+          body: playMemos.body,
+          sharedAt: playMemos.sharedAt,
+          updatedAt: playMemos.updatedAt,
         })
-        .from(gameSessionPlayMemos)
-        .where(eq(gameSessionPlayMemos.seatId, seatId))
+        .from(playMemos)
+        .where(eq(playMemos.seatId, seatId))
         .limit(1);
 
       const row = rows[0];
@@ -897,17 +939,17 @@ export const createGameSessionRepository = (
       body: string,
     ): Promise<GameSessionPlayMemo> {
       const result = await db
-        .insert(gameSessionPlayMemos)
+        .insert(playMemos)
         .values({ seatId, body })
         .onConflictDoUpdate({
-          target: gameSessionPlayMemos.seatId,
+          target: playMemos.seatId,
           set: { body },
         })
         .returning();
 
       const row = result[0];
       if (!row) throw new Error('プレイメモの保存に失敗しました');
-      return toPlayMemo({ ...row, memberId: row.seatId });
+      return toPlayMemo({ ...row, seatId: row.seatId });
     },
 
     /** body は書き換えない。更新対象が無い＝メモ未作成で、呼び出し側が 404 にする */
@@ -916,14 +958,14 @@ export const createGameSessionRepository = (
       sharedAt: Date | null,
     ): Promise<GameSessionPlayMemo | null> {
       const result = await db
-        .update(gameSessionPlayMemos)
+        .update(playMemos)
         .set({ sharedAt })
-        .where(eq(gameSessionPlayMemos.seatId, seatId))
+        .where(eq(playMemos.seatId, seatId))
         .returning();
 
       const row = result[0];
       if (!row) return null;
-      return toPlayMemo({ ...row, memberId: row.seatId });
+      return toPlayMemo({ ...row, seatId: row.seatId });
     },
 
     /**
@@ -935,20 +977,20 @@ export const createGameSessionRepository = (
     ): Promise<SharedGameSessionPlayMemo[]> {
       const rows = await db
         .select({
-          memberId: gameSessionPlayMemos.seatId,
-          body: gameSessionPlayMemos.body,
-          sharedAt: gameSessionPlayMemos.sharedAt,
-          updatedAt: gameSessionPlayMemos.updatedAt,
+          seatId: playMemos.seatId,
+          body: playMemos.body,
+          sharedAt: playMemos.sharedAt,
+          updatedAt: playMemos.updatedAt,
         })
-        .from(gameSessionPlayMemos)
-        .innerJoin(seats, eq(seats.id, gameSessionPlayMemos.seatId))
+        .from(playMemos)
+        .innerJoin(seats, eq(seats.id, playMemos.seatId))
         .where(
           and(
             eq(seats.gameSessionId, gameSessionId),
-            isNotNull(gameSessionPlayMemos.sharedAt),
+            isNotNull(playMemos.sharedAt),
           ),
         )
-        .orderBy(asc(gameSessionPlayMemos.sharedAt));
+        .orderBy(asc(playMemos.sharedAt));
 
       // where で公開済みに絞っているが型には反映されないため、ここでも null を落とす
       return rows

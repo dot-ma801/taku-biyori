@@ -1,15 +1,31 @@
-import { computed, getCurrentInstance, onMounted, onUnmounted, ref } from 'vue';
+import {
+  computed,
+  getCurrentInstance,
+  onMounted,
+  onUnmounted,
+  ref,
+  toValue,
+  watch,
+} from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyStatus } from '@taku-biyori/shared';
 import { listMyLobbies, listPublicLobbies } from '@/api/lobby';
 import { ApiError } from '@/lib/api-client';
 import type { LobbyListItemModel } from '@/models/lobby';
 import { useSession } from '@/lib/auth';
 
+/**
+ * 取得対象の指定。
+ *
+ * 呼び出し側（`LobbyList` の `scope` prop）は再マウントなしで切り替わりうるので、
+ * `MaybeRefOrGetter` で受けて **取得のたびに読み直す**（CLAUDE.md「composable の
+ * 引数は Ref を要求しない」）。固定値をそのまま渡してもよい。
+ */
 export type UseLobbyListOptions = {
   /** 自分のロビーを取得しない（「探す」だけが要る呼び出し用） */
-  skipMine?: boolean;
+  skipMine?: MaybeRefOrGetter<boolean>;
   /** 公開ロビーを取得しない（「自分のもの」だけが要る呼び出し用） */
-  skipPublic?: boolean;
+  skipPublic?: MaybeRefOrGetter<boolean>;
 };
 
 export const useLobbyList = (
@@ -90,7 +106,7 @@ export const useLobbyList = (
    * ログイン不要で見せたいのでエラーにせず空で扱う。
    */
   async function fetchMine(): Promise<LobbyListItemModel[]> {
-    if (options.skipMine) return [];
+    if (toValue(options.skipMine)) return [];
     try {
       return await listMyLobbies();
     } catch (e) {
@@ -100,7 +116,7 @@ export const useLobbyList = (
   }
 
   async function fetchPublic(): Promise<LobbyListItemModel[]> {
-    if (options.skipPublic) return [];
+    if (toValue(options.skipPublic)) return [];
     return listPublicLobbies();
   }
 
@@ -120,6 +136,15 @@ export const useLobbyList = (
   }
 
   onMounted(fetch);
+
+  // 取得対象が変わったら、いま持っている一覧はもう対象外。取り直す
+  // （`scope` を切り替えたのに前の一覧が残る、を防ぐ）
+  watch(
+    () => [toValue(options.skipMine), toValue(options.skipPublic)],
+    () => {
+      void fetch();
+    },
+  );
 
   return {
     publicLobbies,

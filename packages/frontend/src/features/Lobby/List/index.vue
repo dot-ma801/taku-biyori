@@ -30,27 +30,29 @@ const props = withDefaults(
 );
 
 const router = useRouter();
+// scope は再マウントなしで変わりうるので computed にする。
+// setup 時の値で固定すると、切り替えても表示と取得対象が前のままになる
+const isPublicScope = computed(() => props.scope === 'public');
 // 出さない側は取得自体を省く（ダッシュボードの一覧リクエストを増やさない）
-const isPublicScope = props.scope === 'public';
 const { filteredMyLobbies, filteredPublicLobbies, hasFilteredLobbies } =
   useLobbyList(props.statuses, {
     skipMine: isPublicScope,
-    skipPublic: !isPublicScope,
+    skipPublic: () => !isPublicScope.value,
   });
 
 const showPublicList = computed(
-  () => isPublicScope && filteredPublicLobbies.value.length > 0,
+  () => isPublicScope.value && filteredPublicLobbies.value.length > 0,
 );
-const showMineSection = computed(() => !isPublicScope);
-const hasTitle = computed(() => !isPublicScope && props.title != null);
+const showMineSection = computed(() => !isPublicScope.value);
+const hasTitle = computed(() => !isPublicScope.value && props.title != null);
 // 「募集中のロビー」は0件なら丸ごと出さない（見出しだけが残らないように）
 const isVisible = computed(() =>
-  isPublicScope
+  isPublicScope.value
     ? showPublicList.value
     : !props.hideWhenEmpty || hasFilteredLobbies.value,
 );
 const showCreateButton = computed(
-  () => !isPublicScope && !props.hideCreateButton,
+  () => !isPublicScope.value && !props.hideCreateButton,
 );
 
 const onClickCreate = () => {

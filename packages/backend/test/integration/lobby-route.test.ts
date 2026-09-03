@@ -61,6 +61,13 @@ const mockListItem: LobbyListItem = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
+/** 公開一覧が返しうる形（公開済み・受付中）。自分の一覧の fixture と混ぜない */
+const mockPublicListItem: LobbyListItem = {
+  ...mockListItem,
+  status: LobbyStatus.open,
+  publishedAt: '2025-01-01T00:00:00.000Z',
+};
+
 const mockLobby: Lobby = {
   id: 'f2b4dbb8-0000-4000-8000-000000000001',
   title: '新規募集',
@@ -121,7 +128,8 @@ const makeApp = (
     listMyLobbies:
       overrides.listMyLobbies ?? vi.fn().mockResolvedValue([mockListItem]),
     listPublicLobbies:
-      overrides.listPublicLobbies ?? vi.fn().mockResolvedValue([mockListItem]),
+      overrides.listPublicLobbies ??
+      vi.fn().mockResolvedValue([mockPublicListItem]),
     createLobby: overrides.createLobby ?? vi.fn().mockResolvedValue(mockLobby),
     getLobby: overrides.getLobby ?? vi.fn().mockResolvedValue(mockGetOk),
     updateLobby:
@@ -217,6 +225,17 @@ describe('GET /api/me/lobbies', () => {
     // Assert
     expect(listMyLobbies).toHaveBeenCalledWith('user-1');
   });
+
+  it('Cache-Control: no-store を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/me/lobbies');
+
+    // Assert
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+  });
 });
 
 describe('GET /api/lobbies', () => {
@@ -230,7 +249,7 @@ describe('GET /api/lobbies', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(body).toEqual([mockListItem]);
+    expect(body).toEqual([mockPublicListItem]);
   });
 
   it('未認証でも 200 を返す（探索用なのでログイン不要）', async () => {

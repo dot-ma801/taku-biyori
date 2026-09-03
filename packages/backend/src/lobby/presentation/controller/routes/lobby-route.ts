@@ -47,6 +47,9 @@ export const registerLobbyRoute = (
       return c.json({ error: 'Unauthorized' }, 401);
     }
     const lobbies = await options.listMyLobbies(authSession.user.id);
+    // Cookie のセッションに紐づく個人の一覧。同じブラウザでアカウントを切り替えたときに
+    // 前のユーザーの一覧が再利用されないよう、キャッシュを禁止する
+    c.header('Cache-Control', 'no-store');
     return c.json(lobbies);
   });
 

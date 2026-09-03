@@ -2,6 +2,7 @@
 defineOptions({ name: 'LobbyDetail' });
 
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import StatusDisplay from '@/features/Lobby/Detail/StatusDisplay.vue';
 import MemberDisplay from '@/features/Lobby/Detail/MemberDisplay.vue';
@@ -31,6 +32,12 @@ const capacityText = computed(() => {
 });
 
 const location = computed(() => lobby.value?.location ?? '未設定');
+
+// URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く
+const breadcrumbItems = computed(() => [
+  { label: 'ダッシュボード', to: { name: 'dashboard' } },
+  { label: lobby.value?.title ?? 'ロビー' },
+]);
 const router = useRouter();
 const { canOpenGameSession: canCreateGameSession } = useCanOpenGameSession(
   () => lobby.value,
@@ -57,6 +64,8 @@ function handleGameSessionCreated(_gameSession: GameSessionModel) {
 
 <template>
   <div class="container" v-if="lobby">
+    <BaseBreadcrumb :items="breadcrumbItems" />
+
     <BaseSectionHeading level="h1">
       {{ lobby.title }}
     </BaseSectionHeading>

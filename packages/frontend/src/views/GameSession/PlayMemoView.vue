@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import PageContainer from '@/components/layout/PageContainer/PageContainer.vue';
+import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import PlayMemoEditor from '@/features/GameSession/PlayMemo/PlayMemoEditor.vue';
@@ -55,6 +56,26 @@ const { selectedEntry, selectedSeatId, isMineSelected, select } =
   usePlayMemoSelection(entries);
 
 const gameSessionTitle = computed(() => gameSession.value?.title ?? '');
+
+// URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く
+const breadcrumbItems = computed(() => [
+  { label: 'ダッシュボード', to: { name: 'dashboard' } },
+  {
+    label: gameSession.value?.lobby.title ?? 'ロビー',
+    to: { name: 'lobbies-detail', params: { lobbyId: props.lobbyId } },
+  },
+  {
+    label: gameSessionTitle.value || '開催',
+    to: {
+      name: 'game-sessions-detail',
+      params: {
+        lobbyId: props.lobbyId,
+        gameSessionId: props.gameSessionId,
+      },
+    },
+  },
+  { label: 'プレイメモ' },
+]);
 
 /**
  * 「何を出すか」の導出は usePlayMemoPane に集約する（CLAUDE.md「データの
@@ -123,6 +144,8 @@ async function onVisibilityChange(shared: boolean) {
 
 <template>
   <PageContainer>
+    <BaseBreadcrumb class="breadcrumb" :items="breadcrumbItems" />
+
     <div v-if="errorMessage">{{ errorMessage }}</div>
 
     <div
@@ -183,6 +206,10 @@ async function onVisibilityChange(shared: boolean) {
 </template>
 
 <style scoped>
+.breadcrumb {
+  margin-bottom: var(--space-4);
+}
+
 .layout {
   display: grid;
   gap: var(--space-4);

@@ -1,5 +1,11 @@
 # RollHub（たく日和）— 設計ドキュメント v1.1: 募集と卓の分離
 
+> [!IMPORTANT]
+> **この文書は [design-v2.md](./design-v2.md) に置き換えられた（superseded）。**
+> v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
+> 本書の DB スキーマ・API・ステータス設計はいずれも現行の実装と一致しない。
+> **履歴として残しているだけなので、実装の根拠には使わないこと。** 現行の設計は design-v2 を参照する。
+
 > **最終更新**: 2026-07-11
 > **元要求**: [docs/requirements/recruitment-separation.md](./requirements/recruitment-separation.md)
 > **位置づけ**: [design-v1.md](./design-v1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針など）は design-v1 を踏襲する。

@@ -7,24 +7,29 @@ import { LobbyStatus, GameSessionStatus } from '@taku-biyori/shared';
 
 <template>
   <div class="dashboard">
-    <LobbyList
-      title="受付中・調整中"
-      :statuses="[LobbyStatus.open, LobbyStatus.closed]"
-    />
+    <!--
+      design-v2 §7-5 の4セクション。開催予定を先頭に置くのは、
+      直近に控えている予定が最も見たい情報だから。
+    -->
     <GameSessionList
       title="開催予定"
       :statuses="[GameSessionStatus.scheduled, GameSessionStatus.today]"
       sort-by-scheduled-at
     />
-    <!-- 非公開のロビー・卓はここからしか辿れないため、下書きが残っているときだけ表示する -->
+    <!-- 未参加の人向けの「募集中のロビー」も、このセクションの下に並ぶ -->
     <LobbyList
-      title="非公開のロビー"
+      title="参加中のロビー"
+      :statuses="[LobbyStatus.open, LobbyStatus.closed]"
+    />
+    <!-- 下書きのロビーはここからしか辿れないため、残っているときだけ表示する -->
+    <LobbyList
+      title="下書きのロビー"
       :statuses="[LobbyStatus.draft]"
       hide-when-empty
       hide-create-button
     />
     <!--
-      履歴。他人の終了した卓は出しても仕方がないので自分の分だけに絞る。
+      履歴。他人の終えた開催は出しても仕方がないので自分の分だけに絞る。
       件数が増えて一覧が重くなったら専用ページへ切り出す。
     -->
     <GameSessionList

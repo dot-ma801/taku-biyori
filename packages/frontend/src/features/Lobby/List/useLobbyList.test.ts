@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nextTick } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 
@@ -7,14 +8,21 @@ vi.mock('@/api/lobby', () => ({
   listPublicLobbies: vi.fn(),
 }));
 
-// useSession（nanostores の Atom）のモック。ログイン中のユーザーを固定する
+// useSession（nanostores の Atom）のモック。
+// 既定はログイン中。セッション復元が遅れるケースは subscribe に流して再現する
 type SessionValue = { data: { user?: { id?: string | null } } | null };
-const currentSessionValue: SessionValue = { data: { user: { id: 'my-user' } } };
+let currentSessionValue: SessionValue = { data: { user: { id: 'my-user' } } };
+let sessionListener: ((value: SessionValue) => void) | null = null;
 
 vi.mock('@/lib/auth', () => ({
   useSession: {
     get: vi.fn(() => currentSessionValue),
-    subscribe: vi.fn(() => () => {}),
+    subscribe: vi.fn((listener: (value: SessionValue) => void) => {
+      sessionListener = listener;
+      return () => {
+        sessionListener = null;
+      };
+    }),
   },
 }));
 
@@ -81,6 +89,8 @@ function makeLobby(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentSessionValue = { data: { user: { id: MY_USER_ID } } };
+  sessionListener = null;
   mockListMyLobbies.mockResolvedValue([]);
   mockListPublicLobbies.mockResolvedValue([]);
 });
@@ -204,6 +214,27 @@ describe('useLobbyList', () => {
       await fetch();
 
       // Assert
+      expect(publicLobbies.value).toEqual([publicLobby]);
+    });
+
+    it('セッション復元が取得より後でも、届いた時点で自分の分を取り除く', async () => {
+      // Arrange
+      // ダッシュボードはセッション復元を待たずに描画されるため、fetch 時点では
+      // まだユーザー ID が無いことがある（router の requiresAuth なしルート）
+      currentSessionValue = { data: null };
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
+      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
+      mockListPublicLobbies.mockResolvedValue([publicLobby, myLobby]);
+
+      // Act
+      const { publicLobbies, fetch } = useLobbyList();
+      await fetch();
+      const beforeRestore = publicLobbies.value;
+      sessionListener?.({ data: { user: { id: MY_USER_ID } } });
+      await nextTick();
+
+      // Assert
+      expect(beforeRestore).toHaveLength(2);
       expect(publicLobbies.value).toEqual([publicLobby]);
     });
 

@@ -9,8 +9,8 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
   /** 自分のロビー（ホスト or 在籍中の参加者） */
   const myLobbies = ref<LobbyListItemModel[]>([]);
 
-  /** 公開かつ受付中のロビー（自分が関わっているものは除く） */
-  const publicLobbies = ref<LobbyListItemModel[]>([]);
+  /** 公開かつ受付中のロビー（サーバから取得したまま。自分の分も含む） */
+  const fetchedPublicLobbies = ref<LobbyListItemModel[]>([]);
 
   /** 取得中かどうか */
   const loading = ref(false);
@@ -42,6 +42,16 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
       lobby.activeEntries.some((entry) => entry.userId === userId)
     );
   };
+
+  /**
+   * 「探す」側に出すロビー。**取得時ではなく computed で絞る。**
+   * ダッシュボードはセッション復元を待たずに描画されるため、fetch の時点では
+   * まだ userId が null のことがある。取得時に絞ると、そのとき自分のロビーが
+   * 「募集中のロビー」に混ざったまま、後からセッションが届いても消えない。
+   */
+  const publicLobbies = computed(() =>
+    fetchedPublicLobbies.value.filter((l) => !isMine(l)),
+  );
 
   /** 自分のロビーのうち statuses に該当するもの（未指定時は myLobbies をそのまま返す） */
   const filteredMyLobbies = computed(() => {
@@ -88,7 +98,7 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
         listPublicLobbies(),
       ]);
       myLobbies.value = mine;
-      publicLobbies.value = publics.filter((l) => !isMine(l));
+      fetchedPublicLobbies.value = publics;
     } catch {
       errorMessage.value = 'ロビー一覧の取得に失敗しました';
     } finally {

@@ -75,9 +75,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      // 「日程が決まっている」モードはロビーと開催の両方を作るため、
+      // 旧 /game-sessions/new と同じく認証が要る（design-v2 §7-1 で統合した）
       path: '/lobbies/new',
       name: 'lobbies-new',
       component: () => import('@/views/Lobby/CreateView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/lobbies/:lobbyId/edit',

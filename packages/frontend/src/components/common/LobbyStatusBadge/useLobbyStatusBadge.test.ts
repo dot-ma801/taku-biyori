@@ -5,8 +5,8 @@ import { useLobbyStatusBadge } from '@/components/common/LobbyStatusBadge/useLob
 
 describe('useLobbyStatusBadge', () => {
   it.each([
-    [LobbyStatus.draft, '非公開', 'muted'],
-    [LobbyStatus.open, '募集中', 'primary'],
+    [LobbyStatus.draft, '下書き', 'muted'],
+    [LobbyStatus.open, '受付中', 'primary'],
     [LobbyStatus.closed, '受付終了', 'warning'],
     [LobbyStatus.disbanded, '解散', 'error'],
   ] as const)(

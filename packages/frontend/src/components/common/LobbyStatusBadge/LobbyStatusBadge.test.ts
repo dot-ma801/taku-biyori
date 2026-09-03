@@ -21,8 +21,8 @@ describe('LobbyStatusBadge', () => {
 
   describe('ラベル', () => {
     it.each([
-      [LobbyStatus.draft, '非公開'],
-      [LobbyStatus.open, '募集中'],
+      [LobbyStatus.draft, '下書き'],
+      [LobbyStatus.open, '受付中'],
       [LobbyStatus.closed, '受付終了'],
       [LobbyStatus.disbanded, '解散'],
     ] as const)(

@@ -12,10 +12,7 @@ type Appearance = { label: string; variant: Variant };
 /**
  * 開催が取りうるステータスの表示定義（design-v2 §4-2 / §2-2）。
  *
- * v2 で導出されるのは4つだけ。`draft` / `open` / `confirmed` は公開と募集が
- * ロビーの関心事へ移ったため導出されない。移行期間中は enum に旧値が残るので、
- * 「キーが無いことがありうる」ルックアップとして Map で持ち、
- * 導出されない値が渡ってもバッジを描画しない。
+ * 公開と受付はロビーの関心事へ移ったので、開催のステータスは4つだけ。
  */
 const APPEARANCE_MAP = new Map<GameSessionStatus, Appearance>([
   [GameSessionStatus.scheduled, { label: '開催予定', variant: 'success' }],

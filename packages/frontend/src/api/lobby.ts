@@ -48,7 +48,17 @@ import {
 // この層が DTO と model の境界。ここより内側（composable / component）は
 // `@taku-biyori/shared` のレスポンス型を見ない（issue #113 の規約）。
 
-export async function listLobbies(): Promise<LobbyListItemModel[]> {
+/**
+ * 自分のロビー（ホスト or 在籍中の参加者）。ログイン必須（design-v2 §6-2）。
+ * ダッシュボードの「参加中のロビー」「下書きのロビー」がこれを使う。
+ */
+export async function listMyLobbies(): Promise<LobbyListItemModel[]> {
+  const dto = (await apiRequest<LobbyListItem[]>('/api/me/lobbies'))!;
+  return dto.map(toLobbyListItemModel);
+}
+
+/** 公開かつ受付中のロビー。未ログインでも取得できる（design-v2 §6-2）。 */
+export async function listPublicLobbies(): Promise<LobbyListItemModel[]> {
   const dto = (await apiRequest<LobbyListItem[]>('/api/lobbies'))!;
   return dto.map(toLobbyListItemModel);
 }

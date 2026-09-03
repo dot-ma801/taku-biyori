@@ -348,8 +348,13 @@ model 側で引き受けること。
 - 日付のみの値（`YYYY-MM-DD`）は `Date` にしない。タイムゾーンで日付がずれるため文字列のまま持つ
 - 表示用のフォールバック文言（`'未設定'` など）は UI の関心事なので model に入れない
 - 変換関数（`toXxxModel()`）には**テストを先に書く**
-- **enum・`*Input` 型・権限関数・ステータス導出関数は shared から直接 import してよい。**
+- **enum・権限関数・ステータス導出関数は shared から直接 import してよい。**
   これらは通信契約ではなく、FE と BE が同じ規則で動くための共有定義そのもの
+- **`*Input` 型は「送るリクエストの形」そのもの（DTO）なので、DTO 境界の内側に置く。**
+  composable / component から直接 import してはいけない
+  （`UpdateGameSessionPlayMemoVisibilityInput` などは、サーバ側のルートが HTTP の JSON を
+  parse するのに使っている型そのもの）。例外は「送る形の下書きを組み立てるユーティリティ」だけで、
+  現状は `utils/pendingCandidateDates.ts` が `LobbyCandidateDateInput` を持つ1件のみ
 - 参考: `src/models/lobby.ts` / `src/models/lobby.test.ts`
 
 ### template 内の式は computed に切り出す

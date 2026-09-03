@@ -15,9 +15,12 @@ const seat: Seat = {
   seatedAt: '2026-08-30T10:00:00.000Z',
 };
 
+const LOBBY = 'lobby-1';
+
 const makeRepo = (
   overrides: Partial<CharacterAssignmentRepository> = {},
 ): CharacterAssignmentRepository => ({
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY),
   findHostUserId: vi.fn().mockResolvedValue(HOST),
   findStatusFields: vi.fn().mockResolvedValue({
     scheduledAt: '2026-09-01',
@@ -37,6 +40,7 @@ describe('updateCharacterAssignment', () => {
     const repo = makeRepo();
     const result = await updateCharacterAssignment(
       repo,
+      LOBBY,
       'session-1',
       'seat-1',
       OWNER,
@@ -48,6 +52,7 @@ describe('updateCharacterAssignment', () => {
   it('ホストも他人の席を更新できる', async () => {
     const result = await updateCharacterAssignment(
       makeRepo(),
+      LOBBY,
       'session-1',
       'seat-1',
       HOST,
@@ -59,6 +64,7 @@ describe('updateCharacterAssignment', () => {
   it('本人でもホストでもなければ forbidden を返す', async () => {
     const result = await updateCharacterAssignment(
       makeRepo(),
+      LOBBY,
       'session-1',
       'seat-1',
       'user-9',
@@ -77,12 +83,45 @@ describe('updateCharacterAssignment', () => {
     });
     const result = await updateCharacterAssignment(
       repo,
+      LOBBY,
       'session-1',
       'seat-1',
       OWNER,
       { characterName: 'x' },
     );
     expect(result).toEqual({ type: 'invalidStatus' });
+  });
+
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateCharacterAssignment(
+      repo,
+      'lobby-other',
+      'session-1',
+      'seat-1',
+      OWNER,
+      { characterName: 'x' },
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.updateSeatCharacterName).not.toHaveBeenCalled();
+  });
+
+  it('開催が無ければ notFound を返す', async () => {
+    const repo = makeRepo({ findLobbyId: vi.fn().mockResolvedValue(null) });
+    const result = await updateCharacterAssignment(
+      repo,
+      LOBBY,
+      'session-1',
+      'seat-1',
+      OWNER,
+      { characterName: 'x' },
+    );
+    expect(result).toEqual({ type: 'notFound' });
   });
 
   it('別セッションの席なら notFound を返す', async () => {
@@ -94,6 +133,7 @@ describe('updateCharacterAssignment', () => {
     });
     const result = await updateCharacterAssignment(
       repo,
+      LOBBY,
       'session-1',
       'seat-1',
       OWNER,

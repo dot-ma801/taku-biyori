@@ -1,6 +1,7 @@
 import type {
   CreateGameSessionInput,
   CreateSeatInput,
+  UpdateSeatInput,
   GameSessionListItem,
   UpdateGameSessionInput,
   UpdateGameSessionPlayMemoVisibilityInput,
@@ -82,10 +83,11 @@ export interface GameSessionUseCases {
     input: CreateSeatInput,
   ): Promise<CreateSeatResult>;
   updateCharacterAssignment(
+    lobbyId: string,
     gameSessionId: string,
     seatId: string,
     userId: string,
-    characterName: string | null,
+    input: UpdateSeatInput,
   ): Promise<
     import('@/game-session/application/update-character-assignment').UpdateCharacterAssignmentResult
   >;
@@ -135,10 +137,15 @@ export const createGameSessionUseCases = (
     listSeats(repo, lobbyId, gameSessionId, userId),
   createSeat: (lobbyId, gameSessionId, userId, input) =>
     createSeat(repo, lobbyId, gameSessionId, userId, input),
-  updateCharacterAssignment: (gameSessionId, seatId, userId, characterName) =>
-    updateCharacterAssignment(repo, gameSessionId, seatId, userId, {
-      characterName,
-    }),
+  updateCharacterAssignment: (lobbyId, gameSessionId, seatId, userId, input) =>
+    updateCharacterAssignment(
+      repo,
+      lobbyId,
+      gameSessionId,
+      seatId,
+      userId,
+      input,
+    ),
   deleteSeat: (lobbyId, gameSessionId, seatId, userId) =>
     deleteSeat(repo, lobbyId, gameSessionId, seatId, userId),
   getMyPlayMemo: (gameSessionId, userId) =>

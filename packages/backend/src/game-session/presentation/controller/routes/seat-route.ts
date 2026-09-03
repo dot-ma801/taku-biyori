@@ -1,8 +1,8 @@
-import type { Context, Hono } from 'hono';
-import type { CreateSeatInput } from '@taku-biyori/shared';
+import type { Hono } from 'hono';
+import type { CreateSeatInput, UpdateSeatInput } from '@taku-biyori/shared';
 import {
   CreateSeatInputSchema,
-  CharacterAssignmentInputSchema,
+  UpdateSeatInputSchema,
 } from '@taku-biyori/shared';
 import type { ListSeatsResult } from '@/game-session/application/list-seats';
 import type { CreateSeatResult } from '@/game-session/application/create-seat';
@@ -23,10 +23,11 @@ export interface RegisterSeatRouteOptions {
     input: CreateSeatInput,
   ) => Promise<CreateSeatResult>;
   updateCharacterAssignment: (
+    lobbyId: string,
     gameSessionId: string,
     seatId: string,
     userId: string,
-    characterName: string | null,
+    input: UpdateSeatInput,
   ) => Promise<UpdateCharacterAssignmentResult>;
   deleteSeat: (
     lobbyId: string,
@@ -48,41 +49,37 @@ export const registerSeatRoute = (
   app: Hono,
   options: RegisterSeatRouteOptions,
 ): void => {
-  // CharacterAssignment の専用経路（#116）。Seat 更新経路と同じ認可・状態判定を共有する。
-  const updateCharacter = async (c: Context, characterName: string | null) => {
+  // キャラクター名の割り当て・解除（#116）。`characterName: null` が解除で、
+  // `.../:seatId/character` のようなサブリソースは作らない（design-v2 §6-11）
+  app.patch(`${BASE}/:seatId`, async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     if (!authSession) return c.json({ error: 'Unauthorized' }, 401);
-    const gameSessionId = c.req.param('id');
-    const seatId = c.req.param('seatId');
-    if (gameSessionId === undefined || seatId === undefined) {
-      return c.json({ error: 'Not Found' }, 404);
-    }
-    const result = await options.updateCharacterAssignment(
-      gameSessionId,
-      seatId,
-      authSession.user.id,
-      characterName,
-    );
-    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
-    if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
-    if (result.type === 'invalidStatus')
-      return c.json({ error: 'Game session is cancelled' }, 422);
-    return c.json(result.seat);
-  };
-  app.put(`${BASE}/:seatId/character`, async (c) => {
+
     let body: unknown;
     try {
       body = await c.req.json();
     } catch {
       return c.json({ error: 'Invalid JSON' }, 400);
     }
-    const parsed = CharacterAssignmentInputSchema.safeParse(body);
+
+    const parsed = UpdateSeatInputSchema.safeParse(body);
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
-    return updateCharacter(c, parsed.data.characterName);
+
+    const result = await options.updateCharacterAssignment(
+      c.req.param('lobbyId'),
+      c.req.param('id'),
+      c.req.param('seatId'),
+      authSession.user.id,
+      parsed.data,
+    );
+
+    if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
+    if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+    if (result.type === 'invalidStatus') {
+      return c.json({ error: 'Game session is cancelled' }, 422);
+    }
+    return c.json(result.seat);
   });
-  app.delete(`${BASE}/:seatId/character`, async (c) =>
-    updateCharacter(c, null),
-  );
 
   app.get(BASE, async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);

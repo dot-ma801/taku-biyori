@@ -154,36 +154,42 @@ export async function createSeat(
   return toSeatModel(dto);
 }
 
-/** キャラクター名の割り当て・解除。`null` で解除する。本人またはホスト */
-/** CharacterAssignment 専用 API。 */
-export async function assignCharacter(
+/**
+ * 着席を更新する。更新できるのはキャラクター名だけで、`null` が解除を表す。
+ * 本人またはホストが操作できる（design-v2 §6-11）。
+ *
+ * 実体は `character_assignments` に分かれているが、API から見た更新対象は Seat のまま。
+ * `.../seats/:seatId/character` のようなサブリソースは持たない。
+ */
+function updateSeat(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+  characterName: string | null,
+): Promise<SeatModel> {
+  return apiRequest<Seat>(`${seatsPath(lobbyId, gameSessionId)}/${seatId}`, {
+    method: 'PATCH',
+    body: { characterName },
+  }).then((dto) => toSeatModel(dto!));
+}
+
+/** キャラクター名を割り当てる。本人またはホスト */
+export function assignCharacter(
   lobbyId: string,
   gameSessionId: string,
   seatId: string,
   characterName: string,
 ): Promise<SeatModel> {
-  const dto = (await apiRequest<Seat>(
-    `${seatsPath(lobbyId, gameSessionId)}/${seatId}/character`,
-    {
-      method: 'PUT',
-      body: { characterName },
-    },
-  ))!;
-  return toSeatModel(dto);
+  return updateSeat(lobbyId, gameSessionId, seatId, characterName);
 }
 
-export async function unassignCharacter(
+/** キャラクター名の割り当てを解除する。未割り当てでも成功する（冪等） */
+export function unassignCharacter(
   lobbyId: string,
   gameSessionId: string,
   seatId: string,
 ): Promise<SeatModel> {
-  const dto = (await apiRequest<Seat>(
-    `${seatsPath(lobbyId, gameSessionId)}/${seatId}/character`,
-    {
-      method: 'DELETE',
-    },
-  ))!;
-  return toSeatModel(dto);
+  return updateSeat(lobbyId, gameSessionId, seatId, null);
 }
 
 /** 離席。本人またはホスト */

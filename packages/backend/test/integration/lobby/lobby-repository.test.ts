@@ -77,7 +77,7 @@ describe('findByUserId', () => {
     });
   });
 
-  it('未参加でも公開・受付中のロビーは含まれる（探索用）', async () => {
+  it('未参加なら公開・受付中のロビーでも含まれない（探索は findPublic の担当）', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -92,13 +92,11 @@ describe('findByUserId', () => {
       const rows = await repo.findByUserId(stranger.id);
 
       // Assert
-      const row = rows.find((r) => r.id === lobbyId);
-      expect(row).toBeDefined();
-      expect(row?.entries.some((e) => e.userId === stranger.id)).toBe(false);
+      expect(rows.find((row) => row.id === lobbyId)).toBeUndefined();
     });
   });
 
-  it('未公開・未参加の募集枠は含まれない', async () => {
+  it('未公開・未参加のロビーは含まれない', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -114,26 +112,29 @@ describe('findByUserId', () => {
     });
   });
 
-  it('締め切りを過ぎた公開募集枠は未参加ユーザーには含まれない', async () => {
+  it('脱退済みの参加者には含まれない', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const stranger = await insertUser(db);
+      const member = await insertUser(db);
       const lobbyId = await insertLobby(db, host.id, {
         publishedAt: new Date(),
-        openUntil: '2000-01-01',
+      });
+      await insertLobbyEntry(db, lobbyId, {
+        userId: member.id,
+        leftAt: new Date(),
       });
       const repo = createLobbyRepository(db);
 
       // Act
-      const rows = await repo.findByUserId(stranger.id);
+      const rows = await repo.findByUserId(member.id);
 
       // Assert
       expect(rows.find((row) => row.id === lobbyId)).toBeUndefined();
     });
   });
 
-  it('締め切りを過ぎていてもホスト自身の募集枠は含まれる', async () => {
+  it('締め切りを過ぎていてもホスト自身のロビーは含まれる', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -172,6 +173,121 @@ describe('findByUserId', () => {
       expect(rows.find((row) => row.id === draftId)?.status).toBe(
         LobbyStatus.draft,
       );
+    });
+  });
+});
+
+describe('findPublic', () => {
+  it('公開かつ受付中のロビーを参加者つきで返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        title: '公開ロビー',
+        publishedAt: new Date(),
+        openUntil: null,
+      });
+      await insertLobbyEntry(db, lobbyId, { userId: host.id });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rows = await repo.findPublic();
+
+      // Assert
+      const row = rows.find((r) => r.id === lobbyId);
+      expect(row).toMatchObject({
+        title: '公開ロビー',
+        status: LobbyStatus.open,
+        hostUserId: host.id,
+      });
+      expect(row?.entries.map((e) => e.userId)).toContain(host.id);
+    });
+  });
+
+  it('下書きのロビーは含まれない', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, { publishedAt: null });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rows = await repo.findPublic();
+
+      // Assert
+      expect(rows.find((row) => row.id === lobbyId)).toBeUndefined();
+    });
+  });
+
+  it('解散済みのロビーは含まれない', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        disbandedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rows = await repo.findPublic();
+
+      // Assert
+      expect(rows.find((row) => row.id === lobbyId)).toBeUndefined();
+    });
+  });
+
+  it('手動で受付を閉じたロビーは含まれない', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        receptionClosedAt: new Date(),
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rows = await repo.findPublic();
+
+      // Assert
+      expect(rows.find((row) => row.id === lobbyId)).toBeUndefined();
+    });
+  });
+
+  it('締め切り日を過ぎたロビーは含まれない', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        openUntil: '2000-01-01',
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rows = await repo.findPublic();
+
+      // Assert
+      expect(rows.find((row) => row.id === lobbyId)).toBeUndefined();
+    });
+  });
+
+  it('ホスト自身のロビーでも公開・受付中なら含まれる（自分の分は呼び出し側が除く）', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id, {
+        publishedAt: new Date(),
+        openUntil: null,
+      });
+      const repo = createLobbyRepository(db);
+
+      // Act
+      const rows = await repo.findPublic();
+
+      // Assert
+      expect(rows.find((row) => row.id === lobbyId)?.hostUserId).toBe(host.id);
     });
   });
 });

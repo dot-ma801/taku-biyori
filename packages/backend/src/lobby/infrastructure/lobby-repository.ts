@@ -39,7 +39,8 @@ import {
 import { user } from '@/system/infrastructure/database/schema';
 import { gameSessions } from '@/system/infrastructure/database/game-session-schema';
 import type { CandidateDateDiff } from '@/lobby/domain/candidate-date-diff';
-import type { ListLobbiesRepository } from '@/lobby/application/list-lobbies';
+import type { ListMyLobbiesRepository } from '@/lobby/application/list-my-lobbies';
+import type { ListPublicLobbiesRepository } from '@/lobby/application/list-public-lobbies';
 import type { CreateLobbyRepository } from '@/lobby/application/create-lobby';
 import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyRepository } from '@/lobby/application/update-lobby';
@@ -58,7 +59,8 @@ import type { ReplaceCandidateDatesRepository } from '@/lobby/application/replac
 import type { UpsertScheduleAnswersRepository } from '@/lobby/application/upsert-schedule-answers';
 import type { UpsertGuestScheduleAnswersRepository } from '@/lobby/application/upsert-guest-schedule-answers';
 
-export type LobbyRepository = ListLobbiesRepository &
+export type LobbyRepository = ListMyLobbiesRepository &
+  ListPublicLobbiesRepository &
   CreateLobbyRepository &
   GetLobbyRepository &
   UpdateLobbyRepository &
@@ -165,6 +167,51 @@ const sortEntries = (entries: LobbyEntry[], hostUserId: string): LobbyEntry[] =>
     return a.joinedAt.localeCompare(b.joinedAt);
   });
 
+/**
+ * 取得済みのロビー行に参加者をぶら下げて `LobbyListItem[]` に変換する。
+ * 一覧系（`findByUserId` / `findPublic`）で共通の後処理。
+ */
+const hydrateListItems = async (
+  db: Database,
+  rows: LobbyRow[],
+): Promise<LobbyListItem[]> => {
+  if (rows.length === 0) return [];
+
+  const entryRows = await db
+    .select({
+      lobbyId: lobbyEntries.lobbyId,
+      id: lobbyEntries.id,
+      userId: lobbyEntries.userId,
+      userName: user.name,
+      guestName: lobbyEntries.guestName,
+      createdAt: lobbyEntries.createdAt,
+      leftAt: lobbyEntries.leftAt,
+    })
+    .from(lobbyEntries)
+    .leftJoin(user, eq(user.id, lobbyEntries.userId))
+    .where(
+      inArray(
+        lobbyEntries.lobbyId,
+        rows.map((r) => r.id),
+      ),
+    )
+    .orderBy(asc(lobbyEntries.createdAt));
+
+  const entriesByLobby = new Map<string, LobbyEntry[]>();
+  for (const row of entryRows) {
+    const list = entriesByLobby.get(row.lobbyId) ?? [];
+    list.push(toEntry(row));
+    entriesByLobby.set(row.lobbyId, list);
+  }
+
+  return rows.map((row) =>
+    toListItem(
+      row,
+      sortEntries(entriesByLobby.get(row.id) ?? [], row.hostUserId),
+    ),
+  );
+};
+
 export const createLobbyRepository = (db: Database): LobbyRepository => ({
   async findByUserId(userId: string): Promise<LobbyListItem[]> {
     const rows = await db
@@ -185,54 +232,31 @@ export const createLobbyRepository = (db: Database): LobbyRepository => ({
                 ),
               ),
           ),
-          // 公開かつ受付中のロビーは、参加していなくても一覧に出す（探索用）
-          and(
-            isNotNull(lobbies.publishedAt),
-            isNull(lobbies.disbandedAt),
-            isNull(lobbies.receptionClosedAt),
-            or(
-              isNull(lobbies.openUntil),
-              sql`${lobbies.openUntil} >= CURRENT_DATE`,
-            ),
+        ),
+      );
+
+    return hydrateListItems(db, rows);
+  },
+
+  async findPublic(): Promise<LobbyListItem[]> {
+    // 「公開かつステータスが open」の条件をそのまま SQL に落とす（design-v2 §4-1）。
+    // 受付終了・解散・締め切り超過はここで弾くので、呼び出し側の絞り込みは要らない。
+    const rows = await db
+      .select(getTableColumns(lobbies))
+      .from(lobbies)
+      .where(
+        and(
+          isNotNull(lobbies.publishedAt),
+          isNull(lobbies.disbandedAt),
+          isNull(lobbies.receptionClosedAt),
+          or(
+            isNull(lobbies.openUntil),
+            sql`${lobbies.openUntil} >= CURRENT_DATE`,
           ),
         ),
       );
 
-    if (rows.length === 0) return [];
-
-    const entryRows = await db
-      .select({
-        lobbyId: lobbyEntries.lobbyId,
-        id: lobbyEntries.id,
-        userId: lobbyEntries.userId,
-        userName: user.name,
-        guestName: lobbyEntries.guestName,
-        createdAt: lobbyEntries.createdAt,
-        leftAt: lobbyEntries.leftAt,
-      })
-      .from(lobbyEntries)
-      .leftJoin(user, eq(user.id, lobbyEntries.userId))
-      .where(
-        inArray(
-          lobbyEntries.lobbyId,
-          rows.map((r) => r.id),
-        ),
-      )
-      .orderBy(asc(lobbyEntries.createdAt));
-
-    const entriesByLobby = new Map<string, LobbyEntry[]>();
-    for (const row of entryRows) {
-      const list = entriesByLobby.get(row.lobbyId) ?? [];
-      list.push(toEntry(row));
-      entriesByLobby.set(row.lobbyId, list);
-    }
-
-    return rows.map((row) =>
-      toListItem(
-        row,
-        sortEntries(entriesByLobby.get(row.id) ?? [], row.hostUserId),
-      ),
-    );
+    return hydrateListItems(db, rows);
   },
 
   async findHostUserId(id: string): Promise<string | null> {

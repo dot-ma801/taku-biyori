@@ -6,7 +6,7 @@ import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
-import type { ScheduleMode } from '@/features/Lobby/Edit/composables/scheduleMode';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
 import { computed } from 'vue';
 
 const props = defineProps<{

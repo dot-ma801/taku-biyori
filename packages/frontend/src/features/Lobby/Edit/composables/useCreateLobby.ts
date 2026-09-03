@@ -14,7 +14,7 @@ import {
   getPendingTimeLabelErrors,
   toCandidateDateInputs,
 } from '@/utils/pendingCandidateDates';
-import type { ScheduleMode } from '@/features/Lobby/Edit/composables/scheduleMode';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
 
 export const useCreateLobby = () => {
   const router = useRouter();

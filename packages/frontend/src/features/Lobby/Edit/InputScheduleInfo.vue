@@ -13,8 +13,8 @@ import {
   getTimeLabelError,
   syncPendingDates,
 } from '@/utils/pendingCandidateDates';
-import type { ScheduleMode } from '@/features/Lobby/Edit/composables/scheduleMode';
-import { SCHEDULE_MODE_OPTIONS } from '@/features/Lobby/Edit/composables/scheduleMode';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
+import { SCHEDULE_MODE_OPTIONS } from '@/features/Lobby/Edit/composables/schedule-mode';
 import { computed } from 'vue';
 
 const openUntil = defineModel<string>('openUntil', { default: '' });

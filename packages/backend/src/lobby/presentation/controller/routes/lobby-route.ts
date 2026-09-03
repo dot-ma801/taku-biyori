@@ -18,7 +18,8 @@ import type { UpdateLobbyStatusResult } from '@/lobby/application/update-lobby-s
 
 export interface RegisterLobbyRouteOptions {
   getSession: (headers: Headers) => Promise<{ user: { id: string } } | null>;
-  listLobbies: (userId: string) => Promise<LobbyListItem[]>;
+  listMyLobbies: (userId: string) => Promise<LobbyListItem[]>;
+  listPublicLobbies: () => Promise<LobbyListItem[]>;
   createLobby: (userId: string, input: CreateLobbyInput) => Promise<Lobby>;
   getLobby: (id: string, userId: string | null) => Promise<GetLobbyResult>;
   updateLobby: (
@@ -38,12 +39,20 @@ export const registerLobbyRoute = (
   app: Hono,
   options: RegisterLobbyRouteOptions,
 ): void => {
-  app.get('/api/lobbies', async (c) => {
+  // 自分のロビー（ホスト or 在籍中の参加者）。ダッシュボードの4セクションが使う。
+  // `/api/lobbies/me` にしないのは `me` が ID の位置に来るため（design-v2 §6-2）。
+  app.get('/api/me/lobbies', async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     if (!authSession) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
-    const lobbies = await options.listLobbies(authSession.user.id);
+    const lobbies = await options.listMyLobbies(authSession.user.id);
+    return c.json(lobbies);
+  });
+
+  // 公開ロビーの探索。未参加の人が遊べるロビーを探すための一覧なので未ログインでも開く。
+  app.get('/api/lobbies', async (c) => {
+    const lobbies = await options.listPublicLobbies();
     return c.json(lobbies);
   });
 

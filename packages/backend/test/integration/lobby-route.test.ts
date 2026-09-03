@@ -118,8 +118,10 @@ const makeApp = (
   } = {},
 ) => {
   const lobby: LobbyUseCases = {
-    listLobbies:
-      overrides.listLobbies ?? vi.fn().mockResolvedValue([mockListItem]),
+    listMyLobbies:
+      overrides.listMyLobbies ?? vi.fn().mockResolvedValue([mockListItem]),
+    listPublicLobbies:
+      overrides.listPublicLobbies ?? vi.fn().mockResolvedValue([mockListItem]),
     createLobby: overrides.createLobby ?? vi.fn().mockResolvedValue(mockLobby),
     getLobby: overrides.getLobby ?? vi.fn().mockResolvedValue(mockGetOk),
     updateLobby:
@@ -179,13 +181,13 @@ const makeApp = (
   });
 };
 
-describe('GET /api/lobbies', () => {
-  it('認証済みなら 200 で募集枠一覧を返す', async () => {
+describe('GET /api/me/lobbies', () => {
+  it('認証済みなら 200 で自分のロビー一覧を返す', async () => {
     // Arrange
     const app = makeApp();
 
     // Act
-    const response = await app.request('/api/lobbies');
+    const response = await app.request('/api/me/lobbies');
     const body = await response.json();
 
     // Assert
@@ -198,7 +200,7 @@ describe('GET /api/lobbies', () => {
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const response = await app.request('/api/lobbies');
+    const response = await app.request('/api/me/lobbies');
 
     // Assert
     expect(response.status).toBe(401);
@@ -206,14 +208,54 @@ describe('GET /api/lobbies', () => {
 
   it('userId をユースケースに渡す', async () => {
     // Arrange
-    const listLobbies = vi.fn().mockResolvedValue([]);
-    const app = makeApp({ listLobbies });
+    const listMyLobbies = vi.fn().mockResolvedValue([]);
+    const app = makeApp({ listMyLobbies });
+
+    // Act
+    await app.request('/api/me/lobbies');
+
+    // Assert
+    expect(listMyLobbies).toHaveBeenCalledWith('user-1');
+  });
+});
+
+describe('GET /api/lobbies', () => {
+  it('200 で公開ロビー一覧を返す', async () => {
+    // Arrange
+    const app = makeApp();
+
+    // Act
+    const response = await app.request('/api/lobbies');
+    const body = await response.json();
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(body).toEqual([mockListItem]);
+  });
+
+  it('未認証でも 200 を返す（探索用なのでログイン不要）', async () => {
+    // Arrange
+    const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
+
+    // Act
+    const response = await app.request('/api/lobbies');
+
+    // Assert
+    expect(response.status).toBe(200);
+  });
+
+  it('自分のロビーのユースケースは呼ばない', async () => {
+    // Arrange
+    const listMyLobbies = vi.fn().mockResolvedValue([]);
+    const listPublicLobbies = vi.fn().mockResolvedValue([]);
+    const app = makeApp({ listMyLobbies, listPublicLobbies });
 
     // Act
     await app.request('/api/lobbies');
 
     // Assert
-    expect(listLobbies).toHaveBeenCalledWith('user-1');
+    expect(listPublicLobbies).toHaveBeenCalledWith();
+    expect(listMyLobbies).not.toHaveBeenCalled();
   });
 });
 

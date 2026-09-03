@@ -36,7 +36,7 @@ export const useMyPlayMemo = (
    * 自分のメンバー行。
    *
    * ゲストは `userId = null` で登録されるため、認証ユーザー ID での検索には
-   * 構造上ヒットしない。「ログイン済み」「その卓のメンバー」「ゲストでない」の
+   * 構造上ヒットしない。「ログイン済み」「その開催のメンバー」「ゲストでない」の
    * 3条件がこの1つの検索で同時に満たされる（design-v1.2 §4）。
    */
   const myMember = computed(() => {
@@ -45,7 +45,7 @@ export const useMyPlayMemo = (
     return toValue(gameSession)?.seats.find((m) => m.userId === userId);
   });
 
-  /** メモ機能の対象者か（ログイン済みかつその卓のメンバー） */
+  /** メモ機能の対象者か（ログイン済みかつその開催のメンバー） */
   const isMyMemo = computed(() => !!myMember.value);
 
   /** ログイン導線を出すか。未ログインとゲストは同じ枝に落ちる */
@@ -74,13 +74,13 @@ export const useMyPlayMemo = (
   /**
    * 自分のメモを取得する。
    *
-   * 卓詳細は requiresAuth ではなくルートガードがセッション復元を待たないため、
+   * 開催の詳細は requiresAuth ではなくルートガードがセッション復元を待たないため、
    * 判定の前に復元の完了を待つ（待たないとマウント直後は常に非メンバー扱いになる）。
    * 非メンバーには通信しない（403 を出し続けないため）。
    */
   async function fetch() {
     // 通信を始める前から loading を立てる。ensureSessionReady() の後に立てると、
-    // 「卓が届いた直後・まだ通信を始めていない」区間で loading === false かつ
+    // 「開催が届いた直後・まだ通信を始めていない」区間で loading === false かつ
     // playMemo === null になる窓ができ、PlayMemoView の loadFailed（読み込み
     // 失敗 UI）が通信前から誤表示され得る。
     loading.value = true;
@@ -95,7 +95,7 @@ export const useMyPlayMemo = (
       playMemo.value = await getMyPlayMemo(lobbyId, gameSessionId);
     } catch {
       // 退出直後の 403 や通信エラー。トーストは出さずセクションを閉じる
-      // （メモは卓詳細の主目的ではないため、失敗を前面に出さない）
+      // （メモは開催の詳細の主目的ではないため、失敗を前面に出さない）
       playMemo.value = null;
     } finally {
       loading.value = false;
@@ -115,7 +115,7 @@ export const useMyPlayMemo = (
   /**
    * 公開・非公開を切り替えられるか。
    *
-   * 本文の編集可否（canEditBody）とは独立で、完了・中止した卓でも切り替えられる
+   * 本文の編集可否（canEditBody）とは独立で、完了・中止した開催でも切り替えられる
    * （design-v1.2 §4）。ただし本文を一度も保存していないメモは API が 404 を
    * 返すため、`updatedAt` が null の間は切り替えさせない。
    */
@@ -165,16 +165,16 @@ export const useMyPlayMemo = (
   }
 
   // 「自分がメモを持てる相手になったか（isMyMemo）」を監視して取得する。
-  // 卓詳細（マウント時には取得済み）とメモ画面（後から届く）のどちらの
+  // 開催の詳細（マウント時には取得済み）とメモ画面（後から届く）のどちらの
   // 順序でも動くよう、値の到着を watch で待つ。
   //
-  // 「卓が届いたか」ではなく isMyMemo を監視するのがポイント。卓詳細で
+  // 「開催が届いたか」ではなく isMyMemo を監視するのがポイント。開催の詳細で
   // 「参加する」を実行した直後は gameSession はすでに届いているため、
   // gameSession の到着だけを監視すると再取得のトリガーがない。isMyMemo は
   // 参加で members が更新されて非メンバー→メンバーに変わったときに
   // true になるので、そのタイミングで再取得できる。
   // watch は値が実際に変化したときだけ発火するため、isMyMemo が true の
-  // まま卓が再取得されても余計な二重取得は起きない（明示的な抑制フラグは不要）。
+  // まま開催が再取得されても余計な二重取得は起きない（明示的な抑制フラグは不要）。
   watch(
     isMyMemo,
     (isMine) => {

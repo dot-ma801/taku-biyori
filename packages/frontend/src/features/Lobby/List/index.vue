@@ -12,7 +12,7 @@ import { useRouter } from 'vue-router';
 const props = defineProps<{
   title?: string;
   statuses?: LobbyStatus[];
-  /** 該当募集枠が1件も無いときにセクションごと描画しない */
+  /** 該当ロビーが1件も無いときにセクションごと描画しない */
   hideWhenEmpty?: boolean;
   /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
   hideCreateButton?: boolean;

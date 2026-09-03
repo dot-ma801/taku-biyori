@@ -145,7 +145,7 @@ describe('canViewShared', () => {
     },
   );
 
-  it('卓がまだ読み込まれていなければ false', () => {
+  it('開催がまだ読み込まれていなければ false', () => {
     // Arrange & Act
     const { canViewShared } = setup(null);
 
@@ -176,7 +176,7 @@ describe('自動取得', () => {
     },
   );
 
-  it('卓が後から届いても、完了していれば取得する', async () => {
+  it('開催が後から届いても、完了していれば取得する', async () => {
     // Arrange
     const { gameSession } = setupWithGameSessionRef(null);
     await flushPromises();
@@ -190,7 +190,7 @@ describe('自動取得', () => {
     expect(listSharedPlayMemos).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 
-  it('取得に失敗したら空のまま（非公開卓の 403 でも画面を壊さない）', async () => {
+  it('取得に失敗したら空のまま（非公開の開催の 403 でも画面を壊さない）', async () => {
     // Arrange
     vi.mocked(listSharedPlayMemos).mockRejectedValue(new Error('Forbidden'));
 
@@ -225,7 +225,7 @@ describe('自動取得', () => {
 });
 
 describe('entries', () => {
-  it('参加メンバー全員が卓の並び順で並ぶ', async () => {
+  it('着席者全員が開催の並び順で並ぶ', async () => {
     // Arrange & Act
     const { entries } = setup();
     await flushPromises();
@@ -360,7 +360,7 @@ describe('entries', () => {
     });
   });
 
-  it('sharedEntries は公開しているメンバーだけを卓の並び順で返す', async () => {
+  it('sharedEntries は公開しているメンバーだけを開催の並び順で返す', async () => {
     // Arrange & Act
     const { sharedEntries } = setup();
     await flushPromises();
@@ -384,7 +384,7 @@ describe('entries', () => {
     expect(sharedEntries.value).toEqual([]);
   });
 
-  it('卓がまだ読み込まれていなければ空', () => {
+  it('開催がまだ読み込まれていなければ空', () => {
     // Arrange & Act
     const { entries } = setup(null);
 

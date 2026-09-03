@@ -56,7 +56,7 @@ const onConfirmRemove = () => {
 <template>
   <BaseCard>
     <BaseSectionHeading class="header" level="h3" :icon="UsersRound">
-      参加メンバー
+      参加者
     </BaseSectionHeading>
 
     <div

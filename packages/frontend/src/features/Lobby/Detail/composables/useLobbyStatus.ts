@@ -40,7 +40,7 @@ export const useLobbyStatus = (
   /** ステータス遷移（公開・解散）処理中かどうか */
   const loading = ref(false);
 
-  /** ログインユーザーがこの募集枠のホストか */
+  /** ログインユーザーがこのロビーのホストか */
   const isHost = computed(() => {
     const current = toValue(lobby);
     return !!current && current.hostUserId === authStore.currentUser?.id;

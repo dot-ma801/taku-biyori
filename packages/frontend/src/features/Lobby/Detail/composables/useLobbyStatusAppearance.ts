@@ -18,13 +18,13 @@ export type StatusAppearance = {
 
 const STATUS_APPEARANCE: Record<LobbyStatus, StatusAppearance> = {
   [LobbyStatus.draft]: {
-    label: '非公開',
+    label: '下書き',
     text: 'まだ公開していません。準備ができたら公開しましょう。',
     variant: 'default',
     icon: EyeOff,
   },
   [LobbyStatus.open]: {
-    label: '募集中',
+    label: '受付中',
     text: '参加者を募集しています。',
     variant: 'primary',
     icon: Megaphone,

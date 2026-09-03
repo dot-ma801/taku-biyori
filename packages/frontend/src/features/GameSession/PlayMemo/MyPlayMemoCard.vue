@@ -97,7 +97,7 @@ const readingEmptyMessage = computed(() => {
   if (!isResolved.value) return '読み込み中...';
   return hasBody.value
     ? 'メモを公開すると、ほかのメンバーが読めるようになります。'
-    : 'この卓のメモはまだ誰も公開していません。';
+    : 'この開催のメモはまだ誰も公開していません。';
 });
 </script>
 

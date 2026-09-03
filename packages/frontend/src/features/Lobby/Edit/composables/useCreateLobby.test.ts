@@ -25,7 +25,7 @@ import type { LobbyDetailModel } from '@/models/lobby';
 
 const mockLobby: LobbyModel = {
   id: 'lobby-1',
-  title: 'テスト募集枠',
+  title: 'テストロビー',
   description: null,
   scenarioName: null,
   location: null,
@@ -73,7 +73,7 @@ describe('useCreateLobby', () => {
     it('候補日が0件でも送信できる', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [];
 
       // Act
@@ -90,7 +90,7 @@ describe('useCreateLobby', () => {
     it('ひとことが上限を超えていたら送信をブロックする', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [
         { date: '2025-05-01', timeLabel: 'あ'.repeat(21) },
         { date: '2025-05-02', timeLabel: '午後から' },
@@ -109,7 +109,7 @@ describe('useCreateLobby', () => {
     it('候補日が1件以上あれば candidateDates として送信する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [
         { date: '2025-05-01', timeLabel: '' },
         { date: '2025-05-02', timeLabel: '' },
@@ -132,7 +132,7 @@ describe('useCreateLobby', () => {
     it('候補日ごとのひとことを正規化して送信する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [
         { date: '2025-05-01', timeLabel: '  13:00〜17:00  ' },
         { date: '2025-05-02', timeLabel: '' },
@@ -195,7 +195,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, maxMembers, pendingDates, errorMessages, submit } =
         useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '1';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
@@ -213,7 +213,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, maxMembers, pendingDates, errorMessages, submit } =
         useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '21';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
@@ -230,7 +230,7 @@ describe('useCreateLobby', () => {
     it('2（下限）を入力すると maxPlayers: 2 で送信する', async () => {
       // Arrange
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '2';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
@@ -246,7 +246,7 @@ describe('useCreateLobby', () => {
     it('未入力なら maxPlayers を含めずに送信する', async () => {
       // Arrange
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
@@ -264,7 +264,7 @@ describe('useCreateLobby', () => {
     it('未入力の任意項目は送信内容から除外する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
@@ -272,7 +272,7 @@ describe('useCreateLobby', () => {
 
       // Assert
       expect(createLobby).toHaveBeenCalledWith({
-        title: '募集枠',
+        title: 'ロビー',
         candidateDates: [{ date: '2025-05-01', timeLabel: null }],
       });
     });
@@ -288,7 +288,7 @@ describe('useCreateLobby', () => {
         pendingDates,
         submit,
       } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       scenarioName.value = 'シナリオ';
       description.value = '説明文';
       location.value = 'ココフォリア';
@@ -320,7 +320,7 @@ describe('useCreateLobby', () => {
       expect(errorMessages.value).not.toEqual([]);
 
       // Act
-      title.value = '募集枠';
+      title.value = 'ロビー';
       await nextTick();
 
       // Assert
@@ -349,7 +349,7 @@ describe('useCreateLobby', () => {
       // Arrange
       vi.mocked(createLobby).mockRejectedValue(new Error('network error'));
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
@@ -364,7 +364,7 @@ describe('useCreateLobby', () => {
     it('作成したロビーの詳細画面へ遷移する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act

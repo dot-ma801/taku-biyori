@@ -40,7 +40,7 @@ const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 
 /**
- * 開催は日程が確定していないと作れない（design-v2 §3-7）。
+ * 開催は日程が決まっていないと作れない（design-v2 §3-7）。
  *
  * 呼び名（title）は**この開催だけの上書き**であり、空欄ならロビーの値に追随する
  * （design-v2 §5-5）。必須にすると、上書きの無い通常の開催が日付・場所・説明を

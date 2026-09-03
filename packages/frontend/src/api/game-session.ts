@@ -79,7 +79,7 @@ export async function getGameSession(
 }
 
 /**
- * 開催を追加する（旧「卓確定」の後継）。
+ * 開催を追加する（design-v2 §5-2）。
  *
  * `scheduledAt` は候補日から選んだ日付でも直接入力でもよい。候補日 ID は送らない
  * （開催日の決定は候補日のコピーではなく新しいファクト。design-v2 §5-2）。
@@ -228,7 +228,7 @@ export async function getMyPlayMemo(
 /**
  * 自分のプレイメモの本文を保存する。
  *
- * 卓が完了・中止していると 409（ApiError.status）が返る。
+ * 開催が完了・中止していると 409（ApiError.status）が返る。
  */
 export async function upsertMyPlayMemo(
   lobbyId: string,
@@ -246,7 +246,7 @@ export async function upsertMyPlayMemo(
 /**
  * 自分のプレイメモの公開・非公開を切り替える。
  *
- * 本文の保存と違い、完了・中止した卓でも呼べる（切替はステータス非依存。design-v1.2 §4）。
+ * 本文の保存と違い、完了・中止した開催でも呼べる（切替はステータス非依存。design-v1.2 §4）。
  * 本文を一度も保存していないメモには 404 が返るため、呼び出し側は保存済みのときだけ叩く。
  */
 export async function updateMyPlayMemoVisibility(
@@ -263,11 +263,11 @@ export async function updateMyPlayMemoVisibility(
 }
 
 /**
- * 卓の公開プレイメモを一覧する。
+ * 開催の公開プレイメモを一覧する。
  *
  * 認証は不要（未ログイン・ゲストでも読める。要求 §3-4）。レスポンスは閲覧者で分岐せず、
  * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは seatId だけが返るため、
- * 表示名は卓のメンバー一覧と突き合わせて解決する。
+ * 表示名は開催の着席者一覧と突き合わせて解決する。
  */
 export async function listSharedPlayMemos(
   lobbyId: string,

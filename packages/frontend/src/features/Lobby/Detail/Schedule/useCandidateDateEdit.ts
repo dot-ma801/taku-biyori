@@ -48,7 +48,7 @@ export const useCandidateDateEdit = (
 ) => {
   const authStore = useAuthStore();
 
-  /** ログインユーザーがこの募集枠のホストか */
+  /** ログインユーザーがこのロビーのホストか */
   const isHost = computed(
     () =>
       !!authStore.currentUser &&

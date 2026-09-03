@@ -235,9 +235,9 @@ describe('useGameSessionList', () => {
       expect(nextSession.value?.id).toBe(near.id);
     });
 
-    // scheduledAt は日付のみ（時刻を持たない）ため、当日の卓は「これから開催される卓」として
-    // nextSession に含める。時刻付きの比較にすると当日の卓が開始時刻前でも脱落する。
-    it('当日の卓は nextSession に含まれる', async () => {
+    // scheduledAt は日付のみ（時刻を持たない）ため、当日の開催は「これから開催される卓」として
+    // nextSession に含める。時刻付きの比較にすると当日の開催が開始時刻前でも脱落する。
+    it('当日の開催は nextSession に含まれる', async () => {
       // Arrange
       const todaySession = makeSession({
         scheduledAt: daysFromToday(0),
@@ -255,8 +255,8 @@ describe('useGameSessionList', () => {
     });
 
     // UTC より進んだ TZ では new Date('YYYY-MM-DD')（UTC 深夜0時）が現在時刻より
-    // 前になり、当日の卓が過去と誤判定される。ローカル基準で比較していることの回帰。
-    it('UTC より進んだ TZ でも当日の卓が nextSession から脱落しない', async () => {
+    // 前になり、当日の開催が過去と誤判定される。ローカル基準で比較していることの回帰。
+    it('UTC より進んだ TZ でも当日の開催が nextSession から脱落しない', async () => {
       // Arrange
       vi.stubEnv('TZ', 'Asia/Tokyo');
       const todaySession = makeSession({
@@ -461,7 +461,7 @@ describe('useGameSessionList', () => {
       expect(filteredMySessions.value).toEqual([mySession]);
     });
 
-    // 終了した卓セクションは他人の卓を出さないため、公開セッションだけが該当する場合は
+    // 終了した卓セクションは他人の開催を出さないため、公開セッションだけが該当する場合は
     // セクションごと消える必要がある。
     it('includePublic=false のとき公開セッションだけでは hasFilteredSessions が false になる', async () => {
       // Arrange

@@ -75,11 +75,22 @@ export const useCreateLobby = () => {
 
   const isFixedMode = computed(() => scheduleMode.value === 'fixed');
 
-  // モードを切り替えたら、作りかけのロビーは入力内容と噛み合わなくなる
-  // （候補日の無いロビーを poll モードで再利用してしまう等）。作り直させる。
-  // errorMessages のクリアと同じく、切り替えの瞬間に効かせたいので flush: 'sync'
+  // ロビーに載る項目を編集したら、作りかけのロビーは入力内容と噛み合わなくなる。
+  // そのまま再送信すると編集が黙って捨てられる（作成済みロビーを使い回すため）ので、
+  // 作り直させる。モードの切り替えも同じ理由で含める
+  // （候補日の無いロビーを poll モードで再利用してしまう）。
+  // errorMessages のクリアと同じく、変更の瞬間に効かせたいので flush: 'sync'
   watch(
-    scheduleMode,
+    [
+      title,
+      scenarioName,
+      maxMembers,
+      description,
+      openUntil,
+      location,
+      pendingDates,
+      scheduleMode,
+    ],
     () => {
       createdLobby.value = null;
     },

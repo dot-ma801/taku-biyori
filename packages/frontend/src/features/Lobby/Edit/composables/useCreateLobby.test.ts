@@ -536,6 +536,28 @@ describe('useCreateLobby（日程が決まっているモード）', () => {
     expect(createGameSession).toHaveBeenCalledTimes(2);
   });
 
+  it('ロビーに載る項目を編集したら作りかけのロビーを使い回さない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+    title.value = '直したロビー名';
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: '直したロビー名' }),
+    );
+  });
+
   it('候補日モードならロビーの詳細へ遷移し開催は作らない', async () => {
     // Arrange
     const { title, submit } = useCreateLobby();

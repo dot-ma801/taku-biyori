@@ -33,15 +33,8 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('@/views/Dashboard/DashboardView.vue'),
     },
-    // 卓・ロビーの一覧ページはダッシュボードに統合した。
+    // ロビーの一覧ページはダッシュボードに統合した。
     // 404 ルートが無く未定義パスは白画面になるため、旧 URL は残してリダイレクトする。
-    { path: '/game-sessions', redirect: { name: 'dashboard' } },
-    {
-      path: '/game-sessions/new',
-      name: 'game-sessions-new',
-      component: () => import('@/views/GameSession/CreateView.vue'),
-      meta: { requiresAuth: true },
-    },
     { path: '/lobbies', redirect: { name: 'dashboard' } },
     // 開催はロビーに属するため、画面ルートも API と同じくロビー配下へ入れ子にする
     // （design-v2 §7-1）。**旧パスからのリダイレクトは作らない。**
@@ -87,7 +80,7 @@ const router = createRouter({
       component: () => import('@/views/Lobby/CreateView.vue'),
     },
     {
-      path: '/lobbies/edit/:lobbyId',
+      path: '/lobbies/:lobbyId/edit',
       name: 'lobbies-edit',
       component: () => import('@/views/Lobby/EditView.vue'),
       props: (to) => ({

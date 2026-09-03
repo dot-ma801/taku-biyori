@@ -34,10 +34,6 @@ const hasFilteredPublicLobbies = computed(
 const onClickCreate = () => {
   router.push({ name: 'lobbies-new' });
 };
-
-const onClickCreateDirect = () => {
-  router.push({ name: 'game-sessions-new' });
-};
 </script>
 
 <template>
@@ -48,17 +44,11 @@ const onClickCreateDirect = () => {
         <BaseButton :left-icon="Plus" @click="onClickCreate"
           >ロビーを作成</BaseButton
         >
-        <BaseButton variant="secondary" @click="onClickCreateDirect"
-          >直接卓を立てる</BaseButton
-        >
       </div>
     </div>
     <div v-else-if="showCreateButton" class="create-actions create-btn">
       <BaseButton :left-icon="Plus" @click="onClickCreate"
         >ロビーを作成</BaseButton
-      >
-      <BaseButton variant="secondary" @click="onClickCreateDirect"
-        >直接卓を立てる</BaseButton
       >
     </div>
     <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>

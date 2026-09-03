@@ -130,8 +130,8 @@ const visibilityDescription = computed(() => {
     return '本文を保存すると、このメモを公開できるようになります。';
   }
   return props.isShared
-    ? '開催が完了・中止したあと、ほかの人がこのメモを読めます。'
-    : 'このメモはあなただけが読めます。公開すると、開催が完了・中止したあとにほかの人も読めるようになります。';
+    ? '開催が完了・中止になったあと、ほかの人がこのメモを読めます。'
+    : 'このメモはあなただけが読めます。公開すると、開催が完了・中止になったあとにほかの人も読めるようになります。';
 });
 
 /**
@@ -217,11 +217,11 @@ onBeforeUnmount(() => {
     </div>
 
     <BaseAlert v-if="showLockedNotice" variant="warning">
-      この開催は完了・中止しました。本文の編集はここまでです。最後に保存された内容を表示しています。
+      この開催は完了・中止になりました。本文の編集はここまでです。最後に保存された内容を表示しています。
     </BaseAlert>
 
     <BaseAlert v-else-if="!props.canEditBody" variant="warning">
-      開催が完了・中止したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
+      開催が完了・中止になったため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
     </BaseAlert>
 
     <BaseAlert v-if="showFailedNotice" variant="error">
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
     />
 
     <p v-if="showEditWindowNotice" class="notice">
-      本文を書けるのは開催が完了・中止するまでです（そのあとも公開・非公開の切り替えは行えます）。
+      本文を書けるのは開催が完了・中止になるまでです（そのあとも公開・非公開の切り替えは行えます）。
     </p>
 
     <div class="foot">

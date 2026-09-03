@@ -558,6 +558,26 @@ describe('useCreateLobby（日程が決まっているモード）', () => {
     );
   });
 
+  // 募集締め切り日は poll モードの入力欄。fixed に切り替えると画面から消えるため、
+  // 残った値をそのまま送ると「見えない締め切り」でロビーが受付終了になってしまう
+  it('モードを fixed に切り替えたら募集締め切り日は送らない', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, openUntil, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    openUntil.value = '2099-08-01';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledWith(
+      expect.not.objectContaining({ openUntil: expect.anything() }),
+    );
+  });
+
   // 送信中もフォームは編集できる。await をまたいでモードを読み直すと、
   // ペイロードの組み立てとその後の分岐が別のモードで動きうる
   it('送信中にモードが変わっても送信開始時のモードで処理する', async () => {

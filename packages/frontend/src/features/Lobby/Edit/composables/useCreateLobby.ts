@@ -166,7 +166,10 @@ export const useCreateLobby = () => {
           ...(scenarioName.value && { scenarioName: scenarioName.value }),
           ...(parsedMaxMembers !== null && { maxPlayers: parsedMaxMembers }),
           ...(description.value && { description: description.value }),
-          ...(openUntil.value && { openUntil: openUntil.value }),
+          // 募集締め切り日は poll モードの入力欄。fixed に切り替えると画面から
+          // 消えるので、残った値は送らない（見えない締め切りで受付終了になるのを防ぐ）
+          ...(!submittedAsFixed &&
+            openUntil.value && { openUntil: openUntil.value }),
           ...(location.value && { location: location.value }),
           candidateDates: submittedAsFixed
             ? []

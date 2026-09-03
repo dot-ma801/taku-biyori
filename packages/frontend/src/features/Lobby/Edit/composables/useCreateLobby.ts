@@ -121,11 +121,24 @@ export const useCreateLobby = () => {
     return errors;
   }
 
+  /** `fixed` モードで開催に載せる入力。送信開始時にスナップショットして渡す */
+  interface FixedScheduleSnapshot {
+    scheduledAt: string;
+    timeLabel: string;
+    description: string;
+  }
+
   /**
    * 開催日が決まっている場合の後続処理。
    * ロビーには必ずホストの LobbyEntry が作られるので、それを唯一の着席者にして開催を1件つくる。
+   *
+   * 入力は ref ではなくスナップショットで受け取る。`submit` から呼ばれる時点で
+   * `createLobby` の await をまたいでおり、ref を読み直すと送信後に編集された値が載るため。
    */
-  async function createFirstGameSession(lobbyId: string): Promise<string> {
+  async function createFirstGameSession(
+    lobbyId: string,
+    input: FixedScheduleSnapshot,
+  ): Promise<string> {
     const detail = await getLobby(lobbyId);
     const hostEntry = detail.activeEntries.find(
       (entry) => entry.userId === detail.hostUserId,
@@ -133,12 +146,10 @@ export const useCreateLobby = () => {
     if (!hostEntry) throw new Error('ホストの参加情報が見つかりません');
 
     const gameSession = await createGameSession(lobbyId, {
-      scheduledAt: scheduledAt.value,
+      scheduledAt: input.scheduledAt,
       entryIds: [hostEntry.id],
-      ...(timeLabel.value && { timeLabel: timeLabel.value }),
-      ...(gameSessionDescription.value && {
-        description: gameSessionDescription.value,
-      }),
+      ...(input.timeLabel && { timeLabel: input.timeLabel }),
+      ...(input.description && { description: input.description }),
     });
     return gameSession.id;
   }
@@ -153,6 +164,13 @@ export const useCreateLobby = () => {
     // await をまたいで isFixedMode を読み直すと、ペイロードを組み立てたモードと
     // その後の分岐が食い違いうる（候補日の無いロビーを poll として扱ってしまう等）。
     const submittedAsFixed = isFixedMode.value;
+    // 開催に載る入力も同じ理由でスナップショットする。createFirstGameSession は
+    // createLobby の await の後に走るため、ref のままだと送信後の編集が載ってしまう
+    const submittedGameSession: FixedScheduleSnapshot = {
+      scheduledAt: scheduledAt.value,
+      timeLabel: timeLabel.value,
+      description: gameSessionDescription.value,
+    };
 
     loading.value = true;
 
@@ -190,7 +208,10 @@ export const useCreateLobby = () => {
         createdLobby.value = lobby;
       }
 
-      const gameSessionId = await createFirstGameSession(lobby.id);
+      const gameSessionId = await createFirstGameSession(
+        lobby.id,
+        submittedGameSession,
+      );
       await router.push({
         name: 'game-sessions-detail',
         params: { lobbyId: lobby.id, gameSessionId },

@@ -607,6 +607,46 @@ describe('useCreateLobby（日程が決まっているモード）', () => {
     });
   });
 
+  // モードと同じ理由で、開催に載る入力も await をまたいで読み直してはいけない
+  it('送信中に開催の入力を変えても送信開始時の値で開催を作る', async () => {
+    // Arrange
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const {
+      title,
+      scheduleMode,
+      scheduledAt,
+      timeLabel,
+      gameSessionDescription,
+      submit,
+    } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    timeLabel.value = '19:00〜';
+    gameSessionDescription.value = '19時に駅前集合';
+
+    // Act
+    const submitted = submit();
+    scheduledAt.value = '2099-12-31';
+    timeLabel.value = '10:00〜';
+    gameSessionDescription.value = '書き換え';
+    resolveCreate?.(mockLobby);
+    await submitted;
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith('lobby-1', {
+      scheduledAt: '2099-09-01',
+      entryIds: [HOST_ENTRY_ID],
+      timeLabel: '19:00〜',
+      description: '19時に駅前集合',
+    });
+  });
+
   // watch がモード変更で消したキャッシュを、飛行中の submit が書き戻してはいけない
   it('送信中にモードが変わったら作りかけのロビーをキャッシュしない', async () => {
     // Arrange

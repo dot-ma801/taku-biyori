@@ -25,6 +25,7 @@ import {
   candidateDates,
   lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
+import { seats } from '@/system/infrastructure/database/game-session-schema';
 import { dateFromToday } from '@/system/domain/date-from-today';
 import { closeTestDatabase, withCommitted } from '@test/helpers/test-database';
 import {
@@ -432,6 +433,66 @@ describe('replace-candidate-dates の TOCTOU（FOR UPDATE 競合）', () => {
           .from(candidateDates)
           .where(eq(candidateDates.pollId, pollId)),
       ).toHaveLength(1);
+    });
+  });
+});
+
+describe('update-seat-character-name の TOCTOU（FOR UPDATE 競合）', () => {
+  /**
+   * ロック無しで存在確認すると、その直後に離席が commit されたときに
+   * `character_assignments` の INSERT が FK 違反で落ち、消えた席を 404 で
+   * 表すはずの経路から 500 が漏れる。
+   *
+   * 未コミットの離席が seats の行ロックを握った状態で割り当てを走らせると、
+   * ちょうどその隙間を再現できる。ロックが無ければ存在確認だけ通り抜け、
+   * INSERT が離席の commit を待たされた末に FK 違反になる。
+   */
+  it('未コミットの離席と競合したら、FK 違反ではなく null を返す', async () => {
+    await withCommitted(async (db, track) => {
+      // Arrange
+      const host = await insertUser(db);
+      track('user', host.id);
+      const lobbyId = await insertLobby(db, host.id);
+      track('lobby', lobbyId);
+      const hostEntryId = await insertLobbyEntry(db, lobbyId, {
+        userId: host.id,
+      });
+      const gameSessionId = await insertGameSession(db, lobbyId);
+      const seatId = await insertSeat(db, gameSessionId, hostEntryId);
+      const repo = createGameSessionRepository(db);
+
+      const deleted = createDeferred();
+      const commit = createDeferred();
+
+      // Act: 離席を未コミットのまま保持し、seats の行ロックを握らせる
+      const unseating = db.transaction(async (tx) => {
+        await tx.delete(seats).where(eq(seats.id, seatId));
+        deleted.resolve();
+        await commit.promise;
+      });
+      // unseating も race しておくことで、コールバックが deleted.resolve() 前に
+      // throw した場合に testTimeout までハングせず即座に検知できる。
+      await Promise.race([deleted.promise, unseating]);
+
+      const assigning = repo.updateSeatCharacterName(seatId, 'アルベルト');
+      const assigningSettled = assigning.then(
+        () => 'settled',
+        () => 'settled',
+      );
+      const raced = await Promise.race([
+        assigningSettled,
+        sleep(BLOCK_PROBE_MS).then(() => 'blocked' as const),
+      ]);
+
+      // Assert: 離席のコミット前は行ロックで待たされている
+      expect(raced).toBe('blocked');
+
+      commit.resolve();
+      await unseating;
+
+      // 席が消えたあとなので「見つからない」に倒れる。FK 違反を投げない
+      await expect(assigning).resolves.toBeNull();
+      expect(await repo.findSeatById(seatId)).toBeNull();
     });
   });
 });

@@ -226,7 +226,10 @@ const addGameSession = async (
  *
  * キャラクター名は `seats` のカラムではなく `character_assignments` の行なので
  * （design-v2 §3-9）、着席を入れてから割り当てを別に入れる。
- * `returning` は VALUES の並び順で返るため、着席と入力を添字で突き合わせる。
+ *
+ * `INSERT ... RETURNING` の行順は PostgreSQL では保証されないため、添字では
+ * 突き合わせない。`lobby_entry_id` を一緒に返して、それをキーに引き当てる
+ * （1開催の中では UNIQUE。§3-8）。返す配列も入力順に組み直す。
  */
 const addSeats = async (
   database: Database,
@@ -241,9 +244,19 @@ const addSeats = async (
         lobbyEntryId: seat.lobbyEntryId,
       })),
     )
-    .returning({ id: seats.id });
+    .returning({ id: seats.id, lobbyEntryId: seats.lobbyEntryId });
 
-  const seatIds = rows.map((row) => row.id);
+  const seatIdByEntryId = new Map(
+    rows.map((row) => [row.lobbyEntryId, row.id]),
+  );
+
+  const seatIds = values.map((seat) => {
+    const seatId = seatIdByEntryId.get(seat.lobbyEntryId);
+    if (seatId === undefined) {
+      throw new Error(`着席の作成に失敗しました: ${seat.lobbyEntryId}`);
+    }
+    return seatId;
+  });
 
   const assignments = values.flatMap((seat, index) => {
     const seatId = seatIds[index];

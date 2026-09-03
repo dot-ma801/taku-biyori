@@ -862,27 +862,48 @@ export const createGameSessionRepository = (
       return rows[0]?.lobbyId ?? null;
     },
 
+    /**
+     * 着席のキャラクター名を割り当て・解除する。
+     *
+     * 存在確認と書き込みを1つのトランザクションにまとめ、`seats` の行を
+     * `FOR UPDATE` で押さえてから触る。ロック無しで存在確認すると、その直後に
+     * 離席が commit されたときに `character_assignments` の INSERT が FK 違反で
+     * 落ち、消えた席を 404 で表すはずの経路から 500 が漏れる。
+     * ロックを取れば、離席は待たされるか、先に commit 済みなら行が見つからず
+     * `null`（= 404）になる。
+     */
     async updateSeatCharacterName(
       seatId: string,
       characterName: string | null,
     ): Promise<Seat | null> {
-      const seat = await repository.findSeatById(seatId);
-      if (!seat) return null;
-      if (characterName === null) {
-        await db
-          .delete(characterAssignments)
-          .where(eq(characterAssignments.seatId, seatId));
-      } else {
-        await db
-          .insert(characterAssignments)
-          .values({ seatId, characterName })
-          .onConflictDoUpdate({
-            target: characterAssignments.seatId,
-            set: { characterName },
-          });
-      }
+      return db.transaction(async (tx) => {
+        const locked = await tx
+          .select({ id: seats.id })
+          .from(seats)
+          .where(eq(seats.id, seatId))
+          .for('update');
+        if (locked.length === 0) return null;
 
-      return repository.findSeatById(seatId);
+        if (characterName === null) {
+          await tx
+            .delete(characterAssignments)
+            .where(eq(characterAssignments.seatId, seatId));
+        } else {
+          await tx
+            .insert(characterAssignments)
+            .values({ seatId, characterName })
+            .onConflictDoUpdate({
+              target: characterAssignments.seatId,
+              set: { characterName },
+            });
+        }
+
+        // 同じトランザクションから読み直す。外の repository で読むと
+        // ここでの書き込みが見えない
+        return createGameSessionRepository(
+          tx as unknown as Database,
+        ).findSeatById(seatId);
+      });
     },
 
     async deleteSeatById(seatId: string): Promise<void> {

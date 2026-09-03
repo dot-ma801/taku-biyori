@@ -32,6 +32,8 @@ const rows = computed(() =>
       to: item.to,
       isCurrent,
       isLink: !isCurrent && item.to !== undefined,
+      // 現在地だけに付ける。template に三項演算子を書かないため、ここで解決する
+      ariaCurrent: isCurrent ? ('page' as const) : undefined,
     };
   }),
 );
@@ -47,7 +49,7 @@ const rows = computed(() =>
         <span
           v-else
           class="breadcrumb__current"
-          :aria-current="row.isCurrent ? 'page' : undefined"
+          :aria-current="row.ariaCurrent"
         >
           {{ row.label }}
         </span>

@@ -110,6 +110,18 @@ describe('BaseBreadcrumb', () => {
       ).toBe('page');
     });
 
+    it('末尾以外には aria-current を付けない', () => {
+      // Arrange & Act
+      const wrapper = mountBreadcrumb({
+        items: [{ label: '親' }, { label: '子' }],
+      });
+
+      // Assert
+      const currents = wrapper.findAll('.breadcrumb__current');
+      expect(currents[0]?.attributes('aria-current')).toBeUndefined();
+      expect(currents[1]?.attributes('aria-current')).toBe('page');
+    });
+
     it('区切りのアイコンは aria-hidden にする', () => {
       // Arrange & Act
       const wrapper = mountBreadcrumb({ items });

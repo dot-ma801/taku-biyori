@@ -9,29 +9,48 @@ import { Plus } from '@lucide/vue';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
-const props = defineProps<{
-  title?: string;
-  statuses?: LobbyStatus[];
-  /** 該当ロビーが1件も無いときにセクションごと描画しない */
-  hideWhenEmpty?: boolean;
-  /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
-  hideCreateButton?: boolean;
-  /** 自分のロビーだけを出す（「探す」側の公開ロビーは描画しない） */
-  hidePublic?: boolean;
-}>();
+/**
+ * 一覧の対象。
+ * - `mine`: 自分のロビー（ホスト or 在籍中の参加者）。ダッシュボードの §7-5 の4セクション用
+ * - `public`: 未参加の人向けの「募集中のロビー」。関心が違うので同じ枠には並べない
+ */
+type Scope = 'mine' | 'public';
+
+const props = withDefaults(
+  defineProps<{
+    title?: string;
+    statuses?: LobbyStatus[];
+    scope?: Scope;
+    /** 該当ロビーが1件も無いときにセクションごと描画しない */
+    hideWhenEmpty?: boolean;
+    /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
+    hideCreateButton?: boolean;
+  }>(),
+  { scope: 'mine' },
+);
 
 const router = useRouter();
-// 「探す」側を出さないセクションは、公開ロビーの取得自体を省く
+// 出さない側は取得自体を省く（ダッシュボードの一覧リクエストを増やさない）
+const isPublicScope = props.scope === 'public';
 const { filteredMyLobbies, filteredPublicLobbies, hasFilteredLobbies } =
-  useLobbyList(props.statuses, { skipPublic: props.hidePublic });
+  useLobbyList(props.statuses, {
+    skipMine: isPublicScope,
+    skipPublic: !isPublicScope,
+  });
 
-const hasTitle = computed(() => props.title != null);
-const isVisible = computed(
-  () => !props.hideWhenEmpty || hasFilteredLobbies.value,
+const showPublicList = computed(
+  () => isPublicScope && filteredPublicLobbies.value.length > 0,
 );
-const showCreateButton = computed(() => !props.hideCreateButton);
-const hasFilteredPublicLobbies = computed(
-  () => filteredPublicLobbies.value.length > 0,
+const showMineSection = computed(() => !isPublicScope);
+const hasTitle = computed(() => !isPublicScope && props.title != null);
+// 「募集中のロビー」は0件なら丸ごと出さない（見出しだけが残らないように）
+const isVisible = computed(() =>
+  isPublicScope
+    ? showPublicList.value
+    : !props.hideWhenEmpty || hasFilteredLobbies.value,
+);
+const showCreateButton = computed(
+  () => !isPublicScope && !props.hideCreateButton,
 );
 
 const onClickCreate = () => {
@@ -54,9 +73,12 @@ const onClickCreate = () => {
         >ロビーを作成</BaseButton
       >
     </div>
-    <MyLobbyList :my-lobbies="filteredMyLobbies"></MyLobbyList>
+    <MyLobbyList
+      v-if="showMineSection"
+      :my-lobbies="filteredMyLobbies"
+    ></MyLobbyList>
     <PublicLobbyList
-      v-if="hasFilteredPublicLobbies"
+      v-if="showPublicList"
       :public-lobbies="filteredPublicLobbies"
     ></PublicLobbyList>
   </div>

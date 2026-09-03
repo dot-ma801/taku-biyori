@@ -20,6 +20,7 @@ function mountEditor(
 ) {
   return mount(PlayMemoEditor, {
     props: {
+      lobbyId: 'lobby-1',
       gameSessionId: 'session-1',
       gameSessionTitle: 'テストセッション',
       playMemo: makePlayMemo(),

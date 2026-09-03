@@ -3,6 +3,7 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseRadioGroup from '@/components/form/BaseRadioGroup/BaseRadioGroup.vue';
 import { CalendarDays, X } from '@lucide/vue';
@@ -20,6 +21,10 @@ import { computed } from 'vue';
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const timeLabel = defineModel<string>('timeLabel', { default: '' });
+/** 当日の連絡事項。開催固有のファクトなので、ロビーの「説明」とは別に入力させる */
+const gameSessionDescription = defineModel<string>('gameSessionDescription', {
+  default: '',
+});
 /**
  * 日程の決め方。`showModeSwitch` が false のときは使われない（既定の `poll` のまま）。
  */
@@ -113,6 +118,12 @@ function updateTimeLabel(date: string, timeLabel: string) {
           ></BaseDatePicker>
 
           <BaseTextBox v-model="timeLabel" label="時間帯" />
+
+          <BaseTextArea
+            v-model="gameSessionDescription"
+            label="当日の連絡事項"
+            placeholder="集合場所や持ち物など、当日に向けた連絡…"
+          />
         </template>
 
         <template v-else>

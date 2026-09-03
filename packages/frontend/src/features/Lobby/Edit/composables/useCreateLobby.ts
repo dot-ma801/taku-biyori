@@ -35,13 +35,18 @@ export const useCreateLobby = () => {
   const scheduleMode = ref<ScheduleMode>('poll');
   const scheduledAt = ref('');
   const timeLabel = ref('');
+  /**
+   * 当日の連絡事項。**開催（GameSession）固有のファクト**で、ロビーの「説明」とは別物
+   * （design-v2 §5-5）。`fixed` モードでのみ入力させ、作成する開催に載せる。
+   */
+  const gameSessionDescription = ref('');
 
   const loading = ref(false);
   /** バリデーション・API エラーのメッセージ一覧。1件ずつアラート表示する */
   const errorMessages = ref<string[]>([]);
   /**
-   * 作成済みのロビー。開催の作成に失敗しても、再送信で下書きロビーを量産しないよう
-   * この画面を離れるまで保持し、後続処理だけをやり直す。
+   * 作成済みのロビー。`fixed` モードで開催の作成に失敗しても、再送信で下書きロビーを
+   * 量産しないよう保持し、後続処理だけをやり直す。
    */
   const createdLobby = ref<LobbyModel | null>(null);
 
@@ -60,6 +65,7 @@ export const useCreateLobby = () => {
       scheduleMode,
       scheduledAt,
       timeLabel,
+      gameSessionDescription,
     ],
     () => {
       errorMessages.value = [];
@@ -68,6 +74,17 @@ export const useCreateLobby = () => {
   );
 
   const isFixedMode = computed(() => scheduleMode.value === 'fixed');
+
+  // モードを切り替えたら、作りかけのロビーは入力内容と噛み合わなくなる
+  // （候補日の無いロビーを poll モードで再利用してしまう等）。作り直させる。
+  // errorMessages のクリアと同じく、切り替えの瞬間に効かせたいので flush: 'sync'
+  watch(
+    scheduleMode,
+    () => {
+      createdLobby.value = null;
+    },
+    { flush: 'sync' },
+  );
 
   /** フォーム全体を検証し、エラーメッセージを全件返す（早期 return せず収集する） */
   function validate(): string[] {
@@ -108,6 +125,9 @@ export const useCreateLobby = () => {
       scheduledAt: scheduledAt.value,
       entryIds: [hostEntry.id],
       ...(timeLabel.value && { timeLabel: timeLabel.value }),
+      ...(gameSessionDescription.value && {
+        description: gameSessionDescription.value,
+      }),
     });
     return gameSession.id;
   }
@@ -136,8 +156,6 @@ export const useCreateLobby = () => {
             ? []
             : toCandidateDateInputs(pendingDates.value),
         }));
-      createdLobby.value = lobby;
-
       if (!isFixedMode.value) {
         await router.push({
           name: 'lobbies-detail',
@@ -145,6 +163,9 @@ export const useCreateLobby = () => {
         });
         return;
       }
+
+      // 開催の作成は2ステップ目なので、ここで初めて保持する意味が出る
+      createdLobby.value = lobby;
 
       const gameSessionId = await createFirstGameSession(lobby.id);
       await router.push({
@@ -178,6 +199,7 @@ export const useCreateLobby = () => {
     scheduleMode,
     scheduledAt,
     timeLabel,
+    gameSessionDescription,
     isFixedMode,
     loading,
     errorMessages,

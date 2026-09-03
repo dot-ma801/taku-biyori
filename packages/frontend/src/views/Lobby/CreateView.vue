@@ -14,6 +14,7 @@ const {
   scheduleMode,
   scheduledAt,
   timeLabel,
+  gameSessionDescription,
   loading,
   errorMessages,
   submit,
@@ -36,6 +37,7 @@ const {
       v-model:scheduleMode="scheduleMode"
       v-model:scheduledAt="scheduledAt"
       v-model:timeLabel="timeLabel"
+      v-model:gameSessionDescription="gameSessionDescription"
       :show-candidate-dates="true"
       :show-schedule-mode-switch="true"
       :loading="loading"

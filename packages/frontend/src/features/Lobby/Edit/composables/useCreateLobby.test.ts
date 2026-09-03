@@ -445,6 +445,61 @@ describe('useCreateLobby（日程が決まっているモード）', () => {
     });
   });
 
+  it('当日の連絡事項は開催に載せる（ロビーの説明とは別）', async () => {
+    // Arrange
+    const {
+      title,
+      scheduleMode,
+      scheduledAt,
+      description,
+      gameSessionDescription,
+      submit,
+    } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    description.value = 'ロビーの説明';
+    gameSessionDescription.value = '19時に駅前集合';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith(
+      'lobby-1',
+      expect.objectContaining({ description: '19時に駅前集合' }),
+    );
+    expect(createLobby).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'ロビーの説明' }),
+    );
+  });
+
+  it('モードを切り替えたら作りかけのロビーは使い回さない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    const { title, scheduleMode, scheduledAt, pendingDates, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+    scheduleMode.value = 'poll';
+    pendingDates.value = [{ date: '2099-10-01', timeLabel: '' }];
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        candidateDates: [{ date: '2099-10-01', timeLabel: null }],
+      }),
+    );
+  });
+
   it('作成後は開催の詳細へ遷移する', async () => {
     // Arrange
     const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();

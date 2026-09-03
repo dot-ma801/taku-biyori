@@ -27,6 +27,9 @@ const openUntil = defineModel<string>('openUntil', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const timeLabel = defineModel<string>('timeLabel', { default: '' });
+const gameSessionDescription = defineModel<string>('gameSessionDescription', {
+  default: '',
+});
 const scheduleMode = defineModel<ScheduleMode>('scheduleMode', {
   default: 'poll',
 });
@@ -62,6 +65,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
       v-model:timeLabel="timeLabel"
+      v-model:gameSessionDescription="gameSessionDescription"
       v-model:scheduleMode="scheduleMode"
       v-model:pendingDates="pendingDates"
       :show-candidate-dates="props.hasSchedulePoll"

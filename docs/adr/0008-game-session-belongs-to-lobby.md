@@ -44,8 +44,12 @@ v2 で概念モデルを Lobby（企画・受付の器）と GameSession（1回�
   直接卓立ては**ロビーの不在ではなく、受付を開かないロビー**として表現する
 - ロビー作成という余分な1ステップは UI 側で1ボタンに隠せる。実際、ロビー作成画面の
   「日程が決まっている」モードが、ロビー作成と開催作成を1操作にまとめている（design-v2 §5-3 / §7-1）
-- API のパスもこれに揃え、セッションは常に `/api/lobbies/:lobbyId/game-sessions/...` の下に置く。
+- API のパスもこれに揃え、セッションは `/api/lobbies/:lobbyId/game-sessions/...` の下に置く。
   画面 URL も同じ階層にした（design-v2 §7-1）
+- **例外は横断一覧の `GET /api/me/game-sessions` だけ。** ダッシュボードは「自分が関わる
+  すべてのロビーの開催」を1リクエストで欲しく、特定の `:lobbyId` の下に置けない。
+  この1本は `registerGameSessionRoute` が公開しており、`docs/openapi.yml` でも例外として
+  注記している。セッション**個体**を指すパスはすべてロビー配下のままにする
 
 ## Consequences
 

@@ -14,9 +14,10 @@ export enum GameSessionStatus {
 /**
  * `getGameSessionStatus()` が導出しうる値。
  *
- * enum には移行期間中だけ `draft` / `open` / `confirmed` が残っているが、v2 で
- * 導出されるのはこの4値だけ（design-v2 §4-2）。v2 の DTO（`GameSessionStatusSchema`）も
- * この4値しか受け付けないため、導出関数の戻り値を先に絞って型で噛み合わせる。
+ * v2 で導出されるのはこの4値だけ（design-v2 §4-2）。v2 の DTO
+ * （`GameSessionStatusSchema`）も この4値しか受け付けないため、
+ * 導出関数の戻り値を先に絞って型で噛み合わせる。
+ * v0.2 の `draft` / `open` / `confirmed` は enum ごと廃止済み。
  */
 export type DerivedGameSessionStatus =
   | GameSessionStatus.scheduled

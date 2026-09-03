@@ -64,7 +64,7 @@ describe('canPerform', () => {
   for (const action of Object.values(GameSessionAction)) {
     describe(`action: ${action}`, () => {
       for (const role of ALL_ROLES) {
-        for (const status of ALL_STATUSES) {
+        for (const status of DERIVED_STATUSES) {
           const expected = ALLOWED[action].some(
             (a) => a.role === role && a.status === status,
           );
@@ -78,23 +78,8 @@ describe('canPerform', () => {
 });
 
 describe('v2 のポリシー表', () => {
-  it.each(LEGACY_STATUSES)(
-    '廃止した %s ではどのアクションも許可しない',
-    (status) => {
-      // Arrange
-      const actions = Object.values(GameSessionAction);
-
-      // Act
-      const allowed = actions.flatMap((action) =>
-        ALL_ROLES.filter((role) => canPerform(action, status, role)).map(
-          (role) => `${action}:${role}`,
-        ),
-      );
-
-      // Assert
-      expect(allowed).toEqual([]);
-    },
-  );
+  // v0.2 の draft / open / confirmed は enum ごと消えたため、
+  // 「廃止したステータスでは何も許可しない」は型で担保される（ここでは検証しない）
 
   it('中止した開催は編集も完了もできない（記録として凍結する）', () => {
     // Arrange
@@ -111,10 +96,10 @@ describe('v2 のポリシー表', () => {
 
   it('完了と中止は同じ条件で許可する（どちらも scheduled / today から）', () => {
     // Arrange / Act
-    const complete = ALL_STATUSES.filter((status) =>
+    const complete = DERIVED_STATUSES.filter((status) =>
       canPerform(GameSessionAction.completeGameSession, status, 'host'),
     );
-    const cancel = ALL_STATUSES.filter((status) =>
+    const cancel = DERIVED_STATUSES.filter((status) =>
       canPerform(GameSessionAction.cancelGameSession, status, 'host'),
     );
 
@@ -124,7 +109,7 @@ describe('v2 のポリシー表', () => {
 
   it('着席させられるのはホストだけで、参加者は自分で着席できない（§6-6）', () => {
     // Arrange / Act
-    const memberCanSeat = ALL_STATUSES.some((status) =>
+    const memberCanSeat = DERIVED_STATUSES.some((status) =>
       canPerform(GameSessionAction.seatEntry, status, 'member'),
     );
 

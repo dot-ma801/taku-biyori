@@ -57,8 +57,11 @@ export const createGameSession = async (
   lobbyId: string,
   userId: string,
   input: CreateGameSessionInput,
+  // 「今日」は引数で受けて既定値だけ実時刻から取る。他のユースケース
+  //（upsertMyPlayMemo / listSharedPlayMemos）と揃え、テストを実行日に依存させない
+  today: string = todayDateString(),
 ): Promise<CreateGameSessionResult> => {
-  if (input.scheduledAt < todayDateString()) return { type: 'pastScheduledAt' };
+  if (input.scheduledAt < today) return { type: 'pastScheduledAt' };
 
   // 重複を除いてからロックを取る。同じ entry を2回渡されても着席は1つ
   const entryIds = [...new Set(input.entryIds)];

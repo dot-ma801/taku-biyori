@@ -41,6 +41,10 @@ export interface RegisterPlayMemoRouteOptions {
 /**
  * プレイメモのルート。開催はロビー配下に入れ子になったので
  * `/api/lobbies/:lobbyId/game-sessions/:id/play-memos...` に揃える（design-v2 §6-13）。
+ *
+ * リクエスト・レスポンス・エラーコードの契約は v2 で変えていない（design-v2 §6-15）。
+ * このファイルの `design-v1.2 §…` はその挙動を記録した**履歴参照**で、
+ * 現行の仕様は design-v2 を見ること。
  */
 const BASE = '/api/lobbies/:lobbyId/game-sessions/:id/play-memos';
 

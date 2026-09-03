@@ -5,6 +5,9 @@
 > v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
 > 本書の DB スキーマ・API・ステータス設計はいずれも現行の実装と一致しない。
 > **履歴として残しているだけなので、実装の根拠には使わないこと。** 現行の設計は design-v2 を参照する。
+>
+> コード中に残る `design-v1.x §…` という参照は、**v2 が引き継いだ判断の出典**を示すもの。
+> 現行の仕様そのものは design-v2 を見ること。
 
 > **最終更新**: 2026-07-11
 > **元要求**: [docs/requirements/recruitment-separation.md](./requirements/recruitment-separation.md)

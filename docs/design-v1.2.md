@@ -3,8 +3,13 @@
 > [!IMPORTANT]
 > **この文書は [design-v2.md](./design-v2.md) に置き換えられた（superseded）。**
 > v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
-> 本書の DB スキーマ・API・ステータス設計はいずれも現行の実装と一致しない。
-> **履歴として残しているだけなので、実装の根拠には使わないこと。** 現行の設計は design-v2 を参照する。
+> 本書の DB スキーマ・ステータス設計・紐付け先（`memberId` → `seatId`）は現行の実装と一致しない。
+> 現行の設計は design-v2 を参照すること。
+>
+> **ただしプレイメモ4本のリクエスト・レスポンス契約は v2 でも変えていない**
+> （design-v2 §6-15「等価性の基準点」）。パスの入れ子化と `memberId` → `seatId` の改名を除けば、
+> 本書の §4（操作可否）・§5（エラー表）・§8 は現在も**その挙動の記録として有効**であり、
+> コード中の `design-v1.2 §…` という参照はこの意味で残している。
 
 > **最終更新**: 2026-08-03
 > **元要求**: [docs/requirements/play-memo.md](./requirements/play-memo.md)

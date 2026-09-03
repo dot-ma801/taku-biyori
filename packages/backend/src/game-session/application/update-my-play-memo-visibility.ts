@@ -24,7 +24,7 @@ export type UpdateMyPlayMemoVisibilityResult =
  * 自分のプレイメモの公開・非公開を切り替える（design-v1.2 §5）。
  *
  * 本文の編集と違い**全ステータスで許可する**。完了・中止後こそ「遊んだ後に公開する」
- * ために使われる操作であるため（design-v1.2 §4 の操作可否表）。
+ * ために使われる操作であるため（design-v2 §4-3「プレイメモの公開切替 / 常時」）。
  * ステータス非依存であることを、ステータスを読まないことで表現している。
  */
 export const updateMyPlayMemoVisibility = async (

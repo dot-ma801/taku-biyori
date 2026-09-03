@@ -127,7 +127,7 @@ export const registerPlayMemoRoute = (
     return c.json(result.playMemo);
   });
 
-  // 公開メモの閲覧は未ログイン・ゲストにも開く（要求 §3-4）。
+  // 公開メモの閲覧は未ログイン・ゲストにも開く（要求 §3-4 / design-v2 §4-3）。
   // 認証は「非公開の開催かどうか」の判定にのみ使うため、未ログインでも 401 にしない
   app.get(BASE, async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);

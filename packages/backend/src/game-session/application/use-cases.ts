@@ -98,20 +98,24 @@ export interface GameSessionUseCases {
     userId: string,
   ): Promise<DeleteSeatResult>;
   getMyPlayMemo(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
   ): Promise<GetMyPlayMemoResult>;
   upsertMyPlayMemo(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
     input: UpsertGameSessionPlayMemoInput,
   ): Promise<UpsertMyPlayMemoResult>;
   updateMyPlayMemoVisibility(
+    lobbyId: string,
     gameSessionId: string,
     userId: string,
     input: UpdateGameSessionPlayMemoVisibilityInput,
   ): Promise<UpdateMyPlayMemoVisibilityResult>;
   listSharedPlayMemos(
+    lobbyId: string,
     gameSessionId: string,
     userId: string | null,
   ): Promise<ListSharedPlayMemosResult>;
@@ -148,12 +152,12 @@ export const createGameSessionUseCases = (
     ),
   deleteSeat: (lobbyId, gameSessionId, seatId, userId) =>
     deleteSeat(repo, lobbyId, gameSessionId, seatId, userId),
-  getMyPlayMemo: (gameSessionId, userId) =>
-    getMyPlayMemo(repo, gameSessionId, userId),
-  upsertMyPlayMemo: (gameSessionId, userId, input) =>
-    upsertMyPlayMemo(repo, gameSessionId, userId, input),
-  updateMyPlayMemoVisibility: (gameSessionId, userId, input) =>
-    updateMyPlayMemoVisibility(repo, gameSessionId, userId, input),
-  listSharedPlayMemos: (gameSessionId, userId) =>
-    listSharedPlayMemos(repo, gameSessionId, userId),
+  getMyPlayMemo: (lobbyId, gameSessionId, userId) =>
+    getMyPlayMemo(repo, lobbyId, gameSessionId, userId),
+  upsertMyPlayMemo: (lobbyId, gameSessionId, userId, input) =>
+    upsertMyPlayMemo(repo, lobbyId, gameSessionId, userId, input),
+  updateMyPlayMemoVisibility: (lobbyId, gameSessionId, userId, input) =>
+    updateMyPlayMemoVisibility(repo, lobbyId, gameSessionId, userId, input),
+  listSharedPlayMemos: (lobbyId, gameSessionId, userId) =>
+    listSharedPlayMemos(repo, lobbyId, gameSessionId, userId),
 });

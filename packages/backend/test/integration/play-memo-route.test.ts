@@ -11,6 +11,10 @@ import type {
 
 const mockSession = { user: { id: 'user-1' } };
 
+const LOBBY_ID = '00000000-0000-4000-8000-00000000aaaa';
+/** 開催はロビー配下に入れ子（design-v2 §6-13） */
+const base = `/api/lobbies/${LOBBY_ID}/game-sessions`;
+
 const mockPlayMemo: GameSessionPlayMemo = {
   seatId: '00000000-0000-4000-8000-000000000001',
   body: '今日のセッションのメモ',
@@ -82,7 +86,7 @@ const makeApp = (
   });
 };
 
-describe('GET /api/game-sessions/:id/play-memos/me', () => {
+describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
   it('メンバーなら 200 で自分のメモを返す', async () => {
     // Arrange
     const getMyPlayMemo = vi
@@ -91,15 +95,13 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     const app = makeApp({ getMyPlayMemo });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(mockPlayMemo);
-    expect(getMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1');
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, 'session-1', 'user-1');
   });
 
   // 未作成と取得エラーをフロントで分岐させない（design-v1.2 §8）
@@ -112,9 +114,7 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
     const body = await response.json();
 
     // Assert
@@ -127,9 +127,7 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
 
     // Assert
     expect(response.status).toBe(401);
@@ -142,9 +140,7 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/nonexistent/play-memos/me',
-    );
+    const response = await app.request(`${base}/nonexistent/play-memos/me`);
 
     // Assert
     expect(response.status).toBe(404);
@@ -159,22 +155,20 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
 
     // Assert
     expect(response.status).toBe(403);
   });
 });
 
-describe('PUT /api/game-sessions/:id/play-memos/me', () => {
+describe('PUT /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
   const put = (
     app: ReturnType<typeof makeApp>,
     body: unknown,
     id = 'session-1',
   ) =>
-    app.request(`/api/game-sessions/${id}/play-memos/me`, {
+    app.request(`${base}/${id}/play-memos/me`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -194,9 +188,14 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(responseBody).toEqual(mockPlayMemo);
-    expect(upsertMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1', {
-      body: '今日のセッションのメモ',
-    });
+    expect(upsertMyPlayMemo).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      'user-1',
+      {
+        body: '今日のセッションのメモ',
+      },
+    );
   });
 
   // 本文を空にしても行は残す（design-v1.2 §8）
@@ -303,9 +302,14 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(upsertMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1', {
-      body,
-    });
+    expect(upsertMyPlayMemo).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      'user-1',
+      {
+        body,
+      },
+    );
   });
 
   it('body が無いと 400 を返す', async () => {
@@ -324,27 +328,24 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     const app = makeApp();
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: 'not json',
-      },
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: 'not json',
+    });
 
     // Assert
     expect(response.status).toBe(400);
   });
 });
 
-describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
+describe('PATCH /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me/visibility', () => {
   const patch = (
     app: ReturnType<typeof makeApp>,
     body: unknown,
     id = 'session-1',
   ) =>
-    app.request(`/api/game-sessions/${id}/play-memos/me/visibility`, {
+    app.request(`${base}/${id}/play-memos/me/visibility`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -365,6 +366,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     expect(response.status).toBe(200);
     expect(responseBody).toEqual(mockPlayMemo);
     expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -385,6 +387,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: false },
@@ -484,7 +487,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
 
     // Act
     const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me/visibility',
+      `${base}/session-1/play-memos/me/visibility`,
       {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -497,7 +500,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
   });
 });
 
-describe('GET /api/game-sessions/:id/play-memos', () => {
+describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
   it('完了した卓の公開メモ一覧を 200 で返す', async () => {
     // Arrange
     const listSharedPlayMemos = vi
@@ -506,15 +509,17 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     const app = makeApp({ listSharedPlayMemos });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(sharedPlayMemos);
-    expect(listSharedPlayMemos).toHaveBeenCalledWith('session-1', 'user-1');
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      'user-1',
+    );
   });
 
   // 未ログイン・ゲストでも公開メモは読める（要求 §3-4・design-v1.2 §4）
@@ -529,15 +534,17 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(sharedPlayMemos);
-    expect(listSharedPlayMemos).toHaveBeenCalledWith('session-1', null);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      null,
+    );
   });
 
   // 完了・中止前は他人のメモを見せない（要求 §3-3）
@@ -550,9 +557,7 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
     const body = await response.json();
 
     // Assert
@@ -567,9 +572,7 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/nonexistent/play-memos',
-    );
+    const response = await app.request(`${base}/nonexistent/play-memos`);
 
     // Assert
     expect(response.status).toBe(404);
@@ -583,9 +586,7 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
 
     // Assert
     expect(response.status).toBe(403);
@@ -599,9 +600,7 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
 
     // Assert
     expect(response.status).toBe(403);

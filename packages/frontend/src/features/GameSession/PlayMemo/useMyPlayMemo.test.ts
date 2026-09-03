@@ -23,6 +23,7 @@ vi.mock('@/stores/auth', () => ({
 import { getMyPlayMemo, updateMyPlayMemoVisibility } from '@/api/game-session';
 import { useAuthStore } from '@/stores/auth';
 
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
 const HOST_USER_ID = 'user-host';
 const MEMBER_USER_ID = 'user-member';
@@ -73,7 +74,7 @@ function mockCurrentUser(userId: string | null) {
 }
 
 function setup(gameSession: GameSessionDetailModel | null = makeGameSession()) {
-  return useMyPlayMemo(SESSION_ID, () => gameSession);
+  return useMyPlayMemo(LOBBY_ID, SESSION_ID, () => gameSession);
 }
 
 /**
@@ -87,7 +88,7 @@ function setupWithGameSessionRef(
   initial: GameSessionDetailModel | null = null,
 ) {
   const gameSession = ref<GameSessionDetailModel | null>(initial);
-  return { ...useMyPlayMemo(SESSION_ID, gameSession), gameSession };
+  return { ...useMyPlayMemo(LOBBY_ID, SESSION_ID, gameSession), gameSession };
 }
 
 /**
@@ -257,7 +258,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
     expect(state.value).toEqual(playMemo);
   });
 
@@ -281,7 +282,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
     expect(playMemo.value).not.toBeNull();
   });
 
@@ -317,7 +318,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 });
 
@@ -332,7 +333,7 @@ describe('fetch', () => {
     await fetch();
 
     // Assert
-    expect(getMyPlayMemo).toHaveBeenCalledWith(SESSION_ID);
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
     expect(state.value).toEqual(playMemo);
   });
 
@@ -515,9 +516,13 @@ describe('setShared', () => {
     await setShared(true);
 
     // Assert
-    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
-      shared: true,
-    });
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      {
+        shared: true,
+      },
+    );
     expect(playMemo.value).toEqual(shared);
     expect(isShared.value).toBe(true);
   });
@@ -535,9 +540,13 @@ describe('setShared', () => {
     await setShared(false);
 
     // Assert
-    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
-      shared: false,
-    });
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      {
+        shared: false,
+      },
+    );
     expect(isShared.value).toBe(false);
   });
 
@@ -553,9 +562,13 @@ describe('setShared', () => {
     await setShared(true);
 
     // Assert
-    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(SESSION_ID, {
-      shared: true,
-    });
+    expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
+      SESSION_ID,
+      {
+        shared: true,
+      },
+    );
   });
 
   it('メモが未作成なら API を呼ばない（404 を出さない）', async () => {

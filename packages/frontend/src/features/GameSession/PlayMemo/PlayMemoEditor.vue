@@ -16,6 +16,7 @@ import type { PlayMemoVisibilityStatus } from '@/features/GameSession/PlayMemo/u
 import type { MyPlayMemoModel } from '@/models/play-memo';
 
 const props = defineProps<{
+  lobbyId: string;
   gameSessionId: string;
   gameSessionTitle: string;
   playMemo: MyPlayMemoModel | null;
@@ -41,6 +42,7 @@ const {
   setDraft,
   save,
 } = usePlayMemoEdit(
+  props.lobbyId,
   props.gameSessionId,
   () => props.playMemo,
   (saved) => emit('saved', saved),

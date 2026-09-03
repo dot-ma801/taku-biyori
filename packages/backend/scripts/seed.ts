@@ -30,8 +30,9 @@ import {
   lobbyEntries,
 } from '@/system/infrastructure/database/lobby-schema';
 import {
-  gameSessionPlayMemos,
+  characterAssignments,
   gameSessions,
+  playMemos,
   seats,
 } from '@/system/infrastructure/database/game-session-schema';
 
@@ -220,6 +221,13 @@ const addGameSession = async (
   return firstRow(rows, 'addGameSession').id;
 };
 
+/**
+ * 着席と、そのキャラクター割り当てをまとめて作る。
+ *
+ * キャラクター名は `seats` のカラムではなく `character_assignments` の行なので
+ * （design-v2 §3-9）、着席を入れてから割り当てを別に入れる。
+ * `returning` は VALUES の並び順で返るため、着席と入力を添字で突き合わせる。
+ */
 const addSeats = async (
   database: Database,
   gameSessionId: string,
@@ -231,12 +239,22 @@ const addSeats = async (
       values.map((seat) => ({
         gameSessionId,
         lobbyEntryId: seat.lobbyEntryId,
-        characterName: seat.characterName ?? null,
       })),
     )
     .returning({ id: seats.id });
 
-  return rows.map((row) => row.id);
+  const seatIds = rows.map((row) => row.id);
+
+  const assignments = values.flatMap((seat, index) => {
+    const seatId = seatIds[index];
+    if (seatId === undefined || !seat.characterName) return [];
+    return [{ seatId, characterName: seat.characterName }];
+  });
+  if (assignments.length > 0) {
+    await database.insert(characterAssignments).values(assignments);
+  }
+
+  return seatIds;
 };
 
 const main = async (): Promise<void> => {
@@ -447,7 +465,7 @@ const main = async (): Promise<void> => {
     throw new Error('完了済みの開催の着席が想定（3件）より少ないです');
   }
 
-  await db.insert(gameSessionPlayMemos).values([
+  await db.insert(playMemos).values([
     {
       seatId: lighthouseKeeperSeatId,
       body: '灯台守視点のメモ。序盤に鍵の話を振れたのがよかった。',

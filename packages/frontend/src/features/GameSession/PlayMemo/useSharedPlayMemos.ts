@@ -45,6 +45,7 @@ export interface PlayMemoMemberEntry {
  * 卓・自分のメンバー ID は所有者が別に居るため getter で読むだけにする（CLAUDE.md）。
  */
 export const useSharedPlayMemos = (
+  lobbyId: string,
   gameSessionId: string,
   gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
   // メンバーでない閲覧者（未ログイン・ゲスト）は null
@@ -81,7 +82,7 @@ export const useSharedPlayMemos = (
     const seq = ++requestSeq;
     loading.value = true;
     try {
-      const result = await listSharedPlayMemos(gameSessionId);
+      const result = await listSharedPlayMemos(lobbyId, gameSessionId);
       // 自分より後に呼ばれた fetch がすでに解決していれば、この応答は
       // 後着（古い）なので一覧・loading のどちらも書き換えない
       if (seq !== requestSeq) return;

@@ -37,7 +37,7 @@ const {
   setShared,
   fetch: fetchPlayMemo,
   applySaved,
-} = useMyPlayMemo(props.gameSessionId, () => gameSession.value);
+} = useMyPlayMemo(props.lobbyId, props.gameSessionId, () => gameSession.value);
 
 const {
   canViewShared,
@@ -45,6 +45,7 @@ const {
   loading: loadingSharedPlayMemos,
   fetch: fetchSharedPlayMemos,
 } = useSharedPlayMemos(
+  props.lobbyId,
   props.gameSessionId,
   () => gameSession.value,
   () => myMember.value?.id ?? null,
@@ -144,6 +145,7 @@ async function onVisibilityChange(shared: boolean) {
 
       <PlayMemoEditor
         v-if="showEditor"
+        :lobby-id="props.lobbyId"
         :game-session-id="props.gameSessionId"
         :game-session-title="gameSessionTitle"
         :play-memo="playMemo"

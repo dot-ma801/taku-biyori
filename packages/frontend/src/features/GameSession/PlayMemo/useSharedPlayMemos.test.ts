@@ -16,6 +16,7 @@ vi.mock('@/api/game-session', () => ({
 
 import { listSharedPlayMemos } from '@/api/game-session';
 
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
 const HOST_USER_ID = 'user-host';
 
@@ -83,6 +84,7 @@ function setup(
   mySeatId: string | null = MY_MEMBER_ID,
 ) {
   return useSharedPlayMemos(
+    LOBBY_ID,
     SESSION_ID,
     () => gameSession,
     () => mySeatId,
@@ -95,7 +97,12 @@ function setupWithGameSessionRef(
 ) {
   const gameSession = ref<GameSessionDetailModel | null>(initial);
   return {
-    ...useSharedPlayMemos(SESSION_ID, gameSession, () => MY_MEMBER_ID),
+    ...useSharedPlayMemos(
+      LOBBY_ID,
+      SESSION_ID,
+      gameSession,
+      () => MY_MEMBER_ID,
+    ),
     gameSession,
   };
 }
@@ -154,7 +161,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(listSharedPlayMemos).toHaveBeenCalledWith(SESSION_ID);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 
   it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
@@ -180,7 +187,7 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(listSharedPlayMemos).toHaveBeenCalledWith(SESSION_ID);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 
   it('取得に失敗したら空のまま（非公開卓の 403 でも画面を壊さない）', async () => {

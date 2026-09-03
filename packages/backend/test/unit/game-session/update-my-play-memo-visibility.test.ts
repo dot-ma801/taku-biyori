@@ -3,6 +3,7 @@ import { updateMyPlayMemoVisibility } from '@/game-session/application/update-my
 import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
+const LOBBY_ID = 'lobby-1';
 const now = new Date('2026-08-02T12:00:00.000Z');
 
 const sharedPlayMemo: GameSessionPlayMemo = {
@@ -15,7 +16,7 @@ const sharedPlayMemo: GameSessionPlayMemo = {
 const makeRepo = (
   overrides: Partial<UpdateMyPlayMemoVisibilityRepository> = {},
 ): UpdateMyPlayMemoVisibilityRepository => ({
-  gameSessionExists: vi.fn().mockResolvedValue(true),
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
   findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
   updatePlayMemoVisibility: vi.fn().mockResolvedValue(sharedPlayMemo),
   ...overrides,
@@ -29,6 +30,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -51,6 +53,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: false },
@@ -65,15 +68,35 @@ describe('updateMyPlayMemoVisibility', () => {
     expect(result).toEqual({ type: 'ok', playMemo: unsharedPlayMemo });
   });
 
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateMyPlayMemoVisibility(
+      repo,
+      'lobby-other',
+      'session-1',
+      'user-1',
+      { shared: true },
+      now,
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.updatePlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
   it('卓が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findLobbyId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       { shared: true },
@@ -95,6 +118,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { shared: true },
@@ -115,6 +139,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -128,12 +153,13 @@ describe('updateMyPlayMemoVisibility', () => {
   it('卓が存在しないときはメンバー検索も更新も行わない', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findLobbyId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       { shared: true },
@@ -157,6 +183,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -177,6 +204,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { shared: true },

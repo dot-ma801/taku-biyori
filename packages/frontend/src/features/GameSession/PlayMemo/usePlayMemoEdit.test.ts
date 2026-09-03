@@ -11,6 +11,7 @@ vi.mock('@/api/game-session', () => ({
 import { upsertMyPlayMemo } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
 const MEMBER_ID = 'member-1';
 const SERVER_BODY = '書斎の鍵は青木さんが持っていた';
@@ -50,7 +51,7 @@ function setup(
     });
 
   return {
-    ...usePlayMemoEdit(SESSION_ID, serverMemo, onSaved),
+    ...usePlayMemoEdit(LOBBY_ID, SESSION_ID, serverMemo, onSaved),
     serverMemo,
   };
 }
@@ -61,7 +62,8 @@ beforeEach(() => {
   // 送信内容と無関係な固定値を返すと、テスト側で「保存成功のエコー」と
   // 「別内容の再取得」を区別できず、echo スキップの検証にならない。
   vi.mocked(upsertMyPlayMemo).mockImplementation(
-    async (_gameSessionId, input) => makePlayMemo({ body: input.body }),
+    async (_lobbyId, _gameSessionId, input) =>
+      makePlayMemo({ body: input.body }),
   );
 });
 

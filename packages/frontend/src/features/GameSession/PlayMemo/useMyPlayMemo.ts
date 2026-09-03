@@ -22,6 +22,7 @@ export type PlayMemoVisibilityStatus = 'idle' | 'saving' | 'failed';
  * 編集ドラフトは持たない（ドラフトの所有者は編集 UI 側。CLAUDE.md「サーバ値と編集ドラフトは別物」）。
  */
 export const useMyPlayMemo = (
+  lobbyId: string,
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。Ref を要求すると props 境界をまたいで
   //       書き換え可能になり、依存の向き（親→子）が壊れるため。
@@ -91,7 +92,7 @@ export const useMyPlayMemo = (
         return;
       }
 
-      playMemo.value = await getMyPlayMemo(gameSessionId);
+      playMemo.value = await getMyPlayMemo(lobbyId, gameSessionId);
     } catch {
       // 退出直後の 403 や通信エラー。トーストは出さずセクションを閉じる
       // （メモは卓詳細の主目的ではないため、失敗を前面に出さない）
@@ -146,9 +147,13 @@ export const useMyPlayMemo = (
     visibilityStatus.value = 'saving';
 
     try {
-      playMemo.value = await updateMyPlayMemoVisibility(gameSessionId, {
-        shared,
-      });
+      playMemo.value = await updateMyPlayMemoVisibility(
+        lobbyId,
+        gameSessionId,
+        {
+          shared,
+        },
+      );
       visibilityStatus.value = 'idle';
     } catch {
       // 通信エラー・退出直後の 403 など。状態は変えずに失敗だけを伝える

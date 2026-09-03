@@ -38,6 +38,7 @@ export type ListSharedPlayMemosResult =
  */
 export const listSharedPlayMemos = async (
   repo: ListSharedPlayMemosRepository,
+  lobbyId: string,
   gameSessionId: string,
   userId: string | null,
   today: string = todayDateString(),
@@ -45,8 +46,11 @@ export const listSharedPlayMemos = async (
   const fields = await repo.findStatusFields(gameSessionId);
   if (!fields) return { type: 'notFound' };
 
-  const lobbyId = await repo.findLobbyId(gameSessionId);
-  if (lobbyId === null) return { type: 'notFound' };
+  // URL のロビーがこの開催のロビーでなければ 404（入れ子のパスは親も検証する）
+  const actualLobbyId = await repo.findLobbyId(gameSessionId);
+  if (actualLobbyId === null || actualLobbyId !== lobbyId) {
+    return { type: 'notFound' };
+  }
 
   // 閲覧制御は getGameSession と同一に保つ（design-v1.2 §4 手順2）
   const lobby = await repo.findLobbyForViewing(lobbyId);

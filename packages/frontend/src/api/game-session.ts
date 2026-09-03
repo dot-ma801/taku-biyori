@@ -48,6 +48,9 @@ const sessionPath = (lobbyId: string, id: string): string =>
 const seatsPath = (lobbyId: string, gameSessionId: string): string =>
   `${sessionPath(lobbyId, gameSessionId)}/seats`;
 
+const playMemosPath = (lobbyId: string, gameSessionId: string): string =>
+  `${sessionPath(lobbyId, gameSessionId)}/play-memos`;
+
 /**
  * 自分に関係する開催の横断一覧。
  * 複数のロビーをまたぐため、これだけは入れ子にしない（design-v2 §6-5）。
@@ -212,11 +215,12 @@ export function deleteSeat(
  * （design-v1.2 §8）。呼び出し側に「未作成」の分岐は不要。
  */
 export async function getMyPlayMemo(
+  lobbyId: string,
   gameSessionId: string,
 ): Promise<MyPlayMemoModel> {
   return toMyPlayMemoModel(
     (await apiRequest<MyGameSessionPlayMemo>(
-      `/api/game-sessions/${gameSessionId}/play-memos/me`,
+      `${playMemosPath(lobbyId, gameSessionId)}/me`,
     ))!,
   );
 }
@@ -227,12 +231,13 @@ export async function getMyPlayMemo(
  * 卓が完了・中止していると 409（ApiError.status）が返る。
  */
 export async function upsertMyPlayMemo(
+  lobbyId: string,
   gameSessionId: string,
   input: UpsertGameSessionPlayMemoInput,
 ): Promise<MyPlayMemoModel> {
   return toMyPlayMemoModel(
     (await apiRequest<MyGameSessionPlayMemo>(
-      `/api/game-sessions/${gameSessionId}/play-memos/me`,
+      `${playMemosPath(lobbyId, gameSessionId)}/me`,
       { method: 'PUT', body: input },
     ))!,
   );
@@ -245,12 +250,13 @@ export async function upsertMyPlayMemo(
  * 本文を一度も保存していないメモには 404 が返るため、呼び出し側は保存済みのときだけ叩く。
  */
 export async function updateMyPlayMemoVisibility(
+  lobbyId: string,
   gameSessionId: string,
   input: UpdateGameSessionPlayMemoVisibilityInput,
 ): Promise<MyPlayMemoModel> {
   return toMyPlayMemoModel(
     (await apiRequest<MyGameSessionPlayMemo>(
-      `/api/game-sessions/${gameSessionId}/play-memos/me/visibility`,
+      `${playMemosPath(lobbyId, gameSessionId)}/me/visibility`,
       { method: 'PATCH', body: input },
     ))!,
   );
@@ -264,9 +270,10 @@ export async function updateMyPlayMemoVisibility(
  * 表示名は卓のメンバー一覧と突き合わせて解決する。
  */
 export async function listSharedPlayMemos(
+  lobbyId: string,
   gameSessionId: string,
 ): Promise<SharedPlayMemoModel[]> {
   return (await apiRequest<SharedGameSessionPlayMemo[]>(
-    `/api/game-sessions/${gameSessionId}/play-memos`,
+    playMemosPath(lobbyId, gameSessionId),
   ))!.map(toSharedPlayMemoModel);
 }

@@ -9,6 +9,7 @@ const props = defineProps<{ lobbyId: string; gameSessionId: string }>();
 
 const {
   title,
+  savedTitle,
   scenarioName,
   location,
   timeLabel,
@@ -22,7 +23,8 @@ const {
 } = useUpdateGameSession(props.lobbyId, props.gameSessionId);
 
 // URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く。
-// 開催の呼び名は上書きの生値なので、未上書きならロビー名（既定値）を出す
+// ラベルは取得時点の値を使う。編集中の下書きを出すと、保存前の文字が
+// リンク先の名前として表示されてしまう
 const breadcrumbItems = computed(() => [
   { label: 'ダッシュボード', to: { name: 'dashboard' } },
   {
@@ -30,7 +32,7 @@ const breadcrumbItems = computed(() => [
     to: { name: 'lobbies-detail', params: { lobbyId: props.lobbyId } },
   },
   {
-    label: title.value || (lobbyDefaults.value?.title ?? '開催'),
+    label: savedTitle.value || '開催',
     to: {
       name: 'game-sessions-detail',
       params: {

@@ -13,6 +13,7 @@ const props = defineProps<{
 
 const {
   title,
+  savedTitle,
   scenarioName,
   maxMembers,
   description,
@@ -31,7 +32,7 @@ const {
 const breadcrumbItems = computed(() => [
   { label: 'ダッシュボード', to: { name: 'dashboard' } },
   {
-    label: title.value || 'ロビー',
+    label: savedTitle.value || 'ロビー',
     to: { name: 'lobbies-detail', params: { lobbyId: props.lobbyId } },
   },
   { label: 'ロビーの編集' },

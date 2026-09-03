@@ -92,6 +92,8 @@ backend・frontend ともに同じ規則です。
 ## 命名規則
 
 - ファイル名は **kebab-case**（例: `create-game-session.ts`, `game-session-route.ts`）
+  - **例外: Vue の SFC（`.vue`）とそのディレクトリは PascalCase**（例: `PublicLobbyList.vue`,
+    `components/common/BaseBreadcrumb/`）。ルートに対応するエントリポイントだけ `index.vue`
 - 開催（セッション）に関する識別子はすべて **`game` プレフィックス**を付ける
   - 変数名: `gameSession`
   - 型名: `GameSession`

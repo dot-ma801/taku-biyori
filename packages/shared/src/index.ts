@@ -30,21 +30,6 @@ export {
   UpdateGameSessionStatusInputSchema,
   type UpdateGameSessionStatusInput,
   // v0.2 契約（移行期間中だけ残す）
-  LegacyGameSessionStatusSchema,
-  LegacyGameSessionSchema,
-  type LegacyGameSession,
-  LegacyGameSessionDetailSchema,
-  type LegacyGameSessionDetail,
-  LegacyGameSessionListItemSchema,
-  type LegacyGameSessionListItem,
-  LegacyUpdateGameSessionInputSchema,
-  type LegacyUpdateGameSessionInput,
-  LegacyUpdateGameSessionStatusInputSchema,
-  type LegacyUpdateGameSessionStatusInput,
-  GameSessionMemberSchema,
-  type GameSessionMember,
-  JoinGameSessionInputSchema,
-  type JoinGameSessionInput,
 } from './game-session.js';
 export {
   getGameSessionStatus,
@@ -136,8 +121,6 @@ export {
   type LobbySchedulePollSummary,
   LobbySchedulePollSchema,
   type LobbySchedulePoll,
-  SchedulePollCandidateDateInputSchema,
-  type SchedulePollCandidateDateInput,
   CreateSchedulePollInputSchema,
   type CreateSchedulePollInput,
   ReplaceCandidateDatesInputSchema,
@@ -148,18 +131,6 @@ export {
   type UpsertScheduleAnswersInput,
   GuestUpsertScheduleAnswersInputSchema,
   type GuestUpsertScheduleAnswersInput,
-  LobbyAvailabilityDateAnswerSchema,
-  type LobbyAvailabilityDateAnswer,
-  LobbyAvailabilityDateSchema,
-  type LobbyAvailabilityDate,
-  CreateLobbyAvailabilityDateInputSchema,
-  type CreateLobbyAvailabilityDateInput,
-  BulkUpdateLobbyAvailabilityDatesInputSchema,
-  type BulkUpdateLobbyAvailabilityDatesInput,
-  UpdateLobbyAvailabilityDateResponseInputSchema,
-  type UpdateLobbyAvailabilityDateResponseInput,
-  GuestUpdateLobbyAvailabilityDateResponseInputSchema,
-  type GuestUpdateLobbyAvailabilityDateResponseInput,
 } from './lobby.js';
 export { getLobbyStatus, type LobbyStatusFacts } from './lobby/status.js';
 export {
@@ -168,11 +139,6 @@ export {
   LOBBY_ACTION_POLICIES,
   canPerformLobbyAction,
 } from './lobby/permissions.js';
-export {
-  DATE_NOTE_MAX_LENGTH,
-  DateNoteSchema,
-  normalizeDateNote,
-} from './lobby/date-note.js';
 export {
   TIME_LABEL_MAX_LENGTH,
   TimeLabelSchema,

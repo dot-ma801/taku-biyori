@@ -1,4 +1,4 @@
-import type { SchedulePollCandidateDateInput } from '@taku-biyori/shared';
+import type { LobbyCandidateDateInput } from '@taku-biyori/shared';
 import { TIME_LABEL_MAX_LENGTH, normalizeTimeLabel } from '@taku-biyori/shared';
 import { formatDateWithWeekday } from '@/utils/date';
 
@@ -73,7 +73,7 @@ export const getTimeLabelCounter = (
 /** API へ送る形式に変換する。空白のみのひとことは未入力（null）として送る */
 export const toCandidateDateInputs = (
   pending: readonly PendingCandidateDate[],
-): SchedulePollCandidateDateInput[] =>
+): LobbyCandidateDateInput[] =>
   pending.map((entry) => ({
     date: entry.date,
     timeLabel: normalizeTimeLabel(entry.timeLabel),

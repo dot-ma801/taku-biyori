@@ -12,8 +12,8 @@ const SEAT_ID = '33333333-3333-4333-8333-333333333333';
 
 // design-v2 §4-2 で導出される4ステータス
 const V2_STATUSES = ['scheduled', 'today', 'completed', 'cancelled'];
-// 移行期間中だけ enum に残っている v0.2 の値（v2 では導出されない）
-const LEGACY_ONLY_STATUSES = ['draft', 'open', 'confirmed'];
+// v0.2 にあって v2 で廃止した値。復活させないための番人として弾けることを確認する
+const RETIRED_STATUSES = ['draft', 'open', 'scheduling'];
 
 const makeGameSession = (status: string) => ({
   id: GAME_SESSION_ID,
@@ -77,7 +77,7 @@ describe('GameSessionStatusSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it.each(LEGACY_ONLY_STATUSES)(
+  it.each(RETIRED_STATUSES)(
     '%s は受け付けない（v0.2 の値は v2 の契約に含まれない）',
     (status) => {
       // Arrange
@@ -104,7 +104,7 @@ describe('v2 レスポンス契約のステータス', () => {
     expect(result.success).toBe(true);
   });
 
-  it.each(LEGACY_ONLY_STATUSES)('GameSessionSchema は %s を弾く', (status) => {
+  it.each(RETIRED_STATUSES)('GameSessionSchema は %s を弾く', (status) => {
     // Arrange
     const input = makeGameSession(status);
 
@@ -115,7 +115,7 @@ describe('v2 レスポンス契約のステータス', () => {
     expect(result.success).toBe(false);
   });
 
-  it.each(LEGACY_ONLY_STATUSES)(
+  it.each(RETIRED_STATUSES)(
     'GameSessionListItemSchema は %s を弾く',
     (status) => {
       // Arrange
@@ -129,7 +129,7 @@ describe('v2 レスポンス契約のステータス', () => {
     },
   );
 
-  it.each(LEGACY_ONLY_STATUSES)(
+  it.each(RETIRED_STATUSES)(
     'GameSessionSummarySchema は %s を弾く',
     (status) => {
       // Arrange

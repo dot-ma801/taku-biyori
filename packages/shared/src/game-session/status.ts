@@ -17,7 +17,7 @@ export enum GameSessionStatus {
  * v2 で導出されるのはこの4値だけ（design-v2 §4-2）。v2 の DTO
  * （`GameSessionStatusSchema`）も この4値しか受け付けないため、
  * 導出関数の戻り値を先に絞って型で噛み合わせる。
- * v0.2 の `draft` / `open` / `confirmed` は enum ごと廃止済み。
+ * v0.2 の公開・受付まわりのステータスは enum ごと廃止済み。
  */
 export type DerivedGameSessionStatus =
   | GameSessionStatus.scheduled

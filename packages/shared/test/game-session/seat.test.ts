@@ -67,15 +67,16 @@ describe('SeatSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('廃止した lobbyMemberId は通しても結果に残らない', () => {
+  it('契約に無いキーは通しても結果に残らない', () => {
     // Arrange
-    const seat = { ...loginSeat, lobbyMemberId: ENTRY_ID };
+    // v0.2 の Seat は出自の突合用フィールドを持っていた。廃止したので落ちる
+    const seat = { ...loginSeat, legacyMemberRef: ENTRY_ID };
 
     // Act
     const result = SeatSchema.parse(seat);
 
     // Assert
-    expect('lobbyMemberId' in result).toBe(false);
+    expect('legacyMemberRef' in result).toBe(false);
   });
 });
 

@@ -4,10 +4,7 @@ import {
   UpdateLobbyInputSchema,
   JoinLobbyInputSchema,
   JoinLobbyAsGuestInputSchema,
-  CreateLobbyAvailabilityDateInputSchema,
-  BulkUpdateLobbyAvailabilityDatesInputSchema,
 } from '@/lobby';
-import { DATE_NOTE_MAX_LENGTH } from '@/lobby/date-note';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -30,55 +27,6 @@ describe('CreateLobbyInputSchema', () => {
 
     // Assert
     expect(result.success).toBe(true);
-  });
-
-  describe('candidateDates の dateNote（ひとこと）', () => {
-    it('dateNote を添えても成功する', () => {
-      // Arrange
-      const input = {
-        title: '募集',
-        candidateDates: [{ date: '2099-09-01', dateNote: '13:00〜17:00' }],
-      };
-
-      // Act
-      const result = CreateLobbyInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    });
-
-    it('dateNote が上限を超えると失敗する', () => {
-      // Arrange
-      const input = {
-        title: '募集',
-        candidateDates: [
-          {
-            date: '2099-09-01',
-            dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1),
-          },
-        ],
-      };
-
-      // Act
-      const result = CreateLobbyInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(false);
-    });
-
-    it('dateNote が null（未入力）でも成功する', () => {
-      // Arrange
-      const input = {
-        title: '募集',
-        candidateDates: [{ date: '2099-09-01', dateNote: null }],
-      };
-
-      // Act
-      const result = CreateLobbyInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    });
   });
 
   describe('candidateDates の timeLabel（時間帯）', () => {
@@ -312,7 +260,7 @@ describe('UpdateLobbyInputSchema', () => {
 });
 
 describe('JoinLobbyInputSchema', () => {
-  it('空オブジェクトで成功する（募集枠メンバーは character_name を持たない）', () => {
+  it('空オブジェクトで成功する（ロビーの参加者は character_name を持たない）', () => {
     // Arrange
     const input = {};
 
@@ -378,177 +326,5 @@ describe('JoinLobbyAsGuestInputSchema', () => {
 
     // Assert
     expect(result.success).toBe(false);
-  });
-});
-
-describe('CreateLobbyAvailabilityDateInputSchema', () => {
-  it('今日以降の日付なら成功する', () => {
-    // Arrange
-    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
-    const input = { date: '2025-06-15' };
-
-    // Act
-    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(true);
-  });
-
-  it('過去日なら失敗する', () => {
-    // Arrange
-    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
-    const input = { date: '2025-06-14' };
-
-    // Act
-    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(false);
-  });
-
-  it('dateNote を添えても成功する', () => {
-    // Arrange
-    vi.setSystemTime(new Date('2025-06-15T00:00:00'));
-    const input = { date: '2025-06-15', dateNote: '夕方から' };
-
-    // Act
-    const result = CreateLobbyAvailabilityDateInputSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(true);
-  });
-});
-
-describe('BulkUpdateLobbyAvailabilityDatesInputSchema', () => {
-  it('1 件以上の日付があれば成功する', () => {
-    // Arrange
-    const input = { dates: [{ date: '2099-09-01' }, { date: '2099-09-02' }] };
-
-    // Act
-    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(true);
-  });
-
-  describe('dates の dateNote（ひとこと）', () => {
-    it('dateNote を添えても成功する', () => {
-      // Arrange
-      const input = {
-        dates: [{ date: '2099-09-01', dateNote: '午後から' }],
-      };
-
-      // Act
-      const result =
-        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    });
-
-    it('dateNote が上限を超えると失敗する', () => {
-      // Arrange
-      const input = {
-        dates: [
-          {
-            date: '2099-09-01',
-            dateNote: 'あ'.repeat(DATE_NOTE_MAX_LENGTH + 1),
-          },
-        ],
-      };
-
-      // Act
-      const result =
-        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(false);
-    });
-  });
-
-  it('dates が空配列なら失敗する（game-session と異なり 1 件以上が必須）', () => {
-    // Arrange
-    const input = { dates: [] };
-
-    // Act
-    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(false);
-  });
-
-  it('dates が未指定なら失敗する', () => {
-    // Arrange
-    const input = {};
-
-    // Act
-    const result = BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-    // Assert
-    expect(result.success).toBe(false);
-  });
-
-  describe('dates の件数上限', () => {
-    it('上限ちょうどの件数は成功する', () => {
-      // Arrange
-      const input = { dates: makeUniqueDates(100) };
-
-      // Act
-      const result =
-        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    });
-
-    it('上限を超える件数は失敗する', () => {
-      // Arrange
-      const input = { dates: makeUniqueDates(101) };
-
-      // Act
-      const result =
-        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('dates の重複禁止', () => {
-    it('重複する日付を含むと失敗する', () => {
-      // Arrange
-      const input = {
-        dates: [
-          { date: '2099-09-01' },
-          { date: '2099-09-02' },
-          { date: '2099-09-01' },
-        ],
-      };
-
-      // Act
-      const result =
-        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(false);
-    });
-
-    it('すべて異なる日付なら成功する', () => {
-      // Arrange
-      const input = {
-        dates: [
-          { date: '2099-09-01' },
-          { date: '2099-09-02' },
-          { date: '2099-09-03' },
-        ],
-      };
-
-      // Act
-      const result =
-        BulkUpdateLobbyAvailabilityDatesInputSchema.safeParse(input);
-
-      // Assert
-      expect(result.success).toBe(true);
-    });
   });
 });

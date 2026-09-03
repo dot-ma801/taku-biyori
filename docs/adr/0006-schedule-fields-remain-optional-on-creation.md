@@ -2,7 +2,14 @@
 
 ## Status
 
-Proposed
+Superseded by [design-v2.md](../design-v2.md) §3-4 / §5-1 / §6-13-1
+
+v2 で概念モデルを作り直した結果、この ADR が前提としていた「卓が候補日を直接持つ」構造が無くなった。
+候補日は `SchedulePoll` の下にぶら下がり、ロビー作成時の `candidateDates` は**任意**、
+開催（`GameSession`）は `scheduled_at` が NOT NULL、という形に整理されている。
+「開催日か候補日のどちらかを必須にするか」という問い自体が、両者が別のテーブルに分かれたことで解消された。
+
+以下は当時の記録として残している。
 
 ## Context
 

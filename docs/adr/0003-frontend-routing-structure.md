@@ -2,7 +2,15 @@
 
 ## Status
 
-Proposed
+Superseded by [design-v2.md](../design-v2.md) §7-1
+
+v2 で画面ルートをロビー配下へ入れ子にしたため、本 ADR の「各ドメインが独立したルートパスを持つ」
+という判断は現行の構造と一致しない。`/game-sessions/*` は廃止し、
+`/lobbies/:lobbyId/game-sessions/:gameSessionId/*` に置き換えている
+（末尾を削れば上位階層に上がれること＝hackable であることを優先した。design-v2 §7-1）。
+ログイン後の遷移先を `/dashboard` にする点は現行も同じ。
+
+以下は当時の記録として残している。
 
 ## Context
 

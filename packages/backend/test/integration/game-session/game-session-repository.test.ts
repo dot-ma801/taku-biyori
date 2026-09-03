@@ -85,11 +85,18 @@ describe('findDetailById', () => {
         guestName: 'みなと',
       });
       const sessionId = await insertGameSession(db, lobbyId);
-      await insertSeat(db, sessionId, hostEntryId);
+      // created_at の既定値 now() はトランザクション内で固定されるため、
+      // withRollback の中では明示しないと3件とも同着になる
+      await insertSeat(db, sessionId, hostEntryId, {
+        createdAt: new Date('2026-08-01T10:00:00.000Z'),
+      });
       await insertSeat(db, sessionId, playerEntryId, {
         characterName: '探索者A',
+        createdAt: new Date('2026-08-01T11:00:00.000Z'),
       });
-      await insertSeat(db, sessionId, guestEntryId);
+      await insertSeat(db, sessionId, guestEntryId, {
+        createdAt: new Date('2026-08-01T12:00:00.000Z'),
+      });
       const repo = createGameSessionRepository(db);
 
       // Act
@@ -105,6 +112,43 @@ describe('findDetailById', () => {
       expect(detail?.seats[2]?.guestName).toBe('みなと');
       expect(detail?.seats[1]?.characterName).toBe('探索者A');
       expect(detail?.seats[0]?.entryId).toBe(hostEntryId);
+    });
+  });
+
+  // 開催の作成時は初期の着席を1文でまとめて INSERT するため、
+  // 本番でも created_at は同着になる（game_sessions の scheduledAt と同じ扱い）
+  it('seatedAt が同じ着席は id 昇順で返す', async () => {
+    await withRollback(async (db) => {
+      // Arrange
+      const host = await insertUser(db);
+      const lobbyId = await insertLobby(db, host.id);
+      const entryA = await insertLobbyEntry(db, lobbyId, { guestName: 'あ' });
+      const entryB = await insertLobbyEntry(db, lobbyId, { guestName: 'い' });
+      const sessionId = await insertGameSession(db, lobbyId);
+      const seatedAt = new Date('2026-08-01T10:00:00.000Z');
+      const laterId = '00000000-0000-4000-8000-0000000000b2';
+      const earlierId = '00000000-0000-4000-8000-0000000000b1';
+      await db.insert(seats).values([
+        {
+          id: laterId,
+          gameSessionId: sessionId,
+          lobbyEntryId: entryA,
+          createdAt: seatedAt,
+        },
+        {
+          id: earlierId,
+          gameSessionId: sessionId,
+          lobbyEntryId: entryB,
+          createdAt: seatedAt,
+        },
+      ]);
+      const repo = createGameSessionRepository(db);
+
+      // Act
+      const detail = await repo.findDetailById(sessionId);
+
+      // Assert
+      expect(detail?.seats.map((s) => s.id)).toEqual([earlierId, laterId]);
     });
   });
 

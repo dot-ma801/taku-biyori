@@ -369,7 +369,7 @@ export const createGameSessionRepository = (
       .from(seats)
       .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
       .where(inArray(seats.gameSessionId, gameSessionIds))
-      .orderBy(asc(seats.createdAt));
+      .orderBy(asc(seats.createdAt), asc(seats.id));
 
     for (const row of rows) {
       const list = byId.get(row.gameSessionId) ?? [];
@@ -476,7 +476,7 @@ export const createGameSessionRepository = (
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.gameSessionId, id))
-        .orderBy(asc(seats.createdAt));
+        .orderBy(asc(seats.createdAt), asc(seats.id));
 
       return {
         ...toGameSession(row, toLobbyRow(row)),
@@ -776,7 +776,7 @@ export const createGameSessionRepository = (
         .innerJoin(lobbyEntries, eq(lobbyEntries.id, seats.lobbyEntryId))
         .leftJoin(user, eq(user.id, lobbyEntries.userId))
         .where(eq(seats.gameSessionId, gameSessionId))
-        .orderBy(asc(seats.createdAt));
+        .orderBy(asc(seats.createdAt), asc(seats.id));
       return rows.map(toSeat);
     },
 

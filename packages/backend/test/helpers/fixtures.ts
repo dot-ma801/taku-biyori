@@ -189,17 +189,25 @@ export const insertGameSession = async (
 };
 
 /** 着席。紐付けは lobby_entry_id 1本になった（design-v2 §3-8） */
+/**
+ * 着席を作る。
+ *
+ * `createdAt` を明示できるようにしてあるのは、既定の `now()` が
+ * **トランザクション開始時刻で固定される**ため。`withRollback` の中では
+ * 何件入れても `created_at` が同じ値になり、`seatedAt` 昇順を検証できない。
+ */
 export const insertSeat = async (
   db: Database,
   gameSessionId: string,
   lobbyEntryId: string,
-  seat: { characterName?: string | null } = {},
+  seat: { characterName?: string | null; createdAt?: Date } = {},
 ): Promise<string> => {
   const rows = await db
     .insert(seats)
     .values({
       gameSessionId,
       lobbyEntryId,
+      ...(seat.createdAt ? { createdAt: seat.createdAt } : {}),
     })
     .returning({ id: seats.id });
 

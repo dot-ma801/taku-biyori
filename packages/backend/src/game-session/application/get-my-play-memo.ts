@@ -20,7 +20,7 @@ export type GetMyPlayMemoResult =
 /**
  * 自分のプレイメモを取得する（design-v1.2 §5）。
  *
- * 卓のステータスには依存しない。本文の編集は完了・中止で閉じるが、
+ * 開催のステータスには依存しない。本文の編集は完了・中止で閉じるが、
  * 自分のメモの閲覧は全ステータスで可能（design-v1.2 §4 の操作可否表）。
  */
 export const getMyPlayMemo = async (

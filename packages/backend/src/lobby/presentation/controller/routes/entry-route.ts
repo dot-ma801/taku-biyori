@@ -80,7 +80,7 @@ export const registerEntryRoute = (
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     // lobbyNotOpen を alreadyJoined より先にチェックする。
-    // 募集枠が open でない場合でも alreadyJoined (409) を返すのは不適切なため、
+    // ロビーが open でない場合でも alreadyJoined (409) を返すのは不適切なため、
     // ステータス不一致を先に検出して 422 を返す（game-session の member-route と同方針）。
     if (result.type === 'lobbyNotOpen') {
       return c.json({ error: 'Lobby is not open for joining' }, 422);

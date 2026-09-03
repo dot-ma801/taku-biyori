@@ -68,7 +68,7 @@ const daysAgo = (days: number): Date => {
 
 /**
  * 前回のシードデータを消す。
- * ロビー・卓はシードユーザーがホストの行だけを対象にするので、
+ * ロビー・開催はシードユーザーがホストの行だけを対象にするので、
  * 手で作った開発データは残る。
  */
 const clearPreviousSeed = async (database: Database): Promise<void> => {
@@ -498,7 +498,7 @@ const main = async (): Promise<void> => {
     hostUserId: natsuId,
     title: '身内卓「週末セッション」',
     scenarioName: null,
-    description: '固定メンバーで遊ぶ卓です。',
+    description: '固定メンバーで遊ぶ開催です。',
     location: 'カフェ・オンライン併用',
     maxPlayers: 6,
     guestLinkToken: 'seed-lobby-direct',
@@ -558,7 +558,7 @@ const main = async (): Promise<void> => {
   console.log(`  開催予定の開催の着席: ${seatCheck.length}`);
   console.log('');
   console.log(
-    '公開中のロビー・卓は role: null で誰の一覧にも出るため、Google ログインでも確認できます',
+    '公開中のロビー・開催は role: null で誰の一覧にも出るため、Google ログインでも確認できます',
   );
 };
 

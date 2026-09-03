@@ -13,7 +13,7 @@ import { relations, sql } from 'drizzle-orm';
 import { user } from '@/system/infrastructure/database/schema';
 
 /**
- * 募集枠（lobby）機能用の PostgreSQL スキーマです。
+ * ロビー（lobby）機能用の PostgreSQL スキーマです。
  * 機能ごとにスキーマを分離する方針（ADR 0005）に基づきます。
  */
 export const lobbySchema = pgSchema('lobby');

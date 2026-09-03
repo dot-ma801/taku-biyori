@@ -42,7 +42,7 @@ describe('getSchedulePoll', () => {
     expect(result).toEqual({ type: 'ok', poll: mockPoll });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi.fn().mockResolvedValue(null),
@@ -60,7 +60,7 @@ describe('getSchedulePoll', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('非公開募集枠にホスト以外がアクセスすると forbidden を返す', async () => {
+  it('非公開ロビーにホスト以外がアクセスすると forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi
@@ -75,7 +75,7 @@ describe('getSchedulePoll', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('非公開募集枠でもホスト本人は閲覧できる', async () => {
+  it('非公開ロビーでもホスト本人は閲覧できる', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi

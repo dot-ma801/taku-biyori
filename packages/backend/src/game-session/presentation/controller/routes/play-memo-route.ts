@@ -121,14 +121,14 @@ export const registerPlayMemoRoute = (
       parsed.data,
     );
 
-    // 卓が無い場合とメモ未作成の場合の両方が notFound（design-v1.2 §5）
+    // 開催が無い場合とメモ未作成の場合の両方が notFound（design-v1.2 §5）
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     return c.json(result.playMemo);
   });
 
   // 公開メモの閲覧は未ログイン・ゲストにも開く（要求 §3-4）。
-  // 認証は「非公開卓かどうか」の判定にのみ使うため、未ログインでも 401 にしない
+  // 認証は「非公開の開催かどうか」の判定にのみ使うため、未ログインでも 401 にしない
   app.get(BASE, async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     const userId = authSession?.user.id ?? null;
@@ -140,7 +140,7 @@ export const registerPlayMemoRoute = (
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
-    // 非公開卓をホスト以外が呼んだケース。ログインの有無で分けず 403 に統一する
+    // 非公開の開催をホスト以外が呼んだケース。ログインの有無で分けず 403 に統一する
     // （design-v1.2 §5 のエラー表）
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     return c.json(result.playMemos);

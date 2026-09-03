@@ -24,7 +24,7 @@ const makeRepo = (
 });
 
 describe('joinLobby', () => {
-  it('ユーザーが募集枠に参加できる', async () => {
+  it('ユーザーがロビーに参加できる', async () => {
     // Arrange
     const repo = makeRepo();
 
@@ -35,7 +35,7 @@ describe('joinLobby', () => {
     expect(result).toEqual({ type: 'ok', entry: mockEntry });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyStatus: vi.fn().mockResolvedValue(null),

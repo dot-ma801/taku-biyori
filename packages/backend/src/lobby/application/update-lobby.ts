@@ -11,7 +11,7 @@ export interface UpdateLobbyRepository extends LobbyHostRepository {
   findLobbyStatus(id: string): Promise<LobbyStatus | null>;
   updateById(id: string, input: UpdateLobbyInput): Promise<Lobby | null>;
   /**
-   * 更新対象の募集枠行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
+   * 更新対象のロビー行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
    * ステータスチェックと updateById を別々のクエリに分けると、その間に並行する
    * updateLobbyStatus が disbanded へ遷移させた場合、チェックを素通りして
    * 更新が成功してしまう race condition（TOCTOU）が起きる。deleteLobby と同方針で

@@ -87,7 +87,7 @@ describe('updateMyPlayMemoVisibility', () => {
     expect(repo.updatePlayMemoVisibility).not.toHaveBeenCalled();
   });
 
-  it('卓が存在しないと notFound を返す', async () => {
+  it('開催が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyId: vi.fn().mockResolvedValue(null),
@@ -109,7 +109,7 @@ describe('updateMyPlayMemoVisibility', () => {
 
   // ゲストは user_id = null のためこの検索に構造上ヒットしない（design-v1.2 §4）。
   // ゲスト除外の専用分岐は書かない
-  it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
+  it('その開催のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findSeatByUserId: vi.fn().mockResolvedValue(null),
@@ -150,7 +150,7 @@ describe('updateMyPlayMemoVisibility', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('卓が存在しないときはメンバー検索も更新も行わない', async () => {
+  it('開催が存在しないときはメンバー検索も更新も行わない', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyId: vi.fn().mockResolvedValue(null),

@@ -76,7 +76,7 @@ const sleep = (ms: number): Promise<void> =>
 const BLOCK_PROBE_MS = 300;
 
 describe('delete-lobby の TOCTOU（FOR UPDATE 競合）', () => {
-  it('同じ募集枠への並行削除は直列化され、成功するのは1つだけ', async () => {
+  it('同じロビーへの並行削除は直列化され、成功するのは1つだけ', async () => {
     await withCommitted(async (db, track) => {
       // Arrange
       const host = await insertUser(db);

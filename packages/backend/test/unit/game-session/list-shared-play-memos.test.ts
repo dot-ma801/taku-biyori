@@ -50,7 +50,7 @@ const makeRepo = (
 });
 
 describe('listSharedPlayMemos', () => {
-  it('完了した卓では公開済みメモを全件返す', async () => {
+  it('完了した開催では公開済みメモを全件返す', async () => {
     // Arrange
     const repo = makeRepo();
 
@@ -68,7 +68,7 @@ describe('listSharedPlayMemos', () => {
     expect(repo.findSharedPlayMemos).toHaveBeenCalledWith('session-1');
   });
 
-  it('中止された卓でも公開済みメモを返す', async () => {
+  it('中止された開催でも公開済みメモを返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -109,7 +109,7 @@ describe('listSharedPlayMemos', () => {
     expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
-  it('卓が存在しないと notFound を返す', async () => {
+  it('開催が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue(null),
@@ -208,7 +208,7 @@ describe('listSharedPlayMemos', () => {
     expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
-  it('非公開のまま中止された卓でも、ホストは公開済みメモを取得できる', async () => {
+  it('非公開のまま中止された開催でも、ホストは公開済みメモを取得できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -232,7 +232,7 @@ describe('listSharedPlayMemos', () => {
   });
 
   // 完了・中止前は他人のメモを見せない（要求 §3-3）
-  it('確定済み（confirmed）の卓では空配列を返す', async () => {
+  it('開催予定（scheduled）の開催では空配列を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -256,7 +256,7 @@ describe('listSharedPlayMemos', () => {
     expect(repo.findSharedPlayMemos).not.toHaveBeenCalled();
   });
 
-  it('当日（today）の卓でも空配列を返す', async () => {
+  it('当日（today）の開催でも空配列を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({

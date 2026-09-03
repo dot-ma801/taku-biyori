@@ -7,7 +7,7 @@ import { GameSessionStatus } from '@taku-biyori/shared';
 const mockListItem: GameSessionListItem = {
   id: 'session-1',
   lobbyId: 'lobby-1',
-  title: 'テスト卓',
+  title: 'テスト開催',
   scenarioName: null,
   status: GameSessionStatus.scheduled,
   scheduledAt: '2099-09-09',
@@ -45,7 +45,7 @@ describe('listGameSessions', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       id: 'session-1',
-      title: 'テスト卓',
+      title: 'テスト開催',
       status: 'scheduled',
       lobbyId: 'lobby-1',
       seats: [],

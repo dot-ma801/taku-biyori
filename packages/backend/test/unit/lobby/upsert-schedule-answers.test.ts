@@ -88,7 +88,7 @@ describe('upsertScheduleAnswers', () => {
     expect(result).toEqual({ type: 'ok', answers: mockAnswers });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue(null),
@@ -156,7 +156,7 @@ describe('upsertScheduleAnswers', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('draft の募集枠は notPublished を返す（公開前は回答できない）', async () => {
+  it('draft のロビーは notPublished を返す（公開前は回答できない）', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({

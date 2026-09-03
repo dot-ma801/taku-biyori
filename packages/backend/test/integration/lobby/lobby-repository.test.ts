@@ -1,5 +1,5 @@
 /**
- * 募集枠リポジトリの実 DB テスト。
+ * ロビーリポジトリの実 DB テスト。
  *
  * 以前は drizzle のメソッドチェーンを `vi.fn()` でモックし、生成された SQL 文字列を
  * assert していた。それでは「クエリが実際に正しい結果を返すか」を検証できないため、
@@ -40,7 +40,9 @@ describe('findByUserId', () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
-      const lobbyId = await insertLobby(db, host.id, { title: 'ホストの卓' });
+      const lobbyId = await insertLobby(db, host.id, {
+        title: 'ホストのロビー',
+      });
       await insertLobbyEntry(db, lobbyId, { userId: host.id });
       await insertLobbyEntry(db, lobbyId, { guestName: 'ゲスト' });
       const repo = createLobbyRepository(db);
@@ -51,7 +53,7 @@ describe('findByUserId', () => {
       // Assert
       const target = rows.find((row) => row.id === lobbyId);
       expect(target).toMatchObject({
-        title: 'ホストの卓',
+        title: 'ホストのロビー',
         hostUserId: host.id,
       });
       expect(target?.entries).toHaveLength(2);
@@ -308,7 +310,7 @@ describe('findHostUserId', () => {
     });
   });
 
-  it('存在しない募集枠では null を返す', async () => {
+  it('存在しないロビーでは null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createLobbyRepository(db);
@@ -360,7 +362,7 @@ describe('findLobbyStatus / findStatusFields', () => {
     });
   });
 
-  it('存在しない募集枠では null を返す', async () => {
+  it('存在しないロビーでは null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createLobbyRepository(db);
@@ -395,7 +397,7 @@ describe('findLobbyStatus / findStatusFields', () => {
 });
 
 describe('findDetailById', () => {
-  it('募集枠とメンバー一覧を返す', async () => {
+  it('ロビーとメンバー一覧を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db, { name: 'ホストさん' });
@@ -415,7 +417,7 @@ describe('findDetailById', () => {
     });
   });
 
-  it('メンバーが1人もいなくても募集枠自体は返す', async () => {
+  it('メンバーが1人もいなくてもロビー自体は返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -453,7 +455,7 @@ describe('findDetailById', () => {
     });
   });
 
-  it('存在しない募集枠では null を返す', async () => {
+  it('存在しないロビーでは null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createLobbyRepository(db);
@@ -506,7 +508,7 @@ describe('updateById', () => {
     });
   });
 
-  it('存在しない募集枠では null を返す', async () => {
+  it('存在しないロビーでは null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createLobbyRepository(db);
@@ -524,7 +526,7 @@ describe('updateById', () => {
 });
 
 describe('deleteById', () => {
-  it('募集枠を削除し、メンバー・日程調整・候補日・回答もカスケード削除される', async () => {
+  it('ロビーを削除し、メンバー・日程調整・候補日・回答もカスケード削除される', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -643,7 +645,7 @@ describe('countGameSessions', () => {
 });
 
 describe('publish', () => {
-  it('未公開の募集枠を公開する', async () => {
+  it('未公開のロビーを公開する', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -814,7 +816,7 @@ describe('disband', () => {
 });
 
 describe('createWithHostAndCandidates', () => {
-  it('候補日が1件以上のとき募集枠・ホストメンバー・日程調整・候補日を1トランザクションで作る', async () => {
+  it('候補日が1件以上のときロビー・ホストメンバー・日程調整・候補日を1トランザクションで作る', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);
@@ -901,7 +903,7 @@ describe('findLobbyVisibility', () => {
     });
   });
 
-  it('存在しない募集枠では null を返す', async () => {
+  it('存在しないロビーでは null を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const repo = createLobbyRepository(db);
@@ -1164,7 +1166,7 @@ describe('エントリー操作', () => {
     });
   });
 
-  it('isGuestEntry は別の募集枠のメンバーには false を返す', async () => {
+  it('isGuestEntry は別のロビーのメンバーには false を返す', async () => {
     await withRollback(async (db) => {
       // Arrange
       const host = await insertUser(db);

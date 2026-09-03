@@ -279,7 +279,7 @@ describe('GET /api/lobbies', () => {
 });
 
 describe('POST /api/lobbies', () => {
-  it('有効なボディで 201 と募集枠を返す', async () => {
+  it('有効なボディで 201 とロビーを返す', async () => {
     // Arrange
     const app = makeApp();
 
@@ -426,7 +426,7 @@ describe('GET /api/lobbies/:id', () => {
     expect(body).toEqual(mockLobbyDetail);
   });
 
-  it('公開済み募集枠は未認証でも 200 を返す', async () => {
+  it('公開済みロビーは未認証でも 200 を返す', async () => {
     // Arrange
     const app = makeApp({
       getSession: vi.fn().mockResolvedValue(null),
@@ -440,7 +440,7 @@ describe('GET /api/lobbies/:id', () => {
     expect(response.status).toBe(200);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       getLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -453,7 +453,7 @@ describe('GET /api/lobbies/:id', () => {
     expect(response.status).toBe(404);
   });
 
-  it('非公開募集枠にホスト以外がアクセスすると 403 を返す', async () => {
+  it('非公開ロビーにホスト以外がアクセスすると 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       getLobby: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -466,7 +466,7 @@ describe('GET /api/lobbies/:id', () => {
     expect(response.status).toBe(403);
   });
 
-  it('非公開募集枠に未認証でアクセスすると 401 を返す', async () => {
+  it('非公開ロビーに未認証でアクセスすると 401 を返す', async () => {
     // Arrange
     const app = makeApp({
       getSession: vi.fn().mockResolvedValue(null),
@@ -494,7 +494,7 @@ describe('GET /api/lobbies/:id', () => {
 });
 
 describe('PATCH /api/lobbies/:id', () => {
-  it('ホストが更新すると 200 と募集枠を返す', async () => {
+  it('ホストが更新すると 200 とロビーを返す', async () => {
     // Arrange
     const app = makeApp();
 
@@ -543,7 +543,7 @@ describe('PATCH /api/lobbies/:id', () => {
     expect(response.status).toBe(403);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -560,7 +560,7 @@ describe('PATCH /api/lobbies/:id', () => {
     expect(response.status).toBe(404);
   });
 
-  it('cancelled の募集枠は 409 を返す', async () => {
+  it('cancelled のロビーは 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateLobby: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
@@ -635,7 +635,7 @@ describe('DELETE /api/lobbies/:id', () => {
     expect(response.status).toBe(403);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       deleteLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -650,7 +650,7 @@ describe('DELETE /api/lobbies/:id', () => {
     expect(response.status).toBe(404);
   });
 
-  it('ホスト以外のメンバーがいる募集枠は 409 を返す', async () => {
+  it('ホスト以外のメンバーがいるロビーは 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       deleteLobby: vi.fn().mockResolvedValue({ type: 'hasMember' }),
@@ -665,7 +665,7 @@ describe('DELETE /api/lobbies/:id', () => {
     expect(response.status).toBe(409);
   });
 
-  it('開催がぶら下がっている募集枠は 409 を返す', async () => {
+  it('開催がぶら下がっているロビーは 409 を返す', async () => {
     // Arrange
     // 消すと過去の開催記録まで連鎖して消えるため（design-v2 §6-13-3）
     const app = makeApp({
@@ -683,7 +683,7 @@ describe('DELETE /api/lobbies/:id', () => {
 });
 
 describe('PATCH /api/lobbies/:id/status', () => {
-  it('ホストが draft → open に遷移すると 200 と募集枠を返す', async () => {
+  it('ホストが draft → open に遷移すると 200 とロビーを返す', async () => {
     // Arrange
     const app = makeApp();
 
@@ -747,7 +747,7 @@ describe('PATCH /api/lobbies/:id/status', () => {
     expect(response.status).toBe(403);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateLobbyStatus: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -820,7 +820,7 @@ describe('PATCH /api/lobbies/:id/status', () => {
 });
 
 describe('GET /api/lobbies/:id/entries', () => {
-  it('公開済み募集枠は未認証でも 200 でメンバー一覧を返す', async () => {
+  it('公開済みロビーは未認証でも 200 でメンバー一覧を返す', async () => {
     // Arrange
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
@@ -833,7 +833,7 @@ describe('GET /api/lobbies/:id/entries', () => {
     expect(body).toEqual([mockMember]);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       listEntries: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -846,7 +846,7 @@ describe('GET /api/lobbies/:id/entries', () => {
     expect(response.status).toBe(404);
   });
 
-  it('非公開募集枠にホスト以外がアクセスすると 403 を返す', async () => {
+  it('非公開ロビーにホスト以外がアクセスすると 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       listEntries: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -859,7 +859,7 @@ describe('GET /api/lobbies/:id/entries', () => {
     expect(response.status).toBe(403);
   });
 
-  it('非公開募集枠に未認証でアクセスすると 401 を返す', async () => {
+  it('非公開ロビーに未認証でアクセスすると 401 を返す', async () => {
     // Arrange
     const app = makeApp({
       getSession: vi.fn().mockResolvedValue(null),
@@ -924,7 +924,7 @@ describe('POST /api/lobbies/:id/entries', () => {
     expect(response.status).toBe(401);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       joinLobby: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -941,7 +941,7 @@ describe('POST /api/lobbies/:id/entries', () => {
     expect(response.status).toBe(404);
   });
 
-  it('open 以外の募集枠は 422 を返す', async () => {
+  it('open 以外のロビーは 422 を返す', async () => {
     // Arrange
     const app = makeApp({
       joinLobby: vi.fn().mockResolvedValue({ type: 'lobbyNotOpen' }),
@@ -1074,7 +1074,7 @@ describe('POST /api/lobbies/:id/guest-entries', () => {
     expect(response.status).toBe(403);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       joinAsGuest: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -1097,7 +1097,7 @@ describe('POST /api/lobbies/:id/guest-entries', () => {
     expect(response.status).toBe(404);
   });
 
-  it('open 以外の募集枠は 422 を返す', async () => {
+  it('open 以外のロビーは 422 を返す', async () => {
     // Arrange
     const app = makeApp({
       joinAsGuest: vi.fn().mockResolvedValue({ type: 'lobbyNotOpen' }),
@@ -1270,7 +1270,7 @@ describe('DELETE /api/lobbies/:id/entries/:entryId', () => {
     expect(response.status).toBe(422);
   });
 
-  it('確定済み・中止済みの募集枠は 409 を返す', async () => {
+  it('確定済み・中止済みのロビーは 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       leaveLobby: vi.fn().mockResolvedValue({ type: 'invalidStatus' }),
@@ -1343,7 +1343,7 @@ describe('GET /api/lobbies/:id/guest-link', () => {
     expect(response.status).toBe(403);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       getGuestLink: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -1464,7 +1464,7 @@ describe('POST /api/lobbies/:id/guest-link（トークンの再発行）', () =>
 });
 
 describe('GET /api/lobbies/:id/schedule-polls', () => {
-  it('公開済み募集枠は未認証でも 200 で日程調整の要約一覧を返す', async () => {
+  it('公開済みロビーは未認証でも 200 で日程調整の要約一覧を返す', async () => {
     // Arrange
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
@@ -1477,7 +1477,7 @@ describe('GET /api/lobbies/:id/schedule-polls', () => {
     expect(body).toEqual([mockSchedulePollSummary]);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const listSchedulePolls = vi.fn().mockResolvedValue({ type: 'notFound' });
     const app = makeApp({ listSchedulePolls });
@@ -1491,7 +1491,7 @@ describe('GET /api/lobbies/:id/schedule-polls', () => {
     expect(response.status).toBe(404);
   });
 
-  it('非公開の募集枠を未認証で見ると 401 を返す', async () => {
+  it('非公開のロビーを未認証で見ると 401 を返す', async () => {
     // Arrange
     const listSchedulePolls = vi.fn().mockResolvedValue({ type: 'forbidden' });
     const app = makeApp({
@@ -1506,7 +1506,7 @@ describe('GET /api/lobbies/:id/schedule-polls', () => {
     expect(response.status).toBe(401);
   });
 
-  it('非公開の募集枠をホスト以外が見ると 403 を返す', async () => {
+  it('非公開のロビーをホスト以外が見ると 403 を返す', async () => {
     // Arrange
     const listSchedulePolls = vi.fn().mockResolvedValue({ type: 'forbidden' });
     const app = makeApp({ listSchedulePolls });
@@ -1603,7 +1603,7 @@ describe('POST /api/lobbies/:id/schedule-polls', () => {
     expect(response.status).toBe(400);
   });
 
-  it('存在しない募集枠なら 404 を返す', async () => {
+  it('存在しないロビーなら 404 を返す', async () => {
     // Arrange
     const createSchedulePoll = vi.fn().mockResolvedValue({ type: 'notFound' });
     const app = makeApp({ createSchedulePoll });
@@ -1642,7 +1642,7 @@ describe('POST /api/lobbies/:id/schedule-polls', () => {
     expect(response.status).toBe(403);
   });
 
-  it('募集枠が disbanded なら 422 を返す', async () => {
+  it('ロビーが disbanded なら 422 を返す', async () => {
     // Arrange
     const createSchedulePoll = vi
       .fn()
@@ -1690,7 +1690,7 @@ describe('POST /api/lobbies/:id/schedule-polls', () => {
 });
 
 describe('GET /api/lobbies/:id/schedule-polls/:pollId', () => {
-  it('公開済み募集枠は未認証でも 200 で日程調整を返す', async () => {
+  it('公開済みロビーは未認証でも 200 で日程調整を返す', async () => {
     // Arrange
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
@@ -1719,7 +1719,7 @@ describe('GET /api/lobbies/:id/schedule-polls/:pollId', () => {
     expect(response.status).toBe(404);
   });
 
-  it('非公開の募集枠を未認証で見ると 401 を返す', async () => {
+  it('非公開のロビーを未認証で見ると 401 を返す', async () => {
     // Arrange
     const getSchedulePoll = vi.fn().mockResolvedValue({ type: 'forbidden' });
     const app = makeApp({
@@ -1736,7 +1736,7 @@ describe('GET /api/lobbies/:id/schedule-polls/:pollId', () => {
     expect(response.status).toBe(401);
   });
 
-  it('非公開の募集枠をホスト以外が見ると 403 を返す', async () => {
+  it('非公開のロビーをホスト以外が見ると 403 を返す', async () => {
     // Arrange
     const getSchedulePoll = vi.fn().mockResolvedValue({ type: 'forbidden' });
     const app = makeApp({ getSchedulePoll });
@@ -1858,7 +1858,7 @@ describe('PUT /api/lobbies/:id/schedule-polls/:pollId/candidate-dates', () => {
     expect(response.status).toBe(403);
   });
 
-  it('募集枠が disbanded なら 422 を返す', async () => {
+  it('ロビーが disbanded なら 422 を返す', async () => {
     // Arrange
     const replaceCandidateDates = vi
       .fn()
@@ -2085,7 +2085,7 @@ describe('PATCH /api/lobbies/:id/schedule-polls/:pollId/answers', () => {
     expect(response.status).toBe(409);
   });
 
-  it('募集枠が未公開なら 422 を返す', async () => {
+  it('ロビーが未公開なら 422 を返す', async () => {
     // Arrange
     const upsertScheduleAnswers = vi
       .fn()
@@ -2113,7 +2113,7 @@ describe('PATCH /api/lobbies/:id/schedule-polls/:pollId/answers', () => {
     expect(response.status).toBe(422);
   });
 
-  it('募集枠が disbanded なら 422 を返す', async () => {
+  it('ロビーが disbanded なら 422 を返す', async () => {
     // Arrange
     const upsertScheduleAnswers = vi
       .fn()
@@ -2350,7 +2350,7 @@ describe('PATCH /api/lobbies/:id/schedule-polls/:pollId/guest-answers', () => {
     expect(response.status).toBe(409);
   });
 
-  it('募集枠が draft・disbanded なら 422 を返す', async () => {
+  it('ロビーが draft・disbanded なら 422 を返す', async () => {
     // Arrange
     const upsertGuestScheduleAnswers = vi
       .fn()
@@ -2515,7 +2515,7 @@ describe('POST → PATCH(公開) → GET の一連フロー', () => {
 describe('ゲストリンク発行 → ゲスト参加 → ゲスト回答の一連フロー', () => {
   it('ホストが発行したゲストリンクでゲストが参加し、そのゲストとして日程回答できる', async () => {
     // Arrange
-    // ステートフルな in-memory 実装で、募集枠・トークン・ゲストメンバー・回答を一貫して検証する
+    // ステートフルな in-memory 実装で、ロビー・トークン・ゲストメンバー・回答を一貫して検証する
     const guestLinkToken = 'flow-guest-token-xyz';
     const guestMembers = new Map<string, LobbyEntry>();
     let nextMemberId = 1;

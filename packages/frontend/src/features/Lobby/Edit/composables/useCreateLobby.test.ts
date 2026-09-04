@@ -682,6 +682,41 @@ describe('useCreateLobby（日程が決まっているモード）', () => {
     );
   });
 
+  // モードだけでなく、ロビーに載る項目の編集でも watch はキャッシュを消す。
+  // 飛行中の submit がそれを書き戻すと、編集した値が黙って捨てられる
+  it('送信中にロビーの項目を編集したら作りかけのロビーをキャッシュしない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const { title, scheduleMode, scheduledAt, timeLabel, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    const submitted = submit();
+    title.value = '直したロビー名';
+    resolveCreate?.(mockLobby);
+    await submitted;
+    // 開催だけの項目を直しても、ロビーのキャッシュは消えない
+    timeLabel.value = '19:00〜';
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: '直したロビー名' }),
+    );
+  });
+
   it('候補日モードならロビーの詳細へ遷移し開催は作らない', async () => {
     // Arrange
     const { title, submit } = useCreateLobby();

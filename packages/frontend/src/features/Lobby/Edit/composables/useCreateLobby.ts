@@ -75,6 +75,12 @@ export const useCreateLobby = () => {
 
   const isFixedMode = computed(() => scheduleMode.value === 'fixed');
 
+  /**
+   * ロビーに載る入力の版。上記の項目が変わるたびに増える。
+   * 飛行中の `submit` が「自分が送ったときの入力で作られたロビーか」を判定するために使う。
+   */
+  const lobbyInputsRevision = ref(0);
+
   // ロビーに載る項目を編集したら、作りかけのロビーは入力内容と噛み合わなくなる。
   // そのまま再送信すると編集が黙って捨てられる（作成済みロビーを使い回すため）ので、
   // 作り直させる。モードの切り替えも同じ理由で含める
@@ -93,6 +99,7 @@ export const useCreateLobby = () => {
     ],
     () => {
       createdLobby.value = null;
+      lobbyInputsRevision.value += 1;
     },
     { flush: 'sync' },
   );
@@ -164,6 +171,9 @@ export const useCreateLobby = () => {
     // await をまたいで isFixedMode を読み直すと、ペイロードを組み立てたモードと
     // その後の分岐が食い違いうる（候補日の無いロビーを poll として扱ってしまう等）。
     const submittedAsFixed = isFixedMode.value;
+    // ロビーに載る入力の版も控える。これが変わっていたら、いま作ったロビーは
+    // 画面の入力ともう噛み合わない（下の書き戻しの判定に使う）
+    const submittedRevision = lobbyInputsRevision.value;
     // 開催に載る入力も同じ理由でスナップショットする。createFirstGameSession は
     // createLobby の await の後に走るため、ref のままだと送信後の編集が載ってしまう
     const submittedGameSession: FixedScheduleSnapshot = {
@@ -202,9 +212,10 @@ export const useCreateLobby = () => {
       }
 
       // 開催の作成は2ステップ目なので、ここで初めて保持する意味が出る。
-      // ただし送信中にモードが変わっていたら、このロビーはもう今の入力と噛み合わない。
-      // watch が消したキャッシュをここで書き戻さない
-      if (isFixedMode.value === submittedAsFixed) {
+      // ただし送信中にロビーの入力（モードを含む）が変わっていたら、
+      // このロビーはもう画面の内容と噛み合わない。watch が消したキャッシュを
+      // ここで書き戻すと、その編集が次の再送信で黙って捨てられる
+      if (lobbyInputsRevision.value === submittedRevision) {
         createdLobby.value = lobby;
       }
 

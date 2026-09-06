@@ -134,7 +134,7 @@ function updateDraft(next: GameSessionDraft) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
 }
 
 .spacer {

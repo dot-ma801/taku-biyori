@@ -200,7 +200,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
 .contents {
   /* 余白 */
   > * {
-    margin: var(--space-5) 0;
+    margin: var(--space-6) 0;
 
     &:first-child {
       margin-top: 0;

@@ -44,13 +44,16 @@ withDefaults(
 </template>
 
 <style scoped>
+/* DS: hierarchy comes from border + surface first, shadow last. A resting
+   card is a hairline --border-subtle with almost no shadow; hover adds
+   --shadow-md and lifts 1px. */
 .card {
   position: relative;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  font-family: var(--font-family-base);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
+  font-family: var(--font-body);
   overflow: hidden;
 }
 
@@ -70,35 +73,34 @@ withDefaults(
 }
 .card--hoverable {
   transition:
-    box-shadow 0.15s,
-    border-color 0.15s;
+    box-shadow var(--duration-normal) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
   cursor: pointer;
 }
 .card--hoverable:hover {
   box-shadow: var(--shadow-md);
-  border-color: var(--color-border-strong);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .card__header {
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4) var(--card-padding);
+  border-bottom: var(--border-width) solid var(--border-subtle);
 }
 .card__title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text);
+  font: var(--text-h3);
+  color: var(--text-primary);
   margin: 0;
-  line-height: 1.3;
 }
 .card__subtitle {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 4px 0 0;
-  line-height: 1.4;
+  font: var(--text-body-sm);
+  color: var(--text-secondary);
+  margin: 2px 0 0;
 }
 
 .card__body {
-  padding: var(--space-6);
+  padding: var(--card-padding);
 }
 .card--no-padding .card__body {
   padding: 0;
@@ -106,11 +108,11 @@ withDefaults(
 
 .card__actions {
   position: relative;
-  padding: var(--space-3) var(--space-6);
-  border-top: 1px solid var(--color-border);
+  padding: var(--space-3) var(--card-padding);
+  border-top: var(--border-width) solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
 }
 </style>

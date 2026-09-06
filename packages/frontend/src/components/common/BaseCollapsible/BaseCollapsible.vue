@@ -36,9 +36,9 @@ const open = defineModel<boolean>({ default: false });
 
 <style scoped>
 .collapsible {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-base);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  font-family: var(--font-body);
   overflow: hidden;
 }
 
@@ -48,40 +48,37 @@ const open = defineModel<boolean>({ default: false });
   justify-content: space-between;
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: background-color 0.15s;
-  font-family: var(--font-family-base);
+  transition: var(--transition-control);
 }
 .collapsible__activator:hover {
-  background: var(--color-surface-muted);
+  background: var(--primary-subtle);
 }
 .collapsible__activator:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .collapsible__title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
-  letter-spacing: 0.01em;
+  font: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
 }
 
 .collapsible__cue {
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   display: flex;
   align-items: center;
 }
 
 .collapsible__content {
   padding: var(--space-4);
-  font-size: 14px;
-  color: var(--color-text);
-  line-height: 1.65;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
+  border-top: var(--border-width) solid var(--border-subtle);
+  background: var(--surface);
 }
 </style>

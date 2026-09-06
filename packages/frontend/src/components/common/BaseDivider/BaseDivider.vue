@@ -24,13 +24,13 @@ withDefaults(
 <style scoped>
 .divider {
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-width) solid var(--border-subtle);
   margin: 0;
   width: 100%;
 }
 .divider--vertical {
   border-top: none;
-  border-left: 1px solid var(--color-border);
+  border-left: var(--border-width) solid var(--border-subtle);
   width: auto;
   height: 100%;
   align-self: stretch;
@@ -39,16 +39,16 @@ withDefaults(
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-family: var(--font-family-base);
+  font-family: var(--font-body);
 }
 .divider__line {
   flex: 1;
-  height: 1px;
-  background: var(--color-border);
+  height: var(--border-width);
+  background: var(--border-subtle);
 }
 .divider__label {
-  font-size: 12px;
-  color: var(--color-text-muted);
+  font: var(--text-caption);
+  color: var(--text-tertiary);
   white-space: nowrap;
 }
 </style>

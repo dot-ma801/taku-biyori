@@ -15,7 +15,7 @@ const props = defineProps<{
   loading: boolean;
   errorMessages: string[];
   hasSchedulePoll?: boolean;
-  /** 「候補日から調整する / 日程が決まっている」の切り替えを出すか（作成画面のみ） */
+  /** 「候補日を出して決める / 開催日を入れる」の切り替えを出すか（作成画面のみ） */
   showScheduleModeSwitch?: boolean;
 }>();
 

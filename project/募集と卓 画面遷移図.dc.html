@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/colors.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/typography.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/shape.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/motion.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/base.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/styles.css">
+<script src="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/_ds_bundle.js"></script>
+<style>
+body{margin:0}
+a{color:var(--primary)}
+a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--background-alt);color:var(--text-primary);font:var(--text-body)">
+<div style="max-width:1080px;margin:0 auto;padding:40px 24px 72px;display:flex;flex-direction:column;gap:44px">
+
+<div style="display:flex;flex-direction:column;gap:10px;max-width:680px">
+<span style="font:var(--text-overline);letter-spacing:0.14em;color:var(--text-tertiary)">FLOW</span>
+<h1 style="margin:0;font:var(--text-h1)">募集と卓 — ユーザーストーリーと画面遷移</h1>
+<p style="margin:0;font:var(--text-body-lg);color:var(--text-secondary);line-height:1.85;text-wrap:pretty">卓は参加するもの、募集は卓が決まるまでの過程です。各ステップの下に「そのとき一覧に見えているカード」を並べているので、カードが増えていかないことがそこで追えます。</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<h2 style="margin:0;font:var(--text-h3)">前提</h2>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{ premise }}" as="p" hint-placeholder-count="3">
+<div style="flex:1 1 300px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,150px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-full);background:var(--primary-subtle);color:var(--primary-on-subtle)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="{{ p.icon }}" size="{{ 18 }}" hint-size="18px,18px"></x-import>
+</span>
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">{{ p.title }}</span>
+<span style="font:var(--text-body-sm);color:var(--text-secondary);line-height:1.85">{{ p.text }}</span>
+</div>
+</x-import>
+</div>
+</sc-for>
+</div>
+</div>
+
+<sc-for list="{{ flows }}" as="f" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:18px;padding-top:8px;border-top:var(--border-width) solid var(--border-subtle)">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:720px">
+<div style="display:flex;align-items:center;gap:10px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ f.tone }}" hint-size="30px,24px">{{ f.id }}</x-import>
+<h2 style="margin:0;font:var(--text-h2)">{{ f.title }}</h2>
+</div>
+<p style="margin:0;font:var(--text-body);color:var(--text-secondary);line-height:1.85;text-wrap:pretty">{{ f.lead }}</p>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:10px">
+<sc-for list="{{ f.steps }}" as="st" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;gap:10px;flex:1 1 210px;min-width:0">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-card);background:var(--surface);border:var(--border-width) solid {{ st.border }};box-shadow:var(--shadow-xs)">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="display:inline-flex;color:{{ st.iconColor }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="{{ st.icon }}" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+</span>
+<span style="font:var(--text-label);color:var(--text-primary);font-weight:var(--weight-medium)">{{ st.screen }}</span>
+</div>
+<span style="font:var(--text-body-sm);color:var(--text-secondary);line-height:1.8">{{ st.act }}</span>
+<sc-if value="{{ st.hasNote }}">
+<span style="font:var(--text-caption);color:{{ st.noteColor }};line-height:1.75;padding-top:2px;border-top:var(--border-width) solid var(--border-subtle)">{{ st.note }}</span>
+</sc-if>
+<span style="margin-top:auto;padding-top:10px;font:var(--text-caption);color:var(--text-tertiary);font-variant-numeric:tabular-nums">一覧：{{ st.list }}</span>
+</div>
+<sc-if value="{{ st.hasArrow }}">
+<span style="flex:none;display:inline-flex;align-items:center;color:var(--text-tertiary)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="arrow-right" size="{{ 18 }}" hint-size="18px,18px"></x-import>
+</span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ f.hasOutcome }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Alert" tone="{{ f.outcomeTone }}" title="{{ f.outcomeTitle }}" hint-size="100%,80px">{{ f.outcome }}</x-import>
+</sc-if>
+</div>
+</sc-for>
+
+<div style="display:flex;flex-direction:column;gap:16px;padding-top:8px;border-top:var(--border-width) solid var(--border-subtle)">
+<h2 style="margin:0;font:var(--text-h2)">カードは増えない</h2>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{ answers }}" as="a" hint-placeholder-count="3">
+<div style="flex:1 1 300px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,190px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:var(--text-h3)">{{ a.title }}</span>
+<span style="font:var(--text-body-sm);color:var(--text-secondary);line-height:1.85">{{ a.text }}</span>
+</div>
+</x-import>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<h2 style="margin:0;font:var(--text-h3)">残っている論点</h2>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ openIssues }}" as="q" hint-placeholder-count="2">
+<div style="display:flex;gap:12px;padding:16px;border-radius:var(--radius-sm);background:var(--surface-subtle);border:var(--border-width) dashed var(--border)">
+<span style="flex:none;display:inline-flex;color:var(--warning);margin-top:2px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="info" size="{{ 16 }}" hint-size="16px,16px"></x-import>
+</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">{{ q.title }}</span>
+<span style="font:var(--text-body-sm);color:var(--text-secondary);line-height:1.85">{{ q.text }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;justify-content:flex-end">
+<x-import component-from-global-scope="DesignSystem_9512d8.Switch" checked="{{ isDark }}" onChange="{{ toggleTheme }}" label="夜のテーマで見る" hint-size="180px,24px"></x-import>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1120,&quot;height&quot;:1400}}">
+const FLOWS = [
+  {
+    id: 'A', tone: 'primary',
+    title: '開催日が決まっている',
+    lead: '「来週の水曜、4人でやる」が先に決まっているケース。募集は登場しません。',
+    steps: [
+      { screen: '卓一覧', icon: 'session', act: '「卓をつくる」を押す', list: '卓 0' },
+      { screen: '卓をつくる', icon: 'add', act: '「開催日が決まっている」を選ぶ', list: '卓 0' },
+      { screen: '開催日を入れる', icon: 'calendar', act: 'タイトルと日付を入れて作成', list: '卓 0' },
+      { screen: '卓詳細', icon: 'link', act: '招待リンクを渡してメンバーを集める', list: '卓 1', accent: true },
+    ],
+  },
+  {
+    id: 'B', tone: 'accent',
+    title: '日程から決める（結果的に2回に分かれる）',
+    lead: 'ここが今回の焦点です。募集は3〜6の間だけ一覧に出て、全員が卓に入った時点で一覧から外れます。',
+    steps: [
+      { screen: '卓一覧', icon: 'session', act: '「卓をつくる」を押す', list: '卓 0' },
+      { screen: '卓をつくる', icon: 'add', act: '「まだ決まっていない」を選ぶ', list: '卓 0' },
+      { screen: '候補日を出す', icon: 'schedule', act: '候補日を3件入れて開始', list: '募集 1', note: 'ここから募集がはじまる' },
+      { screen: '募集詳細 / 日程調整', icon: 'calendar', act: '6人が ○△× で回答', list: '募集 1', note: '参加表明はここで1回だけ' },
+      { screen: '募集詳細', icon: 'check', act: '5/11 に来られる4人で卓を確定', list: '募集 1 ＋ 卓 1', accent: true },
+      { screen: '募集詳細', icon: 'check', act: '残った2人で 5/17 を確定', list: '募集 1 ＋ 卓 2', note: '2人は回答済みなので再表明なし', accent: true },
+      { screen: '卓一覧', icon: 'session', act: '全員が卓に入り、募集は一覧から外れる', list: '卓 2', accent: true },
+    ],
+    outcomeTone: 'success',
+    outcomeTitle: '最後に一覧に残るのは卓 2 枚',
+    outcome: '実際に開催する回の数と一致します。募集カードは過程が終わった時点で一覧から外れ、卓の「募集：〇〇 の 第1卓」からたどれる履歴になります。',
+  },
+  {
+    id: 'C', tone: 'primary',
+    title: '招待された側（PL・ゲスト）',
+    lead: '参加表明は募集に対して1回。どの卓に入るかはホストが決めるので、PL 側の操作は増えません。',
+    steps: [
+      { screen: '招待リンク', icon: 'door', act: 'URL を開く（ログイン不要）', list: '—' },
+      { screen: '募集詳細 / 日程調整', icon: 'calendar', act: '自分の ○△× を送る', list: '募集 1', note: 'これが参加表明' },
+      { screen: '（待つ）', icon: 'clock', act: 'ホストが卓を確定するのを待つ', list: '募集 1' },
+      { screen: '卓詳細', icon: 'session', act: '自分が入った卓が一覧に出る', list: '卓 1', accent: true, note: '再表明・再参加の操作なし' },
+    ],
+  },
+];
+
+class Component extends DCLogic {
+  state = { theme: 'light' };
+
+  renderVals() {
+    const dark = this.state.theme === 'dark';
+    return {
+      theme: this.state.theme,
+      isDark: dark,
+      toggleTheme: () => this.setState({ theme: dark ? 'light' : 'dark' }),
+
+      premise: [
+        { icon: 'session', title: '卓 — 参加するもの', text: '開催日と参加者が入っている。一覧に並ぶのはこれだけ。ユーザーが覚える名詞は卓ひとつ。' },
+        { icon: 'schedule', title: '募集 — 卓が決まるまでの過程', text: '候補日と回答を持つ。開始と終わりがある。終われば一覧から外れる。' },
+        { icon: 'members', title: '参加表明は募集に付く', text: '卓ではなく募集に対して1回。卓への配属はホストが選ぶので、2卓目でも聞き直さない。' },
+      ],
+
+      flows: FLOWS.map((f) => ({
+        ...f,
+        hasOutcome: !!f.outcome,
+        steps: f.steps.map((st, i) => ({
+          ...st,
+          hasArrow: i < f.steps.length - 1,
+          hasNote: !!st.note,
+          noteColor: st.accent ? 'var(--primary-on-subtle)' : 'var(--text-tertiary)',
+          border: st.accent ? 'var(--primary)' : 'var(--border-subtle)',
+          iconColor: st.accent ? 'var(--primary)' : 'var(--text-tertiary)',
+        })),
+      })),
+
+      answers: [
+        { title: '募集は「行き先を示すだけのカード」にならない', text: '過程が終われば一覧から外れます。残るのは実際に開催する卓だけ。募集自体は消さず、卓の出自表示からたどれる履歴として残します。' },
+        { title: '一覧の枚数は、開催する回数と同じ', text: '1募集から2卓なら卓2枚。1卓なら卓1枚で、そのとき「第1卓」という番号も出しません。番号は複数あるときだけの情報です。' },
+        { title: '2卓目にメンバーが入った状態で立つ', text: '募集の回答をそのまま持ち越すので、ホストが「残りのメンバーで確定」を押した時点でメンバー入りの卓ができます。PL 側の操作はゼロ。' },
+      ],
+
+      openIssues: [
+        { title: '募集を一覧から外す条件', text: '「全員がどこかの卓に入った」か「締め切りを過ぎた」のどちらか。回答したのに卓に入れなかった人が残っている間は、募集を出したままにする必要があります。' },
+        { title: '卓に入れなかった人への見え方', text: '募集は見えているが自分の卓はまだない状態です。募集カードに「あなたの日程は調整中」と出すか、通知だけにするかは決めていません。' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

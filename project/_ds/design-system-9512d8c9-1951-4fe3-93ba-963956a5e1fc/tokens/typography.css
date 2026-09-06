@@ -1,0 +1,46 @@
+/* たく日和 — type scale.
+   Japanese-first: generous line-height, no ultra-bold, no oversized headings. */
+:root {
+  --text-display: 400 2.5rem/1.28 var(--font-display);
+  --text-h1: 700 2rem/1.35 var(--font-display);
+  --text-h2: 700 1.5rem/1.4 var(--font-display);
+  --text-h3: 500 1.25rem/1.5 var(--font-display);
+  --text-body-lg: 400 1.125rem/1.85 var(--font-body);
+  --text-body: 400 1rem/1.8 var(--font-body);
+  --text-body-sm: 400 0.875rem/1.75 var(--font-body);
+  --text-label: 500 0.8125rem/1.45 var(--font-body);
+  --text-caption: 400 0.75rem/1.6 var(--font-body);
+  --text-overline: 600 0.6875rem/1.45 var(--font-body);
+
+  --size-display: 2.5rem;
+  --size-h1: 2rem;
+  --size-h2: 1.5rem;
+  --size-h3: 1.25rem;
+  --size-body-lg: 1.125rem;
+  --size-body: 1rem;
+  --size-body-sm: 0.875rem;
+  --size-label: 0.8125rem;
+  --size-caption: 0.75rem;
+  --size-overline: 0.6875rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-overline: 0.14em;
+}
+
+.ds-display { font: var(--text-display); letter-spacing: var(--tracking-tight); }
+.ds-h1 { font: var(--text-h1); letter-spacing: var(--tracking-tight); }
+.ds-h2 { font: var(--text-h2); }
+.ds-h3 { font: var(--text-h3); }
+.ds-body-lg { font: var(--text-body-lg); }
+.ds-body { font: var(--text-body); }
+.ds-body-sm { font: var(--text-body-sm); }
+.ds-label { font: var(--text-label); letter-spacing: var(--tracking-wide); }
+.ds-caption { font: var(--text-caption); color: var(--text-secondary); }
+.ds-overline { font: var(--text-overline); letter-spacing: var(--tracking-overline); text-transform: uppercase; color: var(--text-secondary); }

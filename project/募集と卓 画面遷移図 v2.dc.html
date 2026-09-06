@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/colors.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/typography.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/shape.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/motion.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/base.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/styles.css">
+<script src="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/_ds_bundle.js"></script>
+<style>
+body{margin:0}
+a{color:var(--primary)}
+a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+
+<div style="width:4320px;background:var(--background-alt);color:var(--text-primary);font:var(--text-body);padding:40px 40px 60px;box-sizing:border-box">
+
+<div style="display:flex;align-items:flex-end;gap:32px;margin-bottom:32px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:720px">
+<span style="font:var(--text-overline);letter-spacing:0.14em;color:var(--text-tertiary)">SCREEN FLOW</span>
+<h1 style="margin:0;font:var(--text-h1)">募集と卓 — 画面遷移</h1>
+<p style="margin:0;font:var(--text-body);color:var(--text-secondary);line-height:1.85">各画面の下に「そのとき一覧に見えているカード」を書いています。最後に残るのは開催する回の数だけです。</p>
+</div>
+<div style="display:flex;gap:28px;padding:14px 18px;border-radius:var(--radius-md);background:var(--surface);border:var(--border-width) solid var(--border-subtle)">
+<sc-for list="{{ legend }}" as="l" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;white-space:nowrap">
+<span style="width:14px;height:14px;border-radius:4px;background:{{ l.color }}"></span>
+<span style="font:var(--text-caption);color:var(--text-secondary)">{{ l.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position:relative;width:4240px;height:1450px">
+
+<svg width="4240" height="1450" viewBox="0 0 4240 1450" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="var(--text-tertiary)"></path>
+</marker>
+</defs>
+<g fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)">
+<path d="M400 690 H592"></path>
+<path d="M940 690 H1132"></path>
+<path d="M1480 690 H1672"></path>
+<path d="M2020 690 H2212"></path>
+<path d="M2560 690 H2752"></path>
+<path d="M3100 690 H3292"></path>
+<path d="M3640 690 H3832"></path>
+<path d="M1480 250 H1672"></path>
+<path d="M770 500 V265 Q770 250 785 250 H1132"></path>
+<path d="M1310 960 V705 Q1310 690 1325 690 H1672"></path>
+<path d="M2930 880 V948"></path>
+</g>
+</svg>
+
+<sc-for list="{{ edgeLabels }}" as="e" hint-placeholder-count="4">
+<span style="position:absolute;left:{{ e.x }}px;top:{{ e.y }}px;padding:3px 8px;border-radius:var(--radius-full);background:var(--surface);border:var(--border-width) solid var(--border-subtle);font:var(--text-caption);color:var(--text-secondary);white-space:nowrap">{{ e.label }}</span>
+</sc-for>
+
+<sc-for list="{{ lanes }}" as="ln" hint-placeholder-count="3">
+<div style="position:absolute;left:{{ ln.x }}px;top:{{ ln.y }}px;display:flex;align-items:center;gap:10px;white-space:nowrap">
+<span style="width:8px;height:8px;border-radius:var(--radius-full);background:{{ ln.color }}"></span>
+<span style="font:var(--text-label);font-weight:var(--weight-medium);color:var(--text-secondary)">{{ ln.label }}</span>
+<span style="font:var(--text-caption);color:var(--text-tertiary)">{{ ln.note }}</span>
+</div>
+</sc-for>
+
+<sc-for list="{{ nodes }}" as="n" hint-placeholder-count="8">
+<div style="position:absolute;left:{{ n.x }}px;top:{{ n.y }}px;width:340px;height:380px;display:flex;flex-direction:column;border-radius:var(--radius-md);background:var(--surface);border:var(--border-width) solid {{ n.border }};box-shadow:var(--shadow-sm);overflow:hidden">
+
+<div style="flex:none;display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;background:var(--surface-subtle);border-bottom:var(--border-width) solid var(--border-subtle)">
+<span style="width:7px;height:7px;border-radius:var(--radius-full);background:var(--primary)"></span>
+<span style="font-size:9px;letter-spacing:0.06em;color:var(--text-tertiary)">たく日和</span>
+<span style="flex:1"></span>
+<span style="font-size:9px;color:var(--text-tertiary)">{{ n.chrome }}</span>
+</div>
+
+<div style="flex:1;min-height:0;padding:14px 14px 10px;display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ n.rows }}" as="r" hint-placeholder-count="3">
+
+<sc-if value="{{ r.isH1 }}">
+<div style="font-family:var(--font-display);font-size:16px;font-weight:var(--weight-bold);line-height:1.35">{{ r.text }}</div>
+</sc-if>
+
+<sc-if value="{{ r.isSub }}">
+<div style="font-size:11px;color:var(--text-secondary);line-height:1.7">{{ r.text }}</div>
+</sc-if>
+
+<sc-if value="{{ r.isBadge }}">
+<div style="display:flex;align-items:center;gap:6px">
+<sc-for list="{{ r.badges }}" as="b" hint-placeholder-count="2">
+<span style="padding:2px 7px;border-radius:var(--radius-xs);font-size:9px;font-weight:var(--weight-medium);background:{{ b.bg }};color:{{ b.fg }}">{{ b.label }}</span>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isTabs }}">
+<div style="display:flex;gap:12px;border-bottom:var(--border-width) solid var(--border-subtle)">
+<sc-for list="{{ r.tabs }}" as="t" hint-placeholder-count="3">
+<span style="padding-bottom:5px;border-bottom:2px solid {{ t.line }};font-size:10px;font-weight:{{ t.weight }};color:{{ t.color }}">{{ t.label }}</span>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isCard }}">
+<div style="display:flex;flex-direction:column;gap:5px;padding:10px;border-radius:var(--radius-sm);background:{{ r.bg }};border:var(--border-width) solid {{ r.cardBorder }}">
+<div style="display:flex;align-items:center;gap:6px">
+<span style="padding:2px 6px;border-radius:var(--radius-xs);font-size:9px;background:{{ r.tagBg }};color:{{ r.tagFg }}">{{ r.status }}</span>
+<span style="flex:1"></span>
+<span style="font-size:9px;color:var(--text-tertiary)">{{ r.right }}</span>
+</div>
+<span style="font-size:12px;font-weight:var(--weight-medium);line-height:1.4">{{ r.title }}</span>
+<sc-if value="{{ r.hasOrigin }}">
+<span style="font-size:9px;color:var(--text-tertiary)">{{ r.origin }}</span>
+</sc-if>
+<span style="font-size:10px;color:var(--text-secondary);line-height:1.6">{{ r.meta }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isPick }}">
+<div style="display:flex;flex-direction:column;gap:7px">
+<sc-for list="{{ r.items }}" as="p" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius-sm);background:{{ p.bg }};border:var(--border-width) solid {{ p.border }}">
+<span style="width:12px;height:12px;border-radius:var(--radius-full);border:2px solid {{ p.dot }};background:{{ p.dotFill }}"></span>
+<span style="flex:1;min-width:0;font-size:11px;line-height:1.6;color:var(--text-primary)">{{ p.label }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isField }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ r.fields }}" as="fd" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:3px">
+<span style="font-size:9px;color:var(--text-tertiary)">{{ fd.label }}</span>
+<div style="height:24px;display:flex;align-items:center;padding:0 8px;border-radius:var(--radius-sm);background:var(--surface);border:var(--border-width) solid var(--border);font-size:10px;color:{{ fd.color }}">{{ fd.value }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isSched }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ r.days }}" as="d" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:var(--radius-sm);background:{{ d.bg }};border:var(--border-width) solid {{ d.border }}">
+<span style="flex:none;width:64px;font-size:10px;color:var(--text-secondary)">{{ d.date }}</span>
+<span style="flex:1;min-width:0;font-size:13px;letter-spacing:0.22em;color:var(--text-primary)">{{ d.marks }}</span>
+<span style="flex:none;font-size:9px;color:{{ d.noteColor }}">{{ d.note }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isChips }}">
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="4">
+<span style="padding:4px 10px;border-radius:var(--radius-full);font-size:10px;background:{{ c.bg }};border:var(--border-width) solid {{ c.border }};color:{{ c.fg }}">{{ c.label }}</span>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isBtn }}">
+<div style="display:flex;gap:7px;flex-wrap:wrap">
+<sc-for list="{{ r.btns }}" as="b" hint-placeholder-count="1">
+<span style="display:inline-flex;align-items:center;height:28px;padding:0 12px;border-radius:var(--radius-sm);font-size:10px;font-weight:var(--weight-medium);background:{{ b.bg }};border:var(--border-width) solid {{ b.border }};color:{{ b.fg }}">{{ b.label }}</span>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isNote }}">
+<div style="font-size:10px;color:var(--text-tertiary);line-height:1.7">{{ r.text }}</div>
+</sc-if>
+
+<sc-if value="{{ r.isEmpty }}">
+<div style="display:flex;flex-direction:column;gap:4px;padding:14px 12px;border-radius:var(--radius-sm);background:var(--surface-subtle);border:var(--border-width) dashed var(--border)">
+<span style="font-size:11px;color:var(--text-primary)">{{ r.title }}</span>
+<span style="font-size:10px;color:var(--text-secondary);line-height:1.6">{{ r.text }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ r.isSpacer }}">
+<div style="flex:1"></div>
+</sc-if>
+
+</sc-for>
+</div>
+
+<div style="flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:{{ n.footBg }};border-top:var(--border-width) solid var(--border-subtle)">
+<span style="font-size:9px;color:var(--text-tertiary)">{{ n.step }}</span>
+<span style="flex:1"></span>
+<span style="font-size:10px;font-weight:var(--weight-medium);color:{{ n.footFg }}">一覧：{{ n.list }}</span>
+</div>
+
+</div>
+</sc-for>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:4320,&quot;height&quot;:1620}}">
+const C = {
+  ok: 'var(--success)', warn: 'var(--warning)',
+  pri: 'var(--primary)', priBg: 'var(--primary-subtle)', priFg: 'var(--primary-on-subtle)',
+  accBg: 'var(--accent-subtle)', accFg: 'var(--accent-on-subtle)',
+  okBg: 'var(--success-surface)', okFg: 'var(--success-text)',
+  warnBg: 'var(--warning-surface)', warnFg: 'var(--warning-text)',
+  nBg: 'var(--surface-subtle)', nFg: 'var(--text-secondary)',
+  sub: 'var(--border-subtle)', tert: 'var(--text-tertiary)',
+};
+
+const tabs = (list) => ({ t: 'tabs', tabs: list.map(([label, on]) => ({
+  label, line: on ? 'var(--accent)' : 'transparent',
+  weight: on ? 'var(--weight-medium)' : 'var(--weight-regular)',
+  color: on ? 'var(--text-primary)' : 'var(--text-tertiary)',
+})) });
+
+const btn = (list) => ({ t: 'btn', btns: list.map(([label, kind]) => ({
+  label,
+  bg: kind === 'p' ? 'var(--primary)' : 'var(--surface)',
+  border: kind === 'p' ? 'var(--primary)' : 'var(--border)',
+  fg: kind === 'p' ? 'var(--text-on-primary)' : 'var(--text-primary)',
+})) });
+
+const pick = (list) => ({ t: 'pick', items: list.map(([label, on]) => ({
+  label,
+  bg: on ? C.priBg : 'var(--surface)',
+  border: on ? C.pri : C.sub,
+  dot: on ? C.pri : 'var(--border)',
+  dotFill: on ? C.pri : 'transparent',
+})) });
+
+const chips = (list) => ({ t: 'chips', chips: list.map(([label, on]) => ({
+  label,
+  bg: on ? C.priBg : 'var(--surface)',
+  border: on ? C.pri : 'var(--border)',
+  fg: on ? C.priFg : 'var(--text-secondary)',
+})) });
+
+const card = (o) => ({ t: 'card', right: '', hasOrigin: !!o.origin, ...o });
+
+const NODES = [
+  // ── レーンB：日程から決める（主線）
+  { id: 'b0', x: 60, y: 500, step: '1', list: '卓 0', chrome: '卓一覧',
+    rows: [
+      { t: 'h1', text: '卓' },
+      tabs([['これから', true], ['募集・調整中', false], ['終了', false]]),
+      { t: 'empty', title: 'まだ卓がありません', text: '最初の卓をつくると、ここに予定が並びます。' },
+      { t: 'spacer' },
+      btn([['卓をつくる', 'p']]),
+    ] },
+  { id: 'b1', x: 600, y: 500, step: '2', list: '卓 0', chrome: '卓をつくる', accent: true,
+    rows: [
+      { t: 'h1', text: '卓をつくる' },
+      { t: 'sub', text: '開催日が決まっているかどうかで、進み方が変わります。' },
+      pick([['開催日が決まっている', false], ['まだ決まっていない', true]]),
+      { t: 'spacer' },
+      { t: 'note', text: 'どちらも、あとから日程を変えられます。' },
+    ] },
+  { id: 'b2', x: 1140, y: 500, step: '3', list: '募集 1', chrome: '候補日を出す',
+    rows: [
+      { t: 'h1', text: '候補日を出して卓を決める' },
+      { t: 'field', fields: [
+        { label: 'タイトル', value: '【5月】定期開催マダミス会', color: 'var(--text-primary)' },
+        { label: '候補日', value: '5/10 ・ 5/11 ・ 5/17', color: 'var(--text-primary)' },
+        { label: '募集人数', value: '6', color: 'var(--text-primary)' },
+      ] },
+      { t: 'spacer' },
+      btn([['募集をはじめる', 'p']]),
+    ] },
+  { id: 'b3', x: 1680, y: 500, step: '4', list: '募集 1', chrome: '募集詳細 / 日程調整',
+    rows: [
+      { t: 'badge', badges: [{ label: '日程調整中', bg: C.warnBg, fg: C.warnFg }, { label: 'GM', bg: C.accBg, fg: C.accFg }] },
+      { t: 'h1', text: '【5月】定期開催マダミス会' },
+      tabs([['概要', false], ['日程調整', true], ['メンバー', false]]),
+      { t: 'sched', days: [
+        { date: '5/10 (金)', marks: '○△○×○×', note: '3人', bg: C.nBg, border: C.sub, noteColor: C.tert },
+        { date: '5/11 (土)', marks: '○○○○××', note: '4人', bg: C.okBg, border: C.ok, noteColor: C.okFg },
+        { date: '5/17 (金)', marks: '△×△×○○', note: '2人', bg: C.nBg, border: C.sub, noteColor: C.tert },
+      ] },
+      { t: 'note', text: '回答＝参加表明。ここで1回だけ。' },
+    ] },
+  { id: 'b4', x: 2220, y: 500, step: '5', list: '募集 1', chrome: '卓を確定する（モーダル）', accent: true,
+    rows: [
+      { t: 'h1', text: '卓を確定する' },
+      { t: 'sub', text: '開催日を決めて、参加するメンバーを選びます' },
+      pick([['5月11日(土) 13:00〜 ／ 4人が参加できる', true]]),
+      chips([['さくら', true], ['ゆう', true], ['けい', true], ['みなと', true], ['あお', false], ['りん', false]]),
+      { t: 'spacer' },
+      btn([['この日で確定する', 'p'], ['キャンセル', 's']]),
+    ] },
+  { id: 'b5', x: 2760, y: 500, step: '6', list: '募集 1 ＋ 卓 1', chrome: '募集詳細 / 概要',
+    rows: [
+      { t: 'h1', text: 'この募集から決まった卓' },
+      card({ status: '実施前', tagBg: C.priBg, tagFg: C.priFg, title: '卓 ／ 5月11日(土) 13:00〜',
+        meta: 'さくら・ゆう・けい・みなと', bg: C.nBg, cardBorder: C.sub, right: '4人' }),
+      { t: 'note', text: 'まだ日程の合っていないメンバーが2人います。' },
+      { t: 'spacer' },
+      btn([['残りのメンバーで卓を確定する', 's']]),
+    ] },
+  { id: 'b6', x: 3300, y: 500, step: '7', list: '募集 1 ＋ 卓 2', chrome: '募集詳細 / 概要', accent: true,
+    rows: [
+      { t: 'h1', text: 'この募集から決まった卓' },
+      card({ status: '実施前', tagBg: C.priBg, tagFg: C.priFg, title: '第1卓 ／ 5月11日(土) 13:00〜',
+        meta: 'さくら・ゆう・けい・みなと', bg: C.nBg, cardBorder: C.sub, right: '4人' }),
+      card({ status: '実施前', tagBg: C.priBg, tagFg: C.priFg, title: '第2卓 ／ 5月17日(金) 19:00〜',
+        meta: 'あお・りん', bg: C.priBg, cardBorder: C.pri, right: '2人' }),
+      { t: 'note', text: '全員がどこかの卓に入りました。募集はここで終わります。' },
+    ] },
+  { id: 'b7', x: 3840, y: 500, step: '8', list: '卓 2', chrome: '卓一覧',
+    rows: [
+      { t: 'h1', text: '卓' },
+      tabs([['これから', true], ['募集・調整中', false], ['終了', false]]),
+      card({ status: '実施前', tagBg: C.priBg, tagFg: C.priFg, title: '第1卓 ／ 5月11日(土)',
+        origin: '募集：【5月】定期開催マダミス会', meta: 'さくら 他3人', bg: 'var(--surface)', cardBorder: C.sub }),
+      card({ status: '実施前', tagBg: C.priBg, tagFg: C.priFg, title: '第2卓 ／ 5月17日(金)',
+        meta: 'あお・りん', bg: 'var(--surface)', cardBorder: C.sub }),
+      { t: 'note', text: '募集カードは一覧から外れています。' },
+    ] },
+
+  // ── レーンA：開催日が決まっている
+  { id: 'a2', x: 1140, y: 60, step: 'A-1', list: '卓 0', chrome: '開催日を入れる',
+    rows: [
+      { t: 'h1', text: '卓をつくる' },
+      { t: 'field', fields: [
+        { label: 'タイトル', value: '春分の会', color: 'var(--text-primary)' },
+        { label: '開催日', value: '3月20日(水) 13:00', color: 'var(--text-primary)' },
+        { label: '実施場所', value: '中野・レンタルスペース flat', color: 'var(--text-primary)' },
+      ] },
+      { t: 'spacer' },
+      btn([['卓を作成', 'p']]),
+    ] },
+  { id: 'a3', x: 1680, y: 60, step: 'A-2', list: '卓 1', chrome: '卓詳細',
+    rows: [
+      { t: 'badge', badges: [{ label: '実施前', bg: C.priBg, fg: C.priFg }, { label: 'GM', bg: C.accBg, fg: C.accFg }] },
+      { t: 'h1', text: '春分の会' },
+      { t: 'sub', text: '3月20日(水) 13:00〜 ／ 中野・レンタルスペース flat' },
+      tabs([['概要', true], ['メンバー', false], ['プレイメモ', false]]),
+      { t: 'spacer' },
+      btn([['招待リンクを取得', 's']]),
+      { t: 'note', text: '募集は登場しません。出自の行も出ません。' },
+    ] },
+
+  // ── レーンC：招待された側
+  { id: 'c2', x: 1140, y: 960, step: 'C-1', list: '—', chrome: '招待リンク（ログイン不要）',
+    rows: [
+      { t: 'sub', text: 'ホストから届いた URL を開く' },
+      { t: 'h1', text: '【5月】定期開催マダミス会' },
+      { t: 'sub', text: 'シナリオ：星降る夜の図書館 ／ 候補日 3件' },
+      { t: 'spacer' },
+      btn([['日程を回答する', 'p']]),
+      { t: 'note', text: 'アカウント登録なしで回答できます。' },
+    ] },
+  { id: 'c5', x: 2760, y: 960, step: 'C-2', list: '卓 1', chrome: '卓詳細（PL の見え方）', accent: true,
+    rows: [
+      { t: 'badge', badges: [{ label: '実施前', bg: C.priBg, fg: C.priFg }, { label: 'PL', bg: C.priBg, fg: C.priFg }] },
+      { t: 'h1', text: '第2卓' },
+      { t: 'sub', text: '募集：【5月】定期開催マダミス会 の 第2卓' },
+      { t: 'sub', text: '5月17日(金) 19:00〜 ／ ココフォリア' },
+      { t: 'spacer' },
+      { t: 'note', text: '参加の操作はしていない。回答が持ち越されて、メンバー入りの卓ができている。' },
+    ] },
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      legend: [
+        { label: '募集（過程）が動いている画面', color: 'var(--warning)' },
+        { label: '卓（もの）が増える瞬間', color: 'var(--primary)' },
+        { label: '一覧から外れる', color: 'var(--text-tertiary)' },
+      ],
+      lanes: [
+        { x: 60, y: 20, label: 'レーン A — 開催日が決まっている', note: '募集なし。卓がそのままできる', color: 'var(--primary)' },
+        { x: 60, y: 460, label: 'レーン B — 日程から決める（2回に分かれる）', note: '募集は 3〜7 の間だけ一覧に出る', color: 'var(--warning)' },
+        { x: 60, y: 920, label: 'レーン C — 招待された側（PL・ゲスト）', note: '操作は「回答する」の1回だけ', color: 'var(--text-tertiary)' },
+      ],
+      edgeLabels: [
+        { x: 900, y: 222, label: '決まっている' },
+        { x: 973, y: 660, label: 'まだ決まっていない' },
+        { x: 1490, y: 656, label: '○△× を送る＝参加表明' },
+        { x: 2837, y: 893, label: '確定した卓が自分の一覧に出る' },
+        { x: 3691, y: 656, label: '募集は外れる' },
+      ],
+      nodes: NODES.map((n) => ({
+        ...n,
+        border: n.accent ? C.pri : C.sub,
+        footBg: n.accent ? C.priBg : C.nBg,
+        footFg: n.accent ? C.priFg : 'var(--text-secondary)',
+        rows: n.rows.map((r) => ({
+          ...r,
+          isH1: r.t === 'h1', isSub: r.t === 'sub', isBadge: r.t === 'badge', isTabs: r.t === 'tabs',
+          isCard: r.t === 'card', isPick: r.t === 'pick', isField: r.t === 'field', isSched: r.t === 'sched',
+          isChips: r.t === 'chips', isBtn: r.t === 'btn', isNote: r.t === 'note', isEmpty: r.t === 'empty',
+          isSpacer: r.t === 'spacer',
+        })),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+/* たく日和 — minimal base layer. Consumers get sane defaults, nothing opinionated. */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: var(--text-body);
+  color: var(--text-primary);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+
+a { color: var(--text-link); text-decoration-color: color-mix(in oklab, var(--text-link) 40%, transparent); text-underline-offset: 2px; }
+a:hover { color: var(--text-link-hover); text-decoration-color: currentColor; }
+
+h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); font-weight: var(--weight-bold); }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+
+::selection { background: var(--sun-200); color: var(--ink-900); }

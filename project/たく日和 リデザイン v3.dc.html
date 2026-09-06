@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/colors.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/typography.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/shape.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/motion.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/tokens/base.css">
+<link rel="stylesheet" href="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/styles.css">
+<script src="_ds/design-system-9512d8c9-1951-4fe3-93ba-963956a5e1fc/_ds_bundle.js"></script>
+<style>
+body{margin:0}
+textarea,input{font-family:inherit}
+a{color:var(--primary)}
+a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--background-alt);color:var(--text-primary);font:var(--text-body)">
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 20px">
+<span style="font:var(--text-overline);letter-spacing:0.14em;color:var(--text-tertiary)">PROTOTYPE</span>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ previewLinks }}" as="l" hint-placeholder-count="6">
+<button type="button" onClick="{{ l.go }}" style="height:28px;padding:0 11px;border-radius:var(--radius-full);border:var(--border-width) solid {{ l.border }};background:{{ l.bg }};color:{{ l.fg }};font:var(--text-caption);cursor:pointer">{{ l.label }}</button>
+</sc-for>
+</div>
+<span style="flex:1"></span>
+<div style="display:flex;gap:6px">
+<button type="button" onClick="{{ setDesktop }}" style="height:28px;padding:0 11px;border-radius:var(--radius-full);border:var(--border-width) solid {{ desktopBorder }};background:{{ desktopBg }};color:var(--text-secondary);font:var(--text-caption);cursor:pointer">デスクトップ</button>
+<button type="button" onClick="{{ setMobile }}" style="height:28px;padding:0 11px;border-radius:var(--radius-full);border:var(--border-width) solid {{ mobileBorder }};background:{{ mobileBg }};color:var(--text-secondary);font:var(--text-caption);cursor:pointer">モバイル</button>
+</div>
+</div>
+
+<div style="padding:{{ framePad }}">
+<div style="position:relative;width:{{ frameW }};max-width:100%;margin:0 auto;border-radius:{{ frameRadius }};background:var(--background);border:var(--border-width) solid var(--border-subtle);box-shadow:var(--shadow-lg);overflow:hidden">
+
+<sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.GlobalNav" items="{{ navItems }}" active="{{ navActive }}" onNavigate="{{ navigateSection }}" user="さくら" theme="{{ theme }}" onToggleTheme="{{ toggleTheme }}" hint-size="100%,60px"></x-import>
+</sc-if>
+
+<sc-if value="{{ isMobile }}">
+<div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--surface);border-bottom:var(--border-width) solid var(--border-subtle)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Logo" size="{{ 17 }}" hint-size="110px,20px"></x-import>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="DesignSystem_9512d8.IconButton" icon="{{ themeIcon }}" label="表示テーマを切り替え" size="sm" onClick="{{ toggleTheme }}" hint-size="32px,32px"></x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Avatar" name="さくら" size="{{ 28 }}" hint-size="28px,28px"></x-import>
+</div>
+</sc-if>
+
+<div style="padding:{{ pagePad }}">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:28px">
+
+<sc-if value="{{ isGreeting }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:560px">
+<span style="font:var(--text-overline);letter-spacing:0.14em;color:var(--text-tertiary)">TODAY</span>
+<h1 style="margin:0;font:var(--text-h1)">こんにちは、さくらさん</h1>
+<p style="margin:0;font:var(--text-body-lg);color:var(--text-secondary)">{{ greeting }}</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="add" onClick="{{ goForm }}" hint-size="140px,40px">卓をつくる</x-import>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isListHead }}">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px">
+<h1 style="margin:0;flex:1;font:var(--text-h1)">卓</h1>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="add" onClick="{{ goForm }}" hint-size="140px,40px">卓をつくる</x-import>
+</div>
+</sc-if>
+
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="overflow-x:auto">
+<div style="min-width:max-content">
+<x-import component-from-global-scope="DesignSystem_9512d8.Tabs" tabs="{{ homeTabs }}" active="{{ homeTab }}" onChange="{{ setHomeTab }}" hint-size="100%,40px"></x-import>
+</div>
+</div>
+
+<sc-if value="{{ homeEmpty }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.EmptyState" icon="session" title="まだ卓がありません" description="最初の卓をつくると、ここに予定が並びます。" hint-size="100%,220px"></x-import>
+</sc-if>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{ homeItems }}" as="it" hint-placeholder-count="2">
+<div style="flex:1 1 330px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" interactive="{{ true }}" onClick="{{ it.open }}" hint-size="100%,220px">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:8px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ it.tone }}" hint-size="72px,24px">{{ it.status }}</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ it.roleTone }}" size="sm" hint-size="34px,20px">{{ it.role }}</x-import>
+<span style="flex:1"></span>
+<span style="font:var(--text-body-sm);color:var(--text-secondary)">{{ it.remaining }}</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:var(--text-h3)">{{ it.title }}</span>
+<span style="display:flex;align-items:center;gap:6px;font:var(--text-body-sm);color:var(--text-secondary)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="scenario" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+{{ it.scenario }}
+</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="display:flex;align-items:center;gap:8px;font:var(--text-body-sm);color:{{ it.dateColor }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="{{ it.dateIcon }}" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+{{ it.datetime }}
+</span>
+<span style="display:flex;align-items:center;gap:8px;font:var(--text-body-sm);color:var(--text-secondary)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="place" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+{{ it.place }}
+</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:var(--border-width) solid var(--border-subtle)">
+<x-import component-from-global-scope="DesignSystem_9512d8.AvatarGroup" names="{{ it.players }}" size="{{ 26 }}" hint-size="90px,26px"></x-import>
+<span style="font:var(--text-caption);color:var(--text-tertiary)">{{ it.count }}</span>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="ghost" size="sm" iconRight="arrow-right" onClick="{{ it.open }}" hint-size="90px,32px">{{ it.action }}</x-import>
+</div>
+</div>
+</x-import>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDetail }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Breadcrumb" items="{{ detailCrumbs }}" onNavigate="{{ goList }}" hint-size="220px,18px"></x-import>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+<div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ stateTone }}" hint-size="80px,24px">{{ stateLabel }}</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ roleTone }}" size="sm" hint-size="34px,20px">{{ role }}</x-import>
+</div>
+<h1 style="margin:0;font:var(--text-h1)">【5月】定期開催マダミス会</h1>
+<div style="display:flex;flex-wrap:wrap;gap:8px 20px;font:var(--text-body-sm);color:var(--text-secondary)">
+<span style="display:flex;align-items:center;gap:7px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="scenario" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+シナリオ：星降る夜の図書館
+</span>
+<span style="display:flex;align-items:center;gap:7px;color:{{ dateColor }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="calendar" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+{{ dateLabel }}
+</span>
+<span style="display:flex;align-items:center;gap:7px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="members" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+{{ memberLabel }}
+</span>
+<span style="display:flex;align-items:center;gap:7px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="place" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+場所：ココフォリア
+</span>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">
+<sc-if value="{{ isAdjusting }}" hint-placeholder-val="{{ true }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="link" onClick="{{ toastLink }}" hint-size="160px,40px">招待リンクを取得</x-import>
+</sc-if>
+<sc-if value="{{ isPlanned }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="memo" onClick="{{ goMemo }}" hint-size="170px,40px">プレイメモを開く</x-import>
+</sc-if>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="secondary" icon="edit" onClick="{{ goForm }}" hint-size="90px,40px">編集</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.IconButton" icon="more" label="その他の操作（招待リンク・完了・中止・削除）" variant="secondary" onClick="{{ openCancel }}" hint-size="40px,40px"></x-import>
+</div>
+</div>
+
+<sc-if value="{{ isAdjusting }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Alert" tone="warning" title="開催日がまだ決まっていません" action="{{ scheduleAction }}" hint-size="100%,84px">候補日への回答は 5 / 6 人ぶん集まっています。5月11日(土) がいちばん多く参加できる日です。</x-import>
+</sc-if>
+
+<div style="overflow-x:auto">
+<div style="min-width:max-content">
+<x-import component-from-global-scope="DesignSystem_9512d8.Tabs" tabs="{{ detailTabs }}" active="{{ detailTab }}" onChange="{{ setDetailTab }}" hint-size="100%,40px"></x-import>
+</div>
+</div>
+
+<sc-if value="{{ paneOverview }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+<div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,200px">
+<div style="display:flex;flex-direction:column;gap:14px">
+<x-import component-from-global-scope="DesignSystem_9512d8.CardHeader" title="詳細" subtitle="ホストからの共有事項" hint-size="100%,44px"></x-import>
+<p style="margin:0;white-space:pre-wrap;line-height:1.85;color:var(--text-secondary)">初参加の方も歓迎です。開始10分前にはココフォリアへ集まってください。
+キャラクターシートは当日こちらで配ります。飲みものだけ用意しておいてもらえると助かります。</p>
+</div>
+</x-import>
+
+<sc-if value="{{ isPlanned }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" interactive="{{ true }}" onClick="{{ goMemo }}" hint-size="100%,200px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="display:inline-flex;color:var(--primary)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="memo" size="{{ 18 }}" hint-size="18px,18px"></x-import>
+</span>
+<span style="font:var(--text-h3)">プレイメモ</span>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="neutral" size="sm" hint-size="56px,20px">非公開</x-import>
+</div>
+<p style="margin:0;font:var(--text-body-sm);color:var(--text-secondary);line-height:1.8">星降る夜の図書館、初手の違和感。閉架の鍵は最後まで誰も触れなかった——</p>
+<div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:var(--border-width) solid var(--border-subtle)">
+<span style="font:var(--text-caption);color:var(--text-tertiary)">312 字・5月10日 23:41 に保存</span>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" size="sm" iconRight="arrow-right" onClick="{{ goMemo }}" hint-size="110px,32px">続きを書く</x-import>
+</div>
+</div>
+</x-import>
+</sc-if>
+</div>
+
+<div style="flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<sc-if value="{{ isAdjusting }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,240px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font:var(--text-overline);letter-spacing:0.14em;color:var(--text-tertiary)">BEST DATE</span>
+<div style="display:flex;align-items:center;gap:14px">
+<div style="flex:none;width:62px;text-align:center;padding:8px 0;border-radius:var(--radius-sm);background:var(--accent-subtle);color:var(--accent-on-subtle)">
+<div style="font:var(--text-caption);letter-spacing:var(--tracking-wide)">5月 土</div>
+<div style="font-family:var(--font-display);font-size:22px;font-weight:var(--weight-bold);line-height:1.2">11</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">13:00〜</span>
+<span style="font:var(--text-caption);color:var(--text-secondary)">5人が参加できる</span>
+</div>
+</div>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" fullWidth="{{ true }}" icon="schedule" onClick="{{ openConfirm }}" hint-size="100%,40px">この日で確定する</x-import>
+<span style="font:var(--text-caption);color:var(--text-tertiary);line-height:1.75">確定したあとも、日程タブで回答を見返せます。</span>
+</div>
+</x-import>
+</sc-if>
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,280px">
+<div style="display:flex;flex-direction:column;gap:14px">
+<x-import component-from-global-scope="DesignSystem_9512d8.CardHeader" title="卓の情報" hint-size="100%,32px"></x-import>
+<sc-for list="{{ facts }}" as="f" hint-placeholder-count="4">
+<div style="display:flex;gap:10px;align-items:baseline">
+<span style="flex:none;width:5.5em;font:var(--text-caption);color:var(--text-tertiary)">{{ f.label }}</span>
+<span style="font:var(--text-body-sm);color:var(--text-primary)">{{ f.value }}</span>
+</div>
+</sc-for>
+<sc-if value="{{ isPlanned }}">
+<div style="padding-top:12px;border-top:var(--border-width) solid var(--border-subtle);display:flex;flex-direction:column;gap:8px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="secondary" fullWidth="{{ true }}" icon="check" onClick="{{ toastComplete }}" hint-size="100%,40px">卓を完了する</x-import>
+<span style="font:var(--text-caption);color:var(--text-tertiary);line-height:1.75">完了すると本文の編集は締め切られ、公開されたプレイメモが読めるようになります。</span>
+</div>
+</sc-if>
+</div>
+</x-import>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ paneSchedule }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<h2 style="margin:0;font:var(--text-h3)">日程</h2>
+<span style="font:var(--text-body-sm);color:var(--text-secondary)">{{ scheduleHint }}</span>
+<span style="flex:1"></span>
+<div style="display:flex;gap:8px">
+<sc-if value="{{ scheduleEditing }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="ghost" onClick="{{ cancelSchedule }}" hint-size="110px,40px">キャンセル</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="check" onClick="{{ submitSchedule }}" hint-size="90px,40px">完了</x-import>
+</sc-if>
+<sc-if value="{{ scheduleIdle }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="secondary" icon="edit" onClick="{{ startSchedule }}" hint-size="150px,40px">回答を編集する</x-import>
+</sc-if>
+<sc-if value="{{ canConfirm }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="schedule" onClick="{{ openConfirm }}" hint-size="150px,40px">開催日を確定する</x-import>
+</sc-if>
+</div>
+</div>
+
+<sc-if value="{{ isPlanned }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Alert" tone="success" title="開催日は 5月11日(土) 13:00〜 に決まりました" hint-size="100%,72px">回答はこのまま記録として残ります。日程を変えるときは「編集」から候補日を出し直せます。</x-import>
+</sc-if>
+
+<sc-for list="{{ scheduleRows }}" as="row" hint-placeholder-count="3">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,120px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+<div style="flex:none;width:62px;text-align:center;padding:8px 0;border-radius:var(--radius-sm);background:{{ row.dayBg }};color:{{ row.dayFg }}">
+<div style="font:var(--text-caption);letter-spacing:var(--tracking-wide)">{{ row.weekday }}</div>
+<div style="font-family:var(--font-display);font-size:22px;font-weight:var(--weight-bold);line-height:1.2">{{ row.day }}</div>
+</div>
+<div style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">{{ row.time }}</span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ row.tone }}" size="sm" hint-size="90px,20px">{{ row.summary }}</x-import>
+</div>
+<span style="font:var(--text-caption);color:var(--text-secondary)">{{ row.note }}</span>
+</div>
+<div style="flex:1 1 300px;min-width:0;display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="4">
+<button type="button" onClick="{{ c.onClick }}" style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:var(--radius-full);border:var(--border-width) solid {{ c.border }};background:{{ c.bg }};color:var(--text-primary);font:var(--text-label);cursor:{{ c.cursor }};transition:var(--transition-control)">
+<span style="font-size:15px;line-height:1;color:{{ c.color }}">{{ c.mark }}</span>
+{{ c.name }}
+</button>
+</sc-for>
+</div>
+</div>
+</x-import>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ paneMembers }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<h2 style="margin:0;font:var(--text-h3)">メンバー</h2>
+<span style="font:var(--text-body-sm);color:var(--text-secondary)">{{ memberLabel }}</span>
+<span style="flex:1"></span>
+<sc-if value="{{ isPlanned }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="secondary" size="sm" icon="edit" onClick="{{ noop }}" hint-size="190px,32px">キャラクターを編集する</x-import>
+</sc-if>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<sc-for list="{{ memberList }}" as="m" hint-placeholder-count="4">
+<div style="flex:1 1 300px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,92px">
+<div style="display:flex;align-items:center;gap:14px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Avatar" name="{{ m.name }}" size="{{ 40 }}" hint-size="40px,40px"></x-import>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">{{ m.primary }}</span>
+<span style="font:var(--text-caption);color:var(--text-secondary)">{{ m.sub }}</span>
+</div>
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ m.tone }}" size="sm" hint-size="60px,20px">{{ m.tag }}</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.IconButton" icon="close" label="参加を取り消す" size="sm" onClick="{{ openRemove }}" hint-size="32px,32px"></x-import>
+</div>
+</x-import>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ paneMemo }}">
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+<div style="flex:0 1 230px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" padding="12px" hint-size="100%,290px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="display:flex;align-items:center;gap:6px;font:var(--text-caption);color:var(--text-secondary);padding:0 4px 4px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="members" size="{{ 14 }}" hint-size="14px,14px"></x-import>
+メンバー
+</span>
+<sc-for list="{{ memoMembers }}" as="e" hint-placeholder-count="4">
+<button type="button" onClick="{{ e.select }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:var(--radius-sm);border:var(--border-width) solid {{ e.border }};background:{{ e.bg }};color:{{ e.fg }};font:var(--text-body-sm);text-align:left;cursor:pointer">
+<x-import component-from-global-scope="DesignSystem_9512d8.Avatar" name="{{ e.name }}" size="{{ 24 }}" hint-size="24px,24px"></x-import>
+<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.name }}</span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ e.tone }}" size="sm" hint-size="46px,20px">{{ e.tag }}</x-import>
+</button>
+</sc-for>
+</div>
+</x-import>
+</div>
+
+<div style="flex:1 1 420px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,560px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="display:inline-flex;color:var(--primary)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="memo" size="{{ 18 }}" hint-size="18px,18px"></x-import>
+</span>
+<span style="font:var(--text-h3)">{{ memoHeading }}</span>
+<span style="flex:1"></span>
+<span style="font:var(--text-caption);color:{{ memoStatusColor }}">{{ memoStatus }}</span>
+</div>
+
+<sc-if value="{{ memoIsMine }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px;border-radius:var(--radius-sm);background:var(--surface-subtle);border:var(--border-width) solid var(--border-subtle)">
+<div style="flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="{{ memoVisTone }}" size="sm" hint-size="60px,20px">{{ memoVisLabel }}</x-import>
+<span style="font:var(--text-caption);color:var(--text-secondary);line-height:1.75">{{ memoVisDesc }}</span>
+</div>
+<x-import component-from-global-scope="DesignSystem_9512d8.Switch" checked="{{ memoShared }}" onChange="{{ toggleMemoShared }}" label="メモを公開する" hint-size="170px,24px"></x-import>
+</div>
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Textarea" value="{{ memoBody }}" onChange="{{ setMemoBody }}" rows="{{ 14 }}" placeholder="プレイ中の気づきを書き留めましょう" hint-size="100%,300px"></x-import>
+
+<span style="font:var(--text-caption);color:var(--text-tertiary);line-height:1.75">本文を書けるのは卓が完了・中止するまでです（そのあとも公開・非公開の切り替えは行えます）。</span>
+
+<div style="display:flex;align-items:center;gap:12px;padding-top:12px;border-top:var(--border-width) solid var(--border-subtle)">
+<span style="font:var(--text-caption);color:var(--text-tertiary);font-variant-numeric:tabular-nums">{{ memoCounter }}</span>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" icon="check" onClick="{{ saveMemo }}" hint-size="90px,40px">保存</x-import>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ memoIsShared }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex">
+<x-import component-from-global-scope="DesignSystem_9512d8.Badge" tone="success" size="sm" hint-size="56px,20px">公開</x-import>
+</div>
+<p style="margin:0;padding:16px;border-radius:var(--radius-sm);background:var(--surface-subtle);border:var(--border-width) solid var(--border-subtle);white-space:pre-wrap;line-height:1.85;color:var(--text-secondary)">{{ memoOtherBody }}</p>
+<span style="font:var(--text-caption);color:var(--text-tertiary)">{{ memoOtherMeta }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ memoIsLocked }}">
+<x-import component-from-global-scope="DesignSystem_9512d8.EmptyState" icon="cloud" title="{{ memoLockedTitle }}" description="{{ memoLockedText }}" compact="{{ true }}" hint-size="100%,180px"></x-import>
+</sc-if>
+</div>
+</x-import>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ isForm }}">
+<div style="display:flex;flex-direction:column;gap:20px;max-width:720px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Breadcrumb" items="{{ formCrumbs }}" onNavigate="{{ goList }}" hint-size="200px,18px"></x-import>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h1 style="margin:0;font:var(--text-h1)">卓をつくる</h1>
+<p style="margin:0;font:var(--text-body);color:var(--text-secondary)">開催日が未定のままでもつくれます。あとから変更できます。</p>
+</div>
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,470px">
+<div style="display:flex;flex-direction:column;gap:20px">
+<x-import component-from-global-scope="DesignSystem_9512d8.CardHeader" title="基本情報" hint-size="100%,32px"></x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="タイトル" required="{{ true }}" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.TextInput" value="{{ formTitle }}" onChange="{{ setFormTitle }}" placeholder="例：【5月】定期開催マダミス会" hint-size="100%,40px"></x-import>
+</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="説明" optional="{{ true }}" helper="改行はそのまま表示されます" hint-size="100%,150px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Textarea" rows="{{ 4 }}" placeholder="共有事項や注意事項、事前準備してほしいことなど…" hint-size="100%,110px"></x-import>
+</x-import>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<div style="flex:1 1 240px">
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="場所" optional="{{ true }}" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.TextInput" placeholder="例：ココフォリア" hint-size="100%,40px"></x-import>
+</x-import>
+</div>
+<div style="flex:1 1 200px">
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="募集人数（自分を含めて）" helper="2〜20人" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.TextInput" type="number" value="6" hint-size="100%,40px"></x-import>
+</x-import>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:var(--radius-sm);background:var(--surface-subtle);border:var(--border-width) dashed var(--border)">
+<span style="display:flex;align-items:center;gap:8px;font:var(--text-label);color:var(--text-secondary)">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="scenario" size="{{ 15 }}" hint-size="15px,15px"></x-import>
+シナリオ情報
+</span>
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="シナリオタイトル" optional="{{ true }}" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.TextInput" placeholder="例：星降る夜の図書館" hint-size="100%,40px"></x-import>
+</x-import>
+</div>
+</div>
+</x-import>
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,420px">
+<div style="display:flex;flex-direction:column;gap:20px">
+<x-import component-from-global-scope="DesignSystem_9512d8.CardHeader" title="日程" subtitle="決まっていなければ、候補日を出してメンバーに聞けます" hint-size="100%,44px"></x-import>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ formModes }}" as="m" hint-placeholder-count="2">
+<button type="button" onClick="{{ m.select }}" style="display:flex;align-items:flex-start;gap:12px;width:100%;padding:14px;text-align:left;border-radius:var(--radius-sm);border:var(--border-width) solid {{ m.border }};background:{{ m.bg }};color:var(--text-primary);cursor:pointer;transition:var(--transition-control)">
+<span style="flex:none;width:16px;height:16px;margin-top:2px;border-radius:var(--radius-full);border:2px solid {{ m.dotBorder }};background:{{ m.dotFill }}"></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">{{ m.title }}</span>
+<span style="font:var(--text-caption);color:var(--text-secondary);line-height:1.75">{{ m.text }}</span>
+</span>
+</button>
+</sc-for>
+</div>
+
+<sc-if value="{{ formModeDate }}">
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<div style="flex:1 1 240px">
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="開催日" required="{{ true }}" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.DateInput" value="2026-05-11T13:00" withTime="{{ true }}" hint-size="100%,40px"></x-import>
+</x-import>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ formModeCandidates }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<div style="flex:1 1 220px">
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="回答の締め切り" optional="{{ true }}" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.DateInput" value="2026-05-06" hint-size="100%,40px"></x-import>
+</x-import>
+</div>
+<div style="flex:1 1 220px">
+<x-import component-from-global-scope="DesignSystem_9512d8.FormField" label="候補日を追加" helper="複数選べます" hint-size="100%,72px">
+<x-import component-from-global-scope="DesignSystem_9512d8.DateInput" value="" hint-size="100%,40px"></x-import>
+</x-import>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ candidateRows }}" as="c" hint-placeholder-count="3">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px;border-radius:var(--radius-sm);background:var(--surface-subtle);border:var(--border-width) solid var(--border-subtle)">
+<span style="flex:none;font:var(--text-label);color:var(--text-secondary);white-space:nowrap">{{ c.label }}</span>
+<div style="flex:1 1 200px;min-width:0">
+<x-import component-from-global-scope="DesignSystem_9512d8.TextInput" value="{{ c.note }}" placeholder="例）19:00〜 / 午後から / 終日OK" size="sm" hint-size="100%,32px"></x-import>
+</div>
+<span style="font:var(--text-caption);color:var(--text-tertiary);font-variant-numeric:tabular-nums">{{ c.counter }}</span>
+<x-import component-from-global-scope="DesignSystem_9512d8.IconButton" icon="close" label="候補日から外す" size="sm" onClick="{{ noop }}" hint-size="32px,32px"></x-import>
+</div>
+</sc-for>
+</div>
+<span style="font:var(--text-caption);color:var(--text-tertiary);line-height:1.75">ひとことは任意です。候補日は作成後も追加・削除できます。</span>
+</div>
+</sc-if>
+</div>
+</x-import>
+
+<div style="display:flex;justify-content:flex-end;gap:12px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="secondary" size="lg" onClick="{{ goList }}" hint-size="120px,48px">キャンセル</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" size="lg" onClick="{{ submitForm }}" hint-size="150px,48px">卓をつくる</x-import>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isProfile }}">
+<div style="display:flex;flex-direction:column;gap:20px;max-width:720px">
+<h1 style="margin:0;font:var(--text-h1)">マイページ</h1>
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,200px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<x-import component-from-global-scope="DesignSystem_9512d8.CardHeader" title="プロフィール" hint-size="100%,32px"></x-import>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:18px">
+<x-import component-from-global-scope="DesignSystem_9512d8.Avatar" name="さくら" size="{{ 56 }}" hint-size="56px,56px"></x-import>
+<div style="display:flex;flex-direction:column;gap:3px">
+<span style="font:var(--text-h3)">さくら</span>
+<span style="font:var(--text-body-sm);color:var(--text-secondary)">@sakura ・ 参加した卓 12</span>
+</div>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="secondary" icon="edit" onClick="{{ noop }}" hint-size="200px,40px">ユーザー名を編集する</x-import>
+</div>
+</div>
+</x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Card" hint-size="100%,150px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<x-import component-from-global-scope="DesignSystem_9512d8.CardHeader" title="表示テーマ" subtitle="青空と、同じ空の夜。お好みで切り替えられます" hint-size="100%,44px"></x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Switch" checked="{{ isDark }}" onChange="{{ toggleTheme }}" label="夜のテーマを使う" hint-size="180px,24px"></x-import>
+</div>
+</x-import>
+<div style="display:flex;justify-content:center">
+<x-import component-from-global-scope="DesignSystem_9512d8.Button" variant="ghost" onClick="{{ openLogout }}" hint-size="130px,40px">ログアウト</x-import>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ isMobile }}">
+<div style="position:sticky;bottom:0;display:flex;background:var(--surface);border-top:var(--border-width) solid var(--border-subtle)">
+<sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
+<button type="button" onClick="{{ n.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:60px;border:none;background:none;color:{{ n.color }};font:var(--text-caption);cursor:pointer">
+<x-import component-from-global-scope="DesignSystem_9512d8.Icon" name="{{ n.icon }}" size="{{ 19 }}" hint-size="19px,19px"></x-import>
+{{ n.label }}
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Dialog" open="{{ cancelOpen }}" tone="danger" title="この卓を中止しますか？" message="中止すると候補日への回答も締め切られます。この操作は取り消せません。" confirmLabel="中止する" cancelLabel="キャンセル" onConfirm="{{ closeDialogs }}" onCancel="{{ closeDialogs }}" hint-size="0,0"></x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Dialog" open="{{ removeOpen }}" tone="danger" title="みなとさんの参加を取り消しますか？" message="取り消したメンバーは、招待リンクから再度参加できます。" confirmLabel="取り消す" cancelLabel="キャンセル" onConfirm="{{ closeDialogs }}" onCancel="{{ closeDialogs }}" hint-size="0,0"></x-import>
+<x-import component-from-global-scope="DesignSystem_9512d8.Dialog" open="{{ logoutOpen }}" title="ログアウトしますか？" message="またいつでも戻ってこられます。" confirmLabel="ログアウト" cancelLabel="キャンセル" onConfirm="{{ closeDialogs }}" onCancel="{{ closeDialogs }}" hint-size="0,0"></x-import>
+
+<x-import component-from-global-scope="DesignSystem_9512d8.Modal" open="{{ confirmOpen }}" title="開催日を確定する" subtitle="この日で開催します。あとから変更できます" footer="{{ confirmFooter }}" onClose="{{ closeDialogs }}" width="{{ 520 }}" hint-size="0,0">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ confirmDates }}" as="d" hint-placeholder-count="3">
+<button type="button" onClick="{{ d.select }}" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:var(--radius-sm);border:var(--border-width) solid {{ d.border }};background:{{ d.bg }};cursor:pointer;text-align:left;color:var(--text-primary)">
+<span style="flex:none;width:52px;text-align:center">
+<span style="display:block;font:var(--text-caption);color:var(--text-secondary)">{{ d.weekday }}</span>
+<span style="display:block;font-family:var(--font-display);font-size:20px;font-weight:var(--weight-bold);line-height:1.2">{{ d.day }}</span>
+</span>
+<span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<span style="font:var(--text-body);font-weight:var(--weight-medium)">{{ d.time }}</span>
+<span style="font:var(--text-caption);color:var(--text-secondary)">{{ d.summary }}</span>
+</span>
+</button>
+</sc-for>
+</div>
+<span style="font:var(--text-caption);color:var(--text-tertiary);line-height:1.75">メンバーはそのままです。来られない人には、開催日が決まったことだけが伝わります。</span>
+</div>
+</x-import>
+
+<sc-if value="{{ toastOpen }}">
+<div style="position:absolute;right:20px;bottom:20px;z-index:60">
+<x-import component-from-global-scope="DesignSystem_9512d8.Toast" tone="success" title="{{ toastText }}" onClose="{{ closeToast }}" hint-size="280px,64px"></x-import>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:900},&quot;initialState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;調整中&quot;,&quot;開催予定&quot;],&quot;default&quot;:&quot;調整中&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;卓の状態&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;GM&quot;,&quot;PL&quot;],&quot;default&quot;:&quot;GM&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;卓の状態&quot;}}">
+const MARKS = {
+  ok: { mark: '○', color: 'var(--success)' },
+  maybe: { mark: '△', color: 'var(--warning)' },
+  ng: { mark: '×', color: 'var(--error)' },
+  none: { mark: '−', color: 'var(--text-tertiary)' },
+};
+const ORDER = ['ok', 'maybe', 'ng', 'none'];
+
+const DATES = [
+  { id: 'd1', weekday: '5月 金', day: '10', time: '19:00〜', note: '20:00 開始でも可' },
+  { id: 'd2', weekday: '5月 土', day: '11', time: '13:00〜', note: '終日OK' },
+  { id: 'd3', weekday: '5月 金', day: '17', time: '19:00〜', note: '' },
+];
+const MEMBERS = ['さくら', 'ゆう', 'けい', 'みなと', 'あお', 'りん'];
+
+const MEMO_ENTRIES = {
+  me: { name: 'さくら（自分）', heading: 'さくらさんのメモ', tag: '自分' },
+  minato: {
+    name: 'みなと', heading: 'みなとさんのメモ', tag: '公開',
+    body: '閉架の鍵は最初から自分が持っていた。第二幕まで出さないつもりだったのに、閲覧記録の話で崩れた。\n\n・あおの便箋は本物。宛名だけ伏せていた\n・さくらの診断書がいちばん効いた',
+    meta: '412 字・5月11日 22:05 に保存',
+  },
+  ao: {
+    name: 'あお', heading: 'あおさんのメモ', tag: '非公開',
+    lockedTitle: 'このメモは公開されていません',
+    lockedText: '本人が公開すると、ここで読めるようになります。',
+  },
+  rin: {
+    name: 'りん', heading: 'りんさんのメモ', tag: 'ゲスト',
+    lockedTitle: 'ゲストのメンバーはメモを持ちません',
+    lockedText: 'ログインして参加すると、自分のメモを残せます。',
+  },
+};
+
+class Component extends DCLogic {
+  state = {
+    theme: 'light',
+    device: 'desktop',
+    screen: 'home',
+    homeTab: 'next',
+    detailTab: 'overview',
+    tableState: null,
+    scheduleEditing: false,
+    formMode: 'candidates',
+    answers: {
+      'd1::さくら': 'ok', 'd1::ゆう': 'maybe', 'd1::けい': 'ok', 'd1::みなと': 'ng', 'd1::あお': 'ok', 'd1::りん': 'ng',
+      'd2::さくら': 'ok', 'd2::ゆう': 'ok', 'd2::けい': 'ok', 'd2::みなと': 'ok', 'd2::あお': 'maybe', 'd2::りん': 'ok',
+      'd3::さくら': 'maybe', 'd3::ゆう': 'ng', 'd3::けい': 'maybe', 'd3::みなと': 'ng', 'd3::あお': 'ok', 'd3::りん': 'ok',
+    },
+    memoBody: '星降る夜の図書館、初手の違和感。閉架の鍵は最後まで誰も触れなかった——\n\n・第一幕：みなとの証言と閲覧記録がずれている\n・第二幕：あおが持っていた便箋、宛名が空欄\n・自分の狙い：閉架の話題を第三幕まで残す',
+    memoShared: false,
+    memoStatus: 'idle',
+    memoMember: 'me',
+    confirmDate: 'd2',
+    dialog: null,
+    toast: null,
+  };
+
+  showToast(text) {
+    this.setState({ toast: text });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+
+  cycle(key) {
+    if (!this.state.scheduleEditing) return;
+    const cur = this.state.answers[key] || 'none';
+    const next = ORDER[(ORDER.indexOf(cur) + 1) % ORDER.length];
+    this.setState({ answers: { ...this.state.answers, [key]: next } });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dark = s.theme === 'dark';
+    const mobile = s.device === 'mobile';
+    const go = (screen) => () => this.setState({ screen });
+    const DS = window.DesignSystem_9512d8 || {};
+
+    // 卓はひとつの実体。状態が「調整中 → 開催予定」と進むだけで、別の画面にはならない。
+    const planned = (s.tableState || this.props.initialState || '調整中') === '開催予定';
+    const role = this.props.role || 'GM';
+    const isGM = role === 'GM';
+
+    const dateLabel = planned ? '5月11日(土) 13:00〜' : '日時：未定（候補日 3件）';
+    const featured = {
+      title: '【5月】定期開催マダミス会', scenario: '星降る夜の図書館',
+      status: planned ? '開催予定' : '調整中',
+      tone: planned ? 'primary' : 'warning',
+      role, roleTone: isGM ? 'accent' : 'primary',
+      datetime: planned ? '5月11日(土) 13:00〜' : '候補日 3件・回答 5 / 6 人',
+      dateIcon: planned ? 'calendar' : 'schedule',
+      dateColor: planned ? 'var(--text-primary)' : 'var(--warning-text)',
+      place: 'ココフォリア', players: MEMBERS, count: '5 / 6 人',
+      remaining: planned ? '' : '残り 1 枠', action: '開く',
+      open: () => this.setState({ screen: 'detail', detailTab: 'overview' }),
+    };
+
+    const others = {
+      next: [
+        { title: '春分の会', scenario: '灰色の海辺にて', status: '開催予定', tone: 'primary', role: 'PL', roleTone: 'primary',
+          datetime: '3月20日(水) 13:00〜', dateIcon: 'calendar', dateColor: 'var(--text-primary)',
+          place: '中野・レンタルスペース flat', players: ['みなと', 'あお', 'りん', 'さくら'],
+          count: '4 / 4 人', remaining: '', action: '開く', open: () => this.showToast('この卓はプロトタイプでは開けません') },
+        { title: '水曜のならし卓', scenario: 'はじめての捜査', status: '当日', tone: 'accent', role: 'GM', roleTone: 'accent',
+          datetime: '本日 20:00〜', dateIcon: 'calendar', dateColor: 'var(--text-primary)',
+          place: 'オンライン (Discord)', players: ['ゆう', 'けい', 'さくら'],
+          count: '3 / 6 人', remaining: '', action: '開く', open: () => this.showToast('この卓はプロトタイプでは開けません') },
+      ],
+      adjusting: [
+        { title: '初心者歓迎・土曜の卓', scenario: '硝子の温室', status: '調整中', tone: 'warning', role: 'PL', roleTone: 'primary',
+          datetime: '候補日 4件・回答 2 / 5 人', dateIcon: 'schedule', dateColor: 'var(--warning-text)',
+          place: 'オンライン', players: ['あお', 'りん'],
+          count: '2 / 5 人', remaining: '残り 3 枠', action: '回答する', open: () => this.showToast('この卓はプロトタイプでは開けません') },
+      ],
+      done: [
+        { title: '２月の卓', scenario: '硝子の温室', status: '完了', tone: 'neutral', role: 'PL', roleTone: 'primary',
+          datetime: '2月11日(日) 14:00〜', dateIcon: 'calendar', dateColor: 'var(--text-secondary)',
+          place: '新宿・卓ラウンジ', players: ['さくら', 'ゆう', 'みなと', 'あお'],
+          count: '4 / 4 人', remaining: '公開メモ 2件', action: 'メモを読む', open: () => this.showToast('この卓はプロトタイプでは開けません') },
+        { title: '雨の日の一幕', scenario: '星降る夜の図書館', status: '中止', tone: 'error', role: 'GM', roleTone: 'accent',
+          datetime: '1月28日(火) 19:30〜', dateIcon: 'calendar', dateColor: 'var(--text-secondary)',
+          place: 'オンライン', players: ['さくら', 'けい'],
+          count: '2 / 5 人', remaining: '', action: '開く', open: () => this.showToast('この卓はプロトタイプでは開けません') },
+      ],
+    };
+
+    // 同じ1枚のカードが、状態に応じてタブを移動する。増えも消えもしない。
+    const nextItems = planned ? [featured, ...others.next] : others.next;
+    const adjItems = planned ? others.adjusting : [featured, ...others.adjusting];
+    const itemsByTab = { next: nextItems, adjusting: adjItems, done: others.done };
+    const homeItems = itemsByTab[s.homeTab] || [];
+
+    const scheduleRows = DATES.map((d) => {
+      const cells = MEMBERS.map((name) => {
+        const key = d.id + '::' + name;
+        const v = s.answers[key] || 'none';
+        const m = MARKS[v];
+        const editable = s.scheduleEditing && name === 'さくら';
+        return {
+          key, name, mark: m.mark, color: m.color,
+          border: editable ? 'var(--primary)' : 'var(--border-subtle)',
+          bg: editable ? 'var(--primary-subtle)' : 'var(--surface-subtle)',
+          cursor: s.scheduleEditing ? 'pointer' : 'default',
+          onClick: () => this.cycle(key),
+        };
+      });
+      const okCount = cells.filter((c) => c.mark === '○').length;
+      const chosen = planned && d.id === 'd2';
+      return {
+        ...d,
+        note: d.note ? 'ひとこと：' + d.note : 'ひとことなし',
+        cells,
+        summary: chosen ? 'この日で開催' : okCount + '人が参加できる',
+        tone: chosen ? 'success' : okCount >= 4 ? 'primary' : 'neutral',
+        dayBg: chosen ? 'var(--accent-subtle)' : 'var(--primary-subtle)',
+        dayFg: chosen ? 'var(--accent-on-subtle)' : 'var(--primary-on-subtle)',
+      };
+    });
+
+    const SECTION_OF = { home: 'home', list: 'session', detail: 'session', form: 'session', profile: 'profile' };
+    const navSection = SECTION_OF[s.screen] || 'home';
+
+    const memoStatusText = { idle: '', dirty: '未保存の変更があります', saved: '保存しました' }[s.memoStatus] || '';
+
+    const screens = [
+      ['home', 'ホーム'], ['list', '卓一覧'], ['detail', '卓詳細'], ['form', '卓をつくる'], ['profile', 'マイページ'],
+    ];
+
+    return {
+      theme: s.theme,
+      isDark: dark,
+      themeIcon: dark ? 'sun' : 'moon',
+      toggleTheme: () => this.setState({ theme: dark ? 'light' : 'dark' }),
+      isDesktop: !mobile,
+      isMobile: mobile,
+      setDesktop: () => this.setState({ device: 'desktop' }),
+      setMobile: () => this.setState({ device: 'mobile' }),
+      desktopBg: mobile ? 'var(--surface)' : 'var(--primary-subtle)',
+      mobileBg: mobile ? 'var(--primary-subtle)' : 'var(--surface)',
+      desktopBorder: mobile ? 'var(--border-subtle)' : 'var(--primary)',
+      mobileBorder: mobile ? 'var(--primary)' : 'var(--border-subtle)',
+      frameW: mobile ? '390px' : '1180px',
+      frameRadius: mobile ? '28px' : 'var(--radius-card)',
+      framePad: mobile ? '8px 16px 40px' : '8px 20px 48px',
+      pagePad: mobile ? '20px 16px 28px' : '32px 40px 56px',
+
+      previewLinks: screens.map(([id, label]) => ({
+        label, go: go(id),
+        bg: s.screen === id ? 'var(--primary-subtle)' : 'var(--surface)',
+        fg: s.screen === id ? 'var(--primary-on-subtle)' : 'var(--text-secondary)',
+        border: s.screen === id ? 'var(--primary)' : 'var(--border-subtle)',
+      })),
+
+      navItems: [
+        ['home', 'ホーム', 'home', 'home'], ['session', '卓', 'session', 'list'], ['profile', 'マイページ', 'user', 'profile'],
+      ].map(([id, label, icon, target]) => ({
+        id, label, icon, go: go(target),
+        color: navSection === id ? 'var(--primary)' : 'var(--text-tertiary)',
+      })),
+      navActive: navSection,
+      navigateSection: (id) => this.setState({ screen: id === 'session' ? 'list' : id }),
+
+      isHome: s.screen === 'home' || s.screen === 'list',
+      isGreeting: s.screen === 'home',
+      isListHead: s.screen === 'list',
+      isDetail: s.screen === 'detail',
+      isForm: s.screen === 'form',
+      isProfile: s.screen === 'profile',
+
+      greeting: planned
+        ? '今週は' + nextItems.length + 'つの卓が待っています。【5月】定期開催マダミス会は 5月11日(土) に決まりました。'
+        : '今週は' + nextItems.length + 'つの卓が待っています。【5月】定期開催マダミス会はまだ日程を決めているところです。',
+
+      goList: go('list'),
+      goForm: go('form'),
+      goMemo: () => this.setState({ screen: 'detail', detailTab: 'memo' }),
+      noop: () => {},
+
+      homeTab: s.homeTab,
+      homeTabs: [
+        { id: 'next', label: 'これから', count: nextItems.length },
+        { id: 'adjusting', label: '調整中', count: adjItems.length },
+        { id: 'done', label: '終了', count: others.done.length },
+      ],
+      setHomeTab: (id) => this.setState({ homeTab: id }),
+      homeItems,
+      homeEmpty: homeItems.length === 0,
+
+      detailCrumbs: [{ label: '卓' }, { label: '【5月】定期開催マダミス会' }],
+      stateLabel: planned ? '開催予定' : '調整中',
+      stateTone: planned ? 'primary' : 'warning',
+      role,
+      roleTone: isGM ? 'accent' : 'primary',
+      isAdjusting: !planned,
+      isPlanned: planned,
+      dateLabel,
+      dateColor: planned ? 'var(--text-primary)' : 'var(--warning-text)',
+      memberLabel: '参加 5 / 定員6',
+      facts: [
+        { label: 'シナリオ', value: '星降る夜の図書館' },
+        { label: '日時', value: planned ? '5月11日(土) 13:00〜' : '未定（候補日 3件）' },
+        { label: '募集人数', value: '6' },
+        { label: '場所', value: 'ココフォリア' },
+      ],
+
+      detailTab: s.detailTab,
+      detailTabs: [
+        { id: 'overview', label: '概要' },
+        { id: 'schedule', label: '日程', count: 3 },
+        { id: 'members', label: 'メンバー', count: 6 },
+        { id: 'memo', label: 'プレイメモ' },
+      ],
+      setDetailTab: (id) => this.setState({ detailTab: id }),
+      paneOverview: s.detailTab === 'overview',
+      paneSchedule: s.detailTab === 'schedule',
+      paneMembers: s.detailTab === 'members',
+      paneMemo: s.detailTab === 'memo',
+
+      scheduleAction: DS.Button
+        ? React.createElement(DS.Button, {
+            size: 'sm', variant: 'secondary', icon: 'schedule',
+            onClick: () => this.setState({ detailTab: 'schedule' }),
+          }, '日程を見る')
+        : null,
+
+      scheduleRows,
+      scheduleEditing: s.scheduleEditing,
+      scheduleIdle: !s.scheduleEditing,
+      canConfirm: !planned && !s.scheduleEditing && isGM,
+      scheduleHint: s.scheduleEditing
+        ? '自分の回答を押すと ○ → △ → × → − の順に切り替わります'
+        : '○ 参加できる ・ △ 調整できる ・ × 不可 ・ − 未回答',
+      startSchedule: () => this.setState({ scheduleEditing: true }),
+      cancelSchedule: () => this.setState({ scheduleEditing: false }),
+      submitSchedule: () => { this.setState({ scheduleEditing: false }); this.showToast('回答を送信しました'); },
+
+      memberList: [
+        { name: 'さくら', primary: planned ? '医師 / さくら' : 'さくら', sub: planned ? '@sakura（あなた）' : 'ホスト・回答済み', tag: 'GM', tone: 'accent' },
+        { name: 'ゆう', primary: planned ? '記者 / ゆう' : 'ゆう', sub: planned ? '@yu' : '回答済み', tag: 'PL', tone: 'primary' },
+        { name: 'けい', primary: planned ? '司書 / けい' : 'けい', sub: planned ? '@kei' : '回答済み', tag: 'PL', tone: 'primary' },
+        { name: 'みなと', primary: planned ? '未設定 / みなと' : 'みなと', sub: planned ? '@minato' : '招待リンクから参加・回答済み', tag: 'ゲスト', tone: 'neutral' },
+        { name: 'あお', primary: planned ? '学生 / あお' : 'あお', sub: planned ? '@ao' : '回答済み', tag: 'PL', tone: 'primary' },
+        { name: 'りん', primary: planned ? '未設定 / りん' : 'りん', sub: planned ? '@rin' : '未回答', tag: 'PL', tone: 'primary' },
+      ],
+
+      memoMembers: [
+        { id: 'me', name: MEMO_ENTRIES.me.name, tag: s.memoShared ? '公開' : '非公開', tone: s.memoShared ? 'success' : 'neutral' },
+        { id: 'minato', name: MEMO_ENTRIES.minato.name, tag: '公開', tone: 'success' },
+        { id: 'ao', name: MEMO_ENTRIES.ao.name, tag: '非公開', tone: 'neutral' },
+        { id: 'rin', name: MEMO_ENTRIES.rin.name, tag: 'ゲスト', tone: 'neutral' },
+      ].map((e) => ({
+        ...e,
+        select: () => this.setState({ memoMember: e.id }),
+        border: s.memoMember === e.id ? 'var(--primary)' : 'transparent',
+        bg: s.memoMember === e.id ? 'var(--primary-subtle)' : 'transparent',
+        fg: s.memoMember === e.id ? 'var(--primary-on-subtle)' : 'var(--text-primary)',
+      })),
+      memoHeading: MEMO_ENTRIES[s.memoMember].heading,
+      memoIsMine: s.memoMember === 'me',
+      memoIsShared: MEMO_ENTRIES[s.memoMember].tag === '公開',
+      memoIsLocked: s.memoMember !== 'me' && MEMO_ENTRIES[s.memoMember].tag !== '公開',
+      memoOtherBody: MEMO_ENTRIES[s.memoMember].body || '',
+      memoOtherMeta: MEMO_ENTRIES[s.memoMember].meta || '',
+      memoLockedTitle: MEMO_ENTRIES[s.memoMember].lockedTitle || '',
+      memoLockedText: MEMO_ENTRIES[s.memoMember].lockedText || '',
+      memoBody: s.memoBody,
+      setMemoBody: (e) => this.setState({ memoBody: e.target.value, memoStatus: 'dirty' }),
+      memoCounter: s.memoBody.length.toLocaleString() + ' / 20,000',
+      memoStatus: memoStatusText,
+      memoStatusColor: s.memoStatus === 'saved' ? 'var(--success)' : 'var(--text-tertiary)',
+      saveMemo: () => { this.setState({ memoStatus: 'saved' }); this.showToast('プレイメモを保存しました'); },
+      memoShared: s.memoShared,
+      toggleMemoShared: () => this.setState({ memoShared: !s.memoShared }),
+      memoVisLabel: s.memoShared ? '公開中' : '非公開',
+      memoVisTone: s.memoShared ? 'success' : 'neutral',
+      memoVisDesc: s.memoShared
+        ? '卓が完了・中止したあと、ほかの人がこのメモを読めます。'
+        : 'このメモはあなただけが読めます。公開すると、卓が完了・中止したあとにほかの人も読めるようになります。',
+
+      formCrumbs: [{ label: '卓' }, { label: '卓をつくる' }],
+      formTitle: '【5月】定期開催マダミス会',
+      setFormTitle: () => {},
+      formModes: [
+        { id: 'date', title: '開催日が決まっている', text: '日付を入れて、そのままつくります。' },
+        { id: 'candidates', title: 'まだ決まっていない', text: '候補日を出して、メンバーの回答から決めます。つくった時点で卓は一覧に並びます。' },
+      ].map((m) => {
+        const on = s.formMode === m.id;
+        return {
+          ...m,
+          select: () => this.setState({ formMode: m.id }),
+          bg: on ? 'var(--primary-subtle)' : 'var(--surface)',
+          border: on ? 'var(--primary)' : 'var(--border-subtle)',
+          dotBorder: on ? 'var(--primary)' : 'var(--border)',
+          dotFill: on ? 'var(--primary)' : 'transparent',
+        };
+      }),
+      formModeDate: s.formMode === 'date',
+      formModeCandidates: s.formMode === 'candidates',
+      submitForm: () => {
+        this.setState({
+          screen: 'list', homeTab: s.formMode === 'date' ? 'next' : 'adjusting',
+          tableState: s.formMode === 'date' ? '開催予定' : '調整中',
+        });
+        this.showToast('卓をつくりました');
+      },
+      candidateRows: [
+        { label: '5月10日(金)', note: '20:00 開始でも可', counter: '11 / 20' },
+        { label: '5月11日(土)', note: '終日OK', counter: '4 / 20' },
+        { label: '5月17日(金)', note: '', counter: '0 / 20' },
+      ],
+
+      cancelOpen: s.dialog === 'cancel',
+      removeOpen: s.dialog === 'remove',
+      logoutOpen: s.dialog === 'logout',
+      confirmOpen: s.dialog === 'confirm',
+      openCancel: () => this.setState({ dialog: 'cancel' }),
+      openRemove: () => this.setState({ dialog: 'remove' }),
+      openLogout: () => this.setState({ dialog: 'logout' }),
+      openConfirm: () => this.setState({ dialog: 'confirm' }),
+      closeDialogs: () => this.setState({ dialog: null }),
+
+      confirmDates: DATES.map((d) => {
+        const answered = MEMBERS.filter((n) => (s.answers[d.id + '::' + n] || 'none') !== 'none').length;
+        const ok = MEMBERS.filter((n) => (s.answers[d.id + '::' + n] || 'none') === 'ok').length;
+        const on = s.confirmDate === d.id;
+        return {
+          ...d,
+          summary: ok + '人が参加できる・回答 ' + answered + '/' + MEMBERS.length,
+          border: on ? 'var(--primary)' : 'var(--border-subtle)',
+          bg: on ? 'var(--primary-subtle)' : 'var(--surface-subtle)',
+          select: () => this.setState({ confirmDate: d.id }),
+        };
+      }),
+      confirmFooter: DS.Button
+        ? React.createElement('div', { style: { display: 'flex', gap: 12, justifyContent: 'flex-end' } },
+            React.createElement(DS.Button, { variant: 'secondary', onClick: () => this.setState({ dialog: null }) }, 'キャンセル'),
+            React.createElement(DS.Button, {
+              icon: 'schedule',
+              onClick: () => {
+                this.setState({ dialog: null, tableState: '開催予定', detailTab: 'overview' });
+                this.showToast('開催日を確定しました');
+              },
+            }, '確定する'))
+        : null,
+
+      toastOpen: !!s.toast,
+      toastText: s.toast || '',
+      closeToast: () => this.setState({ toast: null }),
+      toastLink: () => this.showToast('招待リンクをコピーしました'),
+      toastComplete: () => this.showToast('卓を完了しました'),
+    };
+  }
+}
+</script>
+</body>
+</html>

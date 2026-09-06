@@ -1,0 +1,18 @@
+/* たく日和 — shape & border. Soft, but not round-everything. */
+:root {
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;   /* card default */
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --radius-control: var(--radius-sm);  /* inputs, buttons */
+  --radius-card: var(--radius-md);
+  --radius-sheet: var(--radius-lg);
+
+  --border-width: 1px;
+  --border-width-strong: 1.5px;
+  --border-hairline: var(--border-width) solid var(--border);
+  --border-card: var(--border-width) solid var(--border-subtle);
+  --stroke-icon: 1.75;
+}

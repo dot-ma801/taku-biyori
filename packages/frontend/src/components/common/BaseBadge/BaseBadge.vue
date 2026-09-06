@@ -24,50 +24,46 @@ withDefaults(
 </template>
 
 <style scoped>
+/* DS: badges stay rectangular at --radius-xs so they don't read as pills.
+   Tone = surface + text pair + a 34% border of the same hue. */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  font-family: var(--font-family-base);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  border-radius: var(--radius-full);
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  font: var(--text-label);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-xs);
+  border-width: var(--border-width);
+  border-style: solid;
   white-space: nowrap;
-  line-height: 1.4;
 }
 
 .badge--default {
-  background: var(--color-surface-muted);
-  color: var(--color-text-secondary);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
 .badge--primary {
-  background: color-mix(
-    in srgb,
-    var(--color-primary) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-primary-text);
+  background: var(--primary-subtle);
+  color: var(--primary-on-subtle);
+  border-color: color-mix(in oklab, var(--primary) 32%, transparent);
 }
 .badge--success {
-  background: color-mix(
-    in srgb,
-    var(--color-success) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-success);
+  background: var(--success-surface);
+  color: var(--success-text);
+  border-color: color-mix(in oklab, var(--success) 34%, transparent);
 }
 .badge--warning {
-  background: color-mix(
-    in srgb,
-    var(--color-warning) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-warning);
+  background: var(--warning-surface);
+  color: var(--warning-text);
+  border-color: color-mix(in oklab, var(--warning) 34%, transparent);
 }
 .badge--error {
-  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
-  color: var(--color-error);
+  background: var(--error-surface);
+  color: var(--error-text);
+  border-color: color-mix(in oklab, var(--error) 34%, transparent);
 }
 
 .badge-dot {
@@ -77,18 +73,18 @@ withDefaults(
   border-radius: 50%;
 }
 .badge-dot--default {
-  background: var(--color-text-muted);
+  background: var(--text-tertiary);
 }
 .badge-dot--primary {
-  background: var(--color-primary);
+  background: var(--primary);
 }
 .badge-dot--success {
-  background: var(--color-success);
+  background: var(--success);
 }
 .badge-dot--warning {
-  background: var(--color-warning);
+  background: var(--warning);
 }
 .badge-dot--error {
-  background: var(--color-error);
+  background: var(--error);
 }
 </style>

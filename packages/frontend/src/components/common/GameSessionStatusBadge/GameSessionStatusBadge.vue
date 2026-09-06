@@ -36,35 +36,36 @@ const badgeClass = computed(() =>
 </template>
 
 <style scoped>
+/* DS badge chrome: rectangular --radius-xs, tone surface + text pair,
+   and a same-hue border at 34%. */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  font-family: var(--font-family-base);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  border-radius: var(--radius-full);
+  height: 24px;
+  padding: 0 9px;
+  font: var(--text-label);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-xs);
+  border-width: var(--border-width);
+  border-style: solid;
   white-space: nowrap;
-  line-height: 1.4;
 }
 
 .status-badge--muted {
-  background: var(--color-surface-muted);
-  color: var(--color-text-secondary);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
 
 .status-badge--success {
-  background: color-mix(
-    in srgb,
-    var(--color-success) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-success);
+  background: var(--success-surface);
+  color: var(--success-text);
+  border-color: color-mix(in oklab, var(--success) 34%, transparent);
 }
 
 .status-badge--error {
-  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
-  color: var(--color-error);
+  background: var(--error-surface);
+  color: var(--error-text);
+  border-color: color-mix(in oklab, var(--error) 34%, transparent);
 }
 </style>

@@ -1,4 +1,4 @@
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, toValue, watch, type MaybeRefOrGetter } from 'vue';
 import { getGameSession } from '@/api/game-session';
 import { ApiError } from '@/lib/api-client';
 import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
@@ -11,18 +11,27 @@ import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
  */
 export const useGetGameSessionDetail = (
   lobbyId: string,
-  gameSessionId: string,
+  // 卓詳細は「ロビー配下のどの開催を見せるか」を取得後に決めるため、
+  // id が後から決まる（= 最初は null）呼び出しも受け付ける。
+  gameSessionId: MaybeRefOrGetter<string | null>,
 ) => {
   const gameSession = ref<GameSessionDetailModel | null>(null);
   const loading = ref(false);
   const errorMessage = ref('');
 
   async function fetch() {
+    const id = toValue(gameSessionId);
+    // 開催がまだ無い卓。取りに行かず「開催なし」のまま置く
+    if (id === null) {
+      gameSession.value = null;
+      return;
+    }
+
     loading.value = true;
     errorMessage.value = '';
 
     try {
-      gameSession.value = await getGameSession(lobbyId, gameSessionId);
+      gameSession.value = await getGameSession(lobbyId, id);
     } catch (err) {
       errorMessage.value =
         err instanceof ApiError ? err.message : 'エラーが発生しました';
@@ -32,6 +41,15 @@ export const useGetGameSessionDetail = (
   }
 
   onMounted(fetch);
+
+  // 代表になる開催が後から決まる／切り替わったら取り直す。
+  // immediate にしないのは、初回を onMounted に一本化しておくため
+  watch(
+    () => toValue(gameSessionId),
+    () => {
+      void fetch();
+    },
+  );
 
   /** 変化したフィールドだけを差し替える */
   function patchGameSession(patch: Partial<GameSessionDetailModel>) {

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppFooter from '@/components/layout/AppFooter.vue';
+import AppBottomNav from '@/components/layout/AppBottomNav.vue';
 import BaseToastContainer from '@/components/common/BaseToastContainer/BaseToastContainer.vue';
 import BaseLoadingOverlay from '@/components/common/BaseLoadingOverlay/BaseLoadingOverlay.vue';
 import { useHideOnScroll } from '@/composables/useHideOnScroll';
 
-// ヘッダーの高さ相当。この位置までは常にヘッダーを見せる
-const HEADER_OFFSET = 64;
+// ヘッダーの高さ相当（--nav-height）。この位置までは常にヘッダーを見せる
+const HEADER_OFFSET = 60;
 
 const { isVisible } = useHideOnScroll({ offset: HEADER_OFFSET });
 </script>
@@ -18,6 +19,7 @@ const { isVisible } = useHideOnScroll({ offset: HEADER_OFFSET });
       <router-view />
     </main>
     <AppFooter />
+    <AppBottomNav />
     <BaseToastContainer />
     <BaseLoadingOverlay />
   </div>
@@ -37,8 +39,8 @@ const { isVisible } = useHideOnScroll({ offset: HEADER_OFFSET });
  */
 .app-container {
   min-height: 100dvh;
-  background-color: var(--color-background);
-  color: var(--color-text);
+  background-color: var(--background);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
 }
@@ -51,7 +53,7 @@ const { isVisible } = useHideOnScroll({ offset: HEADER_OFFSET });
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: transform 0.25s ease;
+  transition: transform var(--duration-normal) var(--ease-standard);
 }
 
 .header--hidden {
@@ -67,6 +69,12 @@ const { isVisible } = useHideOnScroll({ offset: HEADER_OFFSET });
 /* 中身が短いページでもフッターが画面下に来るよう、余白ぶんを content が引き受ける */
 .content {
   flex: 1;
-  padding: var(--space-4);
+  padding: var(--gutter);
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: var(--space-4);
+  }
 }
 </style>

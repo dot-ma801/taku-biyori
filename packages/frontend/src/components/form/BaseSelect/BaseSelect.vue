@@ -34,10 +34,10 @@ const model = defineModel<string>();
         </Select.Placeholder>
         <Select.Cue v-slot="{ isOpen }" class="select__cue">
           <ChevronDown
-            :size="14"
+            :size="16"
             :style="{
               transform: isOpen ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.15s',
+              transition: 'transform var(--duration-fast) var(--ease-standard)',
             }"
           />
         </Select.Cue>
@@ -61,7 +61,7 @@ const model = defineModel<string>();
             }"
           >
             <span>{{ opt.label }}</span>
-            <Check v-if="isSelected" :size="13" class="select__item-check" />
+            <Check v-if="isSelected" :size="16" class="select__item-check" />
           </div>
         </Select.Item>
       </Select.Content>
@@ -70,18 +70,18 @@ const model = defineModel<string>();
 </template>
 
 <style scoped>
+/* Same DS field chrome as BaseTextBox; the popover is a --radius-md sheet on
+   --surface-raised with --shadow-md. */
 .select-wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  font-family: var(--font-family-base);
+  gap: var(--space-2);
+  font-family: var(--font-body);
 }
 
 .select-wrap__label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-secondary);
+  font: var(--text-label);
+  color: var(--text-primary);
 }
 
 .select {
@@ -93,60 +93,58 @@ const model = defineModel<string>();
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: 10px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-base);
-  font-size: 14px;
-  color: var(--color-text);
+  height: 40px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   cursor: pointer;
   text-align: left;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  transition: var(--transition-control);
 }
 .select__activator:hover:not(:disabled) {
-  border-color: var(--color-secondary);
+  border-color: var(--border-strong);
 }
-.select__activator[aria-expanded='true'] {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
-}
+.select__activator[aria-expanded='true'],
 .select__activator:focus-visible {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 .select__activator:disabled {
-  opacity: 0.5;
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
   cursor: not-allowed;
-  background: var(--color-surface-muted);
 }
 
 .select__value {
   flex: 1;
+  min-width: 0;
   text-align: left;
 }
 .select__placeholder {
   flex: 1;
-  color: var(--color-text-muted);
+  min-width: 0;
+  color: var(--text-tertiary);
   text-align: left;
 }
 .select__cue {
   flex-shrink: 0;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   display: flex;
   align-items: center;
 }
 
 /* Select.Content は native popover + CSS anchor positioning で自動配置される */
 .select__content {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-1) 0;
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-1);
   max-height: 240px;
   overflow-y: auto;
   min-width: anchor-size(width);
@@ -156,25 +154,29 @@ const model = defineModel<string>();
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: var(--color-text);
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.1s;
+  transition: var(--transition-control);
 }
 .select__item:hover:not(.select__item--disabled) {
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
 }
 .select__item--selected {
-  color: var(--color-primary-text);
-  font-weight: 500;
+  background: var(--primary-subtle);
+  color: var(--primary-on-subtle);
+  font-weight: var(--weight-medium);
 }
 .select__item--disabled {
-  opacity: 0.45;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 .select__item-check {
-  color: var(--color-primary-text);
+  color: var(--primary);
   flex-shrink: 0;
 }
 </style>

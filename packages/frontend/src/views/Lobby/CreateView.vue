@@ -23,7 +23,7 @@ const {
 </script>
 
 <template>
-  <PageContainer>
+  <PageContainer size="sm">
     <LobbyEdit
       heading="ロビー新規作成"
       submit-label="ロビーを作成する"

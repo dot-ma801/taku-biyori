@@ -4,31 +4,46 @@ import { useGlobalNavItems } from '@/components/layout/GlobalNav/useGlobalNavIte
 
 describe('useGlobalNavItems', () => {
   describe('項目', () => {
-    it('ダッシュボードとマイページの2項目を返す', () => {
+    it('ダッシュボード・卓・マイページの3項目を返す', () => {
       // Arrange & Act
       const { items } = useGlobalNavItems('dashboard');
 
       // Assert
-      expect(items.value.map((i) => i.id)).toEqual(['dashboard', 'profile']);
+      expect(items.value.map((i) => i.id)).toEqual([
+        'dashboard',
+        'tables',
+        'profile',
+      ]);
     });
   });
 
   describe('現在地の判定', () => {
+    it('dashboard ではダッシュボードが現在地になる', () => {
+      // Arrange & Act
+      const { items } = useGlobalNavItems('dashboard');
+
+      // Assert
+      expect(items.value.filter((i) => i.isCurrent).map((i) => i.id)).toEqual([
+        'dashboard',
+      ]);
+    });
+
     it.each([
-      'dashboard',
+      'tables',
       'lobbies-detail',
       'lobbies-new',
       'lobbies-edit',
       'game-sessions-detail',
       'game-sessions-edit',
       'game-sessions-play-memo',
-    ])('卓配下の "%s" ではダッシュボードが現在地になる', (routeName) => {
+    ])('卓配下の "%s" では卓が現在地になる', (routeName) => {
       // Arrange & Act
       const { items } = useGlobalNavItems(routeName);
 
       // Assert
-      expect(items.value[0]?.isCurrent).toBe(true);
-      expect(items.value[1]?.isCurrent).toBe(false);
+      expect(items.value.filter((i) => i.isCurrent).map((i) => i.id)).toEqual([
+        'tables',
+      ]);
     });
 
     it('profile-setting ではマイページが現在地になる', () => {
@@ -36,8 +51,9 @@ describe('useGlobalNavItems', () => {
       const { items } = useGlobalNavItems('profile-setting');
 
       // Assert
-      expect(items.value[0]?.isCurrent).toBe(false);
-      expect(items.value[1]?.isCurrent).toBe(true);
+      expect(items.value.filter((i) => i.isCurrent).map((i) => i.id)).toEqual([
+        'profile',
+      ]);
     });
 
     it.each(['login', 'top', 'auth-callback'])(
@@ -81,8 +97,9 @@ describe('useGlobalNavItems', () => {
       routeName.value = 'profile-setting';
 
       // Assert
-      expect(items.value[0]?.isCurrent).toBe(false);
-      expect(items.value[1]?.isCurrent).toBe(true);
+      expect(items.value.filter((i) => i.isCurrent).map((i) => i.id)).toEqual([
+        'profile',
+      ]);
     });
   });
 });

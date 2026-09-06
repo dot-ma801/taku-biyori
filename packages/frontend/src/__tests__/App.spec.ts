@@ -16,6 +16,7 @@ const createTestRouter = () =>
         name: 'dashboard',
         component: { template: '<div />' },
       },
+      { path: '/tables', name: 'tables', component: { template: '<div />' } },
       {
         path: '/profile/setting',
         name: 'profile-setting',

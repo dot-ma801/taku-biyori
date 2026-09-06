@@ -6,9 +6,9 @@ import {
 } from '@taku-biyori/shared';
 
 export interface JoinAsGuestRepository {
-  // null は募集枠が存在しないことを表す
+  // null はロビーが存在しないことを表す
   findLobbyStatus(id: string): Promise<LobbyStatus | null>;
-  // 募集枠の guest_link_token。null は募集枠非存在（またはトークン未設定）
+  // ロビーの guest_link_token。null はロビー非存在（またはトークン未設定）
   findGuestLinkToken(id: string): Promise<string | null>;
   addGuestEntry(
     lobbyId: string,
@@ -23,8 +23,8 @@ export type JoinAsGuestResult =
   | { type: 'lobbyNotOpen' };
 
 /**
- * ゲスト（完全匿名）として募集枠に参加する。
- * - トークンが募集枠の guest_link_token と一致しなければ invalidToken（403 相当）
+ * ゲスト（完全匿名）としてロビーに参加する。
+ * - トークンがロビーの guest_link_token と一致しなければ invalidToken（403 相当）
  * - 参加を許すステータス（open）でなければ lobbyNotOpen（422 相当・通常参加と同条件）
  * 本人確認手段がないため重複参加は許容する（dup チェックを行わない）。
  * status 取得とトークン取得を並列化してレイテンシを削減する。

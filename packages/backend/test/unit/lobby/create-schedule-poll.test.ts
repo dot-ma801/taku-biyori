@@ -89,7 +89,7 @@ describe('createSchedulePoll', () => {
     });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({ findHostUserId: vi.fn().mockResolvedValue(null) });
 
@@ -120,7 +120,7 @@ describe('createSchedulePoll', () => {
     expect(createSchedulePollWithDates).not.toHaveBeenCalled();
   });
 
-  it('募集枠が解散済みの場合は invalidStatus を返す', async () => {
+  it('ロビーが解散済みの場合は invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -140,7 +140,7 @@ describe('createSchedulePoll', () => {
     expect(result).toEqual({ type: 'invalidStatus' });
   });
 
-  it('draft の募集枠でもホストは日程調整を始められる', async () => {
+  it('draft のロビーでもホストは日程調整を始められる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({

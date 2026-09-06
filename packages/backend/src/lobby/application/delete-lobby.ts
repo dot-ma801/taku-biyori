@@ -14,7 +14,7 @@ export interface DeleteLobbyRepository extends LobbyHostRepository {
   countGameSessions(id: string): Promise<number>;
   deleteById(id: string): Promise<void>;
   /**
-   * 削除対象の募集枠行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
+   * 削除対象のロビー行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
    * 「条件チェック → 削除」を別々のクエリに分けると TOCTOU race condition が起きるため、
    * application 層からロック付きトランザクション境界を明示的に開く
    * （既存 game-session の executeWithLock と同方針）。

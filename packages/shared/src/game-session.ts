@@ -7,11 +7,7 @@ import { todayDateString } from '@/date';
 export { GameSessionStatus };
 
 /**
- * v2 レスポンスのステータス。`getGameSessionStatus()` が導出する4値だけを許す（design-v2 §4-2）。
- *
- * `GameSessionStatus` enum には移行期間中だけ `draft` / `open` / `confirmed` が残っているが、
- * v2 では導出されない値なので v2 の DTO では受け付けない。
- * 旧 DTO は `LegacyGameSessionStatusSchema` を使う。
+ * レスポンスのステータス。`getGameSessionStatus()` が導出する4値だけを許す（design-v2 §4-2）。
  */
 export const GameSessionStatusSchema = z.enum([
   GameSessionStatus.scheduled,
@@ -19,10 +15,6 @@ export const GameSessionStatusSchema = z.enum([
   GameSessionStatus.completed,
   GameSessionStatus.cancelled,
 ]);
-
-// ============================================================
-// v2 契約（design-v2 §5-5 / §6-5 / §6-13-5）
-// ============================================================
 
 /**
  * **編集フォーム用の生値。** `null` は「上書きしていない」を意味する。
@@ -210,111 +202,3 @@ export const UpdateGameSessionStatusInputSchema = z.object({
 export type UpdateGameSessionStatusInput = z.infer<
   typeof UpdateGameSessionStatusInputSchema
 >;
-
-// ============================================================
-// v0.2 契約（移行期間中だけ残す）
-//
-// 新モデルへ載せ替える前の卓（`game_session_members` 前提）の経路が使っている。
-// 旧 UI を置き換える PR でまとめて削除する。新しい実装からは参照しないこと。
-// ============================================================
-
-/**
- * 旧 DTO のステータス。移行期の `draft` / `open` / `confirmed` を含む enum 全体を受ける。
- *
- * @deprecated v2 の4ステータス（`GameSessionStatusSchema`）へ移行する
- */
-export const LegacyGameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
-
-/** @deprecated `GameSessionListItem` へ移行する */
-export const LegacyGameSessionListItemSchema = z.object({
-  id: z.string().uuid(),
-  title: z.string(),
-  scenarioName: z.string().nullable().optional(),
-  status: LegacyGameSessionStatusSchema,
-  isPublished: z.boolean(),
-  memberCount: z.number().int(),
-  maxMembers: z.number().int().nullable().optional(),
-  scheduledAt: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  role: z.enum(['host', 'member']).nullable(),
-});
-/** @deprecated `GameSessionListItem` へ移行する */
-export type LegacyGameSessionListItem = z.infer<
-  typeof LegacyGameSessionListItemSchema
->;
-
-/** @deprecated `GameSession` へ移行する */
-export const LegacyGameSessionSchema = z.object({
-  id: z.string().uuid(),
-  title: z.string(),
-  description: z.string().nullable().optional(),
-  scenarioName: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
-  status: LegacyGameSessionStatusSchema,
-  isPublished: z.boolean(),
-  scheduledAt: z.string(),
-  completedAt: z.string().nullable().optional(),
-  cancelledAt: z.string().nullable().optional(),
-  maxMembers: z.number().int().nullable().optional(),
-  createdBy: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-/** @deprecated `GameSession` へ移行する */
-export type LegacyGameSession = z.infer<typeof LegacyGameSessionSchema>;
-
-/** @deprecated `UpdateGameSessionInput` へ移行する */
-export const LegacyUpdateGameSessionInputSchema = z
-  .object({
-    title: z.string().min(1).max(100).optional(),
-    description: z.string().max(1000).nullable().optional(),
-    scenarioName: z.string().max(200).nullable().optional(),
-    location: z.string().max(200).nullable().optional(),
-    maxMembers: z.number().int().min(2).max(20).nullable().optional(),
-    scheduledAt: z.iso.date().optional(),
-  })
-  .refine((input) => Object.keys(input).length > 0, {
-    message: '少なくとも1つのフィールドが必要です',
-  });
-/** @deprecated `UpdateGameSessionInput` へ移行する */
-export type LegacyUpdateGameSessionInput = z.infer<
-  typeof LegacyUpdateGameSessionInputSchema
->;
-
-/** @deprecated `UpdateGameSessionStatusInput` へ移行する */
-export const LegacyUpdateGameSessionStatusInputSchema = z.object({
-  status: z.enum(['open', 'completed', 'cancelled']),
-});
-/** @deprecated `UpdateGameSessionStatusInput` へ移行する */
-export type LegacyUpdateGameSessionStatusInput = z.infer<
-  typeof LegacyUpdateGameSessionStatusInputSchema
->;
-
-/** @deprecated `Seat` へ移行する */
-export const GameSessionMemberSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().nullable(),
-  userName: z.string().nullable(),
-  guestName: z.string().nullable(),
-  characterName: z.string().nullable(),
-  joinedAt: z.string(),
-});
-/** @deprecated `Seat` へ移行する */
-export type GameSessionMember = z.infer<typeof GameSessionMemberSchema>;
-
-/** @deprecated `GameSessionDetail` へ移行する */
-export const LegacyGameSessionDetailSchema = LegacyGameSessionSchema.extend({
-  members: z.array(GameSessionMemberSchema),
-});
-/** @deprecated `GameSessionDetail` へ移行する */
-export type LegacyGameSessionDetail = z.infer<
-  typeof LegacyGameSessionDetailSchema
->;
-
-/** @deprecated 自分で着席する経路は廃止した（design-v2 §6-6） */
-export const JoinGameSessionInputSchema = z.object({
-  characterName: z.string().max(100).optional(),
-});
-/** @deprecated 自分で着席する経路は廃止した（design-v2 §6-6） */
-export type JoinGameSessionInput = z.infer<typeof JoinGameSessionInputSchema>;

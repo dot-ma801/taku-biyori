@@ -97,7 +97,7 @@ describe('upsertGuestScheduleAnswers', () => {
     expect(result).toEqual({ type: 'ok', answers: mockAnswers });
   });
 
-  it('募集枠が存在しない場合は notFound を返す', async () => {
+  it('ロビーが存在しない場合は notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findGuestLinkToken: vi.fn().mockResolvedValue(null),
@@ -111,7 +111,7 @@ describe('upsertGuestScheduleAnswers', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('募集枠は存在するがゲストリンクトークンが未設定の場合は invalidToken を返す', async () => {
+  it('ロビーは存在するがゲストリンクトークンが未設定の場合は invalidToken を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findGuestLinkToken: vi.fn().mockResolvedValue(null),
@@ -135,7 +135,7 @@ describe('upsertGuestScheduleAnswers', () => {
     expect(result).toEqual({ type: 'invalidToken' });
   });
 
-  it('draft の募集枠は invalidStatus を返す（ゲストは notPublished を区別しない）', async () => {
+  it('draft のロビーは invalidStatus を返す（ゲストは notPublished を区別しない）', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({

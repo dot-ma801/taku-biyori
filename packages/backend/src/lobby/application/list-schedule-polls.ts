@@ -16,7 +16,7 @@ export type ListSchedulePollsResult =
   | { type: 'forbidden' };
 
 /**
- * 日程調整の履歴一覧。公開済みの募集枠は誰でも閲覧できる。
+ * 日程調整の履歴一覧。公開済みのロビーは誰でも閲覧できる。
  * 非公開（draft）はホストのみ（listEntries と同方針。design-v2 §6-4）。
  */
 export const listSchedulePolls = async (

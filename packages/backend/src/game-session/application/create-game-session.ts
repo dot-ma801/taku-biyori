@@ -41,7 +41,7 @@ export type CreateGameSessionResult =
   | { type: 'pastScheduledAt' };
 
 /**
- * セッションを開く（design-v2 §5-2）。v0.2 の「卓確定」の後継。
+ * セッションを開く（design-v2 §5-2）。v0.2 の POST /confirm の後継。
  *
  * v0.2 との違いは意味の方が大きい。候補日 ID ではなく `scheduledAt` を直接受け取り
  * （開催日の決定は候補日のコピーではなく新しいファクト）、ロビーの title などを

@@ -92,7 +92,7 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).toHaveBeenCalledWith('member-1', '');
   });
 
-  it('draft の卓でも保存できる', async () => {
+  it('draft の開催でも保存できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi
@@ -114,7 +114,7 @@ describe('upsertMyPlayMemo', () => {
     expect(result.type).toBe('ok');
   });
 
-  it('当日（today）の卓でも保存できる', async () => {
+  it('当日（today）の開催でも保存できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -156,7 +156,7 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('卓が存在しないと notFound を返す', async () => {
+  it('開催が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue(null),
@@ -178,7 +178,7 @@ describe('upsertMyPlayMemo', () => {
   });
 
   // ゲストは user_id = null のためこの検索に構造上ヒットしない（design-v1.2 §4）
-  it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
+  it('その開催のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findSeatByUserId: vi.fn().mockResolvedValue(null),
@@ -199,7 +199,7 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('完了した卓では statusLocked を返す', async () => {
+  it('完了した開催では statusLocked を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -223,7 +223,7 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('中止した卓では statusLocked を返す', async () => {
+  it('中止した開催では statusLocked を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
@@ -247,8 +247,8 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  // 非メンバーに卓のステータスを推測させない（存在チェックを先に通す設計と対称）
-  it('完了した卓でも非メンバーには forbidden を返す', async () => {
+  // 非メンバーに開催のステータスを推測させない（存在チェックを先に通す設計と対称）
+  it('完了した開催でも非メンバーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({

@@ -41,6 +41,10 @@ export interface RegisterPlayMemoRouteOptions {
 /**
  * プレイメモのルート。開催はロビー配下に入れ子になったので
  * `/api/lobbies/:lobbyId/game-sessions/:id/play-memos...` に揃える（design-v2 §6-13）。
+ *
+ * リクエスト・レスポンス・エラーコードの契約は v2 で変えていない（design-v2 §6-15）。
+ * このファイルの `design-v1.2 §…` はその挙動を記録した**履歴参照**で、
+ * 現行の仕様は design-v2 を見ること。
  */
 const BASE = '/api/lobbies/:lobbyId/game-sessions/:id/play-memos';
 
@@ -121,14 +125,14 @@ export const registerPlayMemoRoute = (
       parsed.data,
     );
 
-    // 卓が無い場合とメモ未作成の場合の両方が notFound（design-v1.2 §5）
+    // 開催が無い場合とメモ未作成の場合の両方が notFound（design-v1.2 §5）
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     return c.json(result.playMemo);
   });
 
-  // 公開メモの閲覧は未ログイン・ゲストにも開く（要求 §3-4）。
-  // 認証は「非公開卓かどうか」の判定にのみ使うため、未ログインでも 401 にしない
+  // 公開メモの閲覧は未ログイン・ゲストにも開く（要求 §3-4 / design-v2 §4-3）。
+  // 認証は「非公開の開催かどうか」の判定にのみ使うため、未ログインでも 401 にしない
   app.get(BASE, async (c) => {
     const authSession = await options.getSession(c.req.raw.headers);
     const userId = authSession?.user.id ?? null;
@@ -140,7 +144,7 @@ export const registerPlayMemoRoute = (
     );
 
     if (result.type === 'notFound') return c.json({ error: 'Not Found' }, 404);
-    // 非公開卓をホスト以外が呼んだケース。ログインの有無で分けず 403 に統一する
+    // 非公開の開催をホスト以外が呼んだケース。ログインの有無で分けず 403 に統一する
     // （design-v1.2 §5 のエラー表）
     if (result.type === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
     return c.json(result.playMemos);

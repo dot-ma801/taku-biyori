@@ -10,7 +10,7 @@ import { z } from 'zod';
  * - ログインユーザー: `userId` が非 null、`guestName` は null
  * - ゲスト: `userId` が null、`guestName` が非 null
  *
- * v0.2 の `lobbyMemberId`（出自の突合用）は**廃止**。選出＝Seat の有無で表せるため不要になった。
+ * v0.2 にあった出自の突合用フィールドは**廃止**。選出＝Seat の有無で表せるため不要になった。
  */
 export const SeatSchema = z.object({
   id: z.string().uuid(),

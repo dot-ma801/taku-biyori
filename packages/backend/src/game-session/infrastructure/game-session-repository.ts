@@ -912,7 +912,7 @@ export const createGameSessionRepository = (
 
     // ---------- プレイメモ ----------
     //
-    // ぶら下がり先が game_session_members.id → seats.id に変わっただけで、
+    // ぶら下がり先が v0.2 のメンバー行から seats.id に変わっただけで、
     // リクエスト・レスポンスの形は変えない（design-v2 §6-15 の等価性の基準点）。
 
     async findPlayMemoBySeatId(

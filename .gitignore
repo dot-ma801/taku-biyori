@@ -9,3 +9,8 @@ coverage/
 .DS_Store
 .eslintcache
 .mcp.json
+
+# rulesync generate の生成物のうち、追跡していないもの
+# （claudecode の .claude/ と codexcli の AGENTS.md は追跡している。opencode は使っていない）
+.opencode/
+opencode.jsonc

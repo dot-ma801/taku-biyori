@@ -127,7 +127,7 @@ describe('replaceCandidateDates', () => {
     });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({ findHostUserId: vi.fn().mockResolvedValue(null) });
 
@@ -166,7 +166,7 @@ describe('replaceCandidateDates', () => {
     expect(applyCandidateDateChanges).not.toHaveBeenCalled();
   });
 
-  it('募集枠が存在しない場合（status も notFound）は notFound を返す', async () => {
+  it('ロビーが存在しない場合（status も notFound）は notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue(null),
@@ -185,7 +185,7 @@ describe('replaceCandidateDates', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('募集枠が解散済みの場合は invalidStatus を返す', async () => {
+  it('ロビーが解散済みの場合は invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({

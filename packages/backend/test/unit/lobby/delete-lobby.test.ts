@@ -46,7 +46,7 @@ describe('deleteLobby', () => {
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
 
-  it('募集枠が存在しない場合は notFound を返す', async () => {
+  it('ロビーが存在しない場合は notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findHostUserId: vi.fn().mockResolvedValue(null),

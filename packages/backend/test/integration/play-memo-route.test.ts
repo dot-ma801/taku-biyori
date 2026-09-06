@@ -133,7 +133,7 @@ describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
     expect(response.status).toBe(401);
   });
 
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       getMyPlayMemo: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -148,7 +148,7 @@ describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
 
   // ゲスト参加のみのユーザーもここに落ちる（ゲストは user_id = null のため
   // メンバー検索に構造上ヒットしない。design-v1.2 §4）
-  it('その卓のメンバーでないなら 403 を返す', async () => {
+  it('その開催のメンバーでないなら 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       getMyPlayMemo: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -236,7 +236,7 @@ describe('PUT /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
     expect(upsertMyPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       upsertMyPlayMemo: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -249,7 +249,7 @@ describe('PUT /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
     expect(response.status).toBe(404);
   });
 
-  it('その卓のメンバーでないなら 403 を返す', async () => {
+  it('その開催のメンバーでないなら 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       upsertMyPlayMemo: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -263,7 +263,7 @@ describe('PUT /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
   });
 
   // 確定後ロックは 409 に統一する（423 は使わない。design-v1.2 §8）
-  it('完了・中止した卓なら 409 を返す', async () => {
+  it('完了・中止した開催なら 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       upsertMyPlayMemo: vi.fn().mockResolvedValue({ type: 'statusLocked' }),
@@ -420,11 +420,11 @@ describe('PATCH /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me/visibility
     expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
   });
 
-  // ユースケースは「卓が無い」場合と「メモ未作成」の場合の両方で notFound を返すため、
+  // ユースケースは「開催が無い」場合と「メモ未作成」の場合の両方で notFound を返すため、
   // HTTP 層ではどちらも同じ 404 に落ちる（design-v1.2 §5）。両者の区別は application 層の責務で、
   // メモ未作成 → notFound の実質的な検証はユニットテスト
   // （update-my-play-memo-visibility.test.ts の「メモ未作成なら notFound を返す」）が担っている
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateMyPlayMemoVisibility: vi
@@ -439,7 +439,7 @@ describe('PATCH /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me/visibility
     expect(response.status).toBe(404);
   });
 
-  it('その卓のメンバーでないなら 403 を返す', async () => {
+  it('その開催のメンバーでないなら 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateMyPlayMemoVisibility: vi
@@ -501,7 +501,7 @@ describe('PATCH /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me/visibility
 });
 
 describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
-  it('完了した卓の公開メモ一覧を 200 で返す', async () => {
+  it('完了した開催の公開メモ一覧を 200 で返す', async () => {
     // Arrange
     const listSharedPlayMemos = vi
       .fn()
@@ -548,7 +548,7 @@ describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
   });
 
   // 完了・中止前は他人のメモを見せない（要求 §3-3）
-  it('完了前の卓では空配列を返す', async () => {
+  it('完了前の開催では空配列を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi
@@ -565,7 +565,7 @@ describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
     expect(body).toEqual([]);
   });
 
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -578,8 +578,8 @@ describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
     expect(response.status).toBe(404);
   });
 
-  // 非公開のまま中止された卓のメモが第三者に漏れないことの要（design-v1.2 §4 手順2）
-  it('非公開の卓をホスト以外が呼ぶと 403 を返す', async () => {
+  // 非公開のまま中止された開催のメモが第三者に漏れないことの要（design-v1.2 §4 手順2）
+  it('非公開の開催をホスト以外が呼ぶと 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -592,7 +592,7 @@ describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
     expect(response.status).toBe(403);
   });
 
-  it('非公開の卓を未ログインで呼んでも 403 を返す', async () => {
+  it('非公開の開催を未ログインで呼んでも 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'forbidden' }),

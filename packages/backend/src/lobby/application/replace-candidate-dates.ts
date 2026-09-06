@@ -28,7 +28,7 @@ export interface ReplaceCandidateDatesRepository extends LobbyHostRepository {
     diff: CandidateDateDiff,
   ): Promise<void>;
   /**
-   * 対象募集枠行に排他ロックを取り、差分計算（読み取り）〜適用（書き込み）までを
+   * 対象ロビー行に排他ロックを取り、差分計算（読み取り）〜適用（書き込み）までを
    * 1トランザクションで実行する。読み取りと書き込みを別トランザクションに分けると、
    * 並行リクエストが同じ「あるべき状態」を根拠に競合する候補日を追加したり、
    * 「最新の調整」判定がすり替わったりする TOCTOU が起きるため

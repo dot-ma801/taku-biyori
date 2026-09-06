@@ -35,7 +35,7 @@ describe('listEntries', () => {
     expect(result).toEqual({ type: 'ok', entries: [mockMember] });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi.fn().mockResolvedValue(null),
@@ -91,7 +91,7 @@ describe('listEntries', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('非公開募集枠に未認証でアクセスすると forbidden を返す', async () => {
+  it('非公開ロビーに未認証でアクセスすると forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyVisibility: vi

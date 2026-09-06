@@ -79,7 +79,7 @@ describe('leaveLobby', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('他募集枠のメンバーIDは notFound を返す', async () => {
+  it('他ロビーのメンバーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findEntryOwner: vi.fn().mockResolvedValue({
@@ -97,7 +97,7 @@ describe('leaveLobby', () => {
   });
 
   it.each([LobbyStatus.disbanded])(
-    'status が %s の募集枠は invalidStatus を返す',
+    'status が %s のロビーは invalidStatus を返す',
     async (status) => {
       // Arrange
       const repo = makeRepo({

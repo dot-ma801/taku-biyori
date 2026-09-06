@@ -18,10 +18,13 @@ export type GetMyPlayMemoResult =
   | { type: 'forbidden' };
 
 /**
- * 自分のプレイメモを取得する（design-v1.2 §5）。
+ * 自分のプレイメモを取得する（design-v2 §6-15）。
  *
- * 卓のステータスには依存しない。本文の編集は完了・中止で閉じるが、
- * 自分のメモの閲覧は全ステータスで可能（design-v1.2 §4 の操作可否表）。
+ * 開催のステータスには依存しない。本文の編集は完了・中止で閉じるが、
+ * 自分のメモの閲覧は全ステータスで可能（design-v2 §4-3）。
+ *
+ * 契約は v2 で変えていないため（design-v2 §6-15）、このファイルの `design-v1.2 §…` は
+ * その挙動を記録した**履歴参照**。現行の仕様は design-v2 を見ること。
  */
 export const getMyPlayMemo = async (
   repo: GetMyPlayMemoRepository,

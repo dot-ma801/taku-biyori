@@ -38,7 +38,7 @@ describe('joinAsGuest', () => {
     expect(result).toEqual({ type: 'ok', entry: mockMember });
   });
 
-  it('存在しない募集枠IDは notFound を返す', async () => {
+  it('存在しないロビーIDは notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findLobbyStatus: vi.fn().mockResolvedValue(null),

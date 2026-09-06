@@ -11,7 +11,7 @@ import {
 } from '@taku-biyori/shared';
 
 export interface UpsertGuestScheduleAnswersRepository {
-  // 募集枠の guest_link_token。null は募集枠非存在を表す
+  // ロビーの guest_link_token。null はロビー非存在を表す
   findGuestLinkToken(lobbyId: string): Promise<string | null>;
   findStatusFields(lobbyId: string): Promise<LobbyStatusFacts | null>;
   /** 指定 pollId が属するロビー ID。null は調整が存在しないことを表す */
@@ -45,7 +45,7 @@ export type UpsertGuestScheduleAnswersResult =
 
 /**
  * ゲスト（完全匿名）が日程調整の候補日にまとめて回答する（調整さん方式）。
- * - トークンが募集枠の guest_link_token と一致しなければ invalidToken（403 相当）
+ * - トークンがロビーの guest_link_token と一致しなければ invalidToken（403 相当）
  * - 回答を許すステータス（open / closed）以外なら invalidStatus（409 相当）。
  *   未公開（draft）と解散（disbanded）が該当する。draft も含めて一律 invalidStatus とするのは
  *   design-v1.1 の意思決定ログを継続したもの。受付終了（closed）でも回答は続けられる

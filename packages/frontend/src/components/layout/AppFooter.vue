@@ -12,8 +12,8 @@ const version = `v${APP_VERSION}`;
 
 <style scoped>
 footer {
-  background-color: var(--color-secondary);
-  color: var(--color-on-primary);
+  background-color: var(--surface-inverse);
+  color: var(--text-inverse);
   text-align: center;
   padding: var(--space-4);
 }

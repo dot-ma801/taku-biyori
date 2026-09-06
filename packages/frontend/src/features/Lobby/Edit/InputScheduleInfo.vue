@@ -5,7 +5,6 @@ import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue'
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
-import BaseRadioGroup from '@/components/form/BaseRadioGroup/BaseRadioGroup.vue';
 import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
 import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
@@ -15,7 +14,7 @@ import {
   syncPendingDates,
 } from '@/utils/pendingCandidateDates';
 import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
-import { SCHEDULE_MODE_OPTIONS } from '@/features/Lobby/Edit/composables/schedule-mode';
+import ScheduleModeSwitch from '@/features/Lobby/Edit/ScheduleModeSwitch.vue';
 import { computed } from 'vue';
 
 const openUntil = defineModel<string>('openUntil', { default: '' });
@@ -41,7 +40,7 @@ const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
 const props = withDefaults(
   defineProps<{
     showCandidateDates?: boolean;
-    /** 「候補日から調整する / 日程が決まっている」の切り替えを出すか（作成画面のみ） */
+    /** 「候補日を出して決める / 開催日を入れる」の切り替えを出すか（作成画面のみ） */
     showModeSwitch?: boolean;
   }>(),
   { showCandidateDates: true, showModeSwitch: false },
@@ -101,13 +100,10 @@ function updateTimeLabel(date: string, timeLabel: string) {
 
     <template #default>
       <div class="contents">
-        <BaseRadioGroup
+        <ScheduleModeSwitch
           v-if="props.showModeSwitch"
           v-model="scheduleMode"
-          label="日程の決め方"
-          direction="row"
-          :options="SCHEDULE_MODE_OPTIONS"
-        ></BaseRadioGroup>
+        />
 
         <template v-if="isFixedMode">
           <BaseDatePicker

@@ -91,25 +91,49 @@ const onClickUserName = () => {
 </template>
 
 <style scoped>
-button {
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  margin-left: auto;
+/* ヘッダーが --color-primary の帯だった頃の名残で、枠と色を
+   --color-on-primary（＝白）で塗っていた。シェルが --surface になったので
+   通常のコントロール色に戻す。 */
+.user-btn {
   display: flex;
   align-items: center;
-
-  border: 2px solid var(--color-on-primary);
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: var(--border-width) solid transparent;
   border-radius: var(--radius-full);
-  width: 100%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.user-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.user-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .user-round {
-  color: var(--color-on-primary);
+  color: inherit;
 }
 
 ul {
-  margin: var(--space-2) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+}
+
+li {
+  display: flex;
+}
+
+li > * {
+  flex: 1;
+  justify-content: flex-start;
 }
 </style>

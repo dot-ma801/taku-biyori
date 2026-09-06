@@ -15,7 +15,8 @@ import type { GetLobbyResult } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyResult } from '@/lobby/application/update-lobby';
 import type { DeleteLobbyResult } from '@/lobby/application/delete-lobby';
 import type { UpdateLobbyStatusResult } from '@/lobby/application/update-lobby-status';
-import type { ListLobbiesRepository } from '@/lobby/application/list-lobbies';
+import type { ListMyLobbiesRepository } from '@/lobby/application/list-my-lobbies';
+import type { ListPublicLobbiesRepository } from '@/lobby/application/list-public-lobbies';
 import type { CreateLobbyRepository } from '@/lobby/application/create-lobby';
 import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
 import type { UpdateLobbyRepository } from '@/lobby/application/update-lobby';
@@ -45,7 +46,8 @@ import type { UpsertScheduleAnswersResult } from '@/lobby/application/upsert-sch
 import type { UpsertScheduleAnswersRepository } from '@/lobby/application/upsert-schedule-answers';
 import type { UpsertGuestScheduleAnswersResult } from '@/lobby/application/upsert-guest-schedule-answers';
 import type { UpsertGuestScheduleAnswersRepository } from '@/lobby/application/upsert-guest-schedule-answers';
-import { listLobbies } from '@/lobby/application/list-lobbies';
+import { listMyLobbies } from '@/lobby/application/list-my-lobbies';
+import { listPublicLobbies } from '@/lobby/application/list-public-lobbies';
 import { createLobby } from '@/lobby/application/create-lobby';
 import { getLobby } from '@/lobby/application/get-lobby';
 import { updateLobby } from '@/lobby/application/update-lobby';
@@ -64,7 +66,8 @@ import { replaceCandidateDates } from '@/lobby/application/replace-candidate-dat
 import { upsertScheduleAnswers } from '@/lobby/application/upsert-schedule-answers';
 import { upsertGuestScheduleAnswers } from '@/lobby/application/upsert-guest-schedule-answers';
 
-type LobbyRepo = ListLobbiesRepository &
+type LobbyRepo = ListMyLobbiesRepository &
+  ListPublicLobbiesRepository &
   CreateLobbyRepository &
   GetLobbyRepository &
   UpdateLobbyRepository &
@@ -84,7 +87,8 @@ type LobbyRepo = ListLobbiesRepository &
   UpsertGuestScheduleAnswersRepository;
 
 export interface LobbyUseCases {
-  listLobbies(userId: string): Promise<LobbyListItem[]>;
+  listMyLobbies(userId: string): Promise<LobbyListItem[]>;
+  listPublicLobbies(): Promise<LobbyListItem[]>;
   createLobby(userId: string, input: CreateLobbyInput): Promise<Lobby>;
   getLobby(id: string, userId: string | null): Promise<GetLobbyResult>;
   updateLobby(
@@ -157,8 +161,9 @@ export interface LobbyUseCases {
 }
 
 export const createLobbyUseCases = (repo: LobbyRepo): LobbyUseCases => ({
-  listLobbies: (userId: string): Promise<LobbyListItem[]> =>
-    listLobbies(repo, userId),
+  listMyLobbies: (userId: string): Promise<LobbyListItem[]> =>
+    listMyLobbies(repo, userId),
+  listPublicLobbies: (): Promise<LobbyListItem[]> => listPublicLobbies(repo),
   createLobby: (userId: string, input: CreateLobbyInput): Promise<Lobby> =>
     createLobby(repo, userId, input),
   getLobby: (id: string, userId: string | null): Promise<GetLobbyResult> =>

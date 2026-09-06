@@ -1,36 +1,47 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nextTick } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 
 vi.mock('@/api/lobby', () => ({
-  listLobbies: vi.fn(),
+  listMyLobbies: vi.fn(),
+  listPublicLobbies: vi.fn(),
 }));
 
-// useSession（nanostores の Atom）のモック。ログイン中のユーザーを固定する
+// useSession（nanostores の Atom）のモック。
+// 既定はログイン中。セッション復元が遅れるケースは subscribe に流して再現する
 type SessionValue = { data: { user?: { id?: string | null } } | null };
-const currentSessionValue: SessionValue = { data: { user: { id: 'my-user' } } };
+let currentSessionValue: SessionValue = { data: { user: { id: 'my-user' } } };
+let sessionListener: ((value: SessionValue) => void) | null = null;
 
 vi.mock('@/lib/auth', () => ({
   useSession: {
     get: vi.fn(() => currentSessionValue),
-    subscribe: vi.fn(() => () => {}),
+    subscribe: vi.fn((listener: (value: SessionValue) => void) => {
+      sessionListener = listener;
+      return () => {
+        sessionListener = null;
+      };
+    }),
   },
 }));
 
-import { listLobbies } from '@/api/lobby';
+import { listMyLobbies, listPublicLobbies } from '@/api/lobby';
+import { ApiError } from '@/lib/api-client';
 import { useLobbyList } from '@/features/Lobby/List/useLobbyList';
 
-const mockListLobbies = vi.mocked(listLobbies);
+const mockListMyLobbies = vi.mocked(listMyLobbies);
+const mockListPublicLobbies = vi.mocked(listPublicLobbies);
 
 const MY_USER_ID = 'my-user';
 const OTHER_USER_ID = 'other-user';
 
-/** 自分がホストのロビー（v0.2 の ...hostedByMe() に相当） */
+/** 自分がホストのロビー */
 const hostedByMe = (): Partial<LobbyListItemModel> => ({
   hostUserId: MY_USER_ID,
 });
 
-/** 自分が参加しているロビー（v0.2 の ...joinedByMe() に相当） */
+/** 自分が参加しているロビー */
 const joinedByMe = (): Partial<LobbyListItemModel> => ({
   hostUserId: OTHER_USER_ID,
   entries: [
@@ -60,7 +71,7 @@ function makeLobby(
 ): LobbyListItemModel {
   return {
     id: crypto.randomUUID(),
-    title: 'テスト募集枠',
+    title: 'テストロビー',
     scenarioName: null,
     status: LobbyStatus.draft,
     publishedAt: null,
@@ -78,39 +89,47 @@ function makeLobby(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentSessionValue = { data: { user: { id: MY_USER_ID } } };
+  sessionListener = null;
+  mockListMyLobbies.mockResolvedValue([]);
+  mockListPublicLobbies.mockResolvedValue([]);
 });
 
 describe('useLobbyList', () => {
   describe('データ取得', () => {
-    it('マウント時に listLobbies を呼び出す', async () => {
+    it('マウント時に自分の一覧と公開の一覧を両方呼び出す', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([]);
+      // beforeEach で両方とも空を返すようにしてある
 
       // Act
       const { fetch } = useLobbyList();
       await fetch();
 
       // Assert
-      expect(mockListLobbies).toHaveBeenCalledOnce();
+      expect(mockListMyLobbies).toHaveBeenCalledOnce();
+      expect(mockListPublicLobbies).toHaveBeenCalledOnce();
     });
 
-    it('取得成功時は allLobbies に結果が格納される', async () => {
+    it('取得成功時は myLobbies / publicLobbies にそれぞれ格納される', async () => {
       // Arrange
-      const lobbies = [makeLobby(), makeLobby()];
-      mockListLobbies.mockResolvedValue(lobbies);
+      const mine = makeLobby({ ...hostedByMe() });
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
+      mockListMyLobbies.mockResolvedValue([mine]);
+      mockListPublicLobbies.mockResolvedValue([publicLobby]);
 
       // Act
-      const { allLobbies, fetch } = useLobbyList();
+      const { myLobbies, publicLobbies, fetch } = useLobbyList();
       await fetch();
 
       // Assert
-      expect(allLobbies.value).toEqual(lobbies);
+      expect(myLobbies.value).toEqual([mine]);
+      expect(publicLobbies.value).toEqual([publicLobby]);
     });
 
     it('取得中は loading が true になる', async () => {
       // Arrange
       let resolveFetch!: () => void;
-      mockListLobbies.mockReturnValue(
+      mockListPublicLobbies.mockReturnValue(
         new Promise<LobbyListItemModel[]>((resolve) => {
           resolveFetch = () => resolve([]);
         }),
@@ -132,7 +151,7 @@ describe('useLobbyList', () => {
 
     it('取得失敗時は errorMessage がセットされる', async () => {
       // Arrange
-      mockListLobbies.mockRejectedValue(new Error('Network error'));
+      mockListPublicLobbies.mockRejectedValue(new Error('Network error'));
 
       // Act
       const { errorMessage, fetch } = useLobbyList();
@@ -144,7 +163,7 @@ describe('useLobbyList', () => {
 
     it('取得失敗時は loading が false に戻る', async () => {
       // Arrange
-      mockListLobbies.mockRejectedValue(new Error('Network error'));
+      mockListPublicLobbies.mockRejectedValue(new Error('Network error'));
 
       // Act
       const { loading, fetch } = useLobbyList();
@@ -153,14 +172,42 @@ describe('useLobbyList', () => {
       // Assert
       expect(loading.value).toBe(false);
     });
+
+    it('未ログインで自分の一覧が 401 でも公開の一覧は表示する', async () => {
+      // Arrange
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
+      mockListMyLobbies.mockRejectedValue(new ApiError(401, 'Unauthorized'));
+      mockListPublicLobbies.mockResolvedValue([publicLobby]);
+
+      // Act
+      const { myLobbies, publicLobbies, errorMessage, fetch } = useLobbyList();
+      await fetch();
+
+      // Assert
+      expect(myLobbies.value).toEqual([]);
+      expect(publicLobbies.value).toEqual([publicLobby]);
+      expect(errorMessage.value).toBe('');
+    });
+
+    it('自分の一覧が 401 以外で失敗した場合はエラーにする', async () => {
+      // Arrange
+      mockListMyLobbies.mockRejectedValue(new ApiError(500, 'Server Error'));
+
+      // Act
+      const { errorMessage, fetch } = useLobbyList();
+      await fetch();
+
+      // Assert
+      expect(errorMessage.value).toBe('ロビー一覧の取得に失敗しました');
+    });
   });
 
-  describe('publicLobbies（自分が関わっていない募集枠）', () => {
-    it('role=null の募集枠のみ含む', async () => {
+  describe('publicLobbies（自分が関わっていないロビー）', () => {
+    it('自分がホストのロビーは公開一覧から取り除く', async () => {
       // Arrange
-      const publicLobby = makeLobby();
-      const myLobby = makeLobby({ ...hostedByMe() });
-      mockListLobbies.mockResolvedValue([publicLobby, myLobby]);
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
+      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
+      mockListPublicLobbies.mockResolvedValue([publicLobby, myLobby]);
 
       // Act
       const { publicLobbies, fetch } = useLobbyList();
@@ -170,9 +217,31 @@ describe('useLobbyList', () => {
       expect(publicLobbies.value).toEqual([publicLobby]);
     });
 
-    it('該当募集枠がない場合は空配列になる', async () => {
+    it('セッション復元が取得より後でも、届いた時点で自分の分を取り除く', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([makeLobby({ ...hostedByMe() })]);
+      // ダッシュボードはセッション復元を待たずに描画されるため、fetch 時点では
+      // まだユーザー ID が無いことがある（router の requiresAuth なしルート）
+      currentSessionValue = { data: null };
+      const publicLobby = makeLobby({ status: LobbyStatus.open });
+      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
+      mockListPublicLobbies.mockResolvedValue([publicLobby, myLobby]);
+
+      // Act
+      const { publicLobbies, fetch } = useLobbyList();
+      await fetch();
+      const beforeRestore = publicLobbies.value;
+      sessionListener?.({ data: { user: { id: MY_USER_ID } } });
+      await nextTick();
+
+      // Assert
+      expect(beforeRestore).toHaveLength(2);
+      expect(publicLobbies.value).toEqual([publicLobby]);
+    });
+
+    it('自分が参加しているロビーは公開一覧から取り除く', async () => {
+      // Arrange
+      const joined = makeLobby({ ...joinedByMe(), status: LobbyStatus.open });
+      mockListPublicLobbies.mockResolvedValue([joined]);
 
       // Act
       const { publicLobbies, fetch } = useLobbyList();
@@ -183,53 +252,11 @@ describe('useLobbyList', () => {
     });
   });
 
-  describe('myLobbies（自分が関わる募集枠）', () => {
-    it('role=host の募集枠を含む', async () => {
-      // Arrange
-      const myLobby = makeLobby({ ...hostedByMe() });
-      mockListLobbies.mockResolvedValue([myLobby]);
-
-      // Act
-      const { myLobbies, fetch } = useLobbyList();
-      await fetch();
-
-      // Assert
-      expect(myLobbies.value).toContainEqual(myLobby);
-    });
-
-    it('role=member の募集枠を含む', async () => {
-      // Arrange
-      const myLobby = makeLobby({ ...joinedByMe() });
-      mockListLobbies.mockResolvedValue([myLobby]);
-
-      // Act
-      const { myLobbies, fetch } = useLobbyList();
-      await fetch();
-
-      // Assert
-      expect(myLobbies.value).toContainEqual(myLobby);
-    });
-
-    it('role=null の募集枠は含まない', async () => {
-      // Arrange
-      const publicLobby = makeLobby();
-      mockListLobbies.mockResolvedValue([publicLobby]);
-
-      // Act
-      const { myLobbies, fetch } = useLobbyList();
-      await fetch();
-
-      // Assert
-      expect(myLobbies.value).not.toContainEqual(publicLobby);
-    });
-  });
-
   describe('filteredMyLobbies（自分のロビーを statuses で絞り込む）', () => {
     it('statuses を指定しない場合は myLobbies をそのまま返す', async () => {
       // Arrange
       const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
-      const publicLobby = makeLobby({ status: LobbyStatus.open });
-      mockListLobbies.mockResolvedValue([myLobby, publicLobby]);
+      mockListMyLobbies.mockResolvedValue([myLobby]);
 
       // Act
       const { filteredMyLobbies, fetch } = useLobbyList();
@@ -239,7 +266,7 @@ describe('useLobbyList', () => {
       expect(filteredMyLobbies.value).toEqual([myLobby]);
     });
 
-    it('statuses を指定した場合は自分のロビーのうち該当ステータスのみ返す', async () => {
+    it('statuses を指定した場合は該当ステータスのみ返す', async () => {
       // Arrange
       const myOpenLobby = makeLobby({
         ...hostedByMe(),
@@ -249,14 +276,7 @@ describe('useLobbyList', () => {
         ...hostedByMe(),
         status: LobbyStatus.draft,
       });
-      const publicOpenLobby = makeLobby({
-        status: LobbyStatus.open,
-      });
-      mockListLobbies.mockResolvedValue([
-        myOpenLobby,
-        myDraftLobby,
-        publicOpenLobby,
-      ]);
+      mockListMyLobbies.mockResolvedValue([myOpenLobby, myDraftLobby]);
 
       // Act
       const { filteredMyLobbies, fetch } = useLobbyList([LobbyStatus.open]);
@@ -270,9 +290,8 @@ describe('useLobbyList', () => {
   describe('filteredPublicLobbies（公開ロビーを statuses で絞り込む）', () => {
     it('statuses を指定しない場合は publicLobbies をそのまま返す', async () => {
       // Arrange
-      const myLobby = makeLobby({ ...hostedByMe(), status: LobbyStatus.open });
       const publicLobby = makeLobby({ status: LobbyStatus.open });
-      mockListLobbies.mockResolvedValue([myLobby, publicLobby]);
+      mockListPublicLobbies.mockResolvedValue([publicLobby]);
 
       // Act
       const { filteredPublicLobbies, fetch } = useLobbyList();
@@ -282,22 +301,13 @@ describe('useLobbyList', () => {
       expect(filteredPublicLobbies.value).toEqual([publicLobby]);
     });
 
-    it('statuses を指定した場合は公開ロビーのうち該当ステータスのみ返す', async () => {
+    it('statuses を指定した場合は該当ステータスのみ返す', async () => {
       // Arrange
-      const publicOpenLobby = makeLobby({
-        status: LobbyStatus.open,
-      });
-      const publicDraftLobby = makeLobby({
-        status: LobbyStatus.draft,
-      });
-      const myOpenLobby = makeLobby({
-        ...hostedByMe(),
-        status: LobbyStatus.open,
-      });
-      mockListLobbies.mockResolvedValue([
+      const publicOpenLobby = makeLobby({ status: LobbyStatus.open });
+      const publicClosedLobby = makeLobby({ status: LobbyStatus.closed });
+      mockListPublicLobbies.mockResolvedValue([
         publicOpenLobby,
-        publicDraftLobby,
-        myOpenLobby,
+        publicClosedLobby,
       ]);
 
       // Act
@@ -309,10 +319,10 @@ describe('useLobbyList', () => {
     });
   });
 
-  describe('hasFilteredLobbies（絞り込み後に表示する募集枠があるか）', () => {
-    it('募集枠が1件も無い場合は false になる', async () => {
+  describe('hasFilteredLobbies（絞り込み後に表示するロビーがあるか）', () => {
+    it('ロビーが1件も無い場合は false になる', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([]);
+      // beforeEach で両方とも空を返すようにしてある
 
       // Act
       const { hasFilteredLobbies, fetch } = useLobbyList([LobbyStatus.draft]);
@@ -322,9 +332,9 @@ describe('useLobbyList', () => {
       expect(hasFilteredLobbies.value).toBe(false);
     });
 
-    it('該当ステータスの自分の募集枠がある場合は true になる', async () => {
+    it('該当ステータスの自分のロビーがある場合は true になる', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([
+      mockListMyLobbies.mockResolvedValue([
         makeLobby({ ...hostedByMe(), status: LobbyStatus.draft }),
       ]);
 
@@ -336,9 +346,9 @@ describe('useLobbyList', () => {
       expect(hasFilteredLobbies.value).toBe(true);
     });
 
-    it('該当ステータスの公開募集枠がある場合は true になる', async () => {
+    it('該当ステータスの公開ロビーがある場合は true になる', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([
+      mockListPublicLobbies.mockResolvedValue([
         makeLobby({ status: LobbyStatus.open }),
       ]);
 
@@ -350,11 +360,13 @@ describe('useLobbyList', () => {
       expect(hasFilteredLobbies.value).toBe(true);
     });
 
-    it('statuses に該当する募集枠が無い場合は false になる', async () => {
+    it('statuses に該当するロビーが無い場合は false になる', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([
+      mockListMyLobbies.mockResolvedValue([
         makeLobby({ ...hostedByMe(), status: LobbyStatus.open }),
-        makeLobby({ status: LobbyStatus.disbanded }),
+      ]);
+      mockListPublicLobbies.mockResolvedValue([
+        makeLobby({ status: LobbyStatus.open }),
       ]);
 
       // Act
@@ -365,10 +377,10 @@ describe('useLobbyList', () => {
       expect(hasFilteredLobbies.value).toBe(false);
     });
 
-    it('statuses 未指定の場合は募集枠が1件でもあれば true になる', async () => {
+    it('statuses 未指定の場合はロビーが1件でもあれば true になる', async () => {
       // Arrange
-      mockListLobbies.mockResolvedValue([
-        makeLobby({ status: LobbyStatus.disbanded }),
+      mockListPublicLobbies.mockResolvedValue([
+        makeLobby({ status: LobbyStatus.open }),
       ]);
 
       // Act

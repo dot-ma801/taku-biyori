@@ -66,7 +66,8 @@ export const createApp = (options: CreateAppOptions) => {
   });
   registerLobbyRoute(app, {
     getSession: options.getSession,
-    listLobbies: options.lobby.listLobbies,
+    listMyLobbies: options.lobby.listMyLobbies,
+    listPublicLobbies: options.lobby.listPublicLobbies,
     createLobby: options.lobby.createLobby,
     getLobby: options.lobby.getLobby,
     updateLobby: options.lobby.updateLobby,

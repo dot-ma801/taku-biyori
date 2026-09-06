@@ -53,13 +53,15 @@ const router = createRouter({
         gameSessionId: to.params.gameSessionId,
       }),
     },
+    // 開催の詳細ページは卓詳細に統合された（#152）。URL は design-v2 §7-1 の
+    // 入れ子のまま残し、同じ卓詳細を「メンバー」タブで開く
     {
       path: '/lobbies/:lobbyId/game-sessions/:gameSessionId',
       name: 'game-sessions-detail',
-      component: () => import('@/views/GameSession/DetailView.vue'),
+      component: () => import('@/views/Table/DetailView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
-        gameSessionId: to.params.gameSessionId,
+        initialTab: 'members',
       }),
     },
     // プレイ中に何度も開き直すため、開催の詳細を経由せず直接開ける URL を持たせる。
@@ -96,10 +98,11 @@ const router = createRouter({
         lobbyId: to.params.lobbyId,
       }),
     },
+    // 卓詳細。ロビー詳細と開催詳細を1画面に統合した（#152）
     {
       path: '/lobbies/:lobbyId',
       name: 'lobbies-detail',
-      component: () => import('@/views/Lobby/DetailView.vue'),
+      component: () => import('@/views/Table/DetailView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
       }),

@@ -138,7 +138,7 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
 /* danger */
 .btn--danger {
   background-color: var(--color-error);
-  color: #ffffff;
+  color: var(--color-on-primary);
   border-color: var(--color-error);
 }
 .btn--danger:hover:not(:disabled) {

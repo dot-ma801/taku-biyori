@@ -69,6 +69,6 @@ const emit = defineEmits<{ toggle: [id: string] }>();
   align-items: center;
   gap: var(--space-1);
   font-size: 12px;
-  color: var(--color-warning, #bf8700);
+  color: var(--color-warning);
 }
 </style>

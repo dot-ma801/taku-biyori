@@ -105,7 +105,7 @@ const errors = computed(() => {
   border-color: var(--color-error);
 }
 .textarea-wrap__control--error:focus {
-  box-shadow: 0 0 0 2px rgba(201, 79, 73, 0.15);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-error) 15%, transparent);
 }
 
 .textarea-wrap__hint {

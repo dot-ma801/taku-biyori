@@ -55,7 +55,7 @@ defineProps<{
 }
 
 .dialog::backdrop {
-  background: rgba(31, 35, 40, 0.4);
+  background: var(--color-overlay);
 }
 
 .dialog__header {

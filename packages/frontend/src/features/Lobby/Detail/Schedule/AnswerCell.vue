@@ -29,15 +29,15 @@ const ARIA_LABEL: Record<Answer, string> = {
 
 <style scoped>
 .answer-icon--ok {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success);
 }
 
 .answer-icon--maybe {
-  color: var(--color-warning, #ca8a04);
+  color: var(--color-warning);
 }
 
 .answer-icon--ng {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error);
 }
 
 .answer-empty {

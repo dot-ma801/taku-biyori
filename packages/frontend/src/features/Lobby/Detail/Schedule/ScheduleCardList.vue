@@ -205,15 +205,15 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
 }
 
 .chip--ok {
-  border-color: var(--color-success, #16a34a);
+  border-color: var(--color-success);
 }
 
 .chip--maybe {
-  border-color: var(--color-warning, #ca8a04);
+  border-color: var(--color-warning);
 }
 
 .chip--ng {
-  border-color: var(--color-error, #dc2626);
+  border-color: var(--color-error);
 }
 
 .chip--none {

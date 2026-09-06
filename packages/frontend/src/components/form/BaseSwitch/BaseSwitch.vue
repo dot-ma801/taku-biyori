@@ -70,13 +70,13 @@ const model = defineModel<boolean>({ default: false });
 :deep(.switch__thumb) {
   width: 16px;
   height: 16px;
-  background: #fff;
+  background: var(--color-on-primary);
   border-radius: 50%;
   transition: transform 0.2s;
   transform: translateX(0);
   display: block;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-sm);
 }
 :deep(.switch__root[aria-checked='true'] .switch__thumb),
 :deep(.switch__root[data-state='checked'] .switch__thumb) {

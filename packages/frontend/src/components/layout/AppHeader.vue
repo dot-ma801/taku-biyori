@@ -28,7 +28,7 @@ header {
      color: inherit な子（テーマ切り替えアイコン）がライトテーマで黒くなる */
   color: var(--color-on-primary);
   padding: var(--space-4);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;

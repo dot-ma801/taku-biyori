@@ -91,7 +91,7 @@ const id = useId();
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   min-width: 160px;
   font-family: var(--font-family-base);
   z-index: 100;

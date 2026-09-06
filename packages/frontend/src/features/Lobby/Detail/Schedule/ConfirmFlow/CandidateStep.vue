@@ -165,12 +165,12 @@ const emit = defineEmits<{
   font-size: 13px;
 }
 .ok {
-  color: var(--color-success, #2da44e);
+  color: var(--color-success);
 }
 .maybe {
-  color: var(--color-warning, #bf8700);
+  color: var(--color-warning);
 }
 .ng {
-  color: var(--color-error, #cf222e);
+  color: var(--color-error);
 }
 </style>

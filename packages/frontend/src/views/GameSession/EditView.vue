@@ -46,7 +46,7 @@ const breadcrumbItems = computed(() => [
 </script>
 
 <template>
-  <PageContainer>
+  <PageContainer size="sm">
     <BaseBreadcrumb class="breadcrumb" :items="breadcrumbItems" />
 
     <GameSessionEdit

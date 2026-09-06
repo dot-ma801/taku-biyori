@@ -99,25 +99,41 @@ backend・frontend ともに同じ規則です。
   - 理由: Better Auth の `session` と衝突するため
 - DB カラム名は **スネークケース**（例: `host_user_id`, `scheduled_at`）
 
-### 日本語ラベル（design-v2 §2-2）
+### 日本語ラベル（design-v2 §2-2 / issue #147）
 
-UI に出す文言は次の語に揃えること。
+**方針: BE では概念を分ける。UI ではそれを漏らさない。**
+
+Lobby と GameSession は**バックエンドでは別リソース・別ステータスのまま**だが、
+**利用者に見せる名詞は「卓」1つ**に統一する（issue #147 のリデザインで確定）。
+UI 表示層で2つを1つの卓に畳む場所は `features/Table/` に集約してある。
+
+#### 利用者に見せる語（UI）
 
 | 概念 | UI 表記 |
 |---|---|
-| Lobby | ロビー（「募集枠」とは書かない） |
-| LobbyEntry | 参加 / 参加者 |
+| Lobby + GameSession（1つの企画） | 卓 |
+| LobbyEntry | 参加 / 参加者 / メンバー |
 | SchedulePoll | 日程調整 |
-| GameSession | 開催 / セッション（1回の開催を「卓」とは書かない） |
-| Seat | 着席 / 着席者 |
-| `disbanded_at` | 解散 |
-| `cancelled_at`（session） | 中止 |
+| Seat | 着席 / 当日の参加者 |
 
-「確定」という概念は v2 で消えている。`features/Landing/` のマーケティング文言に出てくる
-「卓」は、サービス全体を語る文脈なので意図的に残している。
+卓の状態は次の1系列だけを見せる。**この語は固定語彙なのでそのまま使うこと**
+（定義は `features/Table/tableCardStatus.ts`）。
+
+```
+募集中 → 調整中 → 開催予定 → 完了 / 中止
+```
+
+「下書き」はこの系列の外側で、ホストにしか見えない。
+
+#### コードの中で使う語（型・変数・API）
+
+UI が「卓」1つに見せていても、**コード側の分離はそのまま維持する**。
+`Lobby` / `GameSession` / `LobbyStatus`（4値）/ `GameSessionStatus`（4値）や
+`disbanded_at`（解散）・`cancelled_at`（中止）は design-v2 のとおりに扱う。
+
+`features/Landing/` のマーケティング文言の「卓」は、以前からサービス全体を語る文脈として
+残していたもので、この統一と矛盾しない。
 「直接卓立て」は design-v2 §5-3 / §7-3 が用語として使っているのでそのまま。
-
-これは**これから書くコードが従う規約**。既存 UI 文言の置換は移行タスク7（issue #117）で行う。
 
 ---
 

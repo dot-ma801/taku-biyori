@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type Size = 'md' | 'lg';
+type Size = 'sm' | 'md' | 'lg';
 
 withDefaults(
   defineProps<{
@@ -26,12 +26,16 @@ withDefaults(
 .page-container {
   width: 100%;
   margin-inline: auto;
-  padding-inline: var(--space-4);
+  padding-inline: var(--gutter);
+}
+/* フォームや認証など、1カラムで読ませたい画面 */
+.page-container--sm {
+  max-width: var(--container-md);
 }
 .page-container--md {
-  max-width: 960px;
+  max-width: var(--container-lg);
 }
 .page-container--lg {
-  max-width: 1200px;
+  max-width: var(--container-xl);
 }
 </style>

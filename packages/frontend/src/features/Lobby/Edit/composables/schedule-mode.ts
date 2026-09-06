@@ -6,7 +6,23 @@
  */
 export type ScheduleMode = 'poll' | 'fixed';
 
-export const SCHEDULE_MODE_OPTIONS: { value: ScheduleMode; label: string }[] = [
-  { value: 'poll', label: '候補日から調整する' },
-  { value: 'fixed', label: '日程が決まっている' },
+/**
+ * 切り替えの選択肢。ラベルは「何をするか」を動詞で言い切る
+ * （デザインシステムの文言ルール）。
+ */
+export const SCHEDULE_MODE_OPTIONS: {
+  value: ScheduleMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'poll',
+    label: '候補日を出して決める',
+    description: '参加する人に ◯ △ × で答えてもらってから開催日を決めます',
+  },
+  {
+    value: 'fixed',
+    label: '開催日を入れる',
+    description: 'もう日程が決まっているときはこちら',
+  },
 ];

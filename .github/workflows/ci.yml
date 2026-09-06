@@ -99,6 +99,9 @@ jobs:
         run: pnpm --filter @taku-biyori/backend lint:check
       - name: Lint (frontend)
         run: pnpm --filter @taku-biyori/frontend lint:check
+      # UI 移行のガードレール。色は必ず variables.css のトークン経由で参照する
+      - name: Check raw color literals (frontend)
+        run: pnpm --filter @taku-biyori/frontend check:raw-color
 
   build:
     name: Build

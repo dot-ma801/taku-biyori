@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import LobbyEdit from '@/features/Lobby/Edit/index.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
+import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import PageContainer from '@/components/layout/PageContainer/PageContainer.vue';
 import { useUpdateLobby } from '@/features/Lobby/Edit/composables/useUpdateLobby';
@@ -11,6 +13,7 @@ const props = defineProps<{
 
 const {
   title,
+  savedTitle,
   scenarioName,
   maxMembers,
   description,
@@ -24,10 +27,22 @@ const {
   submit,
   cancel,
 } = useUpdateLobby(props.lobbyId);
+
+// URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く
+const breadcrumbItems = computed(() => [
+  { label: 'ダッシュボード', to: { name: 'dashboard' } },
+  {
+    label: savedTitle.value || 'ロビー',
+    to: { name: 'lobbies-detail', params: { lobbyId: props.lobbyId } },
+  },
+  { label: 'ロビーの編集' },
+]);
 </script>
 
 <template>
   <PageContainer>
+    <BaseBreadcrumb class="breadcrumb" :items="breadcrumbItems" />
+
     <div v-if="fetchError" class="fetch-error">
       <BaseAlert variant="error" title="ロビー情報の取得に失敗しました">
         {{ fetchError }}
@@ -62,6 +77,10 @@ const {
 </template>
 
 <style scoped>
+.breadcrumb {
+  margin-bottom: var(--space-4);
+}
+
 .fetch-error {
   display: flex;
   flex-direction: column;

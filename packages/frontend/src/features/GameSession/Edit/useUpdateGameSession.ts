@@ -33,6 +33,13 @@ export const useUpdateGameSession = (lobbyId: string, id: string) => {
     location: string | null;
   } | null>(null);
 
+  /**
+   * 取得時点の解決済み呼び名（上書き ?? ロビー）。**フォームの下書きとは別に持つ。**
+   * パンくずのラベルに下書きを使うと、保存前に打った文字がそのまま
+   * 「その開催の名前」として出てしまい、リンク先の実体と食い違う。
+   */
+  const savedTitle = ref('');
+
   const loading = ref(false);
   const errorMessage = ref('');
 
@@ -50,6 +57,7 @@ export const useUpdateGameSession = (lobbyId: string, id: string) => {
 
       description.value = gameSession.description ?? '';
       scheduledAt.value = gameSession.scheduledAt;
+      savedTitle.value = gameSession.title;
 
       lobbyDefaults.value = {
         title: gameSession.lobby.title,
@@ -109,6 +117,7 @@ export const useUpdateGameSession = (lobbyId: string, id: string) => {
   return {
     fetchInitialValues,
     title,
+    savedTitle,
     scenarioName,
     location,
     timeLabel,

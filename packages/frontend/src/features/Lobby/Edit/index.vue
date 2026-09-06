@@ -6,6 +6,7 @@ import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -14,6 +15,8 @@ const props = defineProps<{
   loading: boolean;
   errorMessages: string[];
   hasSchedulePoll?: boolean;
+  /** 「候補日から調整する / 日程が決まっている」の切り替えを出すか（作成画面のみ） */
+  showScheduleModeSwitch?: boolean;
 }>();
 
 const title = defineModel<string>('title', { default: '' });
@@ -23,6 +26,13 @@ const description = defineModel<string>('description', { default: '' });
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
+const gameSessionDescription = defineModel<string>('gameSessionDescription', {
+  default: '',
+});
+const scheduleMode = defineModel<ScheduleMode>('scheduleMode', {
+  default: 'poll',
+});
 const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
@@ -54,8 +64,12 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
     <InputScheduleInfo
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
+      v-model:timeLabel="timeLabel"
+      v-model:gameSessionDescription="gameSessionDescription"
+      v-model:scheduleMode="scheduleMode"
       v-model:pendingDates="pendingDates"
       :show-candidate-dates="props.hasSchedulePoll"
+      :show-mode-switch="props.showScheduleModeSwitch"
     />
 
     <div v-if="hasErrors" class="error-area">

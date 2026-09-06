@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'GameSessionDetail' });
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
+import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import SeatDisplay from '@/features/GameSession/Detail/SeatDisplay.vue';
 import MemoDisplay from '@/features/GameSession/Detail/MemoDisplay.vue';
 import PlayMemoDisplay from '@/features/GameSession/PlayMemo/PlayMemoDisplay.vue';
@@ -48,6 +49,16 @@ const location = computed(() => gameSession.value?.location ?? '未設定');
 const isToday = computed(
   () => gameSession.value?.status === GameSessionStatus.today,
 );
+
+// URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く
+const breadcrumbItems = computed(() => [
+  { label: 'ダッシュボード', to: { name: 'dashboard' } },
+  {
+    label: gameSession.value?.lobby.title ?? 'ロビー',
+    to: { name: 'lobbies-detail', params: { lobbyId: props.lobbyId } },
+  },
+  { label: gameSession.value?.title ?? '開催' },
+]);
 </script>
 
 <template>
@@ -56,15 +67,11 @@ const isToday = computed(
 
   <div v-else-if="gameSession" class="container">
     <div>
+      <BaseBreadcrumb class="breadcrumb" :items="breadcrumbItems" />
+
       <BaseSectionHeading level="h1">
         {{ gameSession.title }}
       </BaseSectionHeading>
-
-      <p class="breadcrumb">
-        <RouterLink :to="{ name: 'lobbies-detail', params: { lobbyId } }">
-          {{ gameSession.lobby.title }}
-        </RouterLink>
-      </p>
 
       <div class="session-meta-bar">
         <div class="description">
@@ -109,7 +116,6 @@ const isToday = computed(
 <style scoped>
 .breadcrumb {
   margin-bottom: var(--space-2);
-  color: var(--color-text-muted);
 }
 
 .container {

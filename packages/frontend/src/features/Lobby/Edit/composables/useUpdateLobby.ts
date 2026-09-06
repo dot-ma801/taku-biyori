@@ -40,6 +40,13 @@ export const useUpdateLobby = (id: string) => {
   const pollId = ref<string | null>(null);
   const hasSchedulePoll = computed(() => pollId.value !== null);
 
+  /**
+   * 取得時点のロビー名。**フォームの下書き（`title`）とは別に持つ。**
+   * パンくずのラベルに下書きを使うと、保存前に打った文字がそのまま
+   * 「そのロビーの名前」として出てしまい、リンク先の実体と食い違う。
+   */
+  const savedTitle = ref('');
+
   // エラー表示中は送信ボタンを無効化しているため、
   // 入力の変更を修正の開始とみなしてエラーをクリアし、再送信できるようにする。
   // flush: 'sync' で変更の瞬間にクリアし、submit が直後に設定するエラーを消さない
@@ -67,6 +74,7 @@ export const useUpdateLobby = (id: string) => {
     try {
       const lobby = await getLobby(id);
       title.value = lobby.title;
+      savedTitle.value = lobby.title;
       scenarioName.value = lobby.scenarioName ?? '';
       maxMembers.value =
         lobby.maxPlayers !== null && lobby.maxPlayers !== undefined
@@ -162,6 +170,7 @@ export const useUpdateLobby = (id: string) => {
 
   return {
     title,
+    savedTitle,
     scenarioName,
     maxMembers,
     description,

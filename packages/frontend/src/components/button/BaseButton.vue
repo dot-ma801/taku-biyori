@@ -6,9 +6,9 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 const ICON_SIZE: Record<Size, number> = {
-  sm: 14,
-  md: 16,
-  lg: 18,
+  sm: 16,
+  md: 18,
+  lg: 20,
 };
 
 const props = withDefaults(
@@ -68,116 +68,120 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  font-family: var(--font-family-base);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  border-width: var(--border-width);
+  border-style: solid;
+  border-color: transparent;
   cursor: pointer;
-  transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s,
-    opacity 0.15s;
+  transition: var(--transition-control);
   white-space: nowrap;
   user-select: none;
 }
 .btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 
-/* sizes */
+/* sizes — DS: sm 32 / md 40 / lg 48 */
 .btn--sm {
-  padding: 6px 12px;
-  font-size: 12px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  font: var(--text-label);
 }
 .btn--md {
-  padding: 10px 16px;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  font: var(--text-body-sm);
 }
 .btn--lg {
-  padding: 14px 20px;
-  font-size: 15px;
+  gap: 8px;
+  height: 48px;
+  padding: 0 22px;
+  font: var(--text-body);
 }
+/* `font` shorthand above resets the weight, so each variant restates it. */
 
 /* primary */
 .btn--primary {
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+  background-color: var(--primary);
+  color: var(--text-on-primary);
 }
 .btn--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-strong);
-  border-color: var(--color-primary-strong);
+  background-color: var(--primary-hover);
+}
+.btn--primary:active:not(:disabled) {
+  background-color: var(--primary-active);
 }
 
 /* secondary */
 .btn--secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+  font-weight: var(--weight-semibold);
+  background-color: var(--surface);
+  color: var(--primary-on-subtle);
+  border-color: var(--border-strong);
 }
 .btn--secondary:hover:not(:disabled) {
-  background-color: var(--color-surface-raised);
+  background-color: var(--primary-subtle);
+  border-color: var(--primary);
+}
+.btn--secondary:active:not(:disabled) {
+  background-color: var(--primary-subtle-hover);
 }
 
 /* ghost */
 .btn--ghost {
+  font-weight: var(--weight-medium);
   background-color: transparent;
-  color: var(--color-text-secondary);
-  border-color: transparent;
+  color: var(--text-secondary);
 }
 .btn--ghost:hover:not(:disabled) {
-  background-color: var(--color-surface-raised);
-  color: var(--color-text);
+  background-color: var(--surface-subtle);
+  color: var(--text-primary);
+}
+.btn--ghost:active:not(:disabled) {
+  background-color: var(--border-subtle);
+  color: var(--text-primary);
 }
 
 /* danger */
 .btn--danger {
-  background-color: var(--color-error);
+  font-weight: var(--weight-semibold);
+  background-color: var(--error);
   color: #ffffff;
-  border-color: var(--color-error);
 }
 .btn--danger:hover:not(:disabled) {
-  filter: brightness(0.88);
-}
-
-/* active (push) */
-.btn--primary:active:not(:disabled) {
-  background-color: var(--color-primary-strong);
-  border-color: var(--color-primary-strong);
-  opacity: 0.8;
-}
-.btn--secondary:active:not(:disabled) {
-  background-color: var(--color-surface-muted);
-}
-.btn--ghost:active:not(:disabled) {
-  background-color: var(--color-surface-muted);
-  color: var(--color-text);
+  background-color: var(--error-700);
 }
 .btn--danger:active:not(:disabled) {
-  filter: brightness(0.8);
+  background-color: var(--error-700);
 }
 
-/* disabled / loading */
+/* disabled / loading — DS mutes the surface instead of fading the element */
 .btn:disabled {
-  opacity: 0.45;
+  background-color: var(--surface-subtle);
+  color: var(--text-disabled);
+  border-color: var(--border-subtle);
   cursor: not-allowed;
+}
+.btn--ghost:disabled {
+  background-color: transparent;
+  border-color: transparent;
 }
 
 /* loading spinner */
 .btn__spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
+  display: block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid color-mix(in oklab, currentColor 30%, transparent);
+  border-top-color: currentColor;
   border-radius: 50%;
-  animation: btn-spin 0.6s linear infinite;
-  flex-shrink: 0;
+  animation: btn-spin 0.7s linear infinite;
+  flex: none;
 }
 @keyframes btn-spin {
   to {

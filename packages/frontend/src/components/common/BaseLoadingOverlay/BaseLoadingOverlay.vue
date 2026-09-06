@@ -40,8 +40,8 @@ const displayMessage = computed(() => message.value ?? '読み込み中…');
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-background) 72%, transparent);
-  font-family: var(--font-family-base);
+  background: color-mix(in srgb, var(--background) 72%, transparent);
+  font-family: var(--font-body);
 }
 
 .loading-overlay__panel {
@@ -51,23 +51,22 @@ const displayMessage = computed(() => message.value ?? '読み込み中…');
   gap: var(--space-3);
   min-width: 180px;
   padding: var(--space-6) var(--space-8);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-lg);
 }
 
 .loading-overlay__spinner {
-  color: var(--color-primary-text);
+  color: var(--primary);
   animation: loading-overlay-spin 0.9s linear infinite;
 }
 
 .loading-overlay__message {
   margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  line-height: var(--line-height-tight);
-  color: var(--color-text-secondary);
+  font: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -83,7 +82,7 @@ const displayMessage = computed(() => message.value ?? '読み込み中…');
 /* transitions */
 .loading-overlay-enter-active,
 .loading-overlay-leave-active {
-  transition: opacity 0.15s ease;
+  transition: opacity var(--duration-fast) var(--ease-standard);
 }
 .loading-overlay-enter-from,
 .loading-overlay-leave-to {

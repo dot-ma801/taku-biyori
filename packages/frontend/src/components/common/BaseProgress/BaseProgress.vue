@@ -55,8 +55,8 @@ withDefaults(
 .progress-wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  font-family: var(--font-family-base);
+  gap: var(--space-2);
+  font-family: var(--font-body);
   width: 100%;
 }
 
@@ -66,18 +66,17 @@ withDefaults(
   justify-content: space-between;
 }
 .progress-wrap__label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  font: var(--text-label);
+  color: var(--text-primary);
 }
 .progress-wrap__value {
-  font-size: 12px;
-  color: var(--color-text-muted);
+  font: var(--text-caption);
+  color: var(--text-tertiary);
 }
 
 .progress__track {
   width: 100%;
-  background: var(--color-surface-muted);
+  background: var(--surface-subtle);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -91,23 +90,23 @@ withDefaults(
 
 .progress__fill {
   height: 100%;
-  background: var(--color-primary);
+  background: var(--primary);
   border-radius: var(--radius-full);
-  transition: width 0.3s ease;
+  transition: width var(--duration-slow) var(--ease-standard);
 }
 .progress--success .progress__fill {
-  background: var(--color-success);
+  background: var(--success);
 }
 .progress--warning .progress__fill {
-  background: var(--color-warning);
+  background: var(--warning);
 }
 .progress--error .progress__fill {
-  background: var(--color-error);
+  background: var(--error);
 }
 
 .progress--indeterminate .progress__fill {
   width: 40% !important;
-  animation: indeterminate 1.4s ease-in-out infinite;
+  animation: indeterminate 1.4s var(--ease-standard) infinite;
 }
 
 @keyframes indeterminate {

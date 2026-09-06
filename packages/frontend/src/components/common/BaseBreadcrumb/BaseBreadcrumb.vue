@@ -65,16 +65,17 @@ const rows = computed(() =>
 </template>
 
 <style scoped>
+/* DS: breadcrumbs sit at caption size — the trail should recede, the current
+   page is the only item in --text-primary. */
 .breadcrumb {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-body);
 }
 
 .breadcrumb__list {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -83,33 +84,36 @@ const rows = computed(() =>
 .breadcrumb__item {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   /* 長いロビー名で1行を占有しないよう、各項目を折り返し可能にする */
   min-width: 0;
 }
 
 .breadcrumb__link {
-  color: var(--color-text-secondary);
+  font: var(--text-caption);
+  color: var(--text-secondary);
   text-decoration: none;
   border-radius: var(--radius-sm);
+  transition: var(--transition-control);
 }
 
 .breadcrumb__link:hover {
-  color: var(--color-text);
+  color: var(--text-primary);
   text-decoration: underline;
 }
 
 .breadcrumb__link:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .breadcrumb__current {
-  color: var(--color-text-muted);
+  font: var(--text-caption);
+  color: var(--text-primary);
 }
 
 .breadcrumb__separator {
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 </style>

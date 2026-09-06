@@ -5,8 +5,8 @@ import { X } from '@lucide/vue';
 type Size = 'sm' | 'md' | 'lg';
 
 const ICON_SIZE: Record<Size, number> = {
-  sm: 10,
-  md: 12,
+  sm: 12,
+  md: 13,
   lg: 14,
 };
 
@@ -64,82 +64,80 @@ const removeIconSize = computed(() => ICON_SIZE[props.size]);
 </template>
 
 <style scoped>
+/* DS: chips get the pill (badges stay rectangular). Selection is carried by
+   --primary-subtle + a --primary border, never by a filled brand colour. */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  font-family: var(--font-family-base);
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
+  gap: 6px;
+  font: var(--text-label);
   border-radius: var(--radius-full);
-  border: 1px solid transparent;
+  border-width: var(--border-width);
+  border-style: solid;
   cursor: pointer;
-  transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+  transition: var(--transition-control);
   user-select: none;
   white-space: nowrap;
 }
 .chip:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 
-/* sizes */
+/* sizes — DS: sm 26 / md 32, lg is this project's own step up */
 .chip--sm {
-  padding: 3px 8px;
-  font-size: 12px;
+  height: 26px;
+  padding: 0 10px;
+  font: var(--text-caption);
 }
 .chip--md {
-  padding: 5px 10px;
-  font-size: 13px;
+  height: 32px;
+  padding: 0 13px;
 }
 .chip--lg {
-  padding: 7px 14px;
-  font-size: 14px;
+  height: 38px;
+  padding: 0 16px;
+  font: var(--text-body-sm);
 }
 
 .chip--selected {
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary) 15%,
-    var(--color-surface)
-  );
-  color: var(--color-text);
-  border-color: color-mix(
-    in srgb,
-    var(--color-primary) 40%,
-    var(--color-border)
-  );
+  background-color: var(--primary-subtle);
+  color: var(--primary-on-subtle);
+  border-color: var(--primary);
+}
+.chip--selected:hover:not(.chip--disabled) {
+  background-color: var(--primary-subtle-hover);
 }
 
 .chip--unselected {
-  background-color: var(--color-surface);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border-strong);
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
 .chip--unselected:hover:not(.chip--disabled) {
-  background-color: var(--color-surface-raised);
-  color: var(--color-text);
+  background-color: var(--surface-subtle);
+  border-color: var(--border-strong);
 }
 
 .chip--disabled {
-  opacity: 0.45;
+  background-color: var(--surface-subtle);
+  color: var(--text-disabled);
+  border-color: var(--border-subtle);
   cursor: not-allowed;
 }
 
 .chip__remove {
   display: inline-flex;
   align-items: center;
+  margin-right: -3px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   color: inherit;
-  opacity: 0.7;
-  transition: opacity 0.15s;
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-standard);
 }
 .chip__remove:hover {
   opacity: 1;

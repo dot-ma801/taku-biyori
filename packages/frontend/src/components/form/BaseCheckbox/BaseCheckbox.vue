@@ -20,7 +20,7 @@ const model = defineModel<boolean>({ default: false });
       class="checkbox__root"
     >
       <Checkbox.Indicator class="checkbox__indicator">
-        <Check :size="12" stroke-width="3" />
+        <Check :size="13" stroke-width="2.5" />
       </Checkbox.Indicator>
     </Checkbox.Root>
     <span v-if="label" class="checkbox__label">{{ label }}</span>
@@ -29,60 +29,64 @@ const model = defineModel<boolean>({ default: false });
 </template>
 
 <style scoped>
+/* DS: an 18px box with a 1.5px border; checked fills with --primary, hover
+   tints with --primary-subtle. */
 .checkbox {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
   cursor: pointer;
-  font-family: var(--font-family-base);
-  font-size: 14px;
-  color: var(--color-text);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   user-select: none;
 }
 .checkbox--disabled {
-  opacity: 0.45;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 
 :deep(.checkbox__root) {
   appearance: none;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  width: 18px;
+  height: 18px;
+  background: var(--surface);
+  border: var(--border-width-strong) solid var(--border-strong);
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: inherit;
-  transition:
-    background-color 0.15s,
-    border-color 0.15s;
+  transition: var(--transition-control);
   padding: 0;
 }
 :deep(.checkbox__root[aria-checked='true']),
 :deep(.checkbox__root[data-state='checked']) {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-on-primary);
 }
 :deep(.checkbox__root:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 :deep(.checkbox__root:hover:not(:disabled)) {
-  border-color: var(--color-primary);
+  background: var(--primary-subtle);
+}
+:deep(.checkbox__root[aria-checked='true']:hover:not(:disabled)),
+:deep(.checkbox__root[data-state='checked']:hover:not(:disabled)) {
+  background: var(--primary);
+}
+:deep(.checkbox__root:disabled) {
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
 }
 
 :deep(.checkbox__indicator) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-on-primary);
-}
-
-.checkbox__label {
-  line-height: 1.4;
+  color: var(--text-on-primary);
 }
 </style>

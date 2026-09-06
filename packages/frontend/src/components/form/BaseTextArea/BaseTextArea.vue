@@ -55,62 +55,57 @@ const errors = computed(() => {
 </template>
 
 <style scoped>
+/* Same DS field chrome as BaseTextBox, with the textarea's 1.8 line-height. */
 .textarea-wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  font-family: var(--font-family-base);
+  gap: var(--space-2);
+  font-family: var(--font-body);
 }
 
 .textarea-wrap__label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-secondary);
+  font: var(--text-label);
+  color: var(--text-primary);
 }
 
 .textarea-wrap__control {
+  display: block;
   padding: 10px 12px;
-  font-family: var(--font-family-base);
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  font: var(--text-body-sm);
+  line-height: 1.8;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  transition: var(--transition-control);
   width: 100%;
   box-sizing: border-box;
   min-height: 80px;
 }
 .textarea-wrap__control::placeholder {
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 .textarea-wrap__control:hover:not(:disabled):not(:read-only) {
-  border-color: var(--color-secondary);
+  border-color: var(--border-strong);
 }
 .textarea-wrap__control:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 .textarea-wrap__control:disabled {
-  opacity: 0.5;
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
   cursor: not-allowed;
-  background: var(--color-surface-muted);
 }
 .textarea-wrap__control--error {
-  border-color: var(--color-error);
-}
-.textarea-wrap__control--error:focus {
-  box-shadow: 0 0 0 2px rgba(201, 79, 73, 0.15);
+  border-color: var(--error);
 }
 
 .textarea-wrap__hint {
-  font-size: 12px;
-  color: var(--color-text-muted);
+  font: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .textarea-wrap__errors {
@@ -119,7 +114,7 @@ const errors = computed(() => {
   gap: 2px;
 }
 .textarea-wrap__error {
-  font-size: 12px;
-  color: var(--color-error);
+  font: var(--text-caption);
+  color: var(--error-text);
 }
 </style>

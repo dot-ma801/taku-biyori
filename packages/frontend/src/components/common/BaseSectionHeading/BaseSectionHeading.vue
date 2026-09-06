@@ -43,7 +43,7 @@ const iconColorStyle = computed(() => {
 
 const textColorStyle = computed(() => {
   if (props.textColor === 'primary') {
-    return 'var(--color-primary)';
+    return 'var(--primary)';
   }
   if (props.textColor === 'default') {
     return 'currentcolor';
@@ -71,20 +71,38 @@ const textColorStyle = computed(() => {
 </template>
 
 <style scoped>
+/* DS type scale. h4〜h6 は DS のスケール外なので、本文サイズから段を落として
+   headings 側に寄せている。 */
 .section-heading {
-  --_icon-primary-color: var(--color-primary);
+  --_icon-primary-color: var(--primary);
 
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  line-height: 1;
-  font-family: var(--font-family-base);
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
-:root[data-theme='dark'] .section-heading {
-  --_icon-primary-color: var(--color-primary-text);
+h1.section-heading {
+  font: var(--text-h1);
+}
+h2.section-heading {
+  font: var(--text-h2);
+}
+h3.section-heading {
+  font: var(--text-h3);
+}
+h4.section-heading {
+  font: var(--text-body-lg);
+  font-weight: var(--weight-semibold);
+}
+h5.section-heading {
+  font: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+h6.section-heading {
+  font: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .section-heading__icon {

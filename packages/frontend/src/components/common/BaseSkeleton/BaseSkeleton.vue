@@ -41,20 +41,21 @@ withDefaults(
   gap: var(--space-2);
 }
 
+/* DS: a slow, low-contrast shimmer — never a flashing pulse. */
 .skeleton {
   display: block;
-  background: var(--color-surface-muted);
+  background: var(--surface-subtle);
   background-image: linear-gradient(
     90deg,
-    var(--color-surface-muted) 0%,
-    var(--color-surface-raised) 50%,
-    var(--color-surface-muted) 100%
+    var(--surface-subtle) 0%,
+    color-mix(in oklab, var(--surface-subtle) 60%, var(--border-subtle)) 50%,
+    var(--surface-subtle) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
+  animation: shimmer 1.6s var(--ease-standard) infinite;
 }
 .skeleton--sm {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
 }
 .skeleton--md {
   border-radius: var(--radius-md);
@@ -64,11 +65,11 @@ withDefaults(
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
+  from {
+    background-position: 120% 0;
   }
-  100% {
-    background-position: -200% 0;
+  to {
+    background-position: -20% 0;
   }
 }
 </style>

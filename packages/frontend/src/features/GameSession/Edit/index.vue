@@ -90,13 +90,13 @@ const canSubmit = computed(() => !props.loading && !!scheduledAt.value);
 .container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .button-area {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-8);
 }
 </style>

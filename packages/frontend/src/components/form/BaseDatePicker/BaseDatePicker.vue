@@ -355,7 +355,7 @@ function selectDate(dateStr: string | null) {
 
 /* クリアボタンの分だけカレンダーアイコンの手前に余白を空ける */
 .datepicker__trigger--clearable .datepicker__trigger-text {
-  padding-right: var(--space-5);
+  padding-right: var(--space-6);
 }
 
 /*

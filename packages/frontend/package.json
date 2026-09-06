@@ -10,6 +10,8 @@
     "test": "vitest",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
+    "vrt": "pnpm run build-storybook --quiet && playwright test -c playwright.vrt.config.ts",
+    "vrt:update": "pnpm run build-storybook --quiet && playwright test -c playwright.vrt.config.ts --update-snapshots",
     "check:raw-color": "node scripts/check-raw-color.mjs",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",

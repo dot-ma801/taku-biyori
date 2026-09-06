@@ -10,6 +10,13 @@ coverage/
 .eslintcache
 .mcp.json
 
+# Storybook / VRT の生成物（基準画像 vrt/__screenshots__ は追跡する）
+storybook-static/
+vrt-report/
+vrt-results/
+playwright-report/
+test-results/
+
 # rulesync generate の生成物のうち、追跡していないもの
 # （claudecode の .claude/ と codexcli の AGENTS.md は追跡している。opencode は使っていない）
 .opencode/

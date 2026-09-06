@@ -1,0 +1,56 @@
+name: VRT Baseline
+
+# 視覚回帰テストの基準画像を撮り直して、実行したブランチにコミットする。
+#
+# 基準画像はフォント・Chromium のバージョンでピクセルが変わるため、
+# 「撮る場所」を CI の vrt ジョブとまったく同じイメージに固定している。
+# 手元で撮りたい場合は packages/frontend/scripts/vrt-docker.sh --update を使うこと。
+#
+# 使いどころ:
+#   - 移行の最初に一度（現行デザインの記録）
+#   - トークン差し替えなど、差分の承認が済んだあと
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.30.3'
+
+jobs:
+  update-baseline:
+    name: Update baseline screenshots
+    runs-on: ubuntu-24.04
+    # タグは packages/frontend の @playwright/test のバージョンと必ず揃えること
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared
+        run: pnpm --filter @taku-biyori/shared build
+      - name: Update screenshots
+        run: pnpm --filter @taku-biyori/frontend vrt:update
+      - name: Commit screenshots
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add packages/frontend/vrt/screenshots
+          if git diff --cached --quiet; then
+            echo '基準画像に変更はありませんでした'
+            exit 0
+          fi
+          git commit -m '[update] VRT の基準画像を撮り直す'
+          git push origin "HEAD:${GITHUB_REF_NAME}"

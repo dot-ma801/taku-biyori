@@ -171,3 +171,51 @@ jobs:
         run: pnpm --filter @taku-biyori/backend test
       - name: Test (frontend)
         run: pnpm --filter @taku-biyori/frontend test
+
+  vrt:
+    name: VRT (Storybook)
+    runs-on: ubuntu-24.04
+    needs: build-shared
+    # 基準画像はレンダリング環境に依存するため、撮る側（vrt-baseline.yml）と
+    # 検証する側でまったく同じイメージを使う。タグは @playwright/test と揃えること。
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check baselines exist
+        id: baseline
+        run: |
+          if [ -n "$(find packages/frontend/vrt/screenshots -name '*.png' -print -quit 2>/dev/null)" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::基準画像が未作成です。vrt-baseline ワークフローを一度実行してください。"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.baseline.outputs.exists == 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        if: steps.baseline.outputs.exists == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        if: steps.baseline.outputs.exists == 'true'
+        run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        if: steps.baseline.outputs.exists == 'true'
+        with:
+          name: shared-dist
+          path: packages/shared/dist
+      - name: Run VRT
+        if: steps.baseline.outputs.exists == 'true'
+        run: pnpm --filter @taku-biyori/frontend vrt
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.baseline.outputs.exists == 'true' }}
+        with:
+          name: vrt-report
+          path: |
+            packages/frontend/vrt-report
+            packages/frontend/vrt-results
+          retention-days: 14

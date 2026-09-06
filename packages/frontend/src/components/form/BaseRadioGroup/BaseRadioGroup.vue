@@ -45,21 +45,18 @@ const model = defineModel<string>();
 </template>
 
 <style scoped>
+/* DS: an 18px circle with a 1.5px border; checked switches the ring and the
+   dot to --primary, hover tints the well with --primary-subtle. */
 .radio-group {
   border: none;
   padding: 0;
   margin: 0;
-  font-family: var(--font-family-base);
-}
-.radio-group:disabled {
-  opacity: 0.45;
+  font-family: var(--font-body);
 }
 
 .radio-group__legend {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-secondary);
+  font: var(--text-label);
+  color: var(--text-primary);
   margin-bottom: var(--space-2);
 }
 
@@ -77,34 +74,42 @@ const model = defineModel<string>();
 .radio {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
   cursor: pointer;
-  font-size: 14px;
-  color: var(--color-text);
-  font-family: var(--font-family-base);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   user-select: none;
 }
 .radio--disabled {
-  opacity: 0.45;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 
 /* ネイティブ span で円形を表現 */
 .radio__circle {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 1.5px solid var(--color-border-strong);
+  background: var(--surface);
+  border: var(--border-width-strong) solid var(--border-strong);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.15s;
+  transition: var(--transition-control);
   cursor: inherit;
+}
+.radio:hover:not(.radio--disabled) .radio__circle {
+  background: var(--primary-subtle);
 }
 /* checked 状態の子 button が data-state='checked' を持つとき円の枠色を変える */
 .radio__circle:has([data-state='checked']) {
-  border-color: var(--color-primary);
+  background: var(--surface);
+  border-color: var(--primary);
+}
+.radio--disabled .radio__circle {
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
 }
 
 /* Radio.Root (button) のデフォルトスタイルをリセット */
@@ -119,20 +124,19 @@ const model = defineModel<string>();
   border-radius: 50%;
 }
 .radio__circle :deep(button:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 3px;
+  outline: none;
+  box-shadow: var(--focus-ring);
   border-radius: 50%;
 }
 
 .radio__indicator {
   width: 8px;
   height: 8px;
-  background: var(--color-primary);
+  background: var(--primary);
   border-radius: 50%;
   display: block;
 }
-
-.radio__label {
-  line-height: 1.4;
+.radio--disabled .radio__indicator {
+  background: var(--text-disabled);
 }
 </style>

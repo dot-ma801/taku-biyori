@@ -22,18 +22,19 @@ const model = defineModel<boolean>({ default: false });
 </template>
 
 <style scoped>
+/* DS: a 40x22 pill track, --border-strong when off and --primary when on,
+   with a 16px --ink-0 thumb that slides (never scales). */
 .switch {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 12px;
   cursor: pointer;
-  font-family: var(--font-family-base);
-  font-size: 14px;
-  color: var(--color-text);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   user-select: none;
 }
 .switch--disabled {
-  opacity: 0.45;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 
@@ -46,44 +47,42 @@ const model = defineModel<boolean>({ default: false });
   cursor: inherit;
 }
 :deep(.switch__root:focus-visible .switch__track) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
 }
 
 :deep(.switch__track) {
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: 36px;
-  height: 20px;
-  background: var(--color-border-strong);
+  width: 40px;
+  height: 22px;
+  background: var(--border-strong);
   border-radius: var(--radius-full);
-  transition: background-color 0.2s;
-  padding: 2px;
+  transition: background-color var(--duration-normal) var(--ease-standard);
+  padding: 3px;
   box-sizing: border-box;
 }
 :deep(.switch__root[aria-checked='true'] .switch__track),
 :deep(.switch__root[data-state='checked'] .switch__track) {
-  background: var(--color-primary);
+  background: var(--primary);
+}
+.switch--disabled :deep(.switch__track) {
+  background: var(--border-subtle);
 }
 
 :deep(.switch__thumb) {
   width: 16px;
   height: 16px;
-  background: #fff;
+  background: var(--ink-0);
   border-radius: 50%;
-  transition: transform 0.2s;
+  transition: transform var(--duration-normal) var(--ease-out);
   transform: translateX(0);
   display: block;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-xs);
 }
 :deep(.switch__root[aria-checked='true'] .switch__thumb),
 :deep(.switch__root[data-state='checked'] .switch__thumb) {
-  transform: translateX(16px);
-}
-
-.switch__label {
-  line-height: 1.4;
+  transform: translateX(18px);
 }
 </style>

@@ -285,22 +285,23 @@ function selectDate(dateStr: string | null) {
 </template>
 
 <style scoped>
+/* Field chrome matches BaseTextBox; the calendar popover is a --radius-md
+   sheet on --surface-raised, and selection uses --primary-subtle (never a
+   filled brand colour on a date cell). */
 .datepicker {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  font-family: var(--font-family-base);
+  gap: var(--space-2);
+  font-family: var(--font-body);
 }
 
 .datepicker__label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-secondary);
+  font: var(--text-label);
+  color: var(--text-primary);
 }
 
 .datepicker__required {
-  color: var(--color-error);
+  color: var(--error);
   margin-left: 2px;
 }
 
@@ -315,42 +316,42 @@ function selectDate(dateStr: string | null) {
   justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
-  padding: 10px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-base);
-  font-size: 14px;
-  color: var(--color-text);
+  height: 40px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   cursor: pointer;
   text-align: left;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  transition: var(--transition-control);
 }
 .datepicker__trigger:hover:not(:disabled) {
-  border-color: var(--color-secondary);
+  border-color: var(--border-strong);
 }
 .datepicker__trigger:focus-visible {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 .datepicker__trigger:disabled {
-  opacity: 0.5;
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
   cursor: not-allowed;
-  background: var(--color-surface-muted);
 }
 
 .datepicker__trigger-text {
   flex: 1;
+  min-width: 0;
 }
 .datepicker__trigger-text--placeholder {
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 .datepicker__trigger-icon {
   flex-shrink: 0;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 /* クリアボタンの分だけカレンダーアイコンの手前に余白を空ける */
@@ -379,26 +380,24 @@ function selectDate(dateStr: string | null) {
   background: transparent;
   border: none;
   border-radius: var(--radius-full);
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   cursor: pointer;
-  transition:
-    background-color 0.1s,
-    color 0.1s;
+  transition: var(--transition-control);
 }
 .datepicker__clear:hover {
-  background: var(--color-surface-raised);
-  color: var(--color-text);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
 }
 .datepicker__clear:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  box-shadow: var(--focus-ring);
 }
 
 .datepicker__popover {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-3);
   width: 256px;
 }
@@ -411,9 +410,8 @@ function selectDate(dateStr: string | null) {
 }
 
 .datepicker__nav-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
+  font: var(--text-label);
+  color: var(--text-primary);
 }
 
 .datepicker__nav-btn {
@@ -423,19 +421,20 @@ function selectDate(dateStr: string | null) {
   width: 28px;
   height: 28px;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.1s;
+  transition: var(--transition-control);
 }
 .datepicker__nav-btn:hover {
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
 }
 .datepicker__nav-btn:focus-visible {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 
 .datepicker__weekdays {
@@ -446,16 +445,15 @@ function selectDate(dateStr: string | null) {
 
 .datepicker__weekday {
   text-align: center;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-muted);
+  font: var(--text-overline);
+  color: var(--text-tertiary);
   padding: 4px 0;
 }
 .datepicker__weekday--sun {
-  color: var(--color-error);
+  color: var(--error);
 }
 .datepicker__weekday--sat {
-  color: var(--color-primary);
+  color: var(--primary);
 }
 
 .datepicker__grid {
@@ -473,11 +471,10 @@ function selectDate(dateStr: string | null) {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
-  font-family: var(--font-family-base);
-  font-size: 13px;
-  color: var(--color-text);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.1s;
+  transition: var(--transition-control);
 }
 .datepicker__cell--empty {
   cursor: default;
@@ -486,11 +483,11 @@ function selectDate(dateStr: string | null) {
 .datepicker__cell:hover:not(:disabled):not(.datepicker__cell--empty):not(
     .datepicker__cell--selected
   ) {
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
 }
 .datepicker__cell:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  box-shadow: var(--focus-ring);
 }
 .datepicker__cell--today {
   position: relative;
@@ -500,24 +497,20 @@ function selectDate(dateStr: string | null) {
   content: '';
   position: absolute;
   inset: 2px;
-  border: 1px solid var(--color-primary-text);
+  border: var(--border-width) solid var(--primary);
   border-radius: var(--radius-full);
   pointer-events: none;
 }
 .datepicker__cell--selected {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-strong);
-  font-weight: 500;
+  background: var(--primary-subtle);
+  color: var(--primary-on-subtle);
+  font-weight: var(--weight-semibold);
 }
 .datepicker__cell--selected:hover {
-  background: color-mix(
-    in srgb,
-    var(--color-primary-soft),
-    var(--color-primary) 15%
-  );
+  background: var(--primary-subtle-hover);
 }
 .datepicker__cell--disabled {
-  opacity: 0.35;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 </style>

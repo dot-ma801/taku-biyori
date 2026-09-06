@@ -12,6 +12,7 @@ export const PAGE_NAME = {
   login: 'login',
   authCallback: 'auth-callback',
   dashboard: 'dashboard',
+  tables: 'tables',
   profileSetting: 'profile-setting',
   lobbiesNew: 'lobbies-new',
   lobbiesEdit: 'lobbies-edit',

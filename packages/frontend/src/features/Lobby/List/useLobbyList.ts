@@ -1,11 +1,37 @@
-import { computed, getCurrentInstance, onMounted, onUnmounted, ref } from 'vue';
+import {
+  computed,
+  getCurrentInstance,
+  onMounted,
+  onUnmounted,
+  ref,
+  toValue,
+  watch,
+} from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
 import type { LobbyStatus } from '@taku-biyori/shared';
 import { listMyLobbies, listPublicLobbies } from '@/api/lobby';
 import { ApiError } from '@/lib/api-client';
 import type { LobbyListItemModel } from '@/models/lobby';
 import { useSession } from '@/lib/auth';
 
-export const useLobbyList = (statuses?: LobbyStatus[]) => {
+/**
+ * 取得対象の指定。
+ *
+ * 呼び出し側（`LobbyList` の `scope` prop）は再マウントなしで切り替わりうるので、
+ * `MaybeRefOrGetter` で受けて **取得のたびに読み直す**（CLAUDE.md「composable の
+ * 引数は Ref を要求しない」）。固定値をそのまま渡してもよい。
+ */
+export type UseLobbyListOptions = {
+  /** 自分のロビーを取得しない（「探す」だけが要る呼び出し用） */
+  skipMine?: MaybeRefOrGetter<boolean>;
+  /** 公開ロビーを取得しない（「自分のもの」だけが要る呼び出し用） */
+  skipPublic?: MaybeRefOrGetter<boolean>;
+};
+
+export const useLobbyList = (
+  statuses?: LobbyStatus[],
+  options: UseLobbyListOptions = {},
+) => {
   /** 自分のロビー（ホスト or 在籍中の参加者） */
   const myLobbies = ref<LobbyListItemModel[]>([]);
 
@@ -80,6 +106,7 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
    * ログイン不要で見せたいのでエラーにせず空で扱う。
    */
   async function fetchMine(): Promise<LobbyListItemModel[]> {
+    if (toValue(options.skipMine)) return [];
     try {
       return await listMyLobbies();
     } catch (e) {
@@ -88,15 +115,17 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
     }
   }
 
+  async function fetchPublic(): Promise<LobbyListItemModel[]> {
+    if (toValue(options.skipPublic)) return [];
+    return listPublicLobbies();
+  }
+
   /** ロビー一覧を取得する（自分の分と公開の分を並行で取る） */
   async function fetch() {
     loading.value = true;
     errorMessage.value = '';
     try {
-      const [mine, publics] = await Promise.all([
-        fetchMine(),
-        listPublicLobbies(),
-      ]);
+      const [mine, publics] = await Promise.all([fetchMine(), fetchPublic()]);
       myLobbies.value = mine;
       fetchedPublicLobbies.value = publics;
     } catch {
@@ -107,6 +136,15 @@ export const useLobbyList = (statuses?: LobbyStatus[]) => {
   }
 
   onMounted(fetch);
+
+  // 取得対象が変わったら、いま持っている一覧はもう対象外。取り直す
+  // （`scope` を切り替えたのに前の一覧が残る、を防ぐ）
+  watch(
+    () => [toValue(options.skipMine), toValue(options.skipPublic)],
+    () => {
+      void fetch();
+    },
+  );
 
   return {
     publicLobbies,

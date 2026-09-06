@@ -347,7 +347,7 @@ describe('save', () => {
     expect(upsertMyPlayMemo).toHaveBeenCalledTimes(1);
   });
 
-  it('409 なら status を locked にする（卓が完了・中止した）', async () => {
+  it('409 なら status を locked にする（開催が完了・中止した）', async () => {
     // Arrange
     vi.mocked(upsertMyPlayMemo).mockRejectedValue(new ApiError(409, 'locked'));
     const { status, setDraft, save } = setup();

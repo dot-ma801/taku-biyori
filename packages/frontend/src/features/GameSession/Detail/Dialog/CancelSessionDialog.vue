@@ -17,7 +17,7 @@ const onClickCancel = () => {
   <BaseDialog
     v-model="model"
     title="開催を中止"
-    description="この卓の開催を中止します。よろしいですか？"
+    description="この開催を中止します。よろしいですか？"
   >
     <template #actions>
       <BaseButton variant="ghost" @click="model = false">戻る</BaseButton>

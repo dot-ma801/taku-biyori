@@ -51,7 +51,7 @@ const {
 /**
  * 本文が閉じているか。
  * サーバ由来のステータス（completed / cancelled）に加え、
- * 書いている最中に卓が完了して 409 を受けた場合（locked）も含む。
+ * 書いている最中に開催が完了して 409 を受けた場合（locked）も含む。
  */
 const isReadOnly = computed(
   () => !props.canEditBody || status.value === 'locked',
@@ -130,14 +130,14 @@ const visibilityDescription = computed(() => {
     return '本文を保存すると、このメモを公開できるようになります。';
   }
   return props.isShared
-    ? '卓が完了・中止したあと、ほかの人がこのメモを読めます。'
-    : 'このメモはあなただけが読めます。公開すると、卓が完了・中止したあとにほかの人も読めるようになります。';
+    ? '開催が完了・中止になったあと、ほかの人がこのメモを読めます。'
+    : 'このメモはあなただけが読めます。公開すると、開催が完了・中止になったあとにほかの人も読めるようになります。';
 });
 
 /**
  * 本文がいずれ編集できなくなることを、閉じる前から伝える（要求 §4）。
  *
- * 卓詳細のカードではなく書く画面に置く。実際に書いている場所で伝わればよく、
+ * 開催の詳細のカードではなく書く画面に置く。実際に書いている場所で伝わればよく、
  * 入口のカードに常時出すと読まれない注意書きだけが場所を取るため。
  */
 const showEditWindowNotice = computed(() => props.canEditBody);
@@ -202,7 +202,7 @@ onBeforeUnmount(() => {
 <template>
   <BaseCard>
     <div class="head">
-      <RouterLink :to="detailRoute" class="back" aria-label="卓の詳細へ戻る">
+      <RouterLink :to="detailRoute" class="back" aria-label="開催の詳細へ戻る">
         <ArrowLeft :size="18" aria-hidden="true" />
       </RouterLink>
       <NotebookPen :size="18" class="head__icon" aria-hidden="true" />
@@ -217,11 +217,11 @@ onBeforeUnmount(() => {
     </div>
 
     <BaseAlert v-if="showLockedNotice" variant="warning">
-      この卓は完了・中止しました。本文の編集はここまでです。最後に保存された内容を表示しています。
+      この開催は完了・中止になりました。本文の編集はここまでです。最後に保存された内容を表示しています。
     </BaseAlert>
 
     <BaseAlert v-else-if="!props.canEditBody" variant="warning">
-      卓が完了・中止したため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
+      開催が完了・中止になったため本文は編集できません。公開・非公開の切り替えは引き続き行えます。
     </BaseAlert>
 
     <BaseAlert v-if="showFailedNotice" variant="error">
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
     />
 
     <p v-if="showEditWindowNotice" class="notice">
-      本文を書けるのは卓が完了・中止するまでです（そのあとも公開・非公開の切り替えは行えます）。
+      本文を書けるのは開催が完了・中止になるまでです（そのあとも公開・非公開の切り替えは行えます）。
     </p>
 
     <div class="foot">
@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
         {{ counterLabel }}
       </span>
       <div class="foot__actions">
-        <RouterLink :to="detailRoute" class="foot__back">卓へ戻る</RouterLink>
+        <RouterLink :to="detailRoute" class="foot__back">開催へ戻る</RouterLink>
         <BaseButton
           v-if="!isReadOnly"
           :disabled="!canSaveNow"

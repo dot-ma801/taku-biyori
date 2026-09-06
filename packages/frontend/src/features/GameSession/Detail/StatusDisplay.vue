@@ -21,7 +21,7 @@ type StatusAppearance = {
 };
 
 /**
- * 卓が取りうるステータスの表示定義。
+ * 開催が取りうるステータスの表示定義（design-v2 §4-2 / §2-2）。
  *
  * 開催の4ステータスを表示する。公開状態はロビーの関心事であり、開催には持たない。
  */
@@ -29,8 +29,8 @@ const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
   [
     GameSessionStatus.scheduled,
     {
-      label: '実施前',
-      text: '開催日が確定しました。当日を待っています。',
+      label: '開催予定',
+      text: '開催日が決まっています。当日を待っています。',
       variant: 'success',
       icon: CalendarCheck,
     },
@@ -38,7 +38,7 @@ const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
   [
     GameSessionStatus.today,
     {
-      label: '当日',
+      label: '本日開催',
       text: '本日開催です。',
       variant: 'warning',
       icon: CircleDot,
@@ -47,8 +47,8 @@ const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
   [
     GameSessionStatus.completed,
     {
-      label: '通過済み',
-      text: '開催を終えた卓です。',
+      label: '完了',
+      text: '開催を終えました。',
       variant: 'success',
       icon: Flag,
     },
@@ -57,7 +57,7 @@ const STATUS_APPEARANCE = new Map<GameSessionStatus, StatusAppearance>([
     GameSessionStatus.cancelled,
     {
       label: '中止',
-      text: 'この卓は中止になりました。',
+      text: 'この開催は中止になりました。',
       variant: 'error',
       icon: Ban,
     },

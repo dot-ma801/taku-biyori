@@ -40,7 +40,7 @@ export const usePlayMemoSelection = (
    *
    * 読めない相手（非公開・ゲスト）も選べる。本文の代わりに読めない理由を出すため、
    * ここで既定へ落としてはいけない（落とすと押しても何も起きないように見える）。
-   * 落とすのは卓に居ないメンバー ID を指定されたときだけ。
+   * 落とすのは開催に居ないメンバー ID を指定されたときだけ。
    */
   const selectedEntry = computed(() => {
     const requested = toValue(entries).find(
@@ -59,7 +59,7 @@ export const usePlayMemoSelection = (
     void router.push({ query: { ...route.query, member: seatId } });
   }
 
-  // 卓に居ないメンバー ID を指定された場合は、実際の選択に URL を合わせる。
+  // 開催に居ないメンバー ID を指定された場合は、実際の選択に URL を合わせる。
   // 履歴を汚さないよう replace で落とす（design-v1.2 §6）。
   watch(
     [requestedSeatId, selectedSeatId, () => toValue(entries).length],

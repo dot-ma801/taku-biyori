@@ -18,7 +18,7 @@ interface UseGameSessionListOptions {
  * `scheduledAt`（`YYYY-MM-DD`）をローカルタイムの深夜0時として解釈する。
  *
  * `new Date('2026-08-01')` は UTC の深夜0時になるため、UTC より進んだ TZ では
- * 当日の卓が「過去」と判定されてしまう。日付の比較はローカル基準で揃える
+ * 当日の開催が「過去」と判定されてしまう。日付の比較はローカル基準で揃える
  * （バックエンドの getGameSessionStatus の today 判定と同じ考え方）。
  */
 const toLocalDate = (scheduledAt: string): Date => {

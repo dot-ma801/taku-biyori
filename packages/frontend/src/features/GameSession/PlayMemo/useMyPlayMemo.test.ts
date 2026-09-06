@@ -78,7 +78,7 @@ function setup(gameSession: GameSessionDetailModel | null = makeGameSession()) {
 }
 
 /**
- * 卓詳細（マウント時にはすでに卓が届いている）と違い、メモ画面では
+ * 開催の詳細（マウント時にはすでに開催が届いている）と違い、メモ画面では
  * gameSession が後から届く・参加によって後から members が更新される、
  * という経路がある。`() => gameSession` の静的な渡し方では
  * useMyPlayMemo 内部の watch が発火しないため、この経路を検証するには
@@ -131,7 +131,7 @@ describe('isMyMemo', () => {
     expect(isMyMemo.value).toBe(false);
   });
 
-  it('ゲストしかいない卓では false（ゲストは userId = null で引き当てられない）', () => {
+  it('ゲストしかいない開催では false（ゲストは userId = null で引き当てられない）', () => {
     // Arrange
     const gameSession = makeGameSession({
       seats: [
@@ -157,7 +157,7 @@ describe('isMyMemo', () => {
     expect(isMyMemo.value).toBe(false);
   });
 
-  it('卓がまだ読み込まれていなければ false', () => {
+  it('開催がまだ読み込まれていなければ false', () => {
     // Arrange & Act
     const { isMyMemo } = setup(null);
 
@@ -238,7 +238,7 @@ describe('canEditBody', () => {
     expect(canEditBody.value).toBe(false);
   });
 
-  it('卓がまだ読み込まれていなければ false', () => {
+  it('開催がまだ読み込まれていなければ false', () => {
     // Arrange & Act
     const { canEditBody } = setup(null);
 
@@ -248,7 +248,7 @@ describe('canEditBody', () => {
 });
 
 describe('自動取得', () => {
-  it('卓が読み込まれていれば生成時に取得する', async () => {
+  it('開催が読み込まれていれば生成時に取得する', async () => {
     // Arrange
     const playMemo = makePlayMemo();
     vi.mocked(getMyPlayMemo).mockResolvedValue(playMemo);
@@ -262,7 +262,7 @@ describe('自動取得', () => {
     expect(state.value).toEqual(playMemo);
   });
 
-  it('卓がまだ読み込まれていなければ取得しない', async () => {
+  it('開催がまだ読み込まれていなければ取得しない', async () => {
     // Arrange & Act
     setup(null);
     await flushPromises();
@@ -271,7 +271,7 @@ describe('自動取得', () => {
     expect(getMyPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('卓が後から届いても、その時点でメンバーなら取得する（メモ画面の経路）', async () => {
+  it('開催が後から届いても、その時点でメンバーなら取得する（メモ画面の経路）', async () => {
     // Arrange
     const { gameSession, playMemo } = setupWithGameSessionRef(null);
     await flushPromises();
@@ -286,7 +286,7 @@ describe('自動取得', () => {
     expect(playMemo.value).not.toBeNull();
   });
 
-  it('メンバーのまま卓が2回差し替わっても、取得は1回で済む', async () => {
+  it('メンバーのまま開催が2回差し替わっても、取得は1回で済む', async () => {
     // Arrange
     const { gameSession } = setupWithGameSessionRef(makeGameSession());
     await flushPromises();
@@ -550,7 +550,7 @@ describe('setShared', () => {
     expect(isShared.value).toBe(false);
   });
 
-  it('完了した卓でも切り替えられる（本文編集と独立）', async () => {
+  it('完了した開催でも切り替えられる（本文編集と独立）', async () => {
     // Arrange
     const shared = makePlayMemo({ sharedAt: new Date('2026-08-04T09:00:00Z') });
     vi.mocked(updateMyPlayMemoVisibility).mockResolvedValue(shared);

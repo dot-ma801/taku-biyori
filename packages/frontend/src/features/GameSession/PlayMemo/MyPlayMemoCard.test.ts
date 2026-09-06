@@ -97,7 +97,7 @@ describe('取得中（loading === true）の表示', () => {
     // Assert
     expect(wrapper.text()).toContain('読み込み中...');
     expect(wrapper.text()).not.toContain(
-      'この卓のメモはまだ誰も公開していません。',
+      'この開催のメモはまだ誰も公開していません。',
     );
   });
 });

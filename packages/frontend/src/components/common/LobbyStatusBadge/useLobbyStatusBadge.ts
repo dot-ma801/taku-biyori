@@ -9,9 +9,10 @@ export type LobbyStatusBadgeVariant =
   | 'success'
   | 'error';
 
+/** design-v2 §4-1 の「日本語」列に揃える */
 const LABEL_MAP: Record<LobbyStatus, string> = {
-  [LobbyStatus.draft]: '非公開',
-  [LobbyStatus.open]: '募集中',
+  [LobbyStatus.draft]: '下書き',
+  [LobbyStatus.open]: '受付中',
   [LobbyStatus.closed]: '受付終了',
   [LobbyStatus.disbanded]: '解散',
 };

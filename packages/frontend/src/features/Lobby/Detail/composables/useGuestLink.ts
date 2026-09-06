@@ -18,7 +18,7 @@ const GUEST_LINK_VISIBLE_STATUSES: LobbyStatus[] = [
 /**
  * ホストがゲスト招待リンクを取得してクリップボードにコピーするための composable。
  * トークン取得 API はホスト限定（非ホストは 403）なので、発行可否もホストで判定する。
- * トークン自体は募集枠に紐づく資格情報なので、コピー時に都度取得する。
+ * トークン自体はロビーに紐づく資格情報なので、コピー時に都度取得する。
  * 読み取りは getter で受け取り、依存の向き（親→子）を一方向に保つ。
  */
 export const useGuestLink = (
@@ -63,7 +63,7 @@ export const useGuestLink = (
     }
   }
 
-  /** ログインユーザーがこの募集枠のホストか */
+  /** ログインユーザーがこのロビーのホストか */
   const isHost = computed(() => {
     const hostId = toValue(hostUserId);
     return (
@@ -88,7 +88,7 @@ export const useGuestLink = (
     );
   });
 
-  /** 招待リンクを組み立てる。ゲストはログインユーザーと同じ募集枠詳細画面を ?token 付きで開く */
+  /** 招待リンクを組み立てる。ゲストはログインユーザーと同じロビー詳細画面を ?token 付きで開く */
   function buildLink(token: string): string {
     return `${window.location.origin}/lobbies/${lobbyId}?token=${token}`;
   }

@@ -154,7 +154,7 @@ describe('canPublish', () => {
 });
 
 describe('canDisband', () => {
-  // UI 仕様: 未公開（draft）の募集枠に「募集中止」ボタンは出さない。
+  // UI 仕様: 下書き（draft）のロビーに「解散」ボタンは出さない。
   // API 上は draft からの中止も許可される（shared の LOBBY_ACTION_POLICIES 参照）
   describe.each([
     { status: LobbyStatus.draft, expected: false },

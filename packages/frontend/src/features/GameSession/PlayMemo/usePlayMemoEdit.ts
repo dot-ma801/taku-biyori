@@ -13,7 +13,7 @@ import { ApiError } from '@/lib/api-client';
  * - `saving`: 送信中
  * - `saved`: 保存済み
  * - `failed`: 保存に失敗（ドラフトは保持。「もう一度保存」で再試行する）
- * - `locked`: 卓が完了・中止して本文編集が閉じた（409）
+ * - `locked`: 開催が完了・中止して本文編集が閉じた（409）
  */
 export type PlayMemoSaveStatus =
   | 'idle'
@@ -98,7 +98,7 @@ export const usePlayMemoEdit = (
    * 現在のドラフトを保存する。
    *
    * 送信中・変更なし・上限超過のときは何もしない。
-   * 409（卓が完了・中止した）を受けたら locked に落として編集を閉じる。
+   * 409（開催が完了・中止した）を受けたら locked に落として編集を閉じる。
    *
    * 二重送信ガードは `status` ではなく `inFlight` を見る。`setDraft` が
    * `status` を dirty/idle に上書きするため、`status === 'saving'` は
@@ -131,7 +131,7 @@ export const usePlayMemoEdit = (
         status.value = isDirty.value ? 'dirty' : 'saved';
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
-          // 書いている最中にホストが卓を完了・中止した。仕様どおりのエラーなので
+          // 書いている最中にホストが開催を完了・中止した。仕様どおりのエラーなので
           // リトライせず読み取りへ落とす（design-v1.2 §4）
           status.value = 'locked';
           return;

@@ -39,7 +39,7 @@ export interface PlayMemoMemberEntry {
 }
 
 /**
- * 卓の公開プレイメモを取得し、メンバーと突き合わせてサイドバーの行を組み立てる composable。
+ * 開催の公開プレイメモを取得し、メンバーと突き合わせてサイドバーの行を組み立てる composable。
  *
  * 一覧（sharedPlayMemos）の所有者はこの composable 自身なので、内部で `.value =` してよい。
  * 卓・自分のメンバー ID は所有者が別に居るため getter で読むだけにする（CLAUDE.md）。
@@ -73,7 +73,7 @@ export const useSharedPlayMemos = (
   /**
    * 公開メモ一覧を取得する。
    *
-   * 完了・中止の前は1件も返らないため通信しない。非公開卓を第三者が開いた場合は
+   * 完了・中止の前は1件も返らないため通信しない。非公開の開催を第三者が開いた場合は
    * 403 が返るが、メモは画面の主目的ではないので空のまま黙って閉じる。
    */
   async function fetch(): Promise<void> {
@@ -97,7 +97,7 @@ export const useSharedPlayMemos = (
     }
   }
 
-  // 卓が後から届く経路（メモ画面）と、完了して読めるようになる経路の両方を
+  // 開催が後から届く経路（メモ画面）と、完了して読めるようになる経路の両方を
   // 拾うため、「読めるようになったか」を監視して取得する。
   watch(
     canViewShared,
@@ -139,13 +139,13 @@ export const useSharedPlayMemos = (
     };
   }
 
-  /** サイドバーに並べる参加メンバー全員。読めない相手も理由（タグ）付きで並べる */
+  /** サイドバーに並べる着席者全員。読めない相手も理由（タグ）付きで並べる */
   const entries = computed<PlayMemoMemberEntry[]>(
     () => toValue(gameSession)?.seats.map(toEntry) ?? [],
   );
 
   /**
-   * 公開しているメンバーだけの行。卓詳細のカードに「誰が公開しているか」を並べ、
+   * 公開しているメンバーだけの行。開催の詳細のカードに「誰が公開しているか」を並べ、
    * そこからその人のメモへ直接飛ばすために使う（自分も含む）。
    */
   const sharedEntries = computed(() =>

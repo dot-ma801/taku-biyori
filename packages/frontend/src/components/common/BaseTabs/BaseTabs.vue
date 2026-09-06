@@ -51,13 +51,15 @@ const model = defineModel<string>();
 
 <style scoped>
 .tabs {
-  font-family: var(--font-family-base);
+  font-family: var(--font-body);
 }
 
+/* DS: underline tabs. The active indicator is the sun accent — the one
+   place the accent colour appears in navigation. */
 .tabs__list {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
-  gap: 0;
+  gap: var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-subtle);
   padding: 0;
   margin: 0;
   list-style: none;
@@ -69,37 +71,36 @@ const model = defineModel<string>();
 }
 
 .tabs__item {
-  padding: 10px var(--space-4);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-muted);
+  padding: 8px 2px 12px;
+  font: var(--text-body-sm);
+  color: var(--text-secondary);
   border: none;
   background: none;
   cursor: pointer;
   border-bottom: 2px solid transparent;
+  border-radius: 2px 2px 0 0;
   margin-bottom: -1px;
   transition:
-    color 0.15s,
-    border-color 0.15s;
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
   white-space: nowrap;
-  font-family: var(--font-family-base);
 }
 .tabs__item:hover:not(:disabled) {
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 .tabs__item[aria-selected='true'],
 .tabs__item[data-state='active'] {
-  color: var(--color-primary-text);
-  border-bottom-color: var(--color-primary-text);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-line);
 }
 .tabs__item:disabled {
-  opacity: 0.4;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 .tabs__item:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .tabs__panels {
@@ -121,8 +122,7 @@ const model = defineModel<string>();
 }
 
 .tabs__panel {
-  font-size: 14px;
-  color: var(--color-text);
-  line-height: 1.65;
+  font: var(--text-body);
+  color: var(--text-primary);
 }
 </style>

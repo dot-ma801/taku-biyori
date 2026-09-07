@@ -11,17 +11,18 @@ const version = `v${APP_VERSION}`;
 </template>
 
 <style scoped>
+/* v0.4 のシェルにフッター帯は無い。バージョン表記だけは残したいので、
+   主張しない hairline の一行に落とす。 */
 footer {
-  background-color: var(--surface-inverse);
-  color: var(--text-inverse);
+  background: var(--surface);
+  color: var(--text-tertiary);
+  border-top: var(--border-width) solid var(--border-subtle);
   text-align: center;
   padding: var(--space-4);
 }
 
 .version {
-  font-size: var(--font-size-sm);
-  /* 主張しすぎない補足情報として少し落とす */
-  opacity: 0.8;
+  font: var(--text-caption);
   font-variant-numeric: tabular-nums;
 }
 </style>

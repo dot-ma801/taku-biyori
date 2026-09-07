@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import LoginView from '@/views/LoginView.vue';
 import AfterLogin from '@/views/AfterLogin.vue';
 import { resolveAuthRedirect } from '@/router/guards';
+import { PAGE_NAME } from '@/config/pageName';
 import { useAuthStore } from '@/stores/auth';
 
 const router = createRouter({
@@ -9,17 +10,17 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'top',
+      name: PAGE_NAME.top,
       component: () => import('@/views/TopView.vue'),
     },
     {
       path: '/login',
-      name: 'login',
+      name: PAGE_NAME.login,
       component: LoginView,
     },
     {
       path: '/auth/callback',
-      name: 'auth-callback',
+      name: PAGE_NAME.authCallback,
       component: AfterLogin,
       props: (to) => ({
         nextPage:
@@ -30,17 +31,17 @@ const router = createRouter({
     },
     {
       path: '/dashboard',
-      name: 'dashboard',
+      name: PAGE_NAME.dashboard,
       component: () => import('@/views/Dashboard/DashboardView.vue'),
     },
     // ロビーの一覧ページはダッシュボードに統合した。
     // 404 ルートが無く未定義パスは白画面になるため、旧 URL は残してリダイレクトする。
-    { path: '/lobbies', redirect: { name: 'dashboard' } },
+    { path: '/lobbies', redirect: { name: PAGE_NAME.dashboard } },
     // 開催はロビーに属するため、画面ルートも API と同じくロビー配下へ入れ子にする
     // （design-v2 §7-1）。**旧パスからのリダイレクトは作らない。**
     {
       path: '/lobbies/:lobbyId/game-sessions/:gameSessionId/edit',
-      name: 'game-sessions-edit',
+      name: PAGE_NAME.gameSessionsEdit,
       component: () => import('@/views/GameSession/EditView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
@@ -49,7 +50,7 @@ const router = createRouter({
     },
     {
       path: '/lobbies/:lobbyId/game-sessions/:gameSessionId',
-      name: 'game-sessions-detail',
+      name: PAGE_NAME.gameSessionsDetail,
       component: () => import('@/views/GameSession/DetailView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
@@ -61,7 +62,7 @@ const router = createRouter({
     // requiresAuth は付けない。書く操作の可否は画面側の着席判定が決める。
     {
       path: '/lobbies/:lobbyId/game-sessions/:gameSessionId/play-memo',
-      name: 'game-sessions-play-memo',
+      name: PAGE_NAME.gameSessionsPlayMemo,
       component: () => import('@/views/GameSession/PlayMemoView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
@@ -70,7 +71,7 @@ const router = createRouter({
     },
     {
       path: '/profile/setting',
-      name: 'profile-setting',
+      name: PAGE_NAME.profileSetting,
       component: () => import('@/views/ProfileView.vue'),
       meta: { requiresAuth: true },
     },
@@ -78,13 +79,13 @@ const router = createRouter({
       // 「日程が決まっている」モードはロビーと開催の両方を作るため、
       // 旧 /game-sessions/new と同じく認証が要る（design-v2 §7-1 で統合した）
       path: '/lobbies/new',
-      name: 'lobbies-new',
+      name: PAGE_NAME.lobbiesNew,
       component: () => import('@/views/Lobby/CreateView.vue'),
       meta: { requiresAuth: true },
     },
     {
       path: '/lobbies/:lobbyId/edit',
-      name: 'lobbies-edit',
+      name: PAGE_NAME.lobbiesEdit,
       component: () => import('@/views/Lobby/EditView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
@@ -92,7 +93,7 @@ const router = createRouter({
     },
     {
       path: '/lobbies/:lobbyId',
-      name: 'lobbies-detail',
+      name: PAGE_NAME.lobbiesDetail,
       component: () => import('@/views/Lobby/DetailView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,

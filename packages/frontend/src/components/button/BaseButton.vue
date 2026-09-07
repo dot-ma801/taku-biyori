@@ -86,19 +86,19 @@ const iconSize = computed(() => ICON_SIZE[props.size]);
 /* sizes — DS: sm 32 / md 40 / lg 48 */
 .btn--sm {
   gap: 6px;
-  height: 32px;
+  height: var(--control-height-sm);
   padding: 0 12px;
   font: var(--text-label);
 }
 .btn--md {
   gap: 8px;
-  height: 40px;
+  height: var(--control-height-md);
   padding: 0 16px;
   font: var(--text-body-sm);
 }
 .btn--lg {
   gap: 8px;
-  height: 48px;
+  height: var(--control-height-lg);
   padding: 0 22px;
   font: var(--text-body);
 }

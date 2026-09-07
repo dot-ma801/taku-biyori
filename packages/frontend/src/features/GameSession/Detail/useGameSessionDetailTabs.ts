@@ -26,13 +26,20 @@ const LABEL: Record<GameSessionDetailTab, string> = {
  *
  * - 概要・メンバーは常に出す
  * - 日程調整は、まだ開催が決まっていない状態でだけ意味がある。開催予定・完了に
- *   なったら履歴を見る場でしかなくなるので、ホストにだけ残す
+ *   なったら履歴を見る場でしかなくなるので、ホストにだけ残す。
+ *   **ただし、開催が決まったあとにホストが新しい日程調整を始めた場合は、
+ *   回答する場が要るので全員に出す**（1つのロビーで調整を何度でもやり直せる）
  * - プレイメモは開催が生まれてから。開催の無い卓ではタブごと出さない
  */
 export const useGameSessionDetailTabs = (
   status: MaybeRefOrGetter<GameSessionCardStatus | null>,
   role: MaybeRefOrGetter<GameSessionRole>,
   hasGameSession: MaybeRefOrGetter<boolean>,
+  /**
+   * 代表の開催より後に始まった日程調整があるか。
+   * 開催が決まったあとの「日程を変更する」でやり直された調整を指す。
+   */
+  hasOngoingSchedulePoll: MaybeRefOrGetter<boolean> = false,
 ) => {
   const availableTabs = computed<GameSessionDetailTab[]>(() => {
     const currentStatus = toValue(status);
@@ -43,7 +50,11 @@ export const useGameSessionDetailTabs = (
 
     const tabs: GameSessionDetailTab[] = [GameSessionDetailTab.overview];
 
-    if (!settled || currentRole === GameSessionRole.host) {
+    if (
+      !settled ||
+      currentRole === GameSessionRole.host ||
+      toValue(hasOngoingSchedulePoll)
+    ) {
       tabs.push(GameSessionDetailTab.schedule);
     }
 

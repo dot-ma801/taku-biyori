@@ -62,6 +62,23 @@ describe('useGameSessionDetailTabs', () => {
     );
 
     it.each([GameSessionCardStatus.scheduled, GameSessionCardStatus.completed])(
+      '開催が決まった "%s" でも、新しい日程調整が始まっていれば全員に出す',
+      (status) => {
+        // Arrange & Act
+        // 「日程を変更する」でやり直した調整に、参加者・ゲストも回答する必要がある
+        const { availableTabs } = useGameSessionDetailTabs(
+          status,
+          GameSessionRole.guest,
+          true,
+          true,
+        );
+
+        // Assert
+        expect(availableTabs.value).toContain(GameSessionDetailTab.schedule);
+      },
+    );
+
+    it.each([GameSessionCardStatus.scheduled, GameSessionCardStatus.completed])(
       '開催が決まった "%s" でもホストには残す（日程を変更できるため）',
       (status) => {
         // Arrange & Act

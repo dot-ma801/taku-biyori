@@ -67,8 +67,12 @@ export const useGameSessionDetailPage = (lobbyId: string) => {
 
   const loading = computed(() => loadingLobby.value || loadingSessions.value);
 
+  /** 日程調整の履歴。新しい順・先頭が最新（LobbyDetailModel の並びをそのまま） */
+  const schedulePolls = computed(() => lobby.value?.schedulePolls ?? []);
+
   return {
     lobby,
+    schedulePolls,
     sessions,
     status,
     gameSessionId,

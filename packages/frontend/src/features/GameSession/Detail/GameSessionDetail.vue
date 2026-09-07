@@ -4,6 +4,7 @@ defineOptions({ name: 'GameSessionDetail' });
 import { computed, getCurrentInstance, onUnmounted, ref, watch } from 'vue';
 import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue';
+import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue';
 import ScheduleTab from '@/features/GameSession/Detail/ScheduleTab.vue';
@@ -18,11 +19,15 @@ import {
   useGameSessionDetailTabs,
 } from '@/features/GameSession/Detail/useGameSessionDetailTabs';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
-import { useLobbyEntriesForSeating } from '@/features/GameSession/Detail/useLobbyEntriesForSeating';
 import { useSession } from '@/lib/auth';
 
 const props = defineProps<{
   lobbyId: string;
+  /**
+   * URL が名指ししている開催。開催の URL から来たときに渡る。
+   * 指定があればそれを見せる（代表の開催で上書きしない）。
+   */
+  gameSessionId?: string;
   /** 特定の開催から来たときに開くタブ。URL 直リンク用 */
   initialTab?: string;
 }>();
@@ -30,7 +35,8 @@ const props = defineProps<{
 const {
   lobby,
   status,
-  gameSessionId,
+  gameSessionId: representativeGameSessionId,
+  schedulePolls,
   loading,
   errorMessage,
   activeEntryCount,
@@ -40,21 +46,35 @@ const {
   removeEntry,
 } = useGameSessionDetailPage(props.lobbyId);
 
+/**
+ * 見せる開催。
+ *
+ * URL が開催を名指ししているなら必ずそれを出す。ブックマークや編集後の戻り先が
+ * 別の開催（代表に選ばれたほう）にすり替わらないようにするため。
+ * 名指しが無いときだけ、代表の開催を出す。
+ */
+const gameSessionId = computed(
+  () => props.gameSessionId ?? representativeGameSessionId.value,
+);
+
 // 代表になる開催は、ロビー配下の一覧を取ってから決まる。
 // そのため id は getter で渡し、決まった時点で詳細を取りに行かせる
 const {
   gameSession,
+  loading: loadingGameSession,
+  errorMessage: gameSessionErrorMessage,
   fetch: fetchGameSession,
   addSeat,
   removeSeat,
   updateSeat,
 } = useGetGameSessionDetail(props.lobbyId, () => gameSessionId.value);
 
-// 着席候補はロビーの在籍者。ホストが着席させるときだけ要る（design-v2 §6-6）
-const { activeEntries } = useLobbyEntriesForSeating(
-  props.lobbyId,
-  () => lobby.value?.hostUserId,
-);
+/**
+ * 着席候補はロビーの在籍者（design-v2 §6-6）。
+ * この画面はロビー詳細を自分で持っているので、別に取り直さず**同じ状態を使う**。
+ * 取り直すと、メンバーを取り消した直後に「着席させる」の候補へ残ってしまう。
+ */
+const activeEntries = computed(() => lobby.value?.activeEntries ?? []);
 
 // useSession は nanostores の Atom なので Vue の ref に変換する
 const sessionData = ref(useSession.get());
@@ -71,10 +91,25 @@ const role = computed(() =>
 );
 const hasGameSession = computed(() => gameSessionId.value !== null);
 
+/**
+ * 見せている開催より後に始まった日程調整があるか。
+ *
+ * 「日程を変更する」で調整をやり直すと、開催が残ったまま新しい調整が始まる。
+ * このとき参加者・ゲストにも回答する場が要るので、日程調整タブを開ける。
+ */
+const hasOngoingSchedulePoll = computed(() => {
+  const latestPoll = schedulePolls.value[0];
+  if (!latestPoll) return false;
+  const session = gameSession.value;
+  if (!session) return true;
+  return latestPoll.createdAt.getTime() > session.createdAt.getTime();
+});
+
 const { tabs, resolveActiveTab } = useGameSessionDetailTabs(
   status,
   role,
   hasGameSession,
+  hasOngoingSchedulePoll,
 );
 
 const activeTab = ref<string>(
@@ -103,6 +138,17 @@ async function refreshAll() {
   await fetch();
   await fetchGameSession();
 }
+
+/**
+ * 開催の詳細だけが取れなかったときの知らせ。
+ *
+ * ロビーは表示できるので画面ごと落とさない。ただし黙って落とすと
+ * 「プレイメモがまだありません」のように**取得できていないことを
+ * 存在しないことと取り違えて**見せてしまうため、帯で伝える。
+ */
+const showGameSessionError = computed(
+  () => gameSessionErrorMessage.value !== '' && !loadingGameSession.value,
+);
 </script>
 
 <template>
@@ -122,16 +168,27 @@ async function refreshAll() {
         :role="role"
       />
 
-      <!-- 編集・招待リンク・その他操作はホストだけ（#152） -->
-      <div v-if="isHost" class="table-detail__actions">
+      <div class="table-detail__actions">
+        <!--
+          参加・退出・招待リンクなどロビーの操作。**全員に出す。**
+          出せる操作の判定は ActionBar が内部で持っているので、ここで
+          ホストに絞ると参加者・未参加者から参加／退出の導線が消えてしまう。
+        -->
         <ActionBar
           :lobby="lobby"
           @updated="patchLobby"
           @member-added="addEntry"
           @member-removed="removeEntry"
         />
+        <!--
+          開催そのものの操作（完了・中止・削除）はホストだけ（#152）。
+          key を付けて、見せる開催が入れ替わったら作り直す。中の
+          useGameSessionStatus は id を setup 時の文字列で捕まえるため、
+          使い回すと操作が前の開催へ飛ぶ。
+        -->
         <SessionActionBar
-          v-if="gameSessionId"
+          v-if="isHost && gameSessionId"
+          :key="gameSessionId"
           :lobby-id="props.lobbyId"
           :game-session-id="gameSessionId"
           :game-session="gameSession"
@@ -139,6 +196,10 @@ async function refreshAll() {
         />
       </div>
     </div>
+
+    <BaseAlert v-if="showGameSessionError" variant="error">
+      開催の情報を取得できませんでした。{{ gameSessionErrorMessage }}
+    </BaseAlert>
 
     <BaseTabs v-model="activeTab" :tabs="tabs" label="卓の内容">
       <template #[GameSessionDetailTab.overview]>

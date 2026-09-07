@@ -72,9 +72,21 @@ const { isVisible } = useHideOnScroll({ offset: HEADER_OFFSET });
   padding: var(--gutter);
 }
 
+/* 境界の出典は variables.css の Breakpoints（768px = --container-md） */
 @media (max-width: 768px) {
   .content {
     padding: var(--space-4);
+  }
+
+  /*
+   * 下部タブバーは fixed で画面下に固定されるため、流れの中に場所を持たない。
+   * バーの高さぶんの余白をここで確保しないと、ページ末尾のコンテンツや
+   * フッターがバーの下に潜り込む。
+   */
+  .app-container {
+    padding-bottom: calc(
+      var(--bottom-nav-height) + env(safe-area-inset-bottom)
+    );
   }
 }
 </style>

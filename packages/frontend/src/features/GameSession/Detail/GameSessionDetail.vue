@@ -1,22 +1,22 @@
 <script setup lang="ts">
-defineOptions({ name: 'TableDetail' });
+defineOptions({ name: 'GameSessionDetail' });
 
 import { computed, getCurrentInstance, onUnmounted, ref, watch } from 'vue';
 import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue';
 import ActionBar from '@/features/Lobby/Detail/ActionBar.vue';
 import SessionActionBar from '@/features/GameSession/Detail/SessionActionBar.vue';
-import ScheduleTab from '@/features/Table/Detail/ScheduleTab.vue';
-import TableDetailHeader from '@/features/Table/Detail/TableDetailHeader.vue';
-import OverviewTab from '@/features/Table/Detail/OverviewTab.vue';
-import MembersTab from '@/features/Table/Detail/MembersTab.vue';
-import PlayMemoTab from '@/features/Table/Detail/PlayMemoTab.vue';
-import { useTableDetail } from '@/features/Table/Detail/useTableDetail';
-import { resolveTableRole } from '@/features/Table/Detail/useTableDetail';
+import ScheduleTab from '@/features/GameSession/Detail/ScheduleTab.vue';
+import GameSessionDetailHeader from '@/features/GameSession/Detail/GameSessionDetailHeader.vue';
+import OverviewTab from '@/features/GameSession/Detail/OverviewTab.vue';
+import MembersTab from '@/features/GameSession/Detail/MembersTab.vue';
+import PlayMemoTab from '@/features/GameSession/Detail/PlayMemoTab.vue';
+import { useGameSessionDetailPage } from '@/features/GameSession/Detail/useGameSessionDetailPage';
+import { resolveGameSessionRole } from '@/features/GameSession/Detail/useGameSessionDetailPage';
 import {
-  TableDetailTab,
-  useTableDetailTabs,
-} from '@/features/Table/Detail/useTableDetailTabs';
+  GameSessionDetailTab,
+  useGameSessionDetailTabs,
+} from '@/features/GameSession/Detail/useGameSessionDetailTabs';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useLobbyEntriesForSeating } from '@/features/GameSession/Detail/useLobbyEntriesForSeating';
 import { useSession } from '@/lib/auth';
@@ -38,7 +38,7 @@ const {
   patchLobby,
   addEntry,
   removeEntry,
-} = useTableDetail(props.lobbyId);
+} = useGameSessionDetailPage(props.lobbyId);
 
 // 代表になる開催は、ロビー配下の一覧を取ってから決まる。
 // そのため id は getter で渡し、決まった時点で詳細を取りに行かせる
@@ -66,16 +66,20 @@ if (getCurrentInstance()) {
 }
 const myUserId = computed(() => sessionData.value.data?.user?.id ?? null);
 
-const role = computed(() => resolveTableRole(lobby.value, myUserId.value));
+const role = computed(() =>
+  resolveGameSessionRole(lobby.value, myUserId.value),
+);
 const hasGameSession = computed(() => gameSessionId.value !== null);
 
-const { tabs, resolveActiveTab } = useTableDetailTabs(
+const { tabs, resolveActiveTab } = useGameSessionDetailTabs(
   status,
   role,
   hasGameSession,
 );
 
-const activeTab = ref<string>(props.initialTab ?? TableDetailTab.overview);
+const activeTab = ref<string>(
+  props.initialTab ?? GameSessionDetailTab.overview,
+);
 
 // 状態やロールが変わるとタブが増減する。いま開いているタブが消えたら概要に戻す
 watch(tabs, () => {
@@ -111,7 +115,7 @@ async function refreshAll() {
     <BaseBreadcrumb :items="breadcrumbItems" />
 
     <div class="table-detail__top">
-      <TableDetailHeader
+      <GameSessionDetailHeader
         :lobby="lobby"
         :game-session="gameSession"
         :status="status"
@@ -137,7 +141,7 @@ async function refreshAll() {
     </div>
 
     <BaseTabs v-model="activeTab" :tabs="tabs" label="卓の内容">
-      <template #[TableDetailTab.overview]>
+      <template #[GameSessionDetailTab.overview]>
         <OverviewTab
           :lobby="lobby"
           :game-session="gameSession"
@@ -145,12 +149,12 @@ async function refreshAll() {
         />
       </template>
 
-      <template #[TableDetailTab.schedule]>
+      <template #[GameSessionDetailTab.schedule]>
         <!-- 確定しても画面は変えない。この場で「調整中 → 開催予定」に切り替わる -->
         <ScheduleTab :lobby="lobby" :is-host="isHost" @changed="refreshAll" />
       </template>
 
-      <template #[TableDetailTab.members]>
+      <template #[GameSessionDetailTab.members]>
         <MembersTab
           :lobby="lobby"
           :game-session="gameSession"
@@ -162,7 +166,7 @@ async function refreshAll() {
         />
       </template>
 
-      <template #[TableDetailTab.playMemo]>
+      <template #[GameSessionDetailTab.playMemo]>
         <PlayMemoTab :game-session="gameSession" />
       </template>
     </BaseTabs>

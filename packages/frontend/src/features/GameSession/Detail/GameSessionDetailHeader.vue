@@ -4,32 +4,37 @@ import { CalendarDays, Clock, MapPin } from '@lucide/vue';
 import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import type { LobbyDetailModel } from '@/models/lobby';
 import type { GameSessionDetailModel } from '@/models/game-session';
-import type { TableCardStatus } from '@/features/Table/tableCardStatus';
+import type { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 import {
-  TABLE_CARD_STATUS_LABEL,
-  TABLE_CARD_STATUS_TONE,
-} from '@/features/Table/tableCardStatus';
-import { TABLE_ROLE_LABEL, TableRole } from '@/features/Table/Detail/tableRole';
+  GAME_SESSION_CARD_STATUS_LABEL,
+  GAME_SESSION_CARD_STATUS_TONE,
+} from '@/features/GameSession/gameSessionCardStatus';
+import {
+  GAME_SESSION_ROLE_LABEL,
+  GameSessionRole,
+} from '@/features/GameSession/Detail/gameSessionRole';
 
 const props = defineProps<{
   lobby: LobbyDetailModel;
   gameSession: GameSessionDetailModel | null;
-  status: TableCardStatus | null;
-  role: TableRole;
+  status: GameSessionCardStatus | null;
+  role: GameSessionRole;
 }>();
 
 const statusLabel = computed(() =>
-  props.status === null ? null : TABLE_CARD_STATUS_LABEL[props.status],
+  props.status === null ? null : GAME_SESSION_CARD_STATUS_LABEL[props.status],
 );
 const statusTone = computed(() =>
-  props.status === null ? 'default' : TABLE_CARD_STATUS_TONE[props.status],
+  props.status === null
+    ? 'default'
+    : GAME_SESSION_CARD_STATUS_TONE[props.status],
 );
-const roleLabel = computed(() => TABLE_ROLE_LABEL[props.role]);
+const roleLabel = computed(() => GAME_SESSION_ROLE_LABEL[props.role]);
 const roleTone = computed(() =>
-  props.role === TableRole.host ? 'warning' : 'primary',
+  props.role === GameSessionRole.host ? 'warning' : 'primary',
 );
 // ゲストには立場のバッジを出さない。「あなたはゲストです」は伝える価値が薄い
-const showRoleBadge = computed(() => props.role !== TableRole.guest);
+const showRoleBadge = computed(() => props.role !== GameSessionRole.guest);
 
 // 開催が決まっている卓だけ日時を出す。決まる前は出す値が無い
 const title = computed(() => props.gameSession?.title ?? props.lobby.title);

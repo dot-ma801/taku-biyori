@@ -59,7 +59,7 @@ const router = createRouter({
     {
       path: '/lobbies/:lobbyId/game-sessions/:gameSessionId',
       name: PAGE_NAME.gameSessionsDetail,
-      component: () => import('@/views/Table/DetailView.vue'),
+      component: () => import('@/views/GameSession/DetailView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
         initialTab: 'members',
@@ -103,7 +103,7 @@ const router = createRouter({
     {
       path: '/lobbies/:lobbyId',
       name: PAGE_NAME.lobbiesDetail,
-      component: () => import('@/views/Table/DetailView.vue'),
+      component: () => import('@/views/GameSession/DetailView.vue'),
       props: (to) => ({
         lobbyId: to.params.lobbyId,
       }),

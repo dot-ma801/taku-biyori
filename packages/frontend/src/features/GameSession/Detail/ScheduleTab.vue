@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { Check } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
-import ConfirmScheduleDialog from '@/features/Table/Detail/ConfirmScheduleDialog.vue';
+import ConfirmScheduleDialog from '@/features/GameSession/Detail/ConfirmScheduleDialog.vue';
 import { useCanOpenGameSession } from '@/features/Lobby/Detail/composables/useCanOpenGameSession';
 import type { LobbyDetailModel } from '@/models/lobby';
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import TableDetail from '@/features/Table/Detail/index.vue';
+import GameSessionDetail from '@/features/GameSession/Detail/GameSessionDetail.vue';
 import PageContainer from '@/components/layout/PageContainer/PageContainer.vue';
 
 defineProps<{
@@ -11,6 +11,6 @@ defineProps<{
 
 <template>
   <PageContainer size="lg">
-    <TableDetail :lobby-id="lobbyId" :initial-tab="initialTab" />
+    <GameSessionDetail :lobby-id="lobbyId" :initial-tab="initialTab" />
   </PageContainer>
 </template>

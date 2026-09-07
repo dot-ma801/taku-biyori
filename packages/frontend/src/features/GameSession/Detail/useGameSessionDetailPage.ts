@@ -3,9 +3,9 @@ import type { LobbyDetailModel, LobbyEntryModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
 import { listLobbyGameSessions } from '@/api/game-session';
 import { useGetLobbyDetail } from '@/features/Lobby/Detail/composables/useGetLobbyDetail';
-import { resolveTableStatus } from '@/features/Table/resolveTableStatus';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
-import { TableRole } from '@/features/Table/Detail/tableRole';
+import { resolveGameSessionCardStatus } from '@/features/GameSession/resolveGameSessionCardStatus';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
+import { GameSessionRole } from '@/features/GameSession/Detail/gameSessionRole';
 
 /**
  * 卓詳細の土台。
@@ -15,7 +15,7 @@ import { TableRole } from '@/features/Table/Detail/tableRole';
  * 「卓」として見せる（#147 / #152）。開催の詳細（着席・プレイメモ）は
  * 代表が決まってから子コンポーネントが取りに行く。
  */
-export const useTableDetail = (lobbyId: string) => {
+export const useGameSessionDetailPage = (lobbyId: string) => {
   const {
     lobby,
     loading: loadingLobby,
@@ -52,11 +52,11 @@ export const useTableDetail = (lobbyId: string) => {
   const resolved = computed(() =>
     lobby.value === null
       ? null
-      : resolveTableStatus(lobby.value.status, sessions.value),
+      : resolveGameSessionCardStatus(lobby.value.status, sessions.value),
   );
 
   /** 卓の状態。一覧のカードと同じ規則で解決する */
-  const status = computed<TableCardStatus | null>(
+  const status = computed<GameSessionCardStatus | null>(
     () => resolved.value?.status ?? null,
   );
 
@@ -89,14 +89,14 @@ export const useTableDetail = (lobbyId: string) => {
  * ホスト判定はロビーの `hostUserId`、参加者判定は在籍中の参加（`activeEntries`）。
  * 脱退した人と未ログインはどちらも `guest` に倒れる。
  */
-export const resolveTableRole = (
+export const resolveGameSessionRole = (
   lobby: Pick<LobbyDetailModel, 'hostUserId' | 'activeEntries'> | null,
   myUserId: string | null,
-): TableRole => {
-  if (lobby === null || myUserId === null) return TableRole.guest;
-  if (lobby.hostUserId === myUserId) return TableRole.host;
+): GameSessionRole => {
+  if (lobby === null || myUserId === null) return GameSessionRole.guest;
+  if (lobby.hostUserId === myUserId) return GameSessionRole.host;
   const isMember = lobby.activeEntries.some(
     (entry: LobbyEntryModel) => entry.userId === myUserId,
   );
-  return isMember ? TableRole.member : TableRole.guest;
+  return isMember ? GameSessionRole.member : GameSessionRole.guest;
 };

@@ -38,24 +38,38 @@ defineProps<{
 </template>
 
 <style scoped>
+/* DS sheet: --radius-sheet, a hairline --border-subtle and --shadow-lg over
+   the navy --overlay. */
 .dialog {
   position: fixed;
   inset: 0;
   margin: auto;
-  width: min(480px, calc(100vw - 32px));
+  width: min(520px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-6);
-  font-family: var(--font-family-base);
-  color: var(--color-text);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-5);
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  animation: dialog-rise var(--duration-normal) var(--ease-out);
+}
+
+@keyframes dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .dialog::backdrop {
-  background: rgba(31, 35, 40, 0.4);
+  background: var(--overlay);
 }
 
 .dialog__header {
@@ -67,46 +81,42 @@ defineProps<{
 }
 
 .dialog__title {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.3;
+  font: var(--text-h3);
   margin: 0;
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .dialog__close {
   flex-shrink: 0;
+  margin: -6px;
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   border-radius: var(--radius-sm);
   line-height: 1;
-  font-size: 14px;
-  transition:
-    color 0.15s,
-    background-color 0.15s;
+  font-size: var(--size-body-sm);
+  transition: var(--transition-control);
 }
 .dialog__close:hover {
-  color: var(--color-text);
-  background-color: var(--color-surface-raised);
+  color: var(--text-primary);
+  background-color: var(--surface-subtle);
 }
 .dialog__close:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .dialog__description {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  line-height: 1.55;
+  font: var(--text-body-sm);
+  color: var(--text-secondary);
   margin: 0 0 var(--space-4);
 }
 
 .dialog__body {
-  font-size: 14px;
-  line-height: 1.65;
+  font: var(--text-body-sm);
+  color: var(--text-primary);
 }
 
 .dialog__actions {

@@ -53,53 +53,49 @@ const model = defineModel<string>({ default: '' });
 </template>
 
 <style scoped>
+/* Same DS field chrome as BaseTextBox. */
 .datetimepicker {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  font-family: var(--font-family-base);
+  gap: var(--space-2);
+  font-family: var(--font-body);
 }
 
 .datetimepicker__label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-secondary);
+  font: var(--text-label);
+  color: var(--text-primary);
 }
 
 .datetimepicker__control {
-  padding: 10px 12px;
-  font-family: var(--font-family-base);
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  height: 40px;
+  padding: 0 12px;
+  font: var(--text-body-sm);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  transition: var(--transition-control);
   width: 100%;
   box-sizing: border-box;
 }
 .datetimepicker__control:hover:not(:disabled):not(:read-only) {
-  border-color: var(--color-secondary);
+  border-color: var(--border-strong);
 }
 .datetimepicker__control:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
 }
 .datetimepicker__control:disabled {
-  opacity: 0.5;
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
   cursor: not-allowed;
-  background: var(--color-surface-muted);
 }
 
 .datetimepicker__hint {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  line-height: 1.45;
+  font: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .datetimepicker__errors {
@@ -108,8 +104,7 @@ const model = defineModel<string>({ default: '' });
   gap: 2px;
 }
 .datetimepicker__error {
-  font-size: 12px;
-  color: var(--color-error);
-  line-height: 1.45;
+  font: var(--text-caption);
+  color: var(--error-text);
 }
 </style>

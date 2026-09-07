@@ -63,7 +63,7 @@ const liveText = computed(
   list-style: none;
   margin: 0;
   padding: 0;
-  font-family: var(--font-family-base);
+  font-family: var(--font-body);
 }
 
 .stepper__item {
@@ -72,7 +72,7 @@ const liveText = computed(
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   text-align: center;
 }
 
@@ -83,12 +83,12 @@ const liveText = computed(
   right: 50%;
   width: 100%;
   height: 2px;
-  background: var(--color-border);
+  background: var(--border);
 }
 
 .stepper__item--active:not(:first-child)::before,
 .stepper__item--completed:not(:first-child)::before {
-  background: var(--color-primary);
+  background: var(--primary);
 }
 
 .stepper__circle {
@@ -100,32 +100,32 @@ const liveText = computed(
   width: 28px;
   height: 28px;
   border-radius: var(--radius-full);
-  border: 2px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 700;
+  border: var(--border-width-strong) solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-tertiary);
+  font: var(--text-caption);
+  font-weight: var(--weight-semibold);
 }
 
 .stepper__item--active .stepper__circle,
 .stepper__item--completed .stepper__circle {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--text-on-primary);
 }
 
 .stepper__label {
-  font-size: 11px;
-  color: var(--color-text-muted);
+  font: var(--text-caption);
+  color: var(--text-tertiary);
 }
 
 .stepper__item--active .stepper__label {
-  color: var(--color-text);
-  font-weight: 700;
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
 }
 
 .stepper__item--completed .stepper__label {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .visually-hidden {

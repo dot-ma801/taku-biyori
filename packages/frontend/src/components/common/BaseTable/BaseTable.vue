@@ -151,32 +151,33 @@ const sortedRows = computed(() => {
 </template>
 
 <style scoped>
+/* DS: the schedule table in v0.4 — a --surface-subtle header row, hairline
+   --border-subtle rules, 12px/16px cells. */
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-family: var(--font-family-base);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
-  color: var(--color-text);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
 }
 
 .table__head {
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
 }
 
 .table__th {
-  padding: var(--space-3) var(--space-4);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  padding: 12px 16px;
+  font: var(--text-label);
+  color: var(--text-secondary);
   white-space: nowrap;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
 .table__th--left {
@@ -192,10 +193,10 @@ const sortedRows = computed(() => {
 .table__th--sortable {
   cursor: pointer;
   user-select: none;
-  transition: color 0.1s;
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 .table__th--sortable:hover {
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .table__th-inner {
@@ -207,35 +208,34 @@ const sortedRows = computed(() => {
 .table__sort-icon {
   display: flex;
   align-items: center;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 .table__th--sortable:hover .table__sort-icon {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .table__row {
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--border-width) solid var(--border-subtle);
 }
 .table__row:last-child {
   border-bottom: none;
 }
 
 .table__row--striped {
-  background: var(--color-surface-raised);
+  background: var(--surface-subtle);
 }
 
 .table__row--hoverable {
-  transition: background 0.1s;
+  transition: background-color var(--duration-fast) var(--ease-standard);
   cursor: pointer;
 }
 .table__row--hoverable:hover {
-  background: var(--color-surface-muted);
+  background: var(--primary-subtle);
 }
 
 .table__td {
-  padding: var(--space-3) var(--space-4);
-  color: var(--color-text);
-  line-height: 1.55;
+  padding: 12px 16px;
+  color: var(--text-primary);
 }
 
 .table__td--left {
@@ -251,7 +251,7 @@ const sortedRows = computed(() => {
 .table__empty {
   padding: var(--space-8) var(--space-4);
   text-align: center;
-  color: var(--color-text-muted);
-  font-size: 14px;
+  color: var(--text-tertiary);
+  font: var(--text-body-sm);
 }
 </style>

@@ -60,8 +60,11 @@ const router = createRouter({
       path: '/lobbies/:lobbyId/game-sessions/:gameSessionId',
       name: PAGE_NAME.gameSessionsDetail,
       component: () => import('@/views/GameSession/DetailView.vue'),
+      // URL が名指しした開催をそのまま渡す。渡さないと代表に選ばれた別の開催が
+      // 開いてしまい、ブックマークや編集後の戻り先がすり替わる
       props: (to) => ({
         lobbyId: to.params.lobbyId,
+        gameSessionId: to.params.gameSessionId,
         initialTab: 'members',
       }),
     },

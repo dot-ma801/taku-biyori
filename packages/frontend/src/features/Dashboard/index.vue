@@ -14,11 +14,17 @@ const { cardsOf, countBy, draftCards, errorMessage } = useTableCards();
 
 const scheduledCards = cardsOf(TableCardStatus.scheduled);
 const adjustingCards = cardsOf(TableCardStatus.adjusting);
+// 「終えた卓」はマイページと同じ範囲を数える。完了だけだと、中止した卓しか
+// 持っていない人に 0 件と出るのに、リンク先には卓が並ぶ食い違いになる
 const completedCount = countBy(TableCardStatus.completed);
+const cancelledCount = countBy(TableCardStatus.cancelled);
 
 const hasDrafts = computed(() => draftCards.value.length > 0);
+const finishedCount = computed(
+  () => completedCount.value + cancelledCount.value,
+);
 const completedLabel = computed(
-  () => `終えた卓 ${completedCount.value} 件をマイページで見る`,
+  () => `終えた卓 ${finishedCount.value} 件をマイページで見る`,
 );
 
 const onClickCreate = () => {

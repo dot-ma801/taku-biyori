@@ -201,7 +201,23 @@
   --container-lg: 1080px;
   --container-xl: 1280px;
   --nav-height: 60px;
+  --nav-height-mobile: 56px;
+  --bottom-nav-height: 60px;
   --sidebar-width: 232px;
+
+  /* --- Control sizing --------------------------------------------------
+     DS のコントロール3サイズ。ボタン・入力欄・アイコンボタンで共有する。 */
+  --control-height-sm: 32px;
+  --control-height-md: 40px;
+  --control-height-lg: 48px;
+
+  /* --- Breakpoints -----------------------------------------------------
+     **メディアクエリの条件にカスタムプロパティは使えない**（`@media
+     (max-width: var(--x))` は動かない）ため、@media にはリテラルを書く。
+     値の出典はここ。変えるときは下記のコメントを頼りに追従させること。
+
+     mobile: 768px … --container-md と同値。ここを境にシェルを
+             デスクトップのナビ ⇄ モバイルの下部タブへ切り替える */
 
   /* --- Shape & border (soft, but not round-everything) ---------------- */
   --radius-xs: 4px;

@@ -38,8 +38,8 @@ watchEffect(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
   padding: 0;
   background: transparent;
   border: var(--border-width) solid transparent;

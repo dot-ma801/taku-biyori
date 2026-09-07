@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
-import { toTableCards } from '@/features/Table/toTableCards';
+import { sortTableCards, toTableCards } from '@/features/Table/toTableCards';
 import { TableCardStatus } from '@/features/Table/tableCardStatus';
 
 const MY_USER_ID = 'my-user-id';
@@ -55,7 +55,7 @@ const makeEntry = (userId: string, leftAt: Date | null = null) => ({
 
 describe('toTableCards', () => {
   describe('卓の状態の解決', () => {
-    it('下書きのロビーは draft になる', () => {
+    it('開催がまだ無い下書きのロビーは draft になる', () => {
       // Arrange
       const lobbies = [makeLobby({ status: LobbyStatus.draft })];
 
@@ -64,6 +64,33 @@ describe('toTableCards', () => {
 
       // Assert
       expect(cards[0]?.status).toBe(TableCardStatus.draft);
+    });
+
+    it('下書きのロビーでも、開催があれば scheduled になる', () => {
+      // Arrange
+      // 「日程が決まっている」で卓を作る経路は、ロビーを下書きのまま残して
+      // 開催だけを作る。ここで draft に倒すと作った直後の卓が一覧から消える
+      const lobbies = [makeLobby({ status: LobbyStatus.draft })];
+      const sessions = [makeSession({ status: GameSessionStatus.scheduled })];
+
+      // Act
+      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards[0]?.status).toBe(TableCardStatus.scheduled);
+      expect(cards[0]?.gameSessionId).toBe('session-1');
+    });
+
+    it('下書きのロビーでも、完了した開催があれば completed になる', () => {
+      // Arrange
+      const lobbies = [makeLobby({ status: LobbyStatus.draft })];
+      const sessions = [makeSession({ status: GameSessionStatus.completed })];
+
+      // Act
+      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards[0]?.status).toBe(TableCardStatus.completed);
     });
 
     it('受付中で開催が無いロビーは recruiting（募集中）になる', () => {
@@ -239,7 +266,7 @@ describe('toTableCards', () => {
       expect(byId.get('lobby-2')?.status).toBe(TableCardStatus.scheduled);
     });
 
-    it('どのロビーにも紐づかない開催は無視される', () => {
+    it('紐づくロビーが無い開催は、その卓の状態に影響しない', () => {
       // Arrange
       const lobbies = [makeLobby({ id: 'lobby-1' })];
       const sessions = [makeSession({ lobbyId: 'unknown-lobby' })];
@@ -248,8 +275,11 @@ describe('toTableCards', () => {
       const cards = toTableCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
-      expect(cards).toHaveLength(1);
-      expect(cards[0]?.status).toBe(TableCardStatus.recruiting);
+      // lobby-1 は開催なしのまま。unknown-lobby は別のカードとして拾われる
+      const byId = new Map(cards.map((c) => [c.lobbyId, c]));
+      expect(byId.get('lobby-1')?.status).toBe(TableCardStatus.recruiting);
+      expect(byId.get('lobby-1')?.gameSessionId).toBeNull();
+      expect(byId.has('unknown-lobby')).toBe(true);
     });
   });
 
@@ -403,13 +433,150 @@ describe('toTableCards', () => {
     });
   });
 
-  describe('空の入力', () => {
-    it('ロビーが無ければ空配列を返す', () => {
+  describe('ロビーが手元に無い開催', () => {
+    it('突き合わせられない開催もカードとして拾う', () => {
+      // Arrange
+      // 脱退したロビーは GET /api/me/lobbies に載らないが、着席の記録が
+      // 残っているかぎり開催は返る。履歴を落とさないための挙動
+      const sessions = [
+        makeSession({
+          id: 'left',
+          lobbyId: 'left-lobby',
+          status: GameSessionStatus.completed,
+        }),
+      ];
+
+      // Act
+      const cards = toTableCards([], sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards).toHaveLength(1);
+      expect(cards[0]?.lobbyId).toBe('left-lobby');
+      expect(cards[0]?.status).toBe(TableCardStatus.completed);
+      expect(cards[0]?.gameSessionId).toBe('left');
+    });
+
+    it('着席数を人数として見せ、定員は出さない', () => {
+      // Arrange
+      const sessions = [makeSession({ lobbyId: 'left-lobby', seatCount: 3 })];
+
+      // Act
+      const cards = toTableCards([], sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards[0]?.memberCount).toBe(3);
+      expect(cards[0]?.maxPlayers).toBeNull();
+      expect(cards[0]?.remainingCount).toBeNull();
+    });
+
+    it('同じロビーの開催が複数残っていてもカードは1枚だけ作る', () => {
+      // Arrange
+      const sessions = [
+        makeSession({
+          id: 'a',
+          lobbyId: 'left-lobby',
+          scheduledAt: '2026-08-01',
+        }),
+        makeSession({
+          id: 'b',
+          lobbyId: 'left-lobby',
+          scheduledAt: '2026-09-01',
+        }),
+      ];
+
+      // Act
+      const cards = toTableCards([], sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards).toHaveLength(1);
+      expect(cards[0]?.gameSessionId).toBe('b');
+    });
+
+    it('ロビーが手元にある開催は重複して拾わない', () => {
+      // Arrange
+      const lobbies = [makeLobby({ id: 'lobby-1' })];
+      const sessions = [makeSession({ lobbyId: 'lobby-1' })];
+
+      // Act
+      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards).toHaveLength(1);
+    });
+  });
+
+  describe('開催日', () => {
+    it('代表になった開催の開催日を持つ', () => {
+      // Arrange
+      const lobbies = [makeLobby()];
+      const sessions = [makeSession({ scheduledAt: '2026-08-15' })];
+
+      // Act
+      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+
+      // Assert
+      expect(cards[0]?.scheduledAt).toBe('2026-08-15');
+    });
+
+    it('開催が無い卓では null になる', () => {
       // Arrange & Act
-      const cards = toTableCards([], [makeSession()], MY_USER_ID);
+      const cards = toTableCards([makeLobby()], [], MY_USER_ID);
+
+      // Assert
+      expect(cards[0]?.scheduledAt).toBeNull();
+    });
+  });
+
+  describe('空の入力', () => {
+    it('ロビーも開催も無ければ空配列を返す', () => {
+      // Arrange & Act
+      const cards = toTableCards([], [], MY_USER_ID);
 
       // Assert
       expect(cards).toEqual([]);
+    });
+  });
+
+  describe('sortTableCards', () => {
+    const card = (lobbyId: string, scheduledAt: string | null) => ({
+      ...(toTableCards([makeLobby({ id: lobbyId })], [], MY_USER_ID)[0] ??
+        ({} as never)),
+      scheduledAt,
+    });
+
+    it('開催予定は開催日の近い順に並べる', () => {
+      // Arrange
+      // 更新日時で並べると、ずっと先の卓を少し編集しただけで
+      // 明日の卓より前に出てしまう
+      const cards = [card('later', '2026-12-01'), card('sooner', '2026-08-01')];
+
+      // Act
+      const sorted = sortTableCards(cards, TableCardStatus.scheduled);
+
+      // Assert
+      expect(sorted.map((c) => c.lobbyId)).toEqual(['sooner', 'later']);
+    });
+
+    it('開催予定以外は渡された並びのままにする', () => {
+      // Arrange
+      const cards = [card('later', '2026-12-01'), card('sooner', '2026-08-01')];
+
+      // Act
+      const sorted = sortTableCards(cards, TableCardStatus.adjusting);
+
+      // Assert
+      expect(sorted.map((c) => c.lobbyId)).toEqual(['later', 'sooner']);
+    });
+
+    it('元の配列を書き換えない', () => {
+      // Arrange
+      const cards = [card('later', '2026-12-01'), card('sooner', '2026-08-01')];
+
+      // Act
+      sortTableCards(cards, TableCardStatus.scheduled);
+
+      // Assert
+      expect(cards.map((c) => c.lobbyId)).toEqual(['later', 'sooner']);
     });
   });
 });

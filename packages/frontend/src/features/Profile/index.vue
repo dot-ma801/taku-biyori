@@ -4,7 +4,7 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ProfileDisplay from '@/features/Profile/ProfileDisplay.vue';
 import PasswordChangeCard from '@/features/Profile/PasswordChangeCard.vue';
-import CompletedTables from '@/features/Profile/CompletedTables.vue';
+import CompletedGameSessions from '@/features/Profile/CompletedGameSessions.vue';
 import LogoutDialog from '@/features/user/LogoutDialog.vue';
 import { useGetProfile } from '@/features/Profile/useGetProfile';
 import { useAuthStore } from '@/stores/auth';
@@ -65,7 +65,7 @@ const onConfirmLogout = async () => {
       </div>
 
       <div class="columns__history">
-        <CompletedTables />
+        <CompletedGameSessions />
       </div>
     </div>
 

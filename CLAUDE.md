@@ -105,7 +105,7 @@ backend・frontend ともに同じ規則です。
 
 Lobby と GameSession は**バックエンドでは別リソース・別ステータスのまま**だが、
 **利用者に見せる名詞は「卓」1つ**に統一する（issue #147 のリデザインで確定）。
-UI 表示層で2つを1つの卓に畳む場所は `features/Table/` に集約してある。
+UI 表示層で2つを1つの卓に畳む場所は `features/GameSession/` に集約してある。
 
 #### 利用者に見せる語（UI）
 
@@ -117,7 +117,7 @@ UI 表示層で2つを1つの卓に畳む場所は `features/Table/` に集約�
 | Seat | 着席 / 当日の参加者 |
 
 卓の状態は次の1系列だけを見せる。**この語は固定語彙なのでそのまま使うこと**
-（定義は `features/Table/tableCardStatus.ts`）。
+（定義は `features/GameSession/gameSessionCardStatus.ts`）。
 
 ```
 募集中 → 調整中 → 開催予定 → 完了 / 中止

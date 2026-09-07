@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
-import TableCard from '@/features/Table/TableCard.vue';
-import { useTableCards } from '@/features/Table/useTableCards';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
+import GameSessionCard from '@/features/GameSession/GameSessionCard.vue';
+import { useGameSessionCards } from '@/features/GameSession/useGameSessionCards';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 /**
  * 終えた卓。ダッシュボードの「終えた卓 N 件をマイページで見る」の着地点（#151）。
  *
  * 一覧には出さず、履歴としてここだけに置く。
  */
-const { cardsOf } = useTableCards();
+const { cardsOf } = useGameSessionCards();
 
-const completed = cardsOf(TableCardStatus.completed);
-const cancelled = cardsOf(TableCardStatus.cancelled);
+const completed = cardsOf(GameSessionCardStatus.completed);
+const cancelled = cardsOf(GameSessionCardStatus.cancelled);
 
 const cards = computed(() => [...completed.value, ...cancelled.value]);
 const isEmpty = computed(() => cards.value.length === 0);
@@ -30,7 +30,7 @@ const isEmpty = computed(() => cards.value.length === 0);
     </BaseCard>
 
     <div v-else class="completed__list">
-      <TableCard v-for="card in cards" :key="card.lobbyId" :card="card" />
+      <GameSessionCard v-for="card in cards" :key="card.lobbyId" :card="card" />
     </div>
   </section>
 </template>

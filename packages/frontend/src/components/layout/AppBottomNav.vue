@@ -1,16 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
 import { useGlobalNavItems } from '@/components/layout/GlobalNav/useGlobalNavItems';
 
-const route = useRoute();
-
-// route.name は Symbol も取りうるので、判定に使う文字列だけを渡す
-const currentRouteName = computed(() =>
-  typeof route.name === 'string' ? route.name : null,
-);
-
-const { items } = useGlobalNavItems(currentRouteName);
+const { items } = useGlobalNavItems();
 </script>
 
 <template>
@@ -30,10 +21,18 @@ const { items } = useGlobalNavItems(currentRouteName);
 </template>
 
 <style scoped>
-/* モバイル専用の下部タブバー（v0.4.dc.html のモバイルシェル）。
-   sticky なので流れの中に場所を確保したまま画面下に貼り付く。 */
+/*
+ * モバイル専用の下部タブバー（v0.4.dc.html のモバイルシェル）。
+ *
+ * sticky だと「流れ上の位置」はページ末尾のままなので、スクロール中は
+ * 画面下に貼り付いたバーが手前のコンテンツに重なってしまう。fixed にして
+ * 常に画面下へ固定し、その高さぶんの余白は App.vue 側で確保する
+ * （`.app-container` の padding-bottom）。
+ */
 .bottom-nav {
-  position: sticky;
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 100;
   display: flex;
@@ -50,7 +49,7 @@ const { items } = useGlobalNavItems(currentRouteName);
   align-items: center;
   justify-content: center;
   gap: 3px;
-  height: 60px;
+  height: var(--bottom-nav-height);
   font: var(--text-caption);
   color: var(--text-tertiary);
   text-decoration: none;
@@ -68,7 +67,7 @@ const { items } = useGlobalNavItems(currentRouteName);
   color: var(--primary);
 }
 
-/* デスクトップはヘッダー内のナビが担当する */
+/* デスクトップはヘッダー内のナビが担当する（境界の出典は variables.css の Breakpoints） */
 @media (min-width: 769px) {
   .bottom-nav {
     display: none;

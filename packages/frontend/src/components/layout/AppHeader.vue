@@ -1,24 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Construction } from '@lucide/vue';
-import { useRoute } from 'vue-router';
 import ThemeSwitchButton from '@/components/layout/ThemeSwitchButton.vue';
 import LoginButton from '@/features/user/LoginButton.vue';
 import { useGlobalNavItems } from '@/components/layout/GlobalNav/useGlobalNavItems';
+import { PAGE_NAME } from '@/config/pageName';
 
-const route = useRoute();
-
-// route.name は Symbol も取りうるので、判定に使う文字列だけを渡す
-const currentRouteName = computed(() =>
-  typeof route.name === 'string' ? route.name : null,
-);
-
-const { items } = useGlobalNavItems(currentRouteName);
+const { items } = useGlobalNavItems();
 </script>
 
 <template>
   <header class="global-nav">
-    <RouterLink :to="{ name: 'dashboard' }" class="global-nav__logo">
+    <RouterLink :to="{ name: PAGE_NAME.dashboard }" class="global-nav__logo">
       <Construction class="global-nav__logo-mark" :size="22" />
       <span class="global-nav__logo-text">たく日和</span>
     </RouterLink>

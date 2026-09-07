@@ -1,88 +1,86 @@
 import { describe, it, expect } from 'vitest';
-import { ref } from 'vue';
-import { useGlobalNavItems } from '@/components/layout/GlobalNav/useGlobalNavItems';
+import { PAGE_NAME } from '@/config/pageName';
+import { toGlobalNavItemViews } from '@/components/layout/GlobalNav/useGlobalNavItems';
 
-describe('useGlobalNavItems', () => {
+describe('toGlobalNavItemViews', () => {
   describe('項目', () => {
     it('ダッシュボードとマイページの2項目を返す', () => {
       // Arrange & Act
-      const { items } = useGlobalNavItems('dashboard');
+      const items = toGlobalNavItemViews(PAGE_NAME.dashboard);
 
       // Assert
-      expect(items.value.map((i) => i.id)).toEqual(['dashboard', 'profile']);
+      expect(items.map((i) => i.id)).toEqual(['dashboard', 'profile']);
     });
   });
 
   describe('現在地の判定', () => {
     it.each([
-      'dashboard',
-      'lobbies-detail',
-      'lobbies-new',
-      'lobbies-edit',
-      'game-sessions-detail',
-      'game-sessions-edit',
-      'game-sessions-play-memo',
-    ])('卓配下の "%s" ではダッシュボードが現在地になる', (routeName) => {
+      PAGE_NAME.dashboard,
+      PAGE_NAME.lobbiesDetail,
+      PAGE_NAME.lobbiesNew,
+      PAGE_NAME.lobbiesEdit,
+      PAGE_NAME.gameSessionsDetail,
+      PAGE_NAME.gameSessionsEdit,
+      PAGE_NAME.gameSessionsPlayMemo,
+    ])('卓配下の "%s" ではダッシュボードが現在地になる', (page) => {
       // Arrange & Act
-      const { items } = useGlobalNavItems(routeName);
+      const items = toGlobalNavItemViews(page);
 
       // Assert
-      expect(items.value[0]?.isCurrent).toBe(true);
-      expect(items.value[1]?.isCurrent).toBe(false);
+      expect(items[0]?.isCurrent).toBe(true);
+      expect(items[1]?.isCurrent).toBe(false);
     });
 
     it('profile-setting ではマイページが現在地になる', () => {
       // Arrange & Act
-      const { items } = useGlobalNavItems('profile-setting');
+      const items = toGlobalNavItemViews(PAGE_NAME.profileSetting);
 
       // Assert
-      expect(items.value[0]?.isCurrent).toBe(false);
-      expect(items.value[1]?.isCurrent).toBe(true);
+      expect(items[0]?.isCurrent).toBe(false);
+      expect(items[1]?.isCurrent).toBe(true);
     });
 
-    it.each(['login', 'top', 'auth-callback'])(
+    it.each([PAGE_NAME.login, PAGE_NAME.top, PAGE_NAME.authCallback])(
       'シェル外の "%s" ではどの項目も現在地にならない',
-      (routeName) => {
+      (page) => {
         // Arrange & Act
-        const { items } = useGlobalNavItems(routeName);
+        const items = toGlobalNavItemViews(page);
 
         // Assert
-        expect(items.value.every((i) => !i.isCurrent)).toBe(true);
+        expect(items.every((i) => !i.isCurrent)).toBe(true);
       },
     );
 
-    it('ルート名が未確定（null）のときはどの項目も現在地にならない', () => {
+    it('現在地が未確定（null）のときはどの項目も現在地にならない', () => {
       // Arrange & Act
-      const { items } = useGlobalNavItems(null);
+      const items = toGlobalNavItemViews(null);
 
       // Assert
-      expect(items.value.every((i) => !i.isCurrent)).toBe(true);
+      expect(items.every((i) => !i.isCurrent)).toBe(true);
     });
   });
 
   describe('aria-current', () => {
     it('現在地の項目だけ "page" を持ち、他は undefined になる', () => {
       // Arrange & Act
-      const { items } = useGlobalNavItems('dashboard');
+      const items = toGlobalNavItemViews(PAGE_NAME.dashboard);
 
       // Assert
-      expect(items.value[0]?.ariaCurrent).toBe('page');
-      expect(items.value[1]?.ariaCurrent).toBeUndefined();
+      expect(items[0]?.ariaCurrent).toBe('page');
+      expect(items[1]?.ariaCurrent).toBeUndefined();
     });
   });
 
-  describe('リアクティビティ', () => {
-    it('ルート名が変わると現在地の項目が切り替わる', () => {
-      // Arrange
-      const routeName = ref('dashboard');
-      const { items } = useGlobalNavItems(routeName);
-
-      // Act
-      routeName.value = 'profile-setting';
+  describe('現在地が変わったとき', () => {
+    it('渡した画面が変われば現在地の項目も入れ替わる', () => {
+      // Arrange & Act
+      const onDashboard = toGlobalNavItemViews(PAGE_NAME.dashboard);
+      const onProfile = toGlobalNavItemViews(PAGE_NAME.profileSetting);
 
       // Assert
-      expect(items.value[0]?.isCurrent).toBe(false);
-      expect(items.value[1]?.isCurrent).toBe(true);
+      expect(onDashboard[0]?.isCurrent).toBe(true);
+      expect(onProfile[0]?.isCurrent).toBe(false);
+      expect(onProfile[1]?.isCurrent).toBe(true);
     });
   });
 });

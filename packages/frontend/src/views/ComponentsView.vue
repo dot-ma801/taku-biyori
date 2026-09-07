@@ -397,11 +397,11 @@ const emailRules = [
 .sandbox {
   max-width: 800px;
   margin: 0 auto;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
   font-family: var(--font-family-base);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .sandbox__header {

@@ -87,10 +87,10 @@ importers:
 
   packages/frontend:
     dependencies:
-      '@fontsource/m-plus-rounded-1c':
+      '@fontsource/noto-sans-jp':
         specifier: 5.3.0
         version: 5.3.0
-      '@fontsource/quicksand':
+      '@fontsource/zen-kaku-gothic-new':
         specifier: 5.3.0
         version: 5.3.0
       '@lucide/vue':
@@ -1040,11 +1040,11 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fontsource/m-plus-rounded-1c@5.3.0':
-    resolution: {integrity: sha512-eB/JxJBRXLdfTsBDElsAZDMtHXM58Hf1tKkHoDVZAaUN7a+qYfwNKh4Q2f7Fk9YNg4xPFjTwooVlQyqbhi8CWQ==}
+  '@fontsource/noto-sans-jp@5.3.0':
+    resolution: {integrity: sha512-OZbBzZ8LrFRs2RFT2Cc0HUV2C2ZeSfyEXhDJWR0EZuZaraJfRubpvrFmUnCljuBDEkw8Vn6CE/+nf9dj9b+0lg==}
 
-  '@fontsource/quicksand@5.3.0':
-    resolution: {integrity: sha512-epmMUyXI39f88bZSCyKlHTZqUWg4O7DqrTXOKqsqbVKMLshX9RtIYCUIw+G2nOfEwdIHIjYbeWdwHRcEzRXBRQ==}
+  '@fontsource/zen-kaku-gothic-new@5.3.0':
+    resolution: {integrity: sha512-2t88gAaUkqIAFARfO8GkT1x57QBRx8A0pWeB0CIrIahnzdanWjcV4thPCSv9BJmpeRndq6qbFx1KYglHykiPhw==}
 
   '@hono/node-server@1.19.11':
     resolution: {integrity: sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g==}
@@ -5432,9 +5432,9 @@ snapshots:
     optionalDependencies:
       '@noble/hashes': 2.2.0
 
-  '@fontsource/m-plus-rounded-1c@5.3.0': {}
+  '@fontsource/noto-sans-jp@5.3.0': {}
 
-  '@fontsource/quicksand@5.3.0': {}
+  '@fontsource/zen-kaku-gothic-new@5.3.0': {}
 
   '@hono/node-server@1.19.11(hono@4.12.5)':
     dependencies:

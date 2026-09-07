@@ -58,7 +58,7 @@ onMounted(async () => {
 <style scoped>
 .container {
   height: 100%;
-  padding: 0 var(--space-7);
+  padding: 0 var(--space-12);
   align-items: center;
 
   display: flex;

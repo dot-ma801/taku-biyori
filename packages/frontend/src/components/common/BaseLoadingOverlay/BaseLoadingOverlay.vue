@@ -50,7 +50,7 @@ const displayMessage = computed(() => message.value ?? '読み込み中…');
   align-items: center;
   gap: var(--space-3);
   min-width: 180px;
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-6) var(--space-8);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

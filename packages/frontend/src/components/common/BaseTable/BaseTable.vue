@@ -249,7 +249,7 @@ const sortedRows = computed(() => {
 }
 
 .table__empty {
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
   font-size: 14px;

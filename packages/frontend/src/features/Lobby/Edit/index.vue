@@ -106,7 +106,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
 .container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .error-area {
@@ -119,6 +119,6 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-8);
 }
 </style>

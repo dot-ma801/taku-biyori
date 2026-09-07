@@ -76,7 +76,7 @@ const scenarioPlaceholder = computed(() =>
 <style scoped>
 .contents {
   > * {
-    margin: var(--space-5) 0;
+    margin: var(--space-6) 0;
 
     &:first-child {
       margin-top: 0;
@@ -96,9 +96,9 @@ const scenarioPlaceholder = computed(() =>
   background-color: var(--color-background);
 
   /* 余白 */
-  padding: var(--space-5);
+  padding: var(--space-6);
   > * {
-    margin: var(--space-5) 0;
+    margin: var(--space-6) 0;
 
     &:first-child {
       margin-top: 0;

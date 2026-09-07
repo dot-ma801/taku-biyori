@@ -231,7 +231,7 @@ async function onVisibilityChange(shared: boolean) {
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-8) var(--space-3);
 }
 
 .failed__text {
@@ -241,7 +241,7 @@ async function onVisibilityChange(shared: boolean) {
 
 .empty {
   margin: 0;
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-8) var(--space-3);
 
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);

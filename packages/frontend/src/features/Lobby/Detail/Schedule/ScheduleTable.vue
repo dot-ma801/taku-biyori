@@ -258,6 +258,6 @@ function onCellKeydown(
 .td--empty {
   text-align: center;
   color: var(--color-text-muted);
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
 }
 </style>

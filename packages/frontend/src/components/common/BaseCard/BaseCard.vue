@@ -80,7 +80,7 @@ withDefaults(
 }
 
 .card__header {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--color-border);
 }
 .card__title {
@@ -98,7 +98,7 @@ withDefaults(
 }
 
 .card__body {
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 .card--no-padding .card__body {
   padding: 0;
@@ -106,7 +106,7 @@ withDefaults(
 
 .card__actions {
   position: relative;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: flex-end;

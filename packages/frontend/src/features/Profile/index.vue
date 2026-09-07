@@ -67,7 +67,7 @@ const onConfirmLogout = async () => {
 .container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .logout-area {

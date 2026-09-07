@@ -49,7 +49,7 @@ defineProps<{
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  padding: var(--space-5);
+  padding: var(--space-6);
   font-family: var(--font-family-base);
   color: var(--color-text);
 }
@@ -113,6 +113,6 @@ defineProps<{
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
 }
 </style>

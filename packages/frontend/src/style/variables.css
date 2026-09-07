@@ -1,102 +1,373 @@
+/* たく日和 — design tokens.
+   Source of truth: Claude Design handoff `_ds/design-system-.../tokens/*.css`
+   (palette: 青空 sky / 太陽 sun / 藍墨 ink-tinted neutrals).
+
+   Layout: raw palette, then semantic tokens (light), then semantic tokens
+   (dark), then legacy aliases (old --color- / --space- prefixed names kept
+   working during the component-by-component migration; drop once every
+   call site moves to the canonical DS names above). */
+
 :root {
-  --font-family-base: 'Quicksand', 'M PLUS Rounded 1c', sans-serif;
-  --font-size-base: 16px;
-  --font-size-sm: 0.875rem; /* 14px = body-sm */
-  --font-size-lg: 1.5rem; /* 24px */
+  /* --- Sky / primary ------------------------------------------------ */
+  --sky-50: #f3f8fd;
+  --sky-100: #e4eff9;
+  --sky-200: #c8dff3;
+  --sky-300: #a1c7e9;
+  --sky-400: #73aadb;
+  --sky-500: #4c8cc9;
+  --sky-600: #336fae;
+  --sky-700: #29598c;
+  --sky-800: #22466e;
+  --sky-900: #1b3653;
+  --sky-950: #12253a;
 
-  --color-primary: #005f6b;
-  --color-primary-strong: #004a53;
-  --color-primary-soft: #d7ecee;
-  --color-on-primary: #ffffff;
-  --color-primary-text: #005f6b;
+  /* --- Sun / accent ------------------------------------------------- */
+  --sun-50: #fff9e6;
+  --sun-100: #fef0c3;
+  --sun-200: #fce08c;
+  --sun-300: #f9cb4e;
+  --sun-400: #f2b622;
+  --sun-500: #dd9a0c;
+  --sun-600: #b57708;
+  --sun-700: #8d5c0d;
 
-  --color-secondary: #596774;
+  /* --- Ink / blue-tinted neutrals ----------------------------------- */
+  --ink-0: #ffffff;
+  --ink-25: #fafbfd;
+  --ink-50: #f4f6fa;
+  --ink-100: #e9edf4;
+  --ink-200: #d9dfe9;
+  --ink-300: #bcc5d3;
+  --ink-400: #8f9aac;
+  --ink-500: #6c7789;
+  --ink-600: #4f5a6c;
+  --ink-700: #3a4454;
+  --ink-800: #27303e;
+  --ink-900: #1a2230;
+  --ink-950: #101725;
 
-  --color-background: #f4f5f1;
-  --color-background-alt: #eef0eb;
-  --color-surface: #fafaf8;
-  --color-surface-raised: #f1f2ec;
-  --color-surface-muted: #e9ebe4;
+  /* --- Semantic palettes (muted, so they never fight the brand) ----- */
+  --success-100: #dcf0e6;
+  --success-300: #86c9ac;
+  --success-500: #2f8d68;
+  --success-700: #216349;
 
-  --color-border: #d4d7cf;
-  --color-border-strong: #b5bbb1;
+  --info-100: #dceaf6;
+  --info-300: #8ab9dd;
+  --info-500: #3c7fb0;
+  --info-700: #2b5c81;
 
-  --color-text: #1f2328;
-  --color-text-secondary: #4e5661;
-  --color-text-muted: #5c6978;
+  --warning-100: #faecd2;
+  --warning-300: #e6c286;
+  --warning-500: #b9812a;
+  --warning-700: #8a5f1e;
 
-  --color-success: #1f7348;
-  --color-success-soft: #d3ede1;
-  --color-warning: #8c5e00;
-  --color-warning-soft: #faecd0;
-  --color-error: #b84040;
-  --color-error-soft: #f5dada;
-  --color-info: #005f6b;
+  --error-100: #f8e2e0;
+  --error-300: #e0a3a0;
+  --error-500: #bf4f4c;
+  --error-700: #8f3a37;
 
-  --color-dark-background: #1c2026;
-  --color-dark-background-alt: #21262d;
-  --color-dark-surface: #25292f;
-  --color-dark-surface-raised: #2c3138;
-  --color-dark-surface-muted: #343941;
-  --color-dark-border: #434a54;
-  --color-dark-border-strong: #59616c;
-  --color-dark-text: #f2f4f7;
-  --color-dark-text-secondary: #cdd3da;
-  --color-dark-text-muted: #929aa5;
+  /* ================= SEMANTIC TOKENS — LIGHT (昼) ================== */
+  color-scheme: light;
 
-  --color-dark-success-soft: #1a3028;
-  --color-dark-warning-soft: #3d3018;
-  --color-dark-error-soft: #3a1f1f;
+  --background: var(--ink-25);
+  --background-alt: var(--sky-50);
+  --surface: var(--ink-0);
+  --surface-subtle: var(--ink-50);
+  --surface-raised: var(--ink-0);
+  --surface-inverse: var(--sky-900);
+  --overlay: rgb(18 37 58 / 0.42);
 
-  --shadow-sm: 0 2px 6px rgba(31, 35, 40, 0.04);
-  --shadow-md: 0 8px 24px rgba(31, 35, 40, 0.06);
-  --shadow-lg: 0 10px 28px rgba(31, 35, 40, 0.08);
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-500);
+  --text-tertiary: var(--ink-400);
+  --text-disabled: var(--ink-300);
+  --text-on-primary: #ffffff;
+  --text-on-accent: var(--sky-950);
+  --text-inverse: var(--sky-50);
+  --text-link: var(--sky-700);
+  --text-link-hover: var(--sky-800);
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-full: 9999px;
+  --border: var(--ink-200);
+  --border-subtle: var(--ink-100);
+  --border-strong: var(--ink-300);
+  --border-focus: var(--sky-500);
 
+  --primary: var(--sky-600);
+  --primary-hover: var(--sky-700);
+  --primary-active: var(--sky-800);
+  --primary-subtle: var(--sky-100);
+  --primary-subtle-hover: var(--sky-200);
+  --primary-on-subtle: var(--sky-800);
+
+  --accent: var(--sun-300);
+  --accent-hover: var(--sun-400);
+  --accent-active: var(--sun-500);
+  --accent-subtle: var(--sun-50);
+  --accent-on-subtle: var(--sun-700);
+  --accent-line: var(--sun-400);
+
+  --success: var(--success-500);
+  --success-surface: var(--success-100);
+  --success-text: var(--success-700);
+  --info: var(--info-500);
+  --info-surface: var(--info-100);
+  --info-text: var(--info-700);
+  --warning: var(--warning-500);
+  --warning-surface: var(--warning-100);
+  --warning-text: var(--warning-700);
+  --error: var(--error-500);
+  --error-surface: var(--error-100);
+  --error-text: var(--error-700);
+
+  --focus-ring: 0 0 0 3px rgb(76 140 201 / 0.32);
+
+  /* Sky gradient used behind hero areas and illustration blocks */
+  --sky-scene: linear-gradient(
+    180deg,
+    var(--sky-300) 0%,
+    var(--sky-200) 44%,
+    var(--sky-100) 100%
+  );
+  --sky-scene-glow: radial-gradient(
+    circle at 78% 22%,
+    rgb(249 203 78 / 0.38) 0%,
+    rgb(249 203 78 / 0) 32%
+  );
+
+  /* --- Typography ----------------------------------------------------
+     Japanese-first: generous line-height, no ultra-bold, no oversized
+     headings. */
+  --font-display:
+    'Zen Kaku Gothic New', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN',
+    'Yu Gothic', sans-serif;
+  --font-body:
+    'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo',
+    sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
+  --text-display: 400 2.5rem/1.28 var(--font-display);
+  --text-h1: 700 2rem/1.35 var(--font-display);
+  --text-h2: 700 1.5rem/1.4 var(--font-display);
+  --text-h3: 500 1.25rem/1.5 var(--font-display);
+  --text-body-lg: 400 1.125rem/1.85 var(--font-body);
+  --text-body: 400 1rem/1.8 var(--font-body);
+  --text-body-sm: 400 0.875rem/1.75 var(--font-body);
+  --text-label: 500 0.8125rem/1.45 var(--font-body);
+  --text-caption: 400 0.75rem/1.6 var(--font-body);
+  --text-overline: 600 0.6875rem/1.45 var(--font-body);
+
+  --size-display: 2.5rem;
+  --size-h1: 2rem;
+  --size-h2: 1.5rem;
+  --size-h3: 1.25rem;
+  --size-body-lg: 1.125rem;
+  --size-body: 1rem;
+  --size-body-sm: 0.875rem;
+  --size-label: 0.8125rem;
+  --size-caption: 0.75rem;
+  --size-overline: 0.6875rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-overline: 0.14em;
+
+  /* --- Spacing (4px base, calm rhythm) -------------------------------- */
+  --space-0: 0;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
 
+  --gutter: var(--space-6);
+  --card-padding: var(--space-5);
+  --section-gap: var(--space-10);
+  --container-sm: 560px;
+  --container-md: 768px;
+  --container-lg: 1080px;
+  --container-xl: 1280px;
+  --nav-height: 60px;
+  --sidebar-width: 232px;
+
+  /* --- Shape & border (soft, but not round-everything) ---------------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --radius-control: var(--radius-sm);
+  --radius-card: var(--radius-md);
+  --radius-sheet: var(--radius-lg);
+
+  --border-width: 1px;
+  --border-width-strong: 1.5px;
+  --border-hairline: var(--border-width) solid var(--border);
+  --border-card: var(--border-width) solid var(--border-subtle);
+  --stroke-icon: 1.75;
+
+  /* --- Elevation (hierarchy comes from border + surface first) ------- */
+  --shadow-none: none;
+  --shadow-xs: 0 1px 1px rgb(18 37 58 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(18 37 58 / 0.05), 0 1px 3px rgb(18 37 58 / 0.04);
+  --shadow-md: 0 2px 4px rgb(18 37 58 / 0.05), 0 4px 12px rgb(18 37 58 / 0.06);
+  --shadow-lg: 0 8px 28px rgb(18 37 58 / 0.1);
+  --shadow-focus: var(--focus-ring);
+
+  --elev-0: var(--surface);
+  --elev-1: var(--shadow-xs);
+  --elev-2: var(--shadow-sm);
+  --elev-3: var(--shadow-md);
+  --elev-4: var(--shadow-lg);
+
+  /* --- Motion (short, soft, never bouncy) ----------------------------- */
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-instant: 90ms;
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+  --duration-slow: 360ms;
+  --transition-control:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+
+  /* =====================================================================
+     Legacy aliases — old token names, pointed at the new DS values so
+     every existing component keeps working unchanged. Migrate call sites
+     to the canonical names above as each component is touched, then
+     delete the alias.
+     ===================================================================== */
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-active);
+  --color-primary-soft: var(--primary-subtle);
+  --color-on-primary: var(--text-on-primary);
+  --color-primary-text: var(--primary);
+  --color-secondary: var(--text-secondary);
+
+  --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-subtle);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-tertiary);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-surface);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-surface);
+  --color-info: var(--info);
+
+  --font-family-base: var(--font-body);
+  --font-size-base: var(--size-body);
+  --font-size-sm: var(--size-body-sm);
+  --font-size-lg: var(--size-h2);
+
+  /* Not part of the DS type scale (which bakes line-height into the
+     --text-* shorthands) — kept as project-local values. */
   --line-height-tight: 1.25;
   --line-height-standard: 1.5;
   --line-height-relaxed: 1.65;
-
-  color-scheme: light;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-background: var(--color-dark-background);
-  --color-background-alt: var(--color-dark-background-alt);
-  --color-surface: var(--color-dark-surface);
-  --color-surface-raised: var(--color-dark-surface-raised);
-  --color-surface-muted: var(--color-dark-surface-muted);
-  --color-border: var(--color-dark-border);
-  --color-border-strong: var(--color-dark-border-strong);
-  --color-text: var(--color-dark-text);
-  --color-text-secondary: var(--color-dark-text-secondary);
-  --color-text-muted: var(--color-dark-text-muted);
+  --background: #0e1826;
+  --background-alt: #0a121d;
+  --surface: #16222f;
+  --surface-subtle: #1c2938;
+  --surface-raised: #1f2d3d;
+  --surface-inverse: var(--sky-100);
+  --overlay: rgb(6 12 20 / 0.62);
 
-  /* ダーク背景でのコントラスト確保 (各色 4.5:1 以上) */
-  /* --color-primary はボタン/ヘッダー背景にも使用するため変更不可。
-     テキスト用途には --color-primary-text を使う。 */
-  --color-primary-text: #3db5c5;
-  --color-info: #3db5c5;
-  --color-success: #54c48c; /* 4.5:1+ on badge bg (color-mix 15% surface) */
-  --color-success-soft: var(--color-dark-success-soft);
-  --color-warning: #e8a030; /* 5.01:1 */
-  --color-warning-soft: var(--color-dark-warning-soft);
-  --color-error: #f88080; /* 4.55:1 */
-  --color-error-soft: var(--color-dark-error-soft);
+  --text-primary: #e7eef7;
+  --text-secondary: #a6b5c7;
+  --text-tertiary: #8492a5;
+  --text-disabled: #5c6a7c;
+  --text-on-primary: #08131f;
+  --text-on-accent: #1a1206;
+  --text-inverse: var(--ink-900);
+  --text-link: var(--sky-300);
+  --text-link-hover: var(--sky-200);
+
+  --border: #2b3b4e;
+  --border-subtle: #223040;
+  --border-strong: #3b4d63;
+  --border-focus: var(--sky-300);
+
+  --primary: #7db4e6;
+  --primary-hover: #9bc7ef;
+  --primary-active: #b6d7f5;
+  --primary-subtle: #1b2f44;
+  --primary-subtle-hover: #23405b;
+  --primary-on-subtle: #b6d7f5;
+
+  --accent: var(--sun-300);
+  --accent-hover: var(--sun-200);
+  --accent-active: var(--sun-100);
+  --accent-subtle: #2c2312;
+  --accent-on-subtle: var(--sun-200);
+  --accent-line: var(--sun-300);
+
+  --success: #63b391;
+  --success-surface: #16302a;
+  --success-text: #9ed4ba;
+  --info: #7aaed6;
+  --info-surface: #16293a;
+  --info-text: #a9cde8;
+  --warning: #dfae62;
+  --warning-surface: #322717;
+  --warning-text: #eccb95;
+  --error: #dc8b88;
+  --error-surface: #341f20;
+  --error-text: #eeb2b0;
+
+  --focus-ring: 0 0 0 3px rgb(125 180 230 / 0.38);
+
+  --sky-scene: linear-gradient(180deg, #12253a 0%, #16283c 46%, #1b2f44 100%);
+  --sky-scene-glow: radial-gradient(
+    circle at 78% 22%,
+    rgb(249 203 78 / 0.26) 0%,
+    rgb(249 203 78 / 0) 30%
+  );
+
+  --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.2);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.26), 0 1px 3px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 2px 6px rgb(0 0 0 / 0.3), 0 6px 16px rgb(0 0 0 / 0.24);
+  --shadow-lg: 0 10px 32px rgb(0 0 0 / 0.42);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
 }
 
 body {
@@ -115,6 +386,6 @@ a:hover {
 }
 
 ::selection {
-  background: var(--color-primary-soft);
-  color: var(--color-text);
+  background: var(--sun-200);
+  color: var(--ink-900);
 }

@@ -45,8 +45,8 @@ const iconMap = {
 <style scoped>
 .toast-stack {
   position: fixed;
-  bottom: var(--space-5);
-  right: var(--space-5);
+  bottom: var(--space-6);
+  right: var(--space-6);
   z-index: 9999;
   display: flex;
   flex-direction: column;

@@ -205,7 +205,7 @@ const detailRoute = computed(() => ({
 
 .empty {
   margin: 0;
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-8) var(--space-3);
 
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
@@ -218,7 +218,7 @@ const detailRoute = computed(() => ({
   align-items: center;
   gap: var(--space-2);
 
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
 
   background: var(--color-background);
   border: 1px solid var(--color-border);

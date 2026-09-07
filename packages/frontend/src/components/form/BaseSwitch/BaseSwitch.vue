@@ -69,6 +69,14 @@ const model = defineModel<boolean>({ default: false });
 .switch--disabled :deep(.switch__track) {
   background: var(--border-subtle);
 }
+/*
+ * checked 側のセレクタのほうが詳細度が高く、無効でも --primary のまま光ってしまう。
+ * つまみの位置で on/off は読めるので、色は無効寄りに落として区別する。
+ */
+.switch--disabled :deep(.switch__root[aria-checked='true'] .switch__track),
+.switch--disabled :deep(.switch__root[data-state='checked'] .switch__track) {
+  background: var(--border-strong);
+}
 
 :deep(.switch__thumb) {
   width: 16px;

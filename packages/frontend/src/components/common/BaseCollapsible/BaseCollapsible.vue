@@ -57,9 +57,13 @@ const open = defineModel<boolean>({ default: false });
 .collapsible__activator:hover {
   background: var(--primary-subtle);
 }
+/*
+ * 親の .collapsible が overflow: hidden なので、外側へ広がる box-shadow の
+ * フォーカスリングは全辺で切り取られて見えなくなる。内側に描く outline を使う。
+ */
 .collapsible__activator:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
 }
 
 .collapsible__title {

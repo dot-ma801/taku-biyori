@@ -95,6 +95,13 @@ const model = defineModel<string>({ default: '' });
 .textbox__control::placeholder {
   color: var(--text-tertiary);
 }
+/*
+ * ::placeholder は色を自分で持つため :disabled の color を継承しない。
+ * 明示的に落とさないと、空の無効フィールドだけ有効に見えてしまう。
+ */
+.textbox__control:disabled::placeholder {
+  color: var(--text-disabled);
+}
 .textbox__control:hover:not(:disabled):not(:read-only) {
   border-color: var(--border-strong);
 }

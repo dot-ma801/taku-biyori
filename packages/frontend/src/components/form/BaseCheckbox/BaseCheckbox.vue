@@ -82,11 +82,22 @@ const model = defineModel<boolean>({ default: false });
   background: var(--surface-subtle);
   border-color: var(--border-subtle);
 }
+/*
+ * disabled は checked より後ろに置いて塗りを打ち消すので、チェック済みのまま
+ * 無効化された場合はここで見え方を作り直す。--surface-subtle の上に
+ * --text-on-primary（白）のチェックが残ると、消えて未チェックに見えてしまう。
+ */
+:deep(.checkbox__root[aria-checked='true']:disabled),
+:deep(.checkbox__root[data-state='checked']:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
 
 :deep(.checkbox__indicator) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-on-primary);
+  /* 箱の色を継承する。有効時は --text-on-primary、無効時は --text-secondary */
+  color: inherit;
 }
 </style>

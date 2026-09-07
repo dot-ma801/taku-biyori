@@ -111,6 +111,10 @@ const model = defineModel<string>();
   background: var(--surface-subtle);
   border-color: var(--border-subtle);
 }
+/* 選択済みのまま無効化されたときは、選択が読み取れる程度に枠を残す */
+.radio--disabled .radio__circle:has([data-state='checked']) {
+  border-color: var(--border-strong);
+}
 
 /* Radio.Root (button) のデフォルトスタイルをリセット */
 .radio__circle :deep(button) {
@@ -136,7 +140,11 @@ const model = defineModel<string>();
   border-radius: 50%;
   display: block;
 }
+/*
+ * --text-disabled は --surface-subtle の上でほとんど沈むため、点だけは
+ * --text-secondary にして「選ばれている」ことが分かる濃さを残す。
+ */
 .radio--disabled .radio__indicator {
-  background: var(--text-disabled);
+  background: var(--text-secondary);
 }
 </style>

@@ -126,6 +126,15 @@ const removeIconSize = computed(() => ICON_SIZE[props.size]);
   border-color: var(--border-subtle);
   cursor: not-allowed;
 }
+/*
+ * 選択の手がかりは色しか無いので、無効化しても選択済みだと分かる塗りを残す。
+ * 打ち消してしまうと aria-pressed が true のまま見た目が未選択になる。
+ */
+.chip--selected.chip--disabled {
+  background-color: var(--primary-subtle);
+  color: var(--text-secondary);
+  border-color: var(--primary-subtle-hover);
+}
 
 .chip__remove {
   display: inline-flex;

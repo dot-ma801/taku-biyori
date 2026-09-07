@@ -40,9 +40,14 @@ const facts = computed(() => [
   },
 ]);
 
-// 当日の連絡事項は開催側、卓そのものの説明はロビー側が持つ
-const description = computed(
-  () => props.gameSession?.description ?? props.lobby.description,
+/*
+ * 卓そのものの説明（ロビー）と当日の連絡事項（開催）は**上書きの関係ではなく
+ * 別々のフィールド**。?? で片方を選ぶと、開催に連絡事項が入った途端に
+ * 卓の説明が消えてしまうので、それぞれ独立して出す。
+ */
+const lobbyDescription = computed(() => props.lobby.description);
+const gameSessionDescription = computed(
+  () => props.gameSession?.description ?? null,
 );
 </script>
 
@@ -57,8 +62,12 @@ const description = computed(
       </dl>
     </BaseCard>
 
-    <BaseCard v-if="description" title="説明・当日の連絡事項">
-      <p class="overview__description">{{ description }}</p>
+    <BaseCard v-if="lobbyDescription" title="卓の説明">
+      <p class="overview__description">{{ lobbyDescription }}</p>
+    </BaseCard>
+
+    <BaseCard v-if="gameSessionDescription" title="当日の連絡事項">
+      <p class="overview__description">{{ gameSessionDescription }}</p>
     </BaseCard>
   </div>
 </template>

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { ref } from 'vue';
-import type { TableCardModel } from '@/features/Table/toTableCards';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
-import { useTableListTabs } from '@/features/Table/List/useTableListTabs';
+import type { GameSessionCardModel } from '@/features/GameSession/toGameSessionCards';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
+import { useGameSessionListTabs } from '@/features/GameSession/List/useGameSessionListTabs';
 
 const makeCard = (
   lobbyId: string,
-  status: TableCardStatus,
-): TableCardModel => ({
+  status: GameSessionCardStatus,
+): GameSessionCardModel => ({
   lobbyId,
   gameSessionId: null,
   title: `卓 ${lobbyId}`,
@@ -21,32 +21,38 @@ const makeCard = (
   updatedAt: new Date('2026-07-01T00:00:00.000Z'),
 });
 
-describe('useTableListTabs', () => {
+describe('useGameSessionListTabs', () => {
   describe('タブ', () => {
     it('下書きを除いた5つの状態のタブを、系列の順に返す', () => {
       // Arrange & Act
-      const { tabs } = useTableListTabs([], TableCardStatus.recruiting);
+      const { tabs } = useGameSessionListTabs(
+        [],
+        GameSessionCardStatus.recruiting,
+      );
 
       // Assert
       expect(tabs.value.map((t) => t.value)).toEqual([
-        TableCardStatus.recruiting,
-        TableCardStatus.adjusting,
-        TableCardStatus.scheduled,
-        TableCardStatus.completed,
-        TableCardStatus.cancelled,
+        GameSessionCardStatus.recruiting,
+        GameSessionCardStatus.adjusting,
+        GameSessionCardStatus.scheduled,
+        GameSessionCardStatus.completed,
+        GameSessionCardStatus.cancelled,
       ]);
     });
 
     it('ラベルに件数を添える', () => {
       // Arrange
       const cards = [
-        makeCard('a', TableCardStatus.recruiting),
-        makeCard('b', TableCardStatus.recruiting),
-        makeCard('c', TableCardStatus.completed),
+        makeCard('a', GameSessionCardStatus.recruiting),
+        makeCard('b', GameSessionCardStatus.recruiting),
+        makeCard('c', GameSessionCardStatus.completed),
       ];
 
       // Act
-      const { tabs } = useTableListTabs(cards, TableCardStatus.recruiting);
+      const { tabs } = useGameSessionListTabs(
+        cards,
+        GameSessionCardStatus.recruiting,
+      );
 
       // Assert
       expect(tabs.value[0]?.label).toBe('募集中 2');
@@ -59,14 +65,14 @@ describe('useTableListTabs', () => {
     it('開いているタブの状態の卓だけを返す', () => {
       // Arrange
       const cards = [
-        makeCard('a', TableCardStatus.recruiting),
-        makeCard('b', TableCardStatus.scheduled),
+        makeCard('a', GameSessionCardStatus.recruiting),
+        makeCard('b', GameSessionCardStatus.scheduled),
       ];
 
       // Act
-      const { cardsOfActiveTab } = useTableListTabs(
+      const { cardsOfActiveTab } = useGameSessionListTabs(
         cards,
-        TableCardStatus.scheduled,
+        GameSessionCardStatus.scheduled,
       );
 
       // Assert
@@ -76,14 +82,14 @@ describe('useTableListTabs', () => {
     it('タブを切り替えると絞り込みも切り替わる', () => {
       // Arrange
       const cards = [
-        makeCard('a', TableCardStatus.recruiting),
-        makeCard('b', TableCardStatus.scheduled),
+        makeCard('a', GameSessionCardStatus.recruiting),
+        makeCard('b', GameSessionCardStatus.scheduled),
       ];
-      const activeTab = ref<string>(TableCardStatus.recruiting);
-      const { cardsOfActiveTab } = useTableListTabs(cards, activeTab);
+      const activeTab = ref<string>(GameSessionCardStatus.recruiting);
+      const { cardsOfActiveTab } = useGameSessionListTabs(cards, activeTab);
 
       // Act
-      activeTab.value = TableCardStatus.scheduled;
+      activeTab.value = GameSessionCardStatus.scheduled;
 
       // Assert
       expect(cardsOfActiveTab.value.map((c) => c.lobbyId)).toEqual(['b']);
@@ -91,25 +97,28 @@ describe('useTableListTabs', () => {
 
     it('未知のタブ値は先頭のタブ（募集中）に倒す', () => {
       // Arrange
-      const cards = [makeCard('a', TableCardStatus.recruiting)];
+      const cards = [makeCard('a', GameSessionCardStatus.recruiting)];
 
       // Act
-      const { activeStatus, cardsOfActiveTab } = useTableListTabs(
+      const { activeStatus, cardsOfActiveTab } = useGameSessionListTabs(
         cards,
         'unknown-tab',
       );
 
       // Assert
-      expect(activeStatus.value).toBe(TableCardStatus.recruiting);
+      expect(activeStatus.value).toBe(GameSessionCardStatus.recruiting);
       expect(cardsOfActiveTab.value).toHaveLength(1);
     });
 
     it('下書きの卓はどのタブにも出ない', () => {
       // Arrange
-      const cards = [makeCard('draft', TableCardStatus.draft)];
+      const cards = [makeCard('draft', GameSessionCardStatus.draft)];
 
       // Act
-      const { tabs } = useTableListTabs(cards, TableCardStatus.recruiting);
+      const { tabs } = useGameSessionListTabs(
+        cards,
+        GameSessionCardStatus.recruiting,
+      );
 
       // Assert
       expect(tabs.value.every((t) => t.label.endsWith(' 0'))).toBe(true);
@@ -119,7 +128,10 @@ describe('useTableListTabs', () => {
   describe('空状態の文言', () => {
     it('開いているタブに応じた文言を返す', () => {
       // Arrange & Act
-      const { emptyMessage } = useTableListTabs([], TableCardStatus.completed);
+      const { emptyMessage } = useGameSessionListTabs(
+        [],
+        GameSessionCardStatus.completed,
+      );
 
       // Assert
       expect(emptyMessage.value).toBe('終えた卓はまだありません');

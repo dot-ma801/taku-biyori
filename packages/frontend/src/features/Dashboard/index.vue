@@ -5,19 +5,19 @@ import { ArrowRight, Pencil, Plus, UserRound } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
-import TableCardGrid from '@/features/Table/TableCardGrid.vue';
-import { useTableCards } from '@/features/Table/useTableCards';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
+import GameSessionCardGrid from '@/features/GameSession/GameSessionCardGrid.vue';
+import { useGameSessionCards } from '@/features/GameSession/useGameSessionCards';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 const router = useRouter();
-const { cardsOf, countBy, draftCards, errorMessage } = useTableCards();
+const { cardsOf, countBy, draftCards, errorMessage } = useGameSessionCards();
 
-const scheduledCards = cardsOf(TableCardStatus.scheduled);
-const adjustingCards = cardsOf(TableCardStatus.adjusting);
+const scheduledCards = cardsOf(GameSessionCardStatus.scheduled);
+const adjustingCards = cardsOf(GameSessionCardStatus.adjusting);
 // 「終えた卓」はマイページと同じ範囲を数える。完了だけだと、中止した卓しか
 // 持っていない人に 0 件と出るのに、リンク先には卓が並ぶ食い違いになる
-const completedCount = countBy(TableCardStatus.completed);
-const cancelledCount = countBy(TableCardStatus.cancelled);
+const completedCount = countBy(GameSessionCardStatus.completed);
+const cancelledCount = countBy(GameSessionCardStatus.cancelled);
 
 const hasDrafts = computed(() => draftCards.value.length > 0);
 const finishedCount = computed(
@@ -56,7 +56,7 @@ const onClickProfile = () => {
     <!-- 直近に控えている予定がいちばん見たい情報なので先頭に置く -->
     <section class="dashboard__section">
       <h2 class="dashboard__section-title">日程の決まった卓</h2>
-      <TableCardGrid
+      <GameSessionCardGrid
         :cards="scheduledCards"
         empty-message="開催日の決まった卓はまだありません"
       />
@@ -69,7 +69,7 @@ const onClickProfile = () => {
           回答が集まったら、開催日を決められます
         </span>
       </div>
-      <TableCardGrid
+      <GameSessionCardGrid
         :cards="adjustingCards"
         empty-message="日程を調整している卓はありません"
       />

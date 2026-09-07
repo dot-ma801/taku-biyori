@@ -1,7 +1,7 @@
 import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 /**
  * 一覧に出す「卓」1枚ぶんの表示モデル。
@@ -13,14 +13,14 @@ import { TableCardStatus } from '@/features/Table/tableCardStatus';
  * 日時・場所は持たせない。一覧のカードには出さない決まりなので、
  * 表示できてしまうデータを載せない（#151）。
  */
-export type TableCardModel = {
+export type GameSessionCardModel = {
   /** 卓の同一性はロビーが持つ。v-for の key にも使う */
   lobbyId: string;
   /** 状態の根拠になった開催。まだ開催が無い卓では null */
   gameSessionId: string | null;
   title: string;
   scenarioName: string | null;
-  status: TableCardStatus;
+  status: GameSessionCardStatus;
   /** 在籍中の人数。脱退者は数えない */
   memberCount: number;
   /** 定員。null なら未設定 */
@@ -85,30 +85,33 @@ const pickNewest = (
 const resolveStatus = (
   lobby: LobbyListItemModel,
   sessions: GameSessionListItemModel[],
-): { status: TableCardStatus; session: GameSessionListItemModel | null } => {
+): {
+  status: GameSessionCardStatus;
+  session: GameSessionListItemModel | null;
+} => {
   if (lobby.status === LobbyStatus.disbanded) {
-    return { status: TableCardStatus.cancelled, session: null };
+    return { status: GameSessionCardStatus.cancelled, session: null };
   }
 
   const live = pickNewest(sessions, LIVE_SESSION_STATUSES);
   if (live !== null) {
-    return { status: TableCardStatus.scheduled, session: live };
+    return { status: GameSessionCardStatus.scheduled, session: live };
   }
 
   const completed = pickNewest(sessions, [GameSessionStatus.completed]);
   if (completed !== null) {
-    return { status: TableCardStatus.completed, session: completed };
+    return { status: GameSessionCardStatus.completed, session: completed };
   }
 
   if (lobby.status === LobbyStatus.draft) {
-    return { status: TableCardStatus.draft, session: null };
+    return { status: GameSessionCardStatus.draft, session: null };
   }
 
   return {
     status:
       lobby.status === LobbyStatus.open
-        ? TableCardStatus.recruiting
-        : TableCardStatus.adjusting,
+        ? GameSessionCardStatus.recruiting
+        : GameSessionCardStatus.adjusting,
     session: null,
   };
 };
@@ -121,11 +124,11 @@ const resolveStatus = (
  *
  * @param myUserId ログイン中のユーザー ID。未ログインなら null
  */
-export const toTableCards = (
+export const toGameSessionCards = (
   lobbies: LobbyListItemModel[],
   gameSessions: GameSessionListItemModel[],
   myUserId: string | null,
-): TableCardModel[] => {
+): GameSessionCardModel[] => {
   const sessionsByLobbyId = new Map<string, GameSessionListItemModel[]>();
   for (const session of gameSessions) {
     const bucket = sessionsByLobbyId.get(session.lobbyId);
@@ -170,11 +173,11 @@ export const toTableCards = (
 };
 
 /** 開催のステータスだけから卓の状態を決める（ロビーが手元に無いとき用） */
-const ORPHAN_STATUS: Record<GameSessionStatus, TableCardStatus> = {
-  [GameSessionStatus.scheduled]: TableCardStatus.scheduled,
-  [GameSessionStatus.today]: TableCardStatus.scheduled,
-  [GameSessionStatus.completed]: TableCardStatus.completed,
-  [GameSessionStatus.cancelled]: TableCardStatus.cancelled,
+const ORPHAN_STATUS: Record<GameSessionStatus, GameSessionCardStatus> = {
+  [GameSessionStatus.scheduled]: GameSessionCardStatus.scheduled,
+  [GameSessionStatus.today]: GameSessionCardStatus.scheduled,
+  [GameSessionStatus.completed]: GameSessionCardStatus.completed,
+  [GameSessionStatus.cancelled]: GameSessionCardStatus.cancelled,
 };
 
 /**
@@ -191,7 +194,7 @@ const toOrphanSessionCards = (
   lobbies: LobbyListItemModel[],
   gameSessions: GameSessionListItemModel[],
   myUserId: string | null,
-): TableCardModel[] => {
+): GameSessionCardModel[] => {
   const knownLobbyIds = new Set(lobbies.map((l) => l.id));
   const orphans = gameSessions.filter((s) => !knownLobbyIds.has(s.lobbyId));
 
@@ -225,11 +228,11 @@ const toOrphanSessionCards = (
  * 「ちょっと編集した」だけで明日の卓より前に出てしまう。
  * それ以外は既定どおり更新の新しい順。
  */
-export const sortTableCards = (
-  cards: TableCardModel[],
-  status: TableCardStatus,
-): TableCardModel[] => {
-  if (status !== TableCardStatus.scheduled) return cards;
+export const sortGameSessionCards = (
+  cards: GameSessionCardModel[],
+  status: GameSessionCardStatus,
+): GameSessionCardModel[] => {
+  if (status !== GameSessionCardStatus.scheduled) return cards;
   return [...cards].sort((a, b) =>
     (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? ''),
   );

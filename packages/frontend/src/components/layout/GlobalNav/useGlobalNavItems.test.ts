@@ -17,7 +17,7 @@ describe('toGlobalNavItemViews', () => {
       // Assert
       expect(items.map((i) => i.id)).toEqual([
         'dashboard',
-        'tables',
+        'game-sessions',
         'profile',
       ]);
     });
@@ -30,7 +30,7 @@ describe('toGlobalNavItemViews', () => {
     });
 
     it.each([
-      PAGE_NAME.tables,
+      PAGE_NAME.gameSessions,
       PAGE_NAME.lobbiesDetail,
       PAGE_NAME.lobbiesNew,
       PAGE_NAME.lobbiesEdit,
@@ -39,7 +39,7 @@ describe('toGlobalNavItemViews', () => {
       PAGE_NAME.gameSessionsPlayMemo,
     ])('卓配下の "%s" では卓が現在地になる', (page) => {
       // Arrange & Act & Assert
-      expect(currentIds(page)).toEqual(['tables']);
+      expect(currentIds(page)).toEqual(['game-sessions']);
     });
 
     it('profile-setting ではマイページが現在地になる', () => {

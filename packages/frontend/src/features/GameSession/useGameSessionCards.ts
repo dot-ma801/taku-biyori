@@ -5,17 +5,20 @@ import { ApiError } from '@/lib/api-client';
 import type { LobbyListItemModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
 import { useAuthStore } from '@/stores/auth';
-import { sortTableCards, toTableCards } from '@/features/Table/toTableCards';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
+import {
+  sortGameSessionCards,
+  toGameSessionCards,
+} from '@/features/GameSession/toGameSessionCards';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 /**
  * 卓カードの取得。
  *
- * ロビー・開催・公開ロビーを1回だけまとめて取り、`toTableCards` で卓に畳む。
+ * ロビー・開催・公開ロビーを1回だけまとめて取り、`toGameSessionCards` で卓に畳む。
  * 画面（ダッシュボード / 卓一覧）はどちらもこの1つの取得を使うので、
  * セクションやタブが増えてもリクエストは増えない。
  */
-export const useTableCards = () => {
+export const useGameSessionCards = () => {
   const authStore = useAuthStore();
 
   const myLobbies = ref<LobbyListItemModel[]>([]);
@@ -42,17 +45,17 @@ export const useTableCards = () => {
 
   /** 自分の卓。下書きも含む */
   const cards = computed(() =>
-    toTableCards(myLobbies.value, gameSessions.value, myUserId.value),
+    toGameSessionCards(myLobbies.value, gameSessions.value, myUserId.value),
   );
 
   /** 下書きを除いた自分の卓。一覧のタブはこちらを使う */
   const activeCards = computed(() =>
-    cards.value.filter((c) => c.status !== TableCardStatus.draft),
+    cards.value.filter((c) => c.status !== GameSessionCardStatus.draft),
   );
 
   /** 下書きの卓。ダッシュボードの1行から辿る導線にだけ使う */
   const draftCards = computed(() =>
-    cards.value.filter((c) => c.status === TableCardStatus.draft),
+    cards.value.filter((c) => c.status === GameSessionCardStatus.draft),
   );
 
   /**
@@ -65,20 +68,20 @@ export const useTableCards = () => {
    * `GET /api/lobbies` 自体が受付中のロビーだけを返すため、ここは常に募集中でよい。
    */
   const publicCards = computed(() =>
-    toTableCards(
+    toGameSessionCards(
       fetchedPublicLobbies.value.filter((l) => !isMine(l)),
       [],
       myUserId.value,
     ),
   );
 
-  const countBy = (status: TableCardStatus) =>
+  const countBy = (status: GameSessionCardStatus) =>
     computed(() => activeCards.value.filter((c) => c.status === status).length);
 
   /** 指定した状態の卓だけを、その状態に合った並び順で返す */
-  const cardsOf = (status: TableCardStatus) =>
+  const cardsOf = (status: GameSessionCardStatus) =>
     computed(() =>
-      sortTableCards(
+      sortGameSessionCards(
         activeCards.value.filter((c) => c.status === status),
         status,
       ),

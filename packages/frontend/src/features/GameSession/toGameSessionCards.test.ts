@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
-import { sortTableCards, toTableCards } from '@/features/Table/toTableCards';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
+import {
+  sortGameSessionCards,
+  toGameSessionCards,
+} from '@/features/GameSession/toGameSessionCards';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 const MY_USER_ID = 'my-user-id';
 
@@ -53,17 +56,17 @@ const makeEntry = (userId: string, leftAt: Date | null = null) => ({
   leftAt,
 });
 
-describe('toTableCards', () => {
+describe('toGameSessionCards', () => {
   describe('卓の状態の解決', () => {
     it('開催がまだ無い下書きのロビーは draft になる', () => {
       // Arrange
       const lobbies = [makeLobby({ status: LobbyStatus.draft })];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.draft);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.draft);
     });
 
     it('下書きのロビーでも、開催があれば scheduled になる', () => {
@@ -74,10 +77,10 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ status: GameSessionStatus.scheduled })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.scheduled);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.scheduled);
       expect(cards[0]?.gameSessionId).toBe('session-1');
     });
 
@@ -87,10 +90,10 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ status: GameSessionStatus.completed })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.completed);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.completed);
     });
 
     it('受付中で開催が無いロビーは recruiting（募集中）になる', () => {
@@ -98,10 +101,10 @@ describe('toTableCards', () => {
       const lobbies = [makeLobby({ status: LobbyStatus.open })];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.recruiting);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.recruiting);
     });
 
     it('受付終了で開催が無いロビーは adjusting（調整中）になる', () => {
@@ -109,10 +112,10 @@ describe('toTableCards', () => {
       const lobbies = [makeLobby({ status: LobbyStatus.closed })];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.adjusting);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.adjusting);
     });
 
     it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
@@ -123,10 +126,10 @@ describe('toTableCards', () => {
         const sessions = [makeSession({ status })];
 
         // Act
-        const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+        const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
         // Assert
-        expect(cards[0]?.status).toBe(TableCardStatus.scheduled);
+        expect(cards[0]?.status).toBe(GameSessionCardStatus.scheduled);
       },
     );
 
@@ -136,10 +139,10 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ status: GameSessionStatus.completed })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.completed);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.completed);
     });
 
     it('解散したロビーは、開催があっても cancelled（中止）になる', () => {
@@ -148,10 +151,10 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ status: GameSessionStatus.scheduled })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.cancelled);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.cancelled);
       expect(cards[0]?.gameSessionId).toBeNull();
     });
 
@@ -161,10 +164,10 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ status: GameSessionStatus.cancelled })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
-      expect(cards[0]?.status).toBe(TableCardStatus.adjusting);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.adjusting);
       expect(cards[0]?.gameSessionId).toBeNull();
     });
   });
@@ -187,11 +190,11 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards).toHaveLength(1);
-      expect(cards[0]?.status).toBe(TableCardStatus.scheduled);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.scheduled);
       expect(cards[0]?.gameSessionId).toBe('next');
     });
 
@@ -204,7 +207,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards[0]?.gameSessionId).toBe('newer');
@@ -225,7 +228,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards[0]?.gameSessionId).toBe('second');
@@ -241,7 +244,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards).toHaveLength(1);
@@ -258,12 +261,14 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ lobbyId: 'lobby-2' })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       const byId = new Map(cards.map((c) => [c.lobbyId, c]));
-      expect(byId.get('lobby-1')?.status).toBe(TableCardStatus.recruiting);
-      expect(byId.get('lobby-2')?.status).toBe(TableCardStatus.scheduled);
+      expect(byId.get('lobby-1')?.status).toBe(
+        GameSessionCardStatus.recruiting,
+      );
+      expect(byId.get('lobby-2')?.status).toBe(GameSessionCardStatus.scheduled);
     });
 
     it('紐づくロビーが無い開催は、その卓の状態に影響しない', () => {
@@ -272,12 +277,14 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ lobbyId: 'unknown-lobby' })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       // lobby-1 は開催なしのまま。unknown-lobby は別のカードとして拾われる
       const byId = new Map(cards.map((c) => [c.lobbyId, c]));
-      expect(byId.get('lobby-1')?.status).toBe(TableCardStatus.recruiting);
+      expect(byId.get('lobby-1')?.status).toBe(
+        GameSessionCardStatus.recruiting,
+      );
       expect(byId.get('lobby-1')?.gameSessionId).toBeNull();
       expect(byId.has('unknown-lobby')).toBe(true);
     });
@@ -294,7 +301,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards[0]?.title).toBe('開催名');
@@ -308,7 +315,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.title).toBe('ロビー名');
@@ -329,7 +336,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.memberCount).toBe(2);
@@ -343,7 +350,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.remainingCount).toBe(3);
@@ -354,7 +361,7 @@ describe('toTableCards', () => {
       const lobbies = [makeLobby({ maxPlayers: null })];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.remainingCount).toBeNull();
@@ -369,7 +376,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.remainingCount).toBe(0);
@@ -382,7 +389,7 @@ describe('toTableCards', () => {
       const lobbies = [makeLobby({ hostUserId: MY_USER_ID })];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.isHost).toBe(true);
@@ -393,7 +400,7 @@ describe('toTableCards', () => {
       const lobbies = [makeLobby({ hostUserId: 'someone-else' })];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.isHost).toBe(false);
@@ -404,7 +411,7 @@ describe('toTableCards', () => {
       const lobbies = [makeLobby({ hostUserId: MY_USER_ID })];
 
       // Act
-      const cards = toTableCards(lobbies, [], null);
+      const cards = toGameSessionCards(lobbies, [], null);
 
       // Assert
       expect(cards[0]?.isHost).toBe(false);
@@ -426,7 +433,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards(lobbies, [], MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, [], MY_USER_ID);
 
       // Assert
       expect(cards.map((c) => c.lobbyId)).toEqual(['new', 'old']);
@@ -447,12 +454,12 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards([], sessions, MY_USER_ID);
+      const cards = toGameSessionCards([], sessions, MY_USER_ID);
 
       // Assert
       expect(cards).toHaveLength(1);
       expect(cards[0]?.lobbyId).toBe('left-lobby');
-      expect(cards[0]?.status).toBe(TableCardStatus.completed);
+      expect(cards[0]?.status).toBe(GameSessionCardStatus.completed);
       expect(cards[0]?.gameSessionId).toBe('left');
     });
 
@@ -461,7 +468,7 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ lobbyId: 'left-lobby', seatCount: 3 })];
 
       // Act
-      const cards = toTableCards([], sessions, MY_USER_ID);
+      const cards = toGameSessionCards([], sessions, MY_USER_ID);
 
       // Assert
       expect(cards[0]?.memberCount).toBe(3);
@@ -485,7 +492,7 @@ describe('toTableCards', () => {
       ];
 
       // Act
-      const cards = toTableCards([], sessions, MY_USER_ID);
+      const cards = toGameSessionCards([], sessions, MY_USER_ID);
 
       // Assert
       expect(cards).toHaveLength(1);
@@ -498,7 +505,7 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ lobbyId: 'lobby-1' })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards).toHaveLength(1);
@@ -512,7 +519,7 @@ describe('toTableCards', () => {
       const sessions = [makeSession({ scheduledAt: '2026-08-15' })];
 
       // Act
-      const cards = toTableCards(lobbies, sessions, MY_USER_ID);
+      const cards = toGameSessionCards(lobbies, sessions, MY_USER_ID);
 
       // Assert
       expect(cards[0]?.scheduledAt).toBe('2026-08-15');
@@ -520,7 +527,7 @@ describe('toTableCards', () => {
 
     it('開催が無い卓では null になる', () => {
       // Arrange & Act
-      const cards = toTableCards([makeLobby()], [], MY_USER_ID);
+      const cards = toGameSessionCards([makeLobby()], [], MY_USER_ID);
 
       // Assert
       expect(cards[0]?.scheduledAt).toBeNull();
@@ -530,16 +537,16 @@ describe('toTableCards', () => {
   describe('空の入力', () => {
     it('ロビーも開催も無ければ空配列を返す', () => {
       // Arrange & Act
-      const cards = toTableCards([], [], MY_USER_ID);
+      const cards = toGameSessionCards([], [], MY_USER_ID);
 
       // Assert
       expect(cards).toEqual([]);
     });
   });
 
-  describe('sortTableCards', () => {
+  describe('sortGameSessionCards', () => {
     const card = (lobbyId: string, scheduledAt: string | null) => ({
-      ...(toTableCards([makeLobby({ id: lobbyId })], [], MY_USER_ID)[0] ??
+      ...(toGameSessionCards([makeLobby({ id: lobbyId })], [], MY_USER_ID)[0] ??
         ({} as never)),
       scheduledAt,
     });
@@ -551,7 +558,10 @@ describe('toTableCards', () => {
       const cards = [card('later', '2026-12-01'), card('sooner', '2026-08-01')];
 
       // Act
-      const sorted = sortTableCards(cards, TableCardStatus.scheduled);
+      const sorted = sortGameSessionCards(
+        cards,
+        GameSessionCardStatus.scheduled,
+      );
 
       // Assert
       expect(sorted.map((c) => c.lobbyId)).toEqual(['sooner', 'later']);
@@ -562,7 +572,10 @@ describe('toTableCards', () => {
       const cards = [card('later', '2026-12-01'), card('sooner', '2026-08-01')];
 
       // Act
-      const sorted = sortTableCards(cards, TableCardStatus.adjusting);
+      const sorted = sortGameSessionCards(
+        cards,
+        GameSessionCardStatus.adjusting,
+      );
 
       // Assert
       expect(sorted.map((c) => c.lobbyId)).toEqual(['later', 'sooner']);
@@ -573,7 +586,7 @@ describe('toTableCards', () => {
       const cards = [card('later', '2026-12-01'), card('sooner', '2026-08-01')];
 
       // Act
-      sortTableCards(cards, TableCardStatus.scheduled);
+      sortGameSessionCards(cards, GameSessionCardStatus.scheduled);
 
       // Assert
       expect(cards.map((c) => c.lobbyId)).toEqual(['later', 'sooner']);

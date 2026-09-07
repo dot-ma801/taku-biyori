@@ -1,28 +1,28 @@
 <script setup lang="ts">
-defineOptions({ name: 'TableList' });
+defineOptions({ name: 'GameSessionList' });
 import { computed, ref } from 'vue';
 import { Plus } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
-import TableCardGrid from '@/features/Table/TableCardGrid.vue';
-import { useTableCards } from '@/features/Table/useTableCards';
-import { useTableListTabs } from '@/features/Table/List/useTableListTabs';
-import { TableCardStatus } from '@/features/Table/tableCardStatus';
+import GameSessionCardGrid from '@/features/GameSession/GameSessionCardGrid.vue';
+import { useGameSessionCards } from '@/features/GameSession/useGameSessionCards';
+import { useGameSessionListTabs } from '@/features/GameSession/List/useGameSessionListTabs';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 const router = useRouter();
-const { activeCards, publicCards, errorMessage } = useTableCards();
+const { activeCards, publicCards, errorMessage } = useGameSessionCards();
 
-const activeTab = ref<string>(TableCardStatus.recruiting);
-const { tabs, cardsOfActiveTab, emptyMessage } = useTableListTabs(
+const activeTab = ref<string>(GameSessionCardStatus.recruiting);
+const { tabs, cardsOfActiveTab, emptyMessage } = useGameSessionListTabs(
   activeCards,
   activeTab,
 );
 
 // 「さがす」導線は募集中のタブにだけ出す。他のタブでは関心が違う
 const showPublicSection = computed(
-  () => activeTab.value === TableCardStatus.recruiting,
+  () => activeTab.value === GameSessionCardStatus.recruiting,
 );
 
 const onClickCreate = () => {
@@ -45,7 +45,7 @@ const onClickCreate = () => {
 
     <BaseTabs v-model="activeTab" :tabs="tabs" label="卓の状態">
       <template v-for="tab in tabs" :key="tab.value" #[tab.value]>
-        <TableCardGrid
+        <GameSessionCardGrid
           :cards="cardsOfActiveTab"
           :empty-message="emptyMessage"
         />
@@ -54,7 +54,7 @@ const onClickCreate = () => {
 
     <section v-if="showPublicSection" class="table-list__public">
       <h2 class="table-list__public-title">ほかの人が募集している卓</h2>
-      <TableCardGrid
+      <GameSessionCardGrid
         :cards="publicCards"
         empty-message="いま募集している卓はありません"
       />

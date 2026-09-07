@@ -3,18 +3,22 @@ import { computed } from 'vue';
 import { BookOpen, UsersRound } from '@lucide/vue';
 import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
-import type { TableCardModel } from '@/features/Table/toTableCards';
+import type { GameSessionCardModel } from '@/features/GameSession/toGameSessionCards';
 import {
-  TABLE_CARD_STATUS_LABEL,
-  TABLE_CARD_STATUS_TONE,
-} from '@/features/Table/tableCardStatus';
+  GAME_SESSION_CARD_STATUS_LABEL,
+  GAME_SESSION_CARD_STATUS_TONE,
+} from '@/features/GameSession/gameSessionCardStatus';
 
 const props = defineProps<{
-  card: TableCardModel;
+  card: GameSessionCardModel;
 }>();
 
-const statusLabel = computed(() => TABLE_CARD_STATUS_LABEL[props.card.status]);
-const statusTone = computed(() => TABLE_CARD_STATUS_TONE[props.card.status]);
+const statusLabel = computed(
+  () => GAME_SESSION_CARD_STATUS_LABEL[props.card.status],
+);
+const statusTone = computed(
+  () => GAME_SESSION_CARD_STATUS_TONE[props.card.status],
+);
 
 // 表示用のフォールバック文言は UI の関心事なのでここで解決する
 const scenarioName = computed(() => props.card.scenarioName ?? 'シナリオ未定');

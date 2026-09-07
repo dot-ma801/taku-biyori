@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import TableCard from '@/features/Table/TableCard.vue';
-import type { TableCardModel } from '@/features/Table/toTableCards';
+import GameSessionCard from '@/features/GameSession/GameSessionCard.vue';
+import type { GameSessionCardModel } from '@/features/GameSession/toGameSessionCards';
 
 defineProps<{
-  cards: TableCardModel[];
+  cards: GameSessionCardModel[];
   /** 0件のときに出す一文。空状態は謝らず、次の一歩だけを示す */
   emptyMessage: string;
 }>();
@@ -14,7 +14,7 @@ defineProps<{
     {{ emptyMessage }}
   </p>
   <div v-else class="table-grid">
-    <TableCard v-for="card in cards" :key="card.lobbyId" :card="card" />
+    <GameSessionCard v-for="card in cards" :key="card.lobbyId" :card="card" />
   </div>
 </template>
 

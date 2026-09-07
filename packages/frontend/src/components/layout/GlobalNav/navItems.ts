@@ -27,13 +27,13 @@ export const GLOBAL_NAV_ITEMS: readonly GlobalNavItem[] = [
     matches: [PAGE_NAME.dashboard],
   },
   {
-    id: 'tables',
+    id: 'game-sessions',
     label: '卓',
     icon: LayoutGrid,
-    to: { name: PAGE_NAME.tables },
+    to: { name: PAGE_NAME.gameSessions },
     // 卓の下位ページ（ロビー・開催の各画面）はまとめて「卓」を現在地にする
     matches: [
-      PAGE_NAME.tables,
+      PAGE_NAME.gameSessions,
       PAGE_NAME.lobbiesNew,
       PAGE_NAME.lobbiesEdit,
       PAGE_NAME.lobbiesDetail,

@@ -31,8 +31,10 @@ const onClickCreate = () => {
   router.push({ name: 'lobbies-new' });
 };
 
+// 下書きも卓カードと同じく卓の詳細へ送る。下書きの詳細には「公開」と「編集」が
+// 揃っているので、続きを書くのも公開するのもそこから辿れる
 const onClickDraft = (lobbyId: string) => {
-  router.push({ name: 'lobbies-edit', params: { lobbyId } });
+  router.push({ name: 'lobbies-detail', params: { lobbyId } });
 };
 
 const onClickProfile = () => {
@@ -87,7 +89,7 @@ const onClickProfile = () => {
         <Pencil :size="15" aria-hidden="true" />
         <span class="dashboard__draft-tag">下書き</span>
         <span class="dashboard__draft-title">{{ card.title }}</span>
-        <span class="dashboard__draft-action">続きを入力する</span>
+        <span class="dashboard__draft-action">下書きを開く</span>
       </button>
     </div>
 

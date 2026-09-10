@@ -1,4 +1,4 @@
-import { House, UserRound, type LucideIcon } from '@lucide/vue';
+import { House, LayoutGrid, UserRound, type LucideIcon } from '@lucide/vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { PAGE_NAME, type PageName } from '@/config/pageName';
 
@@ -17,20 +17,23 @@ export type GlobalNavItem = {
   matches: readonly PageName[];
 };
 
-/**
- * シェルのナビ項目（v0.4.dc.html の navItems と同じ2つ）。
- *
- * 卓の一覧はダッシュボードに統合済みなので、独立した「卓」項目は置かない
- * （router の `/lobbies` → dashboard リダイレクトを参照）。
- */
+/** シェルのナビ項目。 */
 export const GLOBAL_NAV_ITEMS: readonly GlobalNavItem[] = [
   {
     id: 'dashboard',
     label: 'ダッシュボード',
     icon: House,
     to: { name: PAGE_NAME.dashboard },
+    matches: [PAGE_NAME.dashboard],
+  },
+  {
+    id: 'game-sessions',
+    label: '卓',
+    icon: LayoutGrid,
+    to: { name: PAGE_NAME.gameSessions },
+    // 卓の下位ページ（ロビー・開催の各画面）はまとめて「卓」を現在地にする
     matches: [
-      PAGE_NAME.dashboard,
+      PAGE_NAME.gameSessions,
       PAGE_NAME.lobbiesNew,
       PAGE_NAME.lobbiesEdit,
       PAGE_NAME.lobbiesDetail,

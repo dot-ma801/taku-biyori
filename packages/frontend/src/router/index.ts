@@ -34,9 +34,15 @@ const router = createRouter({
       name: PAGE_NAME.dashboard,
       component: () => import('@/views/Dashboard/DashboardView.vue'),
     },
-    // ロビーの一覧ページはダッシュボードに統合した。
-    // 404 ルートが無く未定義パスは白画面になるため、旧 URL は残してリダイレクトする。
-    { path: '/lobbies', redirect: { name: PAGE_NAME.dashboard } },
+    // 卓の一覧。データ側は Lobby / GameSession のままだが、この画面は
+    // UI 表示層で1つの「卓」に畳んで見せる（#147 / #151）。
+    {
+      path: '/game-sessions',
+      name: PAGE_NAME.gameSessions,
+      component: () => import('@/views/GameSession/ListView.vue'),
+    },
+    // 旧 URL。404 ルートが無く未定義パスは白画面になるため残す
+    { path: '/lobbies', redirect: { name: PAGE_NAME.gameSessions } },
     // 開催はロビーに属するため、画面ルートも API と同じくロビー配下へ入れ子にする
     // （design-v2 §7-1）。**旧パスからのリダイレクトは作らない。**
     {

@@ -17,6 +17,11 @@ const createTestRouter = () =>
         component: { template: '<div />' },
       },
       {
+        path: '/game-sessions',
+        name: 'game-sessions',
+        component: { template: '<div />' },
+      },
+      {
         path: '/profile/setting',
         name: 'profile-setting',
         component: { template: '<div />' },

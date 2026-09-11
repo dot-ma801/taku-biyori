@@ -213,7 +213,12 @@ const showGameSessionError = computed(
 
       <template #[GameSessionDetailTab.schedule]>
         <!-- 確定しても画面は変えない。この場で「調整中 → 開催予定」に切り替わる -->
-        <ScheduleTab :lobby="lobby" :is-host="isHost" @changed="refreshAll" />
+        <ScheduleTab
+          :lobby="lobby"
+          :is-host="isHost"
+          :has-pending-schedule-poll="hasOngoingSchedulePoll"
+          @changed="refreshAll"
+        />
       </template>
 
       <template #[GameSessionDetailTab.members]>

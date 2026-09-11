@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // FIXME: @vuetify/v0 に DatePicker が追加されたら、カレンダーロジックをそちらに置き換える
 // https://0.vuetifyjs.com/components/date-picker
-import { computed, ref, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { Popover } from '@vuetify/v0';
 import { ChevronLeft, ChevronRight, CalendarDays, X } from '@lucide/vue';
 import { todayDateString } from '@taku-biyori/shared';
@@ -58,6 +58,27 @@ const displayYear = ref(
 );
 const displayMonth = ref(
   initialDate ? parseInt(initialDate.slice(5, 7)) - 1 : today.getMonth(),
+);
+
+/**
+ * 外から値が入れ替わったら表示年月を追従させる。
+ *
+ * 編集画面のように**取得が終わってから** v-model が埋まる使い方では、setup 時の
+ * 初期化だけだと選択済みの日付が別の月にあってもカレンダーは今月のまま開く。
+ * 選択が見えず、月送りしないと確認も追加もできない。
+ *
+ * 開いているあいだは動かさない。利用者が月を送っている最中に選択が増えると
+ * （複数選択では閉じないので起こる）、見ている月が勝手に戻ってしまう。
+ */
+watch(
+  () => selectedDates.value[0],
+  (first) => {
+    if (!first || isOpen.value) {
+      return;
+    }
+    displayYear.value = parseInt(first.slice(0, 4));
+    displayMonth.value = parseInt(first.slice(5, 7)) - 1;
+  },
 );
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];

@@ -124,6 +124,56 @@ describe('BaseDatePicker', () => {
     });
   });
 
+  // 編集画面のように取得が終わってから v-model が埋まる使い方では、setup 時の
+  // 初期化だけだと選択済みの日付が別の月にあってもカレンダーは今月のまま開く
+  describe('表示年月の追従', () => {
+    it('あとから入った値の月にカレンダーを合わせる', async () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const wrapper = mount(BaseDatePicker, {
+        props: { multiple: true, modelValue: [] },
+      });
+
+      // Act
+      await wrapper.setProps({ modelValue: ['2025-09-20'] });
+
+      // Assert
+      expect(wrapper.find('.datepicker__nav-title').text()).toBe('2025年9月');
+    });
+
+    it('値が空に戻っても表示年月は動かさない', async () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const wrapper = mount(BaseDatePicker, {
+        props: { multiple: true, modelValue: ['2025-09-20'] },
+      });
+
+      // Act
+      await wrapper.setProps({ modelValue: [] });
+
+      // Assert
+      expect(wrapper.find('.datepicker__nav-title').text()).toBe('2025年9月');
+    });
+
+    // 複数選択では選んでもカレンダーが閉じない。開いている最中に表示月が
+    // 戻ると、利用者が送った月から勝手に引き戻される
+    it('開いているあいだは表示年月を動かさない', async () => {
+      // Arrange
+      vi.setSystemTime(new Date('2025-06-15T00:00:00'));
+      const wrapper = mount(BaseDatePicker, {
+        props: { multiple: true, modelValue: ['2025-09-20'] },
+      });
+      await wrapper.get('.datepicker__trigger').trigger('click');
+      await wrapper.get('[aria-label="次の月"]').trigger('click');
+
+      // Act
+      await wrapper.setProps({ modelValue: ['2025-09-20', '2025-10-05'] });
+
+      // Assert
+      expect(wrapper.find('.datepicker__nav-title').text()).toBe('2025年10月');
+    });
+  });
+
   describe('disablePast', () => {
     it('today より前の日付セルが disabled になる', () => {
       // Arrange

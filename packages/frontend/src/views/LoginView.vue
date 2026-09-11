@@ -51,17 +51,23 @@ onMounted(async () => {
       <span class="brand__text">たく日和</span>
     </RouterLink>
 
-    <BaseTabs v-model="activeTab" :tabs="LOGIN_TABS" stretch fixed-height>
-      <!-- ログインタブ -->
-      <template #signin>
-        <LoginCard class="card" :nest-page="nestPage"></LoginCard>
-      </template>
+    <!--
+      Tabs.Root はレンダーレスでルート要素を持たないため、幅は外側の箱で決める。
+      タブ見出しとカードの左右端を揃えるため、どちらもこの箱の幅に従わせる。
+    -->
+    <div class="auth">
+      <BaseTabs v-model="activeTab" :tabs="LOGIN_TABS" stretch fixed-height>
+        <!-- ログインタブ -->
+        <template #signin>
+          <LoginCard class="card" :nest-page="nestPage"></LoginCard>
+        </template>
 
-      <!-- 新規作成タブ -->
-      <template #signup>
-        <SignupCard class="card" :nest-page="nestPage" />
-      </template>
-    </BaseTabs>
+        <!-- 新規作成タブ -->
+        <template #signup>
+          <SignupCard class="card" :nest-page="nestPage" />
+        </template>
+      </BaseTabs>
+    </div>
   </div>
 </template>
 
@@ -103,7 +109,15 @@ onMounted(async () => {
   font-weight: var(--weight-bold);
 }
 
+/*
+ * ログイン・新規作成のフォームは項目数が少ないぶん、400px だと入力欄が窮屈に見える。
+ * 読みやすい行長の上限（約 480px）まで広げ、狭い画面では画面幅に従わせる。
+ */
+.auth {
+  width: min(480px, 100%);
+}
+
 .card {
-  width: min(400px, 100%);
+  width: 100%;
 }
 </style>

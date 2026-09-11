@@ -70,9 +70,27 @@ export const useGameSessionDetailPage = (lobbyId: string) => {
   /** 日程調整の履歴。新しい順・先頭が最新（LobbyDetailModel の並びをそのまま） */
   const schedulePolls = computed(() => lobby.value?.schedulePolls ?? []);
 
+  /**
+   * まだ確定していない日程調整があるか。
+   *
+   * **見せている開催ではなく、ロビー配下の開催すべてと突き合わせる。**
+   * 表示中の開催と比べると、開催が2件以上あるロビーでホストが古いほうの URL を
+   * 開いたときに「確定待ち」と誤判定し、確定済みの調整からもう1件作れてしまう。
+   *
+   * 最新の調整より後に作られた開催が1件でもあれば、その調整は決着済みとみなす。
+   */
+  const hasPendingSchedulePoll = computed(() => {
+    const latestPoll = schedulePolls.value[0];
+    if (!latestPoll) return false;
+    return !sessions.value.some(
+      (session) => session.createdAt.getTime() > latestPoll.createdAt.getTime(),
+    );
+  });
+
   return {
     lobby,
     schedulePolls,
+    hasPendingSchedulePoll,
     sessions,
     status,
     gameSessionId,

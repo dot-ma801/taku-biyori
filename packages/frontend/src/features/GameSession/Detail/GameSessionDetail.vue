@@ -37,7 +37,7 @@ const {
   lobby,
   status,
   gameSessionId: representativeGameSessionId,
-  schedulePolls,
+  hasPendingSchedulePoll,
   loading,
   errorMessage,
   activeEntryCount,
@@ -92,25 +92,11 @@ const role = computed(() =>
 );
 const hasGameSession = computed(() => gameSessionId.value !== null);
 
-/**
- * 見せている開催より後に始まった日程調整があるか。
- *
- * 「日程を変更する」で調整をやり直すと、開催が残ったまま新しい調整が始まる。
- * このとき参加者・ゲストにも回答する場が要るので、日程調整タブを開ける。
- */
-const hasOngoingSchedulePoll = computed(() => {
-  const latestPoll = schedulePolls.value[0];
-  if (!latestPoll) return false;
-  const session = gameSession.value;
-  if (!session) return true;
-  return latestPoll.createdAt.getTime() > session.createdAt.getTime();
-});
-
 const { tabs, resolveActiveTab } = useGameSessionDetailTabs(
   status,
   role,
   hasGameSession,
-  hasOngoingSchedulePoll,
+  hasPendingSchedulePoll,
 );
 
 const activeTab = ref<string>(
@@ -216,7 +202,7 @@ const showGameSessionError = computed(
         <ScheduleTab
           :lobby="lobby"
           :is-host="isHost"
-          :has-pending-schedule-poll="hasOngoingSchedulePoll"
+          :has-pending-schedule-poll="hasPendingSchedulePoll"
           @changed="refreshAll"
         />
       </template>

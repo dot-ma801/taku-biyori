@@ -36,10 +36,10 @@ export const useGameSessionDetailTabs = (
   role: MaybeRefOrGetter<GameSessionRole>,
   hasGameSession: MaybeRefOrGetter<boolean>,
   /**
-   * 代表の開催より後に始まった日程調整があるか。
-   * 開催が決まったあとの「日程を変更する」でやり直された調整を指す。
+   * まだ確定していない日程調整があるか。
+   * 開催が決まったあとの「日程を変更する」でやり直された調整もこれに入る。
    */
-  hasOngoingSchedulePoll: MaybeRefOrGetter<boolean> = false,
+  hasPendingSchedulePoll: MaybeRefOrGetter<boolean> = false,
 ) => {
   const availableTabs = computed<GameSessionDetailTab[]>(() => {
     const currentStatus = toValue(status);
@@ -53,7 +53,7 @@ export const useGameSessionDetailTabs = (
     if (
       !settled ||
       currentRole === GameSessionRole.host ||
-      toValue(hasOngoingSchedulePoll)
+      toValue(hasPendingSchedulePoll)
     ) {
       tabs.push(GameSessionDetailTab.schedule);
     }

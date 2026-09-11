@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Check } from '@lucide/vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleDisplay from '@/features/Lobby/Detail/Schedule/ScheduleDisplay.vue';
@@ -10,6 +10,11 @@ import type { LobbyDetailModel } from '@/models/lobby';
 const props = defineProps<{
   lobby: LobbyDetailModel;
   isHost: boolean;
+  /**
+   * いま確定を待っている日程調整があるか。
+   * 確定済み（＝この調整から開催が生まれている）なら false になり、確定の導線を出さない。
+   */
+  hasPendingSchedulePoll: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -19,6 +24,18 @@ const emit = defineEmits<{
 
 const { canOpenGameSession } = useCanOpenGameSession(() => props.lobby);
 const isConfirmOpen = ref(false);
+
+/**
+ * 「日程を確定する」を出すか。
+ *
+ * ロビーのステータスだけで判定すると、確定したあとも押せるままになる
+ * （開催予定の卓でもう一度確定して開催が二重にできてしまう）。
+ * まだ確定していない調整があることまで確かめる。
+ */
+const canConfirmSchedule = computed(
+  () =>
+    props.isHost && canOpenGameSession.value && props.hasPendingSchedulePoll,
+);
 
 /**
  * 確定しても別画面へは飛ばさない（#152）。
@@ -37,8 +54,8 @@ function handleCreated() {
       @restarted="emit('changed')"
     />
 
-    <!-- 確定はホストだけ（#152） -->
-    <div v-if="isHost && canOpenGameSession" class="schedule-tab__actions">
+    <!-- 確定はホストだけ（#152）。確定済みの調整では出さない -->
+    <div v-if="canConfirmSchedule" class="schedule-tab__actions">
       <BaseButton :left-icon="Check" @click="isConfirmOpen = true">
         日程を確定する
       </BaseButton>

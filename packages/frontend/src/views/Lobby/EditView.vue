@@ -19,6 +19,7 @@ const {
   description,
   openUntil,
   location,
+  pendingDates,
   loading,
   errorMessages,
   fetchError,
@@ -66,10 +67,10 @@ const breadcrumbItems = computed(() => [
       v-model:description="description"
       v-model:openUntil="openUntil"
       v-model:location="location"
-      :show-candidate-dates="false"
+      v-model:pendingDates="pendingDates"
+      :show-candidate-dates="hasSchedulePoll"
       :loading="loading"
       :error-messages="errorMessages"
-      :has-schedule-poll="hasSchedulePoll"
       @submit="submit"
       @cancel="cancel"
     ></LobbyEdit>

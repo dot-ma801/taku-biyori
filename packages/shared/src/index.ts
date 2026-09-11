@@ -23,6 +23,7 @@ export {
   type GameSessionListItem,
   GameSessionSummarySchema,
   type GameSessionSummary,
+  GAME_SESSION_OVERRIDE_MAX_LENGTHS,
   CreateGameSessionInputSchema,
   type CreateGameSessionInput,
   UpdateGameSessionInputSchema,

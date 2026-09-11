@@ -1,8 +1,14 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
+import { LobbyStatus, normalizeTimeLabel } from '@taku-biyori/shared';
 import { createGameSession } from '@/api/game-session';
-import { getSchedulePoll } from '@/api/lobby';
+import { getSchedulePoll, updateLobbyStatus } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
+import { formatDateWithWeekday } from '@/utils/date';
+import {
+  getDraftFieldCounter,
+  isDraftValid,
+} from '@/features/Lobby/Detail/Schedule/ConfirmFlow/draftValidation';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import { ApiError } from '@/lib/api-client';
 import type { GameSessionModel } from '@/models/game-session';
@@ -12,13 +18,6 @@ import type {
   SchedulePollModel,
 } from '@/models/schedule-poll';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
-
-/**
- * 開催日の決め方。design-v2 §7 のステップ1は
- * 「候補日から選ぶ」と「直接日付を入れる」の2経路を持つ。
- * 日程調整を回していないロビー（直接卓立て）は候補日が無いので direct しか通らない。
- */
-export type DateMode = 'candidate' | 'direct';
 
 export type GameSessionDraft = {
   title: string;
@@ -37,9 +36,13 @@ const emptyDraft = (): GameSessionDraft => ({
 });
 
 /**
- * 「開催を追加する」ダイアログの状態を所有する。
+ * 「日程を確定する」ダイアログの状態を所有する。
  * 候補日は最新の SchedulePoll からこの composable が読み、親が持つ LobbyDetailModel を
  * 書き換えない。作成成功だけを onCreated で親に通知する。
+ *
+ * 開催日は**日程調整の候補日からしか選べない**。直接日付を入れる経路は
+ * 「日程調整の結果を確定する」という操作の意味とずれるため持たない
+ * （日程が決まっている卓は、作成画面の「開催日を入れる」で立てる）。
  */
 export const useConfirmFlow = (
   lobby: MaybeRefOrGetter<LobbyDetailModel>,
@@ -57,9 +60,6 @@ export const useConfirmFlow = (
   const loadingPoll = ref(false);
   const loading = ref(false);
   const selectedCandidateId = ref<string | null>(null);
-  const dateMode = ref<DateMode>('candidate');
-  /** 直接入力の開催日（YYYY-MM-DD）。候補日経路では使わない */
-  const directDate = ref('');
   const selectedEntryIds = ref<Set<string>>(new Set());
   const draft = ref<GameSessionDraft>(emptyDraft());
 
@@ -77,18 +77,17 @@ export const useConfirmFlow = (
       counts: answerCounts(date, entries.value),
     })),
   );
-  const selectedCandidateDate = computed(() =>
-    dateMode.value === 'candidate'
-      ? (candidateDates.value.find(
-          (date) => date.id === selectedCandidateId.value,
-        ) ?? null)
-      : null,
+  const selectedCandidateDate = computed(
+    () =>
+      candidateDates.value.find(
+        (date) => date.id === selectedCandidateId.value,
+      ) ?? null,
   );
-  // 開催日は選んだ経路から導出する。候補日経路なら選択中の候補日、直接入力なら入力値
-  const scheduledAt = computed(() =>
-    dateMode.value === 'direct'
-      ? directDate.value
-      : (selectedCandidateDate.value?.date ?? ''),
+  // 開催日は選択中の候補日から導出する
+  const scheduledAt = computed(() => selectedCandidateDate.value?.date ?? '');
+  /** 表示用に整形した開催日。整形はコンポーネントではなくここで済ませる */
+  const scheduledAtLabel = computed(() =>
+    scheduledAt.value === '' ? '' : formatDateWithWeekday(scheduledAt.value),
   );
   const selectedEntries = computed(() =>
     entries.value.filter((entry) => selectedEntryIds.value.has(entry.id)),
@@ -96,6 +95,24 @@ export const useConfirmFlow = (
   const selectedCount = computed(() => selectedEntryIds.value.size);
   const canProceedCandidate = computed(() => scheduledAt.value !== '');
   const canProceedEntries = computed(() => selectedCount.value > 0);
+
+  /** 時間帯の文字数カウンター。候補日の入力と同じ `N / MAX` 形式 */
+  const timeLabelCounter = computed(() =>
+    getDraftFieldCounter('timeLabel', draft.value.timeLabel),
+  );
+  /**
+   * 確定できるか。
+   *
+   * 上書き項目は**すべて** API の契約（`CreateGameSessionInputSchema`）で長さが
+   * 決まっている。超えたまま送ると 400 が返るだけで、画面には「日程の確定に
+   * 失敗しました」としか出せず、どこを直せばよいか伝わらない。送る前にここで止める。
+   */
+  const canConfirm = computed(
+    () =>
+      canProceedCandidate.value &&
+      canProceedEntries.value &&
+      isDraftValid(draft.value),
+  );
   const capacityMismatch = computed(() => {
     const maxPlayers = toValue(lobby).maxPlayers;
     return maxPlayers !== null && maxPlayers !== selectedCount.value;
@@ -117,32 +134,6 @@ export const useConfirmFlow = (
     if (!date) return;
     selectedCandidateId.value = id;
     selectedEntryIds.value = defaultEntryIds(date);
-  }
-
-  /**
-   * 開催日の決め方を切り替える。
-   * 経路をまたいで選択が残ると「候補日を選んだのに別の日で作る」事故になるため、
-   * 日付も参加者の既定選択も捨てて選び直させる。
-   */
-  function setDateMode(mode: DateMode) {
-    if (dateMode.value === mode) return;
-    dateMode.value = mode;
-    selectedCandidateId.value = null;
-    directDate.value = '';
-    selectedEntryIds.value = new Set();
-  }
-
-  /**
-   * 直接入力の開催日を決める。
-   *
-   * 直接入力の日付には日程回答が無いので、候補日経路の「ok / maybe を既定で選ぶ」に
-   * あたる絞り込みができない。在籍している entry を全員選んだ状態から外させる。
-   */
-  function setDirectDate(date: string) {
-    directDate.value = date;
-    selectedEntryIds.value = date
-      ? new Set(entries.value.map((entry) => entry.id))
-      : new Set();
   }
 
   function toggleEntry(id: string) {
@@ -193,15 +184,10 @@ export const useConfirmFlow = (
 
   async function reset() {
     step.value = 1;
-    dateMode.value = 'candidate';
     selectedCandidateId.value = null;
-    directDate.value = '';
     selectedEntryIds.value = new Set();
     draft.value = emptyDraft();
     await loadLatestPoll();
-    // 選べる候補日が無いロビー（日程調整を回していない・直接卓立て）で
-    // 候補日待ちのまま詰まらせない
-    if (candidateDates.value.length === 0) dateMode.value = 'direct';
   }
 
   // 親が v-model を true にして開くケースでは BaseDialog（Dialog.Root）から
@@ -218,33 +204,53 @@ export const useConfirmFlow = (
 
   function createInput() {
     const values = draft.value;
+    const normalizedTimeLabel = normalizeTimeLabel(values.timeLabel);
     return {
       scheduledAt: scheduledAt.value,
       entryIds: [...selectedEntryIds.value],
       ...(values.title ? { title: values.title } : {}),
       ...(values.scenarioName ? { scenarioName: values.scenarioName } : {}),
       ...(values.location ? { location: values.location } : {}),
-      ...(values.timeLabel ? { timeLabel: values.timeLabel } : {}),
+      // 候補日のひとことと同じく正規化して送る。検証（getTimeLabelError）が
+      // 正規化後の長さで数えているので、生値のまま送ると前後の空白ぶんだけ
+      // 契約（max 20）を超えて 400 になりうる
+      ...(normalizedTimeLabel ? { timeLabel: normalizedTimeLabel } : {}),
       ...(values.description ? { description: values.description } : {}),
     };
   }
 
+  /**
+   * 日程が決まったら新しい参加の受付は閉じる。
+   *
+   * 確定したあとに増えた参加者は当日の参加者に入っておらず、ホストが気づかないまま
+   * 「参加したのに席が無い」状態になる。受付中のときだけ閉じ、閉じ損ねても
+   * 確定そのものは成功として扱う（ホストは「追加募集」でいつでも開き直せる）。
+   */
+  async function closeReceptionAfterConfirm() {
+    if (toValue(lobby).status !== LobbyStatus.open) return;
+    try {
+      await updateLobbyStatus(toValue(lobby).id, { status: 'closed' });
+    } catch {
+      toast.error('受付の終了に失敗しました。必要なら手動で閉じてください');
+    }
+  }
+
   async function confirm() {
-    if (loading.value || !canProceedCandidate.value || !canProceedEntries.value)
-      return;
+    if (loading.value || !canConfirm.value) return;
     loading.value = true;
     try {
       const gameSession = await createGameSession(
         toValue(lobby).id,
         createInput(),
       );
-      toast.success('開催を追加しました');
+      await closeReceptionAfterConfirm();
+      toast.success('日程を確定しました');
       onCreated(gameSession);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         toast.error('ロビーの状態が変更されています。読み込み直してください');
       } else {
-        toast.error('開催の追加に失敗しました');
+        toast.error('日程の確定に失敗しました');
       }
     } finally {
       loading.value = false;
@@ -255,10 +261,9 @@ export const useConfirmFlow = (
     step,
     loading,
     loadingPoll,
-    dateMode,
-    directDate,
     selectedCandidateId,
     scheduledAt,
+    scheduledAtLabel,
     selectedEntryIds,
     selectedEntries,
     selectedCount,
@@ -266,10 +271,10 @@ export const useConfirmFlow = (
     draft,
     canProceedCandidate,
     canProceedEntries,
+    canConfirm,
+    timeLabelCounter,
     capacityMismatch,
     selectCandidate,
-    setDateMode,
-    setDirectDate,
     toggleEntry,
     isWarnedEntry,
     getEntryAnswer,

@@ -11,8 +11,12 @@ import type {
 
 const mockSession = { user: { id: 'user-1' } };
 
+const LOBBY_ID = '00000000-0000-4000-8000-00000000aaaa';
+/** 開催はロビー配下に入れ子（design-v2 §6-13） */
+const base = `/api/lobbies/${LOBBY_ID}/game-sessions`;
+
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: '00000000-0000-4000-8000-000000000001',
+  seatId: '00000000-0000-4000-8000-000000000001',
   body: '今日のセッションのメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T00:00:00.000Z',
@@ -20,7 +24,7 @@ const mockPlayMemo: GameSessionPlayMemo = {
 
 /** メモ未作成のメンバーに返す空メモ（design-v1.2 §8） */
 const emptyPlayMemo: MyGameSessionPlayMemo = {
-  memberId: '00000000-0000-4000-8000-000000000001',
+  seatId: '00000000-0000-4000-8000-000000000001',
   body: '',
   sharedAt: null,
   updatedAt: null,
@@ -28,13 +32,13 @@ const emptyPlayMemo: MyGameSessionPlayMemo = {
 
 const sharedPlayMemos: SharedGameSessionPlayMemo[] = [
   {
-    memberId: '00000000-0000-4000-8000-000000000001',
+    seatId: '00000000-0000-4000-8000-000000000001',
     body: '一人目のメモ',
     sharedAt: '2026-08-02T10:00:00.000Z',
     updatedAt: '2026-08-02T10:00:00.000Z',
   },
   {
-    memberId: '00000000-0000-4000-8000-000000000002',
+    seatId: '00000000-0000-4000-8000-000000000002',
     body: '二人目のメモ',
     sharedAt: '2026-08-02T11:00:00.000Z',
     updatedAt: '2026-08-02T11:00:00.000Z',
@@ -82,7 +86,7 @@ const makeApp = (
   });
 };
 
-describe('GET /api/game-sessions/:id/play-memos/me', () => {
+describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
   it('メンバーなら 200 で自分のメモを返す', async () => {
     // Arrange
     const getMyPlayMemo = vi
@@ -91,15 +95,13 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     const app = makeApp({ getMyPlayMemo });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(mockPlayMemo);
-    expect(getMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1');
+    expect(getMyPlayMemo).toHaveBeenCalledWith(LOBBY_ID, 'session-1', 'user-1');
   });
 
   // 未作成と取得エラーをフロントで分岐させない（design-v1.2 §8）
@@ -112,9 +114,7 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
     const body = await response.json();
 
     // Assert
@@ -127,24 +127,20 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
     const app = makeApp({ getSession: vi.fn().mockResolvedValue(null) });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
 
     // Assert
     expect(response.status).toBe(401);
   });
 
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       getMyPlayMemo: vi.fn().mockResolvedValue({ type: 'notFound' }),
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/nonexistent/play-memos/me',
-    );
+    const response = await app.request(`${base}/nonexistent/play-memos/me`);
 
     // Assert
     expect(response.status).toBe(404);
@@ -152,29 +148,27 @@ describe('GET /api/game-sessions/:id/play-memos/me', () => {
 
   // ゲスト参加のみのユーザーもここに落ちる（ゲストは user_id = null のため
   // メンバー検索に構造上ヒットしない。design-v1.2 §4）
-  it('その卓のメンバーでないなら 403 を返す', async () => {
+  it('その開催のメンバーでないなら 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       getMyPlayMemo: vi.fn().mockResolvedValue({ type: 'forbidden' }),
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`);
 
     // Assert
     expect(response.status).toBe(403);
   });
 });
 
-describe('PUT /api/game-sessions/:id/play-memos/me', () => {
+describe('PUT /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me', () => {
   const put = (
     app: ReturnType<typeof makeApp>,
     body: unknown,
     id = 'session-1',
   ) =>
-    app.request(`/api/game-sessions/${id}/play-memos/me`, {
+    app.request(`${base}/${id}/play-memos/me`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -194,9 +188,14 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(responseBody).toEqual(mockPlayMemo);
-    expect(upsertMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1', {
-      body: '今日のセッションのメモ',
-    });
+    expect(upsertMyPlayMemo).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      'user-1',
+      {
+        body: '今日のセッションのメモ',
+      },
+    );
   });
 
   // 本文を空にしても行は残す（design-v1.2 §8）
@@ -237,7 +236,7 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     expect(upsertMyPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       upsertMyPlayMemo: vi.fn().mockResolvedValue({ type: 'notFound' }),
@@ -250,7 +249,7 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     expect(response.status).toBe(404);
   });
 
-  it('その卓のメンバーでないなら 403 を返す', async () => {
+  it('その開催のメンバーでないなら 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       upsertMyPlayMemo: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -264,7 +263,7 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
   });
 
   // 確定後ロックは 409 に統一する（423 は使わない。design-v1.2 §8）
-  it('完了・中止した卓なら 409 を返す', async () => {
+  it('完了・中止した開催なら 409 を返す', async () => {
     // Arrange
     const app = makeApp({
       upsertMyPlayMemo: vi.fn().mockResolvedValue({ type: 'statusLocked' }),
@@ -303,9 +302,14 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(upsertMyPlayMemo).toHaveBeenCalledWith('session-1', 'user-1', {
-      body,
-    });
+    expect(upsertMyPlayMemo).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      'user-1',
+      {
+        body,
+      },
+    );
   });
 
   it('body が無いと 400 を返す', async () => {
@@ -324,27 +328,24 @@ describe('PUT /api/game-sessions/:id/play-memos/me', () => {
     const app = makeApp();
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me',
-      {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: 'not json',
-      },
-    );
+    const response = await app.request(`${base}/session-1/play-memos/me`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: 'not json',
+    });
 
     // Assert
     expect(response.status).toBe(400);
   });
 });
 
-describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
+describe('PATCH /api/lobbies/:lobbyId/game-sessions/:id/play-memos/me/visibility', () => {
   const patch = (
     app: ReturnType<typeof makeApp>,
     body: unknown,
     id = 'session-1',
   ) =>
-    app.request(`/api/game-sessions/${id}/play-memos/me/visibility`, {
+    app.request(`${base}/${id}/play-memos/me/visibility`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -365,6 +366,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     expect(response.status).toBe(200);
     expect(responseBody).toEqual(mockPlayMemo);
     expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -385,6 +387,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(updateMyPlayMemoVisibility).toHaveBeenCalledWith(
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: false },
@@ -417,11 +420,11 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     expect(updateMyPlayMemoVisibility).not.toHaveBeenCalled();
   });
 
-  // ユースケースは「卓が無い」場合と「メモ未作成」の場合の両方で notFound を返すため、
+  // ユースケースは「開催が無い」場合と「メモ未作成」の場合の両方で notFound を返すため、
   // HTTP 層ではどちらも同じ 404 に落ちる（design-v1.2 §5）。両者の区別は application 層の責務で、
   // メモ未作成 → notFound の実質的な検証はユニットテスト
   // （update-my-play-memo-visibility.test.ts の「メモ未作成なら notFound を返す」）が担っている
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateMyPlayMemoVisibility: vi
@@ -436,7 +439,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
     expect(response.status).toBe(404);
   });
 
-  it('その卓のメンバーでないなら 403 を返す', async () => {
+  it('その開催のメンバーでないなら 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       updateMyPlayMemoVisibility: vi
@@ -484,7 +487,7 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
 
     // Act
     const response = await app.request(
-      '/api/game-sessions/session-1/play-memos/me/visibility',
+      `${base}/session-1/play-memos/me/visibility`,
       {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -497,8 +500,8 @@ describe('PATCH /api/game-sessions/:id/play-memos/me/visibility', () => {
   });
 });
 
-describe('GET /api/game-sessions/:id/play-memos', () => {
-  it('完了した卓の公開メモ一覧を 200 で返す', async () => {
+describe('GET /api/lobbies/:lobbyId/game-sessions/:id/play-memos', () => {
+  it('完了した開催の公開メモ一覧を 200 で返す', async () => {
     // Arrange
     const listSharedPlayMemos = vi
       .fn()
@@ -506,15 +509,17 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     const app = makeApp({ listSharedPlayMemos });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(sharedPlayMemos);
-    expect(listSharedPlayMemos).toHaveBeenCalledWith('session-1', 'user-1');
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      'user-1',
+    );
   });
 
   // 未ログイン・ゲストでも公開メモは読める（要求 §3-4・design-v1.2 §4）
@@ -529,19 +534,21 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
     const body = await response.json();
 
     // Assert
     expect(response.status).toBe(200);
     expect(body).toEqual(sharedPlayMemos);
-    expect(listSharedPlayMemos).toHaveBeenCalledWith('session-1', null);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(
+      LOBBY_ID,
+      'session-1',
+      null,
+    );
   });
 
   // 完了・中止前は他人のメモを見せない（要求 §3-3）
-  it('完了前の卓では空配列を返す', async () => {
+  it('完了前の開催では空配列を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi
@@ -550,9 +557,7 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
     const body = await response.json();
 
     // Assert
@@ -560,38 +565,34 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     expect(body).toEqual([]);
   });
 
-  it('卓が存在しないなら 404 を返す', async () => {
+  it('開催が存在しないなら 404 を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'notFound' }),
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/nonexistent/play-memos',
-    );
+    const response = await app.request(`${base}/nonexistent/play-memos`);
 
     // Assert
     expect(response.status).toBe(404);
   });
 
-  // 非公開のまま中止された卓のメモが第三者に漏れないことの要（design-v1.2 §4 手順2）
-  it('非公開の卓をホスト以外が呼ぶと 403 を返す', async () => {
+  // 非公開のまま中止された開催のメモが第三者に漏れないことの要（design-v1.2 §4 手順2）
+  it('非公開の開催をホスト以外が呼ぶと 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'forbidden' }),
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
 
     // Assert
     expect(response.status).toBe(403);
   });
 
-  it('非公開の卓を未ログインで呼んでも 403 を返す', async () => {
+  it('非公開の開催を未ログインで呼んでも 403 を返す', async () => {
     // Arrange
     const app = makeApp({
       listSharedPlayMemos: vi.fn().mockResolvedValue({ type: 'forbidden' }),
@@ -599,9 +600,7 @@ describe('GET /api/game-sessions/:id/play-memos', () => {
     });
 
     // Act
-    const response = await app.request(
-      '/api/game-sessions/session-1/play-memos',
-    );
+    const response = await app.request(`${base}/session-1/play-memos`);
 
     // Assert
     expect(response.status).toBe(403);

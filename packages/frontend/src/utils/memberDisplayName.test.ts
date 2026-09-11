@@ -1,17 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import type { GameSessionMember } from '@taku-biyori/shared';
 import { memberDisplayName, memberBaseName } from '@/utils/memberDisplayName';
 
+type MemberNameSource = {
+  userId: string | null;
+  userName: string | null;
+  guestName: string | null;
+};
+
 function makeMember(
-  overrides: Partial<GameSessionMember> = {},
-): GameSessionMember {
+  overrides: Partial<MemberNameSource> = {},
+): MemberNameSource {
   return {
-    id: 'member-1',
     userId: 'user-1',
     userName: 'テストユーザー',
     guestName: null,
-    characterName: null,
-    joinedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ref } from 'vue';
 import { usePlayMemoPane } from '@/features/GameSession/PlayMemo/usePlayMemoPane';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import type { PlayMemoMemberEntry } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 
 const MY_MEMBER_ID = 'member-me';
@@ -11,7 +11,7 @@ function makeEntry(
   overrides: Partial<PlayMemoMemberEntry> = {},
 ): PlayMemoMemberEntry {
   return {
-    memberId: OTHER_MEMBER_ID,
+    seatId: OTHER_MEMBER_ID,
     primaryLabel: '青木',
     secondaryLabel: null,
     userId: 'user-other',
@@ -25,13 +25,13 @@ function makeEntry(
 }
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: MY_MEMBER_ID,
+    seatId: MY_MEMBER_ID,
     body: '書斎の鍵は青木さんが持っていた',
     sharedAt: null,
-    updatedAt: '2026-08-03T12:04:00Z',
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
@@ -40,7 +40,7 @@ function setup(overrides: {
   loadingMemo?: boolean;
   loadingSharedPlayMemos?: boolean;
   isMyMemo?: boolean;
-  playMemo?: MyGameSessionPlayMemo | null;
+  playMemo?: MyPlayMemoModel | null;
   canViewShared?: boolean;
   selectedEntry?: PlayMemoMemberEntry | null;
   isMineSelected?: boolean;
@@ -48,9 +48,7 @@ function setup(overrides: {
   const loadingMemo = ref(overrides.loadingMemo ?? false);
   const loadingSharedPlayMemos = ref(overrides.loadingSharedPlayMemos ?? false);
   const isMyMemo = ref(overrides.isMyMemo ?? true);
-  const playMemo = ref<MyGameSessionPlayMemo | null>(
-    overrides.playMemo ?? null,
-  );
+  const playMemo = ref<MyPlayMemoModel | null>(overrides.playMemo ?? null);
   const canViewShared = ref(overrides.canViewShared ?? false);
   const selectedEntry = ref<PlayMemoMemberEntry | null>(
     overrides.selectedEntry ?? null,

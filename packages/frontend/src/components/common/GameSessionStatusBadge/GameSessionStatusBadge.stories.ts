@@ -2,10 +2,9 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { GameSessionStatus } from '@taku-biyori/shared';
 import GameSessionStatusBadge from '@/components/common/GameSessionStatusBadge/GameSessionStatusBadge.vue';
 
-/** 卓が取りうるステータス（open は募集枠へ移管したため含めない） */
+/** 開催が取りうるステータス（design-v2 §4-2 で導出される4つ） */
 const GAME_SESSION_STATUSES = [
-  GameSessionStatus.draft,
-  GameSessionStatus.confirmed,
+  GameSessionStatus.scheduled,
   GameSessionStatus.today,
   GameSessionStatus.completed,
   GameSessionStatus.cancelled,
@@ -22,7 +21,7 @@ const meta: Meta<typeof GameSessionStatusBadge> = {
     },
   },
   args: {
-    status: GameSessionStatus.confirmed,
+    status: GameSessionStatus.scheduled,
   },
 };
 
@@ -31,9 +30,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Draft: Story = { args: { status: GameSessionStatus.draft } };
-export const Confirmed: Story = {
-  args: { status: GameSessionStatus.confirmed },
+export const Scheduled: Story = {
+  args: { status: GameSessionStatus.scheduled },
 };
 export const Today: Story = { args: { status: GameSessionStatus.today } };
 export const Completed: Story = {

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import PlayMemoEditor from '@/features/GameSession/PlayMemo/PlayMemoEditor.vue';
-import type { MyGameSessionPlayMemo } from '@taku-biyori/shared';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 
 function makePlayMemo(
-  overrides: Partial<MyGameSessionPlayMemo> = {},
-): MyGameSessionPlayMemo {
+  overrides: Partial<MyPlayMemoModel> = {},
+): MyPlayMemoModel {
   return {
-    memberId: 'member-1',
+    seatId: 'member-1',
     body: '',
     sharedAt: null,
     updatedAt: null,
@@ -20,6 +20,7 @@ function mountEditor(
 ) {
   return mount(PlayMemoEditor, {
     props: {
+      lobbyId: 'lobby-1',
       gameSessionId: 'session-1',
       gameSessionTitle: 'テストセッション',
       playMemo: makePlayMemo(),
@@ -74,7 +75,7 @@ describe('公開トグルの説明文', () => {
       isShared: false,
       playMemo: makePlayMemo({
         body: '本文あり',
-        updatedAt: '2026-08-01T00:00:00Z',
+        updatedAt: new Date('2026-08-01T00:00:00Z'),
       }),
     });
 

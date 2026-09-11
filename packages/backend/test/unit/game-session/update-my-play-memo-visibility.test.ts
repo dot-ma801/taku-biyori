@@ -3,10 +3,11 @@ import { updateMyPlayMemoVisibility } from '@/game-session/application/update-my
 import type { UpdateMyPlayMemoVisibilityRepository } from '@/game-session/application/update-my-play-memo-visibility';
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
+const LOBBY_ID = 'lobby-1';
 const now = new Date('2026-08-02T12:00:00.000Z');
 
 const sharedPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '今日のセッションのメモ',
   sharedAt: now.toISOString(),
   updatedAt: now.toISOString(),
@@ -15,8 +16,8 @@ const sharedPlayMemo: GameSessionPlayMemo = {
 const makeRepo = (
   overrides: Partial<UpdateMyPlayMemoVisibilityRepository> = {},
 ): UpdateMyPlayMemoVisibilityRepository => ({
-  gameSessionExists: vi.fn().mockResolvedValue(true),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
+  findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
   updatePlayMemoVisibility: vi.fn().mockResolvedValue(sharedPlayMemo),
   ...overrides,
 });
@@ -29,6 +30,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -51,6 +53,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: false },
@@ -65,15 +68,35 @@ describe('updateMyPlayMemoVisibility', () => {
     expect(result).toEqual({ type: 'ok', playMemo: unsharedPlayMemo });
   });
 
-  it('卓が存在しないと notFound を返す', async () => {
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await updateMyPlayMemoVisibility(
+      repo,
+      'lobby-other',
+      'session-1',
+      'user-1',
+      { shared: true },
+      now,
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.updatePlayMemoVisibility).not.toHaveBeenCalled();
+  });
+
+  it('開催が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findLobbyId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       { shared: true },
@@ -86,15 +109,16 @@ describe('updateMyPlayMemoVisibility', () => {
 
   // ゲストは user_id = null のためこの検索に構造上ヒットしない（design-v1.2 §4）。
   // ゲスト除外の専用分岐は書かない
-  it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
+  it('その開催のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { shared: true },
@@ -115,6 +139,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -125,15 +150,16 @@ describe('updateMyPlayMemoVisibility', () => {
     expect(result).toEqual({ type: 'notFound' });
   });
 
-  it('卓が存在しないときはメンバー検索も更新も行わない', async () => {
+  it('開催が存在しないときはメンバー検索も更新も行わない', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findLobbyId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       { shared: true },
@@ -141,7 +167,7 @@ describe('updateMyPlayMemoVisibility', () => {
     );
 
     // Assert
-    expect(repo.findMemberByUserId).not.toHaveBeenCalled();
+    expect(repo.findSeatByUserId).not.toHaveBeenCalled();
     expect(repo.updatePlayMemoVisibility).not.toHaveBeenCalled();
   });
 
@@ -157,6 +183,7 @@ describe('updateMyPlayMemoVisibility', () => {
     // Act
     const result = await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { shared: true },
@@ -171,12 +198,13 @@ describe('updateMyPlayMemoVisibility', () => {
   it('メンバーでないときは更新を行わない', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     await updateMyPlayMemoVisibility(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { shared: true },

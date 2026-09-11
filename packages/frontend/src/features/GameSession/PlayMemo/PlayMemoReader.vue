@@ -61,7 +61,7 @@ const detailRoute = computed(() => ({
 <template>
   <BaseCard>
     <div class="head">
-      <RouterLink :to="detailRoute" class="back" aria-label="卓の詳細へ戻る">
+      <RouterLink :to="detailRoute" class="back" aria-label="開催の詳細へ戻る">
         <ArrowLeft :size="18" aria-hidden="true" />
       </RouterLink>
       <!-- 誰のメモかはアイコンでも分かるようにする。種は他画面と揃える -->
@@ -91,7 +91,9 @@ const detailRoute = computed(() => ({
 
     <div class="foot">
       <span class="meta">{{ sharedAtLabel }}</span>
-      <RouterLink :to="detailRoute" class="foot__back">卓へ戻る</RouterLink>
+      <RouterLink :to="detailRoute" class="foot__back"
+        >開催の詳細へ戻る</RouterLink
+      >
     </div>
   </BaseCard>
 </template>
@@ -203,7 +205,7 @@ const detailRoute = computed(() => ({
 
 .empty {
   margin: 0;
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-8) var(--space-3);
 
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
@@ -216,7 +218,7 @@ const detailRoute = computed(() => ({
   align-items: center;
   gap: var(--space-2);
 
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
 
   background: var(--color-background);
   border: 1px solid var(--color-border);

@@ -8,14 +8,13 @@ import { getHealth } from '@/health/application/get-health';
 import { registerAuthRoute } from '@/auth/presentation/controller/routes/auth-route';
 import { registerHealthRoute } from '@/health/presentation/controller/routes/health-route';
 import { registerGameSessionRoute } from '@/game-session/presentation/controller/routes/game-session-route';
-import { registerMemberRoute } from '@/game-session/presentation/controller/routes/member-route';
-import { registerGuestLinkRoute } from '@/game-session/presentation/controller/routes/guest-link-route';
+import { registerSeatRoute } from '@/game-session/presentation/controller/routes/seat-route';
 import { registerPlayMemoRoute } from '@/game-session/presentation/controller/routes/play-memo-route';
 import { registerProfileRoute } from '@/profile/presentation/controller/routes/profile-route';
 import { registerLobbyRoute } from '@/lobby/presentation/controller/routes/lobby-route';
-import { registerMemberRoute as registerLobbyMemberRoute } from '@/lobby/presentation/controller/routes/member-route';
+import { registerEntryRoute as registerLobbyEntryRoute } from '@/lobby/presentation/controller/routes/entry-route';
 import { registerGuestLinkRoute as registerLobbyGuestLinkRoute } from '@/lobby/presentation/controller/routes/guest-link-route';
-import { registerAvailabilityDateRoute as registerLobbyAvailabilityDateRoute } from '@/lobby/presentation/controller/routes/availability-date-route';
+import { registerSchedulePollRoute as registerLobbySchedulePollRoute } from '@/lobby/presentation/controller/routes/schedule-poll-route';
 
 export interface CreateAppOptions {
   frontendOrigin: string;
@@ -44,24 +43,19 @@ export const createApp = (options: CreateAppOptions) => {
   registerGameSessionRoute(app, {
     getSession: options.getSession,
     listGameSessions: options.gameSession.listGameSessions,
-    createGameSession: options.gameSession.createGameSession,
+    listLobbyGameSessions: options.gameSession.listLobbyGameSessions,
     getGameSession: options.gameSession.getGameSession,
+    createGameSession: options.gameSession.createGameSession,
     updateGameSession: options.gameSession.updateGameSession,
     deleteGameSession: options.gameSession.deleteGameSession,
     updateGameSessionStatus: options.gameSession.updateGameSessionStatus,
   });
-  registerMemberRoute(app, {
+  registerSeatRoute(app, {
     getSession: options.getSession,
-    listMembers: options.gameSession.listMembers,
-    joinGameSession: options.gameSession.joinGameSession,
-    joinAsGuest: options.gameSession.joinAsGuest,
-    updateMember: options.gameSession.updateMember,
-    leaveGameSession: options.gameSession.leaveGameSession,
-  });
-  registerGuestLinkRoute(app, {
-    getSession: options.getSession,
-    getGuestLink: options.gameSession.getGuestLink,
-    getGuestLinkPreview: options.gameSession.getGuestLinkPreview,
+    listSeats: options.gameSession.listSeats,
+    createSeat: options.gameSession.createSeat,
+    updateCharacterAssignment: options.gameSession.updateCharacterAssignment,
+    deleteSeat: options.gameSession.deleteSeat,
   });
   registerPlayMemoRoute(app, {
     getSession: options.getSession,
@@ -72,17 +66,17 @@ export const createApp = (options: CreateAppOptions) => {
   });
   registerLobbyRoute(app, {
     getSession: options.getSession,
-    listLobbies: options.lobby.listLobbies,
+    listMyLobbies: options.lobby.listMyLobbies,
+    listPublicLobbies: options.lobby.listPublicLobbies,
     createLobby: options.lobby.createLobby,
     getLobby: options.lobby.getLobby,
     updateLobby: options.lobby.updateLobby,
     deleteLobby: options.lobby.deleteLobby,
     updateLobbyStatus: options.lobby.updateLobbyStatus,
-    confirmLobby: options.lobby.confirmLobby,
   });
-  registerLobbyMemberRoute(app, {
+  registerLobbyEntryRoute(app, {
     getSession: options.getSession,
-    listMembers: options.lobby.listMembers,
+    listEntries: options.lobby.listEntries,
     joinLobby: options.lobby.joinLobby,
     joinAsGuest: options.lobby.joinAsGuest,
     leaveLobby: options.lobby.leaveLobby,
@@ -90,17 +84,16 @@ export const createApp = (options: CreateAppOptions) => {
   registerLobbyGuestLinkRoute(app, {
     getSession: options.getSession,
     getGuestLink: options.lobby.getGuestLink,
+    regenerateGuestLink: options.lobby.regenerateGuestLink,
   });
-  registerLobbyAvailabilityDateRoute(app, {
+  registerLobbySchedulePollRoute(app, {
     getSession: options.getSession,
-    listAvailabilityDates: options.lobby.listAvailabilityDates,
-    addAvailabilityDate: options.lobby.addAvailabilityDate,
-    bulkUpdateAvailabilityDates: options.lobby.bulkUpdateAvailabilityDates,
-    deleteAvailabilityDate: options.lobby.deleteAvailabilityDate,
-    updateAvailabilityDateResponse:
-      options.lobby.updateAvailabilityDateResponse,
-    updateGuestAvailabilityDateResponse:
-      options.lobby.updateGuestAvailabilityDateResponse,
+    listSchedulePolls: options.lobby.listSchedulePolls,
+    getSchedulePoll: options.lobby.getSchedulePoll,
+    createSchedulePoll: options.lobby.createSchedulePoll,
+    replaceCandidateDates: options.lobby.replaceCandidateDates,
+    upsertScheduleAnswers: options.lobby.upsertScheduleAnswers,
+    upsertGuestScheduleAnswers: options.lobby.upsertGuestScheduleAnswers,
   });
   registerProfileRoute(app, {
     getSession: options.getSession,

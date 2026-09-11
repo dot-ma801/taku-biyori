@@ -1,5 +1,18 @@
 # RollHub（たく日和）— 設計ドキュメント v1.2: プレイメモ
 
+> [!IMPORTANT]
+> **この文書は [design-v2.md](./design-v2.md) に置き換えられた（superseded）。**
+> v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
+> 本書の DB スキーマ・ステータス設計・紐付け先（`memberId` → `seatId`）は現行の実装と一致しない。
+> 現行の設計は design-v2 を参照すること。
+>
+> **ただしプレイメモ4本のリクエスト・レスポンス契約は v2 でも変えていない**
+> （design-v2 §6-15「等価性の基準点」）。パスの入れ子化と `memberId` → `seatId` の改名を除けば、
+> 本書の §4（操作可否）・§5（エラー表）・§8 は現在も**その挙動の記録として有効**であり、
+> コード中の `design-v1.2 §…` という参照はこの意味で残している。
+
+<!-- MD028: superseded 注記と元のメタ情報を別の blockquote として保つ -->
+
 > **最終更新**: 2026-08-03
 > **元要求**: [docs/requirements/play-memo.md](./requirements/play-memo.md)
 > **位置づけ**: [design-v1.md](./design-v1.md) / [design-v1.1.md](./design-v1.1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針、卓のステータス導出など）は design-v1 / design-v1.1 を踏襲する。

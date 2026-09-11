@@ -41,11 +41,14 @@ describe('createAuth', () => {
   });
 
   it('returns the google provider only when both values are provided', () => {
+    // `betterAuth` はモックしており実行時には渡した config をそのまま返すが、
+    // createAuth の型は本物の Auth<...> のままなので socialProviders が
+    // 静的には見えない。テスト用にモックの実体形へキャストする。
     const auth = createAuth({
       ...baseOptions,
       googleClientId: 'google-client-id',
       googleClientSecret: 'google-client-secret',
-    });
+    }) as unknown as { socialProviders: unknown };
 
     expect(auth.socialProviders).toEqual({
       google: {

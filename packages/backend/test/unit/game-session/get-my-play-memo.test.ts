@@ -3,8 +3,10 @@ import { getMyPlayMemo } from '@/game-session/application/get-my-play-memo';
 import type { GetMyPlayMemoRepository } from '@/game-session/application/get-my-play-memo';
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
+const LOBBY_ID = 'lobby-1';
+
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '今日のセッションのメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T00:00:00.000Z',
@@ -13,9 +15,9 @@ const mockPlayMemo: GameSessionPlayMemo = {
 const makeRepo = (
   overrides: Partial<GetMyPlayMemoRepository> = {},
 ): GetMyPlayMemoRepository => ({
-  gameSessionExists: vi.fn().mockResolvedValue(true),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
-  findPlayMemoByMemberId: vi.fn().mockResolvedValue(mockPlayMemo),
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
+  findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
+  findPlayMemoBySeatId: vi.fn().mockResolvedValue(mockPlayMemo),
   ...overrides,
 });
 
@@ -25,7 +27,7 @@ describe('getMyPlayMemo', () => {
     const repo = makeRepo();
 
     // Act
-    const result = await getMyPlayMemo(repo, 'session-1', 'user-1');
+    const result = await getMyPlayMemo(repo, LOBBY_ID, 'session-1', 'user-1');
 
     // Assert
     expect(result).toEqual({ type: 'ok', playMemo: mockPlayMemo });
@@ -35,17 +37,17 @@ describe('getMyPlayMemo', () => {
   it('メモ未作成でも notFound ではなく空メモを返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findPlayMemoByMemberId: vi.fn().mockResolvedValue(null),
+      findPlayMemoBySeatId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
-    const result = await getMyPlayMemo(repo, 'session-1', 'user-1');
+    const result = await getMyPlayMemo(repo, LOBBY_ID, 'session-1', 'user-1');
 
     // Assert
     expect(result).toEqual({
       type: 'ok',
       playMemo: {
-        memberId: 'member-1',
+        seatId: 'member-1',
         body: '',
         sharedAt: null,
         updatedAt: null,
@@ -53,14 +55,31 @@ describe('getMyPlayMemo', () => {
     });
   });
 
-  it('卓が存在しないと notFound を返す', async () => {
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await getMyPlayMemo(
+      repo,
+      'lobby-other',
+      'session-1',
+      'user-1',
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.findSeatByUserId).not.toHaveBeenCalled();
+  });
+
+  it('開催が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findLobbyId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
-    const result = await getMyPlayMemo(repo, 'nonexistent', 'user-1');
+    const result = await getMyPlayMemo(repo, LOBBY_ID, 'nonexistent', 'user-1');
 
     // Assert
     expect(result).toEqual({ type: 'notFound' });
@@ -68,30 +87,30 @@ describe('getMyPlayMemo', () => {
 
   // ゲストは user_id = null のためこの検索に構造上ヒットしない（design-v1.2 §4）。
   // ゲスト除外の専用分岐は書かない
-  it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
+  it('その開催のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
-    const result = await getMyPlayMemo(repo, 'session-1', 'user-9');
+    const result = await getMyPlayMemo(repo, LOBBY_ID, 'session-1', 'user-9');
 
     // Assert
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('卓が存在しないときはメンバー検索もメモ取得も行わない', async () => {
+  it('開催が存在しないときはメンバー検索もメモ取得も行わない', async () => {
     // Arrange
     const repo = makeRepo({
-      gameSessionExists: vi.fn().mockResolvedValue(false),
+      findLobbyId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
-    await getMyPlayMemo(repo, 'nonexistent', 'user-1');
+    await getMyPlayMemo(repo, LOBBY_ID, 'nonexistent', 'user-1');
 
     // Assert
-    expect(repo.findMemberByUserId).not.toHaveBeenCalled();
-    expect(repo.findPlayMemoByMemberId).not.toHaveBeenCalled();
+    expect(repo.findSeatByUserId).not.toHaveBeenCalled();
+    expect(repo.findPlayMemoBySeatId).not.toHaveBeenCalled();
   });
 });

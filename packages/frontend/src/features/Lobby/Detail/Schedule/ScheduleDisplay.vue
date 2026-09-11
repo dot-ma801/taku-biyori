@@ -4,32 +4,45 @@ import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSecti
 import BaseButton from '@/components/button/BaseButton.vue';
 import ScheduleTable from '@/features/Lobby/Detail/Schedule/ScheduleTable.vue';
 import ScheduleCardList from '@/features/Lobby/Detail/Schedule/ScheduleCardList.vue';
-import ConfirmFlowDialog from '@/features/Lobby/Detail/Schedule/ConfirmFlow/ConfirmFlowDialog.vue';
-import { useSchedule } from '@/features/Lobby/Detail/Schedule/useSchedule';
-import type { LobbyDetail } from '@taku-biyori/shared';
+import RestartSchedulePoll from '@/features/Lobby/Detail/Schedule/RestartSchedulePoll.vue';
+import CandidateDateEditSection from '@/features/Lobby/Detail/Schedule/CandidateDateEditSection.vue';
+import SchedulePollHistory from '@/features/Lobby/Detail/Schedule/SchedulePollHistory.vue';
+import { useSchedulePoll } from '@/features/Lobby/Detail/Schedule/useSchedulePoll';
+import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSchedule';
 import { isGuestMember } from '@taku-biyori/shared';
+import type { LobbyDetailModel } from '@/models/lobby';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
 import { CalendarCheck, SquarePen, Check, RotateCcw } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSchedule';
 import { useMyLobbyMemberId } from '@/features/Lobby/Detail/composables/useMyLobbyMemberId';
-import { useScheduleConfirm } from '@/features/Lobby/Detail/Schedule/useScheduleConfirm';
 
 const props = defineProps<{
-  lobby: LobbyDetail;
+  lobby: LobbyDetailModel;
 }>();
 
 const emit = defineEmits<{
-  'lobby-changed': [];
+  // 送信時に日程調整が最新でなくなっていた（409）とき、親にロビー詳細の再取得を依頼する
+  stale: [];
+  // 新しい日程調整を開始した（やり直す）。schedulePolls が変わり最新の調整 id が
+  // 切り替わるため、親にロビー詳細の再取得を依頼する
+  restarted: [];
 }>();
 
-const confirmFlowDialogModel = ref(false);
+const { myMemberId: myEntryId } = useMyLobbyMemberId(
+  () => props.lobby.activeEntries,
+);
 
-const { myMemberId } = useMyLobbyMemberId(() => props.lobby.members);
+// ロビー詳細が持つ最新の日程調整 id。調整が1件も無ければ null
+// （<template> に式を書かず computed に切り出す：CLAUDE.md ルール）
+const latestPollId = computed(() => props.lobby.schedulePolls[0]?.id ?? null);
+
+// 過去の調整（最新以外）。新しい順の先頭（最新）を除いた残り
+const historyPolls = computed(() => props.lobby.schedulePolls.slice(1));
+const hasHistory = computed(() => historyPolls.value.length > 0);
 
 const {
-  availabilityDates,
+  candidateDates,
   loading,
   errorMessage,
   canInputSchedule,
@@ -39,8 +52,14 @@ const {
   cancelEdit,
   cycleAnswer,
   submitEdit,
-  refetch: refetchSchedule,
-} = useSchedule(props.lobby.id, myMemberId, () => props.lobby.status);
+  refetch: refetchPoll,
+} = useSchedulePoll(
+  props.lobby.id,
+  latestPollId,
+  () => myEntryId.value,
+  () => props.lobby.status,
+  () => emit('stale'),
+);
 
 // token は招待リンク（?token=）由来。route から読み、getter で composable へ渡す
 const route = useRoute();
@@ -59,14 +78,11 @@ const {
 } = useGuestSchedule(
   props.lobby.id,
   token,
-  availabilityDates,
+  latestPollId,
+  () => candidateDates.value,
   () => props.lobby.status,
-  refetchSchedule,
-);
-
-const { canConfirm } = useScheduleConfirm(
-  () => props.lobby.hostUserId,
-  () => props.lobby.status,
+  refetchPoll,
+  () => emit('stale'),
 );
 
 // ===== 表（ScheduleTable）への入力をモードに応じて組み立てる =====
@@ -77,20 +93,22 @@ const isScheduleEditing = computed(
 );
 
 // 編集できるメンバー列の id。自分の列編集なら自分のみ、ゲスト編集ならゲスト列すべて
-const editableMemberIds = computed<string[]>(() => {
-  if (isEditing.value && myMemberId.value) return [myMemberId.value];
+const editableEntryIds = computed<string[]>(() => {
+  if (isEditing.value && myEntryId.value) return [myEntryId.value];
   if (isEditingGuestSchedule.value) {
-    return props.lobby.members.filter((m) => isGuestMember(m)).map((m) => m.id);
+    return props.lobby.activeEntries
+      .filter((m) => isGuestMember(m))
+      .map((m) => m.id);
   }
   return [];
 });
 
-// 表に渡すドラフト。キーを `${memberId}::${dateId}` に統一する
+// 表に渡すドラフト。キーを `${entryId}::${dateId}` に統一する
 const tableDraftAnswers = computed<Map<string, Answer>>(() => {
-  if (isEditing.value && myMemberId.value) {
+  if (isEditing.value && myEntryId.value) {
     const map = new Map<string, Answer>();
     for (const [dateId, answer] of draftAnswers.value) {
-      map.set(`${myMemberId.value}::${dateId}`, answer);
+      map.set(`${myEntryId.value}::${dateId}`, answer);
     }
     return map;
   }
@@ -99,15 +117,15 @@ const tableDraftAnswers = computed<Map<string, Answer>>(() => {
 });
 
 // セルクリック：モードに応じて対象の回答をトグルする
-function onCellClick(memberId: string, dateId: string) {
+function onCellClick(entryId: string, dateId: string) {
   if (isEditing.value) cycleAnswer(dateId);
   else if (isEditingGuestSchedule.value)
-    cycleAnswerGuestSchedule(memberId, dateId);
+    cycleAnswerGuestSchedule(entryId, dateId);
 }
 
 // 「回答を編集する」：メンバーなら自分の列、ゲストならゲスト編集を開始
 function startScheduleEdit() {
-  if (myMemberId.value) enterEditMode();
+  if (myEntryId.value) enterEditMode();
   else if (canEditGuestSchedule.value) enterEditModeGuestSchedule();
 }
 
@@ -132,8 +150,8 @@ const finishDisabled = computed(
 );
 
 // template 内の式を computed に切り出す（CLAUDE.md ルール）
-const displayMemberId = computed(
-  () => myMemberId.value || canEditGuestSchedule.value,
+const canShowScheduleActions = computed(
+  () => myEntryId.value !== null || canEditGuestSchedule.value,
 );
 const canEditSchedule = computed(
   () => canInputSchedule.value || canEditGuestSchedule.value,
@@ -147,31 +165,31 @@ const canEditSchedule = computed(
     </BaseSectionHeading>
 
     <div v-if="loading" class="state-message">読み込み中...</div>
-    <div v-else-if="errorMessage" class="state-message error">
-      {{ errorMessage }}
-    </div>
     <template v-else>
+      <div v-if="errorMessage" class="state-message error">
+        {{ errorMessage }}
+      </div>
       <div class="schedule-table">
         <ScheduleTable
-          :availability-dates="availabilityDates"
-          :members="props.lobby.members"
-          :my-member-id="myMemberId"
-          :editable-member-ids="editableMemberIds"
+          :candidate-dates="candidateDates"
+          :members="props.lobby.activeEntries"
+          :my-entry-id="myEntryId"
+          :editable-entry-ids="editableEntryIds"
           :draft-answers="tableDraftAnswers"
           @cell-click="onCellClick"
         />
       </div>
       <div class="schedule-cards">
         <ScheduleCardList
-          :availability-dates="availabilityDates"
-          :members="props.lobby.members"
-          :my-member-id="myMemberId"
-          :editable-member-ids="editableMemberIds"
+          :candidate-dates="candidateDates"
+          :members="props.lobby.activeEntries"
+          :my-entry-id="myEntryId"
+          :editable-entry-ids="editableEntryIds"
           :draft-answers="tableDraftAnswers"
           @cell-click="onCellClick"
         />
       </div>
-      <div v-if="displayMemberId" class="actions">
+      <div v-if="canShowScheduleActions" class="actions">
         <template v-if="isScheduleEditing">
           <BaseButton
             variant="secondary"
@@ -198,24 +216,36 @@ const canEditSchedule = computed(
           >
             回答を編集する
           </BaseButton>
-          <BaseButton
-            v-if="canConfirm"
-            :left-icon="CalendarCheck"
-            @click="confirmFlowDialogModel = true"
-          >
-            卓を確定する
-          </BaseButton>
         </template>
       </div>
-    </template>
-  </BaseCard>
 
-  <ConfirmFlowDialog
-    v-model="confirmFlowDialogModel"
-    :lobby="lobby"
-    :availability-dates="availabilityDates"
-    @lobby-changed="emit('lobby-changed')"
-  />
+      <div class="host-actions">
+        <CandidateDateEditSection
+          :lobby-id="props.lobby.id"
+          :poll-id="latestPollId"
+          :host-user-id="props.lobby.hostUserId"
+          :status="props.lobby.status"
+          :candidate-dates="candidateDates"
+          @updated="refetchPoll"
+          @stale="emit('stale')"
+        />
+        <RestartSchedulePoll
+          :lobby-id="props.lobby.id"
+          :host-user-id="props.lobby.hostUserId"
+          :status="props.lobby.status"
+          @created="emit('restarted')"
+        />
+      </div>
+    </template>
+
+    <SchedulePollHistory
+      v-if="hasHistory"
+      class="history"
+      :lobby-id="props.lobby.id"
+      :history="historyPolls"
+      :entries="props.lobby.entries"
+    />
+  </BaseCard>
 </template>
 
 <style scoped>
@@ -241,6 +271,20 @@ const canEditSchedule = computed(
   > * {
     margin: 0 var(--space-1);
   }
+}
+
+/* ホスト向け導線（候補日を編集・やり直す）。メンバー向けの .actions とは別に積む */
+.host-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+.history {
+  margin-top: var(--space-4);
 }
 
 /* 768px 以下ではテーブルをカード表示にフォールバックする */

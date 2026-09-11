@@ -73,27 +73,29 @@ const id = useId();
   padding: 0;
   cursor: pointer;
   border-radius: var(--radius-full);
-  color: var(--color-text);
-  transition: color 0.15s;
+  color: var(--text-secondary);
+  transition: var(--transition-control);
 }
 
 .popover__activator:hover {
-  color: var(--color-primary);
+  color: var(--text-primary);
 }
 
 .popover__activator:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
   border-radius: var(--radius-sm);
 }
 
+/* DS: floating surfaces are --surface-raised with a hairline border and
+   --shadow-lg. */
 .popover__content {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   min-width: 160px;
-  font-family: var(--font-family-base);
+  font-family: var(--font-body);
   z-index: 100;
 }
 </style>

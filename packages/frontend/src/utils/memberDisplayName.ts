@@ -1,16 +1,16 @@
-import type { GameSessionMember } from '@taku-biyori/shared';
 import { isGuestMember } from '@taku-biyori/shared';
 
 const UNSET = '（未設定）';
 
 /**
  * 表示名の導出に必要な最小のフィールド集合。
- * GameSessionMember・LobbyMember の両方がこの3フィールドを持つため、どちらも渡せる。
+ * LobbyEntry・Seat の両方がこの3フィールドを持つため、どちらも渡せる。
  */
-type MemberNameSource = Pick<
-  GameSessionMember,
-  'userId' | 'userName' | 'guestName'
->;
+type MemberNameSource = {
+  userId: string | null;
+  userName: string | null;
+  guestName: string | null;
+};
 
 /**
  * アバター用の生の名前（サフィックスなし）。

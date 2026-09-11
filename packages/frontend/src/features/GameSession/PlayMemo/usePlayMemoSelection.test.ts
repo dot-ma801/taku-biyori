@@ -17,15 +17,15 @@ const PRIVATE_MEMBER_ID = 'member-private';
 const GUEST_MEMBER_ID = 'member-guest';
 
 function makeEntry(
-  memberId: string,
+  seatId: string,
   overrides: Partial<PlayMemoMemberEntry> = {},
 ): PlayMemoMemberEntry {
   return {
-    memberId,
-    primaryLabel: memberId,
+    seatId,
+    primaryLabel: seatId,
     secondaryLabel: null,
-    userId: `user-${memberId}`,
-    avatarName: memberId,
+    userId: `user-${seatId}`,
+    avatarName: seatId,
     tag: 'shared',
     readable: true,
     isMe: false,
@@ -63,12 +63,12 @@ beforeEach(() => {
 describe('既定の選択', () => {
   it('?member= が無ければ自分が選ばれる', () => {
     // Arrange & Act
-    const { selectedMemberId, isMineSelected } = usePlayMemoSelection(() =>
+    const { selectedSeatId, isMineSelected } = usePlayMemoSelection(() =>
       makeEntries(),
     );
 
     // Assert
-    expect(selectedMemberId.value).toBe(MY_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(MY_MEMBER_ID);
     expect(isMineSelected.value).toBe(true);
   });
 
@@ -77,12 +77,12 @@ describe('既定の選択', () => {
     const entries = makeEntries().map((entry) => ({ ...entry, isMe: false }));
 
     // Act
-    const { selectedMemberId, isMineSelected } = usePlayMemoSelection(
+    const { selectedSeatId, isMineSelected } = usePlayMemoSelection(
       () => entries,
     );
 
     // Assert
-    expect(selectedMemberId.value).toBe(SHARED_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(SHARED_MEMBER_ID);
     expect(isMineSelected.value).toBe(false);
   });
 
@@ -102,12 +102,12 @@ describe('既定の選択', () => {
     ];
 
     // Act
-    const { selectedMemberId, selectedEntry } = usePlayMemoSelection(
+    const { selectedSeatId, selectedEntry } = usePlayMemoSelection(
       () => entries,
     );
 
     // Assert
-    expect(selectedMemberId.value).toBeNull();
+    expect(selectedSeatId.value).toBeNull();
     expect(selectedEntry.value).toBeNull();
   });
 });
@@ -118,10 +118,10 @@ describe('?member= の指定', () => {
     mockRoute({ member: SHARED_MEMBER_ID });
 
     // Act
-    const { selectedMemberId } = usePlayMemoSelection(() => makeEntries());
+    const { selectedSeatId } = usePlayMemoSelection(() => makeEntries());
 
     // Assert
-    expect(selectedMemberId.value).toBe(SHARED_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(SHARED_MEMBER_ID);
   });
 
   it('読めない相手を指定されてもその人を選ぶ（本文の代わりに理由を出すため）', async () => {
@@ -129,13 +129,13 @@ describe('?member= の指定', () => {
     mockRoute({ member: PRIVATE_MEMBER_ID });
 
     // Act
-    const { selectedMemberId, selectedEntry } = usePlayMemoSelection(() =>
+    const { selectedSeatId, selectedEntry } = usePlayMemoSelection(() =>
       makeEntries(),
     );
     await flushPromises();
 
     // Assert
-    expect(selectedMemberId.value).toBe(PRIVATE_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(PRIVATE_MEMBER_ID);
     expect(selectedEntry.value?.readable).toBe(false);
     expect(replace).not.toHaveBeenCalled();
   });
@@ -145,11 +145,11 @@ describe('?member= の指定', () => {
     mockRoute({ member: GUEST_MEMBER_ID });
 
     // Act
-    const { selectedMemberId } = usePlayMemoSelection(() => makeEntries());
+    const { selectedSeatId } = usePlayMemoSelection(() => makeEntries());
     await flushPromises();
 
     // Assert
-    expect(selectedMemberId.value).toBe(GUEST_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(GUEST_MEMBER_ID);
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -158,11 +158,11 @@ describe('?member= の指定', () => {
     mockRoute({ member: 'member-unknown' });
 
     // Act
-    const { selectedMemberId } = usePlayMemoSelection(() => makeEntries());
+    const { selectedSeatId } = usePlayMemoSelection(() => makeEntries());
     await flushPromises();
 
     // Assert
-    expect(selectedMemberId.value).toBe(MY_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(MY_MEMBER_ID);
     expect(replace).toHaveBeenCalled();
   });
 
@@ -187,11 +187,11 @@ describe('?member= の指定', () => {
     const entries = ref<PlayMemoMemberEntry[]>([]);
 
     // Act
-    const { selectedMemberId } = usePlayMemoSelection(entries);
+    const { selectedSeatId } = usePlayMemoSelection(entries);
     await flushPromises();
 
     // Assert
-    expect(selectedMemberId.value).toBeNull();
+    expect(selectedSeatId.value).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -199,14 +199,14 @@ describe('?member= の指定', () => {
     // Arrange
     mockRoute({ member: SHARED_MEMBER_ID });
     const entries = ref<PlayMemoMemberEntry[]>([]);
-    const { selectedMemberId } = usePlayMemoSelection(entries);
+    const { selectedSeatId } = usePlayMemoSelection(entries);
 
     // Act
     entries.value = makeEntries();
     await flushPromises();
 
     // Assert
-    expect(selectedMemberId.value).toBe(SHARED_MEMBER_ID);
+    expect(selectedSeatId.value).toBe(SHARED_MEMBER_ID);
     expect(replace).not.toHaveBeenCalled();
   });
 });
@@ -247,6 +247,6 @@ describe('selectedEntry', () => {
     const { selectedEntry } = usePlayMemoSelection(() => makeEntries());
 
     // Assert
-    expect(selectedEntry.value?.memberId).toBe(SHARED_MEMBER_ID);
+    expect(selectedEntry.value?.seatId).toBe(SHARED_MEMBER_ID);
   });
 });

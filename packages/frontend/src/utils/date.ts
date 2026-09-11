@@ -31,11 +31,11 @@ export function formatDateWithWeekday(dateStr: string): string {
 /**
  * "6/10 21:04"
  *
- * 日付文字列ではなく ISO 8601 のタイムスタンプ（瞬間）を受け取り、
+ * ISO 8601 のタイムスタンプまたは Date（瞬間）を受け取り、
  * 実行環境のローカル時刻で表示する。パースできない場合は空文字を返す。
  */
-export function formatDateTimeShort(isoString: string): string {
-  const date = new Date(isoString);
+export function formatDateTimeShort(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '';
 
   const month = date.getMonth() + 1;

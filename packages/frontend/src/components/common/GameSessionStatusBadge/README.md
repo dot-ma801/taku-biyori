@@ -19,22 +19,20 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 ## ステータスとバリアントの対応
 
+ラベルは design-v2 §4-2 の「日本語」列に揃えている。
+
 | ステータス  | ラベル   | バリアント          |
 | ----------- | -------- | ------------------- |
-| `draft`     | 非公開   | muted（グレー）     |
-| `confirmed` | 実施前   | success（グリーン） |
-| `today`     | 当日     | error（レッド）     |
-| `completed` | 通過済み | muted（グレー）     |
+| `scheduled` | 開催予定 | success（グリーン） |
+| `today`     | 本日開催 | error（レッド）     |
+| `completed` | 完了     | muted（グレー）     |
 | `cancelled` | 中止     | error（レッド）     |
 
 `today` と `cancelled` に error（赤）を使う。`today` は当日開催の緊急感を、`cancelled` は開催されない事実を、それぞれ他ステータスと区別して伝える。  
 バリアントのマッピングは `features/GameSession/Detail/StatusDisplay.vue` の設計方針に準拠している。
 
-`open`（募集中）は募集枠（lobby）へ移管したため卓では導出されず、表示もしない
-（design-v1.1 §8）。ただし `PATCH /:id/status` の公開遷移（`draft → open`）のリクエスト値として
-使うため、`GameSessionStatus` enum には残っている。導出されないステータスが渡ってもバッジを
-描画しないよう、マッピングは「キーが無いことがありうる」ルックアップとして持つ。募集枠のバッジは
-`LobbyStatusBadge` を使うこと。
+公開と受付はロビーの関心事なので、開催のステータスには含まれない（design-v2 §4-2）。
+ロビーのバッジは `LobbyStatusBadge` を使うこと。
 
 ## Design Notes
 
@@ -51,20 +49,14 @@ API 呼び出しや composable 依存は一切持たず、純粋な表示のみ�
 
 ### ラベル
 
-- `draft` のとき「非公開」と表示されること
-- `confirmed` のとき「実施前」と表示されること
-- `today` のとき「当日」と表示されること
-- `completed` のとき「通過済み」と表示されること
+- `scheduled` のとき「開催予定」と表示されること
+- `today` のとき「本日開催」と表示されること
+- `completed` のとき「完了」と表示されること
 - `cancelled` のとき「中止」と表示されること
 
 ### バリアント
 
-- `draft` のとき `status-badge--muted` クラスが付与されること
-- `confirmed` のとき `status-badge--success` クラスが付与されること
+- `scheduled` のとき `status-badge--success` クラスが付与されること
 - `today` のとき `status-badge--error` クラスが付与されること
 - `completed` のとき `status-badge--muted` クラスが付与されること
 - `cancelled` のとき `status-badge--error` クラスが付与されること
-
-### 卓では扱わないステータス
-
-- `open` のときバッジを描画しないこと

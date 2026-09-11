@@ -1,10 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import {
-  type MyGameSessionPlayMemo,
-  GAME_SESSION_PLAY_MEMO_MAX_LENGTH,
-} from '@taku-biyori/shared';
+import { GAME_SESSION_PLAY_MEMO_MAX_LENGTH } from '@taku-biyori/shared';
 import { upsertMyPlayMemo } from '@/api/game-session';
+import type { MyPlayMemoModel } from '@/models/play-memo';
 import { ApiError } from '@/lib/api-client';
 
 /**
@@ -15,7 +13,7 @@ import { ApiError } from '@/lib/api-client';
  * - `saving`: 送信中
  * - `saved`: 保存済み
  * - `failed`: 保存に失敗（ドラフトは保持。「もう一度保存」で再試行する）
- * - `locked`: 卓が完了・中止して本文編集が閉じた（409）
+ * - `locked`: 開催が完了・中止して本文編集が閉じた（409）
  */
 export type PlayMemoSaveStatus =
   | 'idle'
@@ -35,11 +33,12 @@ export type PlayMemoSaveStatus =
  * 内部で `.value =` してよい（CLAUDE.md の例外）。サーバ値は所有せず getter で読む。
  */
 export const usePlayMemoEdit = (
+  lobbyId: string,
   gameSessionId: string,
   // NOTE: 読み取りは getter で受ける。サーバ値の所有者は useMyPlayMemo 側。
-  playMemo: MaybeRefOrGetter<MyGameSessionPlayMemo | null>,
+  playMemo: MaybeRefOrGetter<MyPlayMemoModel | null>,
   // NOTE: 保存後のサーバ値は callback で所有者へ返す。ここでは書き換えない。
-  onSaved: (saved: MyGameSessionPlayMemo) => void,
+  onSaved: (saved: MyPlayMemoModel) => void,
 ) => {
   /** 編集ドラフト。この composable が所有するので v-model 可 */
   const draftBody = ref('');
@@ -99,7 +98,7 @@ export const usePlayMemoEdit = (
    * 現在のドラフトを保存する。
    *
    * 送信中・変更なし・上限超過のときは何もしない。
-   * 409（卓が完了・中止した）を受けたら locked に落として編集を閉じる。
+   * 409（開催が完了・中止した）を受けたら locked に落として編集を閉じる。
    *
    * 二重送信ガードは `status` ではなく `inFlight` を見る。`setDraft` が
    * `status` を dirty/idle に上書きするため、`status === 'saving'` は
@@ -116,7 +115,9 @@ export const usePlayMemoEdit = (
 
     const request = (async () => {
       try {
-        const saved = await upsertMyPlayMemo(gameSessionId, { body: sending });
+        const saved = await upsertMyPlayMemo(lobbyId, gameSessionId, {
+          body: sending,
+        });
         // 基準値は「送った本文」ではなく「サーバが保存した本文」に合わせる。
         // 上の watch はこの baseline との一致でエコーを判定するため、サーバが
         // 本文を正規化して返すと（前後の空白除去など）送信内容とはズレる。
@@ -130,7 +131,7 @@ export const usePlayMemoEdit = (
         status.value = isDirty.value ? 'dirty' : 'saved';
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
-          // 書いている最中にホストが卓を完了・中止した。仕様どおりのエラーなので
+          // 書いている最中にホストが開催を完了・中止した。仕様どおりのエラーなので
           // リトライせず読み取りへ落とす（design-v1.2 §4）
           status.value = 'locked';
           return;

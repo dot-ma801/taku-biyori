@@ -1,14 +1,14 @@
 import { computed, getCurrentInstance, onUnmounted, ref, toValue } from 'vue';
 import type { ComputedRef, MaybeRefOrGetter } from 'vue';
-import type { LobbyMember } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { useSession } from '@/lib/auth';
 
 /**
- * ログインユーザーに対応する自分の LobbyMember の id を導出する composable。
+ * ログインユーザーに対応する自分の LobbyEntry の id を導出する composable。
  * 日程調整表（自分の列編集）や参加/退出ボタンから利用する想定。
  */
 export const useMyLobbyMemberId = (
-  members: MaybeRefOrGetter<LobbyMember[]>,
+  members: MaybeRefOrGetter<LobbyEntryModel[]>,
 ): {
   myMemberId: ComputedRef<string | null>;
   isJoined: ComputedRef<boolean>;
@@ -26,7 +26,7 @@ export const useMyLobbyMemberId = (
     });
   }
 
-  /** ログインユーザーに対応する LobbyMember の id。未ログイン・未参加なら null */
+  /** ログインユーザーに対応する LobbyEntry の id。未ログイン・未参加なら null */
   const myMemberId = computed<string | null>(() => {
     const userId = sessionData.value.data?.user?.id;
     if (!userId) return null;

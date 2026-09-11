@@ -20,7 +20,7 @@
 <BaseStepper
   :steps="['候補日選択', '参加者選択', '確認']"
   :current="step"
-  label="卓確定の手順"
+  label="開催を追加する手順"
 />
 ```
 

@@ -1,38 +1,34 @@
 <script setup lang="ts">
 import BaseCheckbox from '@/components/form/BaseCheckbox/BaseCheckbox.vue';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
-import { memberDisplayName } from '@/utils/memberDisplayName';
-import type { LobbyMember } from '@taku-biyori/shared';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
+import type { LobbyEntryModel } from '@/models/lobby';
+import { memberDisplayName } from '@/utils/memberDisplayName';
 import { AlertTriangle } from '@lucide/vue';
 
 const props = defineProps<{
-  members: LobbyMember[];
-  selectedMemberIds: Set<string>;
-  isWarnedMember: (memberId: string) => boolean;
-  getMemberAnswer: (memberId: string) => Answer | null;
+  entries: LobbyEntryModel[];
+  selectedEntryIds: Set<string>;
+  isWarnedEntry: (entryId: string) => boolean;
+  getEntryAnswer: (entryId: string) => Answer | null;
 }>();
-
-const emit = defineEmits<{
-  toggle: [id: string];
-}>();
+const emit = defineEmits<{ toggle: [id: string] }>();
 </script>
 
 <template>
   <p class="step-label">参加者を選んでください</p>
-  <ul class="member-list">
-    <li v-for="member in members" :key="member.id" class="member-item">
-      <label class="member-label">
+  <ul class="entry-list">
+    <li v-for="entry in entries" :key="entry.id" class="entry-item">
+      <label class="entry-label">
         <BaseCheckbox
-          :model-value="selectedMemberIds.has(member.id)"
-          @update:model-value="emit('toggle', member.id)"
+          :model-value="selectedEntryIds.has(entry.id)"
+          @update:model-value="emit('toggle', entry.id)"
         />
-        <span class="member-name">{{ memberDisplayName(member) }}</span>
-        <AnswerCell :answer="props.getMemberAnswer(member.id)" />
-        <span v-if="props.isWarnedMember(member.id)" class="warn">
-          <AlertTriangle :size="14" />
-          ×・未回答
-        </span>
+        <span class="entry-name">{{ memberDisplayName(entry) }}</span>
+        <AnswerCell :answer="props.getEntryAnswer(entry.id)" />
+        <span v-if="props.isWarnedEntry(entry.id)" class="warn"
+          ><AlertTriangle :size="14" />×・未回答</span
+        >
       </label>
     </li>
   </ul>
@@ -44,8 +40,7 @@ const emit = defineEmits<{
   color: var(--color-text-muted);
   margin: 0 0 var(--space-3);
 }
-
-.member-list {
+.entry-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -53,14 +48,12 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: var(--space-2);
 }
-
-.member-item {
+.entry-item {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
-
-.member-label {
+.entry-label {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -68,11 +61,9 @@ const emit = defineEmits<{
   font-size: 14px;
   width: 100%;
 }
-
-.member-name {
+.entry-name {
   flex: 1;
 }
-
 .warn {
   display: flex;
   align-items: center;

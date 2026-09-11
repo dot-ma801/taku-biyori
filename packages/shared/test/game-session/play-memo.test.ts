@@ -92,7 +92,7 @@ describe('GameSessionPlayMemoSchema', () => {
   it('非公開メモ（sharedAt が null）を受け付ける', () => {
     // Arrange
     const memo = {
-      memberId: '00000000-0000-4000-8000-000000000001',
+      seatId: '00000000-0000-4000-8000-000000000001',
       body: 'メモ',
       sharedAt: null,
       updatedAt: '2026-08-02T00:00:00.000Z',
@@ -110,7 +110,7 @@ describe('SharedGameSessionPlayMemoSchema', () => {
   it('公開済みのみを返すため sharedAt が null のメモを拒否する', () => {
     // Arrange
     const memo = {
-      memberId: '00000000-0000-4000-8000-000000000001',
+      seatId: '00000000-0000-4000-8000-000000000001',
       body: 'メモ',
       sharedAt: null,
       updatedAt: '2026-08-02T00:00:00.000Z',
@@ -129,7 +129,7 @@ describe('MyGameSessionPlayMemoSchema', () => {
   it('未作成の空メモ（updatedAt が null）を受け付ける', () => {
     // Arrange
     const memo = {
-      memberId: '00000000-0000-4000-8000-000000000001',
+      seatId: '00000000-0000-4000-8000-000000000001',
       body: '',
       sharedAt: null,
       updatedAt: null,

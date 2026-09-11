@@ -5,15 +5,30 @@ import InputScheduleInfo from '@/features/Lobby/Edit/InputScheduleInfo.vue';
 import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
-import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
 import { computed } from 'vue';
 
-const props = defineProps<{
-  heading: string;
-  submitLabel: string;
-  loading: boolean;
-  errorMessages: string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    heading: string;
+    submitLabel: string;
+    loading: boolean;
+    errorMessages: string[];
+    /**
+     * 候補日（とひとこと）の入力欄を出すか。
+     * 作成画面は常に出す。編集画面は日程調整が1件でもあるときだけ出す。
+     *
+     * **既定値を明示する必要がある**: Boolean の prop は省略されると `undefined` では
+     * なく `false` になるため、既定値なしだと呼び出し側が渡し忘れたときに
+     * 候補日の入力欄ごと消える。
+     */
+    showCandidateDates?: boolean;
+    /** 「候補日を出して決める / 開催日を入れる」の切り替えを出すか（作成画面のみ） */
+    showScheduleModeSwitch?: boolean;
+  }>(),
+  { showCandidateDates: true, showScheduleModeSwitch: false },
+);
 
 const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
@@ -22,6 +37,13 @@ const description = defineModel<string>('description', { default: '' });
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
+const gameSessionDescription = defineModel<string>('gameSessionDescription', {
+  default: '',
+});
+const scheduleMode = defineModel<ScheduleMode>('scheduleMode', {
+  default: 'poll',
+});
 const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
@@ -53,7 +75,12 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
     <InputScheduleInfo
       v-model:openUntil="openUntil"
       v-model:scheduledAt="scheduledAt"
+      v-model:timeLabel="timeLabel"
+      v-model:gameSessionDescription="gameSessionDescription"
+      v-model:scheduleMode="scheduleMode"
       v-model:pendingDates="pendingDates"
+      :show-candidate-dates="props.showCandidateDates"
+      :show-mode-switch="props.showScheduleModeSwitch"
     />
 
     <div v-if="hasErrors" class="error-area">
@@ -90,7 +117,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
 .container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .error-area {
@@ -103,6 +130,6 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-8);
 }
 </style>

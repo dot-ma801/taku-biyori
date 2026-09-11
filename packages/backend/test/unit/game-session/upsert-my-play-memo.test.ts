@@ -3,18 +3,18 @@ import { upsertMyPlayMemo } from '@/game-session/application/upsert-my-play-memo
 import type { UpsertMyPlayMemoRepository } from '@/game-session/application/upsert-my-play-memo';
 import type { GameSessionPlayMemo } from '@taku-biyori/shared';
 
-const NOW = new Date('2026-08-02T10:00:00.000Z');
+const TODAY = '2026-08-02';
+const LOBBY_ID = 'lobby-1';
 
-/** 公開済み・実施前（confirmed）の卓 */
-const confirmedFields = {
-  isPublished: true,
-  scheduledAt: new Date('2026-09-01'),
+/** 開催予定（scheduled）のセッション */
+const scheduledFields = {
+  scheduledAt: '2026-09-01',
   completedAt: null,
   cancelledAt: null,
 };
 
 const mockPlayMemo: GameSessionPlayMemo = {
-  memberId: 'member-1',
+  seatId: 'member-1',
   body: '書き換えたメモ',
   sharedAt: null,
   updatedAt: '2026-08-02T10:00:00.000Z',
@@ -23,9 +23,10 @@ const mockPlayMemo: GameSessionPlayMemo = {
 const makeRepo = (
   overrides: Partial<UpsertMyPlayMemoRepository> = {},
 ): UpsertMyPlayMemoRepository => ({
-  findStatusFields: vi.fn().mockResolvedValue(confirmedFields),
+  findLobbyId: vi.fn().mockResolvedValue(LOBBY_ID),
+  findStatusFields: vi.fn().mockResolvedValue(scheduledFields),
   findHostUserId: vi.fn().mockResolvedValue('user-host'),
-  findMemberByUserId: vi.fn().mockResolvedValue('member-1'),
+  findSeatByUserId: vi.fn().mockResolvedValue('member-1'),
   upsertPlayMemo: vi.fn().mockResolvedValue(mockPlayMemo),
   ...overrides,
 });
@@ -38,10 +39,11 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: '書き換えたメモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -59,10 +61,11 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-host',
       { body: '書き換えたメモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -77,10 +80,11 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: '' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -88,50 +92,71 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).toHaveBeenCalledWith('member-1', '');
   });
 
-  it('draft の卓でも保存できる', async () => {
+  it('draft の開催でも保存できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi
         .fn()
-        .mockResolvedValue({ ...confirmedFields, isPublished: false }),
+        .mockResolvedValue({ ...scheduledFields, isPublished: false }),
     });
 
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
     expect(result.type).toBe('ok');
   });
 
-  it('当日（today）の卓でも保存できる', async () => {
+  it('当日（today）の開催でも保存できる', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
-        scheduledAt: new Date('2026-08-02'),
+        ...scheduledFields,
+        scheduledAt: '2026-08-02',
       }),
     });
 
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
     expect(result.type).toBe('ok');
   });
 
-  it('卓が存在しないと notFound を返す', async () => {
+  it('URL のロビーがこの開催のロビーでなければ notFound を返す', async () => {
+    // Arrange
+    const repo = makeRepo();
+
+    // Act
+    const result = await upsertMyPlayMemo(
+      repo,
+      'lobby-other',
+      'session-1',
+      'user-1',
+      { body: 'メモ' },
+      TODAY,
+    );
+
+    // Assert
+    expect(result).toEqual({ type: 'notFound' });
+    expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
+  });
+
+  it('開催が存在しないと notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue(null),
@@ -140,10 +165,11 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'nonexistent',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -152,19 +178,20 @@ describe('upsertMyPlayMemo', () => {
   });
 
   // ゲストは user_id = null のためこの検索に構造上ヒットしない（design-v1.2 §4）
-  it('その卓のメンバーでないユーザーには forbidden を返す', async () => {
+  it('その開催のメンバーでないユーザーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -172,11 +199,11 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('完了した卓では statusLocked を返す', async () => {
+  it('完了した開催では statusLocked を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
+        ...scheduledFields,
         completedAt: new Date('2026-08-01T00:00:00.000Z'),
       }),
     });
@@ -184,10 +211,11 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -195,11 +223,11 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  it('中止した卓では statusLocked を返す', async () => {
+  it('中止した開催では statusLocked を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
+        ...scheduledFields,
         cancelledAt: new Date('2026-08-01T00:00:00.000Z'),
       }),
     });
@@ -207,10 +235,11 @@ describe('upsertMyPlayMemo', () => {
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-1',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert
@@ -218,24 +247,25 @@ describe('upsertMyPlayMemo', () => {
     expect(repo.upsertPlayMemo).not.toHaveBeenCalled();
   });
 
-  // 非メンバーに卓のステータスを推測させない（存在チェックを先に通す設計と対称）
-  it('完了した卓でも非メンバーには forbidden を返す', async () => {
+  // 非メンバーに開催のステータスを推測させない（存在チェックを先に通す設計と対称）
+  it('完了した開催でも非メンバーには forbidden を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findStatusFields: vi.fn().mockResolvedValue({
-        ...confirmedFields,
+        ...scheduledFields,
         completedAt: new Date('2026-08-01T00:00:00.000Z'),
       }),
-      findMemberByUserId: vi.fn().mockResolvedValue(null),
+      findSeatByUserId: vi.fn().mockResolvedValue(null),
     });
 
     // Act
     const result = await upsertMyPlayMemo(
       repo,
+      LOBBY_ID,
       'session-1',
       'user-9',
       { body: 'メモ' },
-      NOW,
+      TODAY,
     );
 
     // Assert

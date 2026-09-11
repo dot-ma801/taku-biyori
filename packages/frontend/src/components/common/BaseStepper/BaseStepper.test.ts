@@ -84,12 +84,12 @@ describe('BaseStepper', () => {
     it('label prop がリストの aria-label に反映される', () => {
       // Arrange & Act
       const wrapper = mount(BaseStepper, {
-        props: { steps, current: 1, label: '卓確定の手順' },
+        props: { steps, current: 1, label: '開催を追加する手順' },
       });
 
       // Assert
       expect(wrapper.find('.stepper').attributes('aria-label')).toBe(
-        '卓確定の手順',
+        '開催を追加する手順',
       );
     });
 

@@ -21,11 +21,10 @@ describe('LobbyStatusBadge', () => {
 
   describe('ラベル', () => {
     it.each([
-      [LobbyStatus.draft, '非公開'],
-      [LobbyStatus.open, '募集中'],
-      [LobbyStatus.scheduling, '日程調整中'],
-      [LobbyStatus.confirmed, '卓確定済み'],
-      [LobbyStatus.cancelled, '中止'],
+      [LobbyStatus.draft, '下書き'],
+      [LobbyStatus.open, '受付中'],
+      [LobbyStatus.closed, '受付終了'],
+      [LobbyStatus.disbanded, '解散'],
     ] as const)(
       'status="%s" のとき "%s" と表示される',
       (status, expectedLabel) => {
@@ -42,9 +41,8 @@ describe('LobbyStatusBadge', () => {
     it.each([
       [LobbyStatus.draft, 'status-badge--muted'],
       [LobbyStatus.open, 'status-badge--primary'],
-      [LobbyStatus.scheduling, 'status-badge--warning'],
-      [LobbyStatus.confirmed, 'status-badge--success'],
-      [LobbyStatus.cancelled, 'status-badge--error'],
+      [LobbyStatus.closed, 'status-badge--warning'],
+      [LobbyStatus.disbanded, 'status-badge--error'],
     ] as const)(
       'status="%s" のとき %s クラスが付与される',
       (status, className) => {

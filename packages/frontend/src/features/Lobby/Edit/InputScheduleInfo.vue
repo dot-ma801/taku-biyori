@@ -3,19 +3,33 @@ import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import BaseSectionHeading from '@/components/common/BaseSectionHeading/BaseSectionHeading.vue';
 import BaseDatePicker from '@/components/form/BaseDatePicker/BaseDatePicker.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import { CalendarDays, X } from '@lucide/vue';
 import { formatDateWithWeekday } from '@/utils/date';
-import type { PendingCandidateDate } from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
 import {
-  getDateNoteCounter,
-  getDateNoteError,
+  getTimeLabelCounter,
+  getTimeLabelError,
   syncPendingDates,
-} from '@/features/Lobby/Edit/composables/pendingCandidateDates';
+} from '@/utils/pendingCandidateDates';
+import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
+import ScheduleModeSwitch from '@/features/Lobby/Edit/ScheduleModeSwitch.vue';
 import { computed } from 'vue';
 
 const openUntil = defineModel<string>('openUntil', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
+/** 当日の連絡事項。開催固有のファクトなので、ロビーの「説明」とは別に入力させる */
+const gameSessionDescription = defineModel<string>('gameSessionDescription', {
+  default: '',
+});
+/**
+ * 日程の決め方。`showModeSwitch` が false のときは使われない（既定の `poll` のまま）。
+ */
+const scheduleMode = defineModel<ScheduleMode>('scheduleMode', {
+  default: 'poll',
+});
 /**
  * 候補日リスト。ローカル管理（pendingDates）とし、
  * 作成・更新のいずれのフローでも呼び出し元が一括で API に送信する。
@@ -23,6 +37,17 @@ const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const pendingDates = defineModel<PendingCandidateDate[]>('pendingDates', {
   default: () => [],
 });
+const props = withDefaults(
+  defineProps<{
+    showCandidateDates?: boolean;
+    /** 「候補日を出して決める / 開催日を入れる」の切り替えを出すか（作成画面のみ） */
+    showModeSwitch?: boolean;
+  }>(),
+  { showCandidateDates: true, showModeSwitch: false },
+);
+
+/** 開催日が決まっているモードか。候補日ではなく開催日そのものを入力させる */
+const isFixedMode = computed(() => scheduleMode.value === 'fixed');
 
 // 日付ピッカーは日付の配列だけを扱う。ひとこととの突き合わせは composable に委ねる。
 // 候補日への入力（ユーザー操作起点の set のみ）で開催日を破棄する。
@@ -45,22 +70,22 @@ const hasDates = computed(() => pendingDates.value.length > 0);
 const dateRows = computed(() =>
   pendingDates.value.map((entry) => ({
     date: entry.date,
-    dateNote: entry.dateNote,
+    timeLabel: entry.timeLabel,
     dateLabel: formatDateWithWeekday(entry.date),
-    counter: getDateNoteCounter(entry.dateNote),
+    counter: getTimeLabelCounter(entry.timeLabel),
   })),
 );
 
-const dateNoteRules = [(v: unknown) => getDateNoteError(v as string) ?? true];
+const timeLabelRules = [(v: unknown) => getTimeLabelError(v as string) ?? true];
 
 function removeDate(date: string) {
   selectedDates.value = selectedDates.value.filter((d) => d !== date);
 }
 
 // ひとことは行ごとに更新する（配列要素を直接書き換えず、新しい配列に差し替える）
-function updateDateNote(date: string, dateNote: string) {
+function updateTimeLabel(date: string, timeLabel: string) {
   pendingDates.value = pendingDates.value.map((entry) =>
-    entry.date === date ? { ...entry, dateNote } : entry,
+    entry.date === date ? { ...entry, timeLabel } : entry,
   );
 }
 </script>
@@ -75,23 +100,56 @@ function updateDateNote(date: string, dateNote: string) {
 
     <template #default>
       <div class="contents">
-        <BaseDatePicker
-          v-model="openUntil"
-          label="募集締め切り日"
-          disable-past
-          clearable
-        ></BaseDatePicker>
+        <ScheduleModeSwitch
+          v-if="props.showModeSwitch"
+          v-model="scheduleMode"
+        />
 
-        <BaseDatePicker
-          label="候補日"
-          multiple
-          disable-past
-          required
-          v-model="selectedDates"
-        ></BaseDatePicker>
+        <template v-if="isFixedMode">
+          <BaseDatePicker
+            v-model="scheduledAt"
+            label="開催日"
+            disable-past
+            required
+          ></BaseDatePicker>
+
+          <BaseTextBox v-model="timeLabel" label="時間帯" />
+
+          <BaseTextArea
+            v-model="gameSessionDescription"
+            label="当日の連絡事項"
+            placeholder="集合場所や持ち物など、当日に向けた連絡…"
+          />
+        </template>
+
+        <template v-else>
+          <!-- 締め切り日はロビー自身の項目。候補日の有無に関わらず編集できる -->
+          <BaseDatePicker
+            v-model="openUntil"
+            label="募集締め切り日"
+            disable-past
+            clearable
+          ></BaseDatePicker>
+
+          <BaseDatePicker
+            v-if="props.showCandidateDates"
+            label="候補日"
+            multiple
+            disable-past
+            required
+            v-model="selectedDates"
+          ></BaseDatePicker>
+        </template>
       </div>
 
-      <ul v-if="hasDates" class="dates">
+      <p v-if="isFixedMode" class="info">
+        ※ 参加者の受付は開かずにロビーを作り、開催を1件つくります。
+      </p>
+
+      <ul
+        v-if="!isFixedMode && props.showCandidateDates && hasDates"
+        class="dates"
+      >
         <li v-for="row in dateRows" :key="row.date" class="date-row">
           <!--
             日付は入力欄の行ラベル。label で包むと for/id なしで暗黙的に
@@ -103,10 +161,10 @@ function updateDateNote(date: string, dateNote: string) {
             <span class="date-text">{{ row.dateLabel }}</span>
             <BaseTextBox
               class="note-input"
-              :model-value="row.dateNote"
+              :model-value="row.timeLabel"
               placeholder="例）19:00〜 / 午後から / 終日OK"
-              :rules="dateNoteRules"
-              @update:model-value="updateDateNote(row.date, $event)"
+              :rules="timeLabelRules"
+              @update:model-value="updateTimeLabel(row.date, $event)"
             />
           </label>
           <span
@@ -128,7 +186,7 @@ function updateDateNote(date: string, dateNote: string) {
         </li>
       </ul>
 
-      <p class="info">
+      <p v-if="!isFixedMode && props.showCandidateDates" class="info">
         ※ 候補日はロビー作成後も追加・削除できます。ひとことは任意です。
       </p>
     </template>
@@ -139,7 +197,7 @@ function updateDateNote(date: string, dateNote: string) {
 .contents {
   /* 余白 */
   > * {
-    margin: var(--space-5) 0;
+    margin: var(--space-6) 0;
 
     &:first-child {
       margin-top: 0;

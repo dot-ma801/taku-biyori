@@ -1,12 +1,12 @@
 import { computed, ref, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { LobbyStatus } from '@taku-biyori/shared';
-import type { LobbyMember } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { joinLobbyAsGuest } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
 
 /**
- * ゲスト（完全匿名）として募集枠に参加するための composable。
+ * ゲスト（完全匿名）としてロビーに参加するための composable。
  * トークンは招待リンクのクエリ由来なので getter で受け取り、変更後の再取得は onJoined で親に委譲する。
  */
 export const useGuestJoin = (
@@ -15,7 +15,7 @@ export const useGuestJoin = (
   token: MaybeRefOrGetter<string | null>,
   status: MaybeRefOrGetter<LobbyStatus | undefined>,
   // NOTE: 作成されたメンバーの反映（addMember 等）を呼び出し元に委譲する。
-  onJoined: (member: LobbyMember) => void,
+  onJoined: (member: LobbyEntryModel) => void,
 ) => {
   const toast = useToast();
   const loading = ref(false);
@@ -35,7 +35,7 @@ export const useGuestJoin = (
   const canSubmit = computed(() => guestName.value.trim().length > 0);
 
   /**
-   * ゲストとして募集枠に参加する。
+   * ゲストとしてロビーに参加する。
    * 成功後に onJoined で再取得を依頼し、入力ドラフトをリセットする。
    * トークン未設定・ゲスト名未入力・loading 中の呼び出しは無視する。
    */

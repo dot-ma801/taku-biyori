@@ -1,48 +1,111 @@
 <script setup lang="ts">
+import BaseTextArea from '@/components/form/BaseTextArea/BaseTextArea.vue';
+import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
+import type { GameSessionDraft } from '@/features/Lobby/Detail/Schedule/ConfirmFlow/useConfirmFlow';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { memberDisplayName } from '@/utils/memberDisplayName';
-import { formatDateWithWeekday } from '@/utils/date';
-import type { LobbyMember } from '@taku-biyori/shared';
-import { computed } from 'vue';
+import {
+  getDraftFieldError,
+  type GameSessionDraftField,
+} from '@/features/Lobby/Detail/Schedule/ConfirmFlow/draftValidation';
 
+/**
+ * 確定の最終ステップ。決まった内容の確認と、この日だけの上書きを受け取る。
+ *
+ * 日付の整形は composable（useConfirmFlow）が済ませたものを受け取る。
+ * ここで `formatDateWithWeekday` を呼ぶと、表示のための導出がコンポーネントに
+ * 残ってしまう（CLAUDE.md「コンポーネントが持っていいもの」）。
+ */
 const props = defineProps<{
-  selectedDate: {
-    id: string;
-    date: string;
-    dateNote: string | null;
-    counts: { ok: number; maybe: number; ng: number };
-  } | null;
-  selectedMembers: LobbyMember[];
+  /** 整形済みの開催日ラベル */
+  scheduledAtLabel: string;
+  selectedEntries: LobbyEntryModel[];
+  draft: GameSessionDraft;
+  /** ひとことの文字数カウンター。超過判定まで解決済みで受け取る */
+  timeLabelCounter: { label: string; isOver: boolean };
 }>();
+const emit = defineEmits<{ 'update:draft': [draft: GameSessionDraft] }>();
 
-const dateLabel = computed(() =>
-  props.selectedDate ? formatDateWithWeekday(props.selectedDate.date) : '-',
-);
+// API の契約（CreateGameSessionInputSchema の max）と同じ基準で、**全項目**を弾く。
+// 送信してから 400 になると「日程の確定に失敗しました」としか出ず、
+// どこを直せばよいか利用者に分からない
+const rulesFor = (field: GameSessionDraftField) => [
+  (v: unknown) => getDraftFieldError(field, (v as string) ?? '') ?? true,
+];
 
-const dateNote = computed(() => props.selectedDate?.dateNote ?? null);
+function update<K extends keyof GameSessionDraft>(
+  key: K,
+  value: GameSessionDraft[K],
+) {
+  emit('update:draft', { ...props.draft, [key]: value });
+}
 </script>
 
 <template>
   <div class="review">
-    <div class="review-row">
-      <span class="review-label">開催日</span>
-      <span class="review-value">{{ dateLabel }}</span>
-      <span v-if="dateNote" class="review-note-text">{{ dateNote }}</span>
+    <div>
+      <span class="label">開催日</span>
+      <p class="date">{{ scheduledAtLabel }}</p>
     </div>
-    <div class="review-row">
-      <span class="review-label"
-        >参加者（{{ selectedMembers.length }} 名）</span
-      >
-      <ul class="review-members">
-        <li
-          v-for="member in selectedMembers"
-          :key="member.id"
-          class="review-member"
-        >
-          {{ memberDisplayName(member) }}
+    <div>
+      <span class="label">当日の参加者（{{ selectedEntries.length }}名）</span>
+      <ul>
+        <li v-for="entry in selectedEntries" :key="entry.id">
+          {{ memberDisplayName(entry) }}
         </li>
       </ul>
     </div>
-    <p class="review-note">確定後は取り消せません。よろしいですか？</p>
+
+    <!--
+      ロビーの値へフォールバックするのは title / scenarioName / location だけ
+      （shared の resolveGameSessionDisplay）。時間帯と連絡事項に卓側の既定値は無いので、
+      ヒントの対象に含めると「空欄にすれば引き継がれる」と誤読される
+    -->
+    <p class="hint">
+      名前・シナリオ・場所は、空欄のままなら卓の設定をそのまま使います。
+    </p>
+    <BaseTextBox
+      :model-value="draft.title"
+      label="卓名（任意）"
+      :rules="rulesFor('title')"
+      @update:model-value="update('title', $event)"
+    />
+    <BaseTextBox
+      :model-value="draft.scenarioName"
+      label="シナリオ名（任意）"
+      :rules="rulesFor('scenarioName')"
+      @update:model-value="update('scenarioName', $event)"
+    />
+    <BaseTextBox
+      :model-value="draft.location"
+      label="場所（任意）"
+      :rules="rulesFor('location')"
+      @update:model-value="update('location', $event)"
+    />
+
+    <p class="hint">次の2つは、この日のためだけの情報です。</p>
+    <div class="field">
+      <BaseTextBox
+        :model-value="draft.timeLabel"
+        label="時間帯（任意）"
+        placeholder="例）19:00〜 / 午後から"
+        :rules="rulesFor('timeLabel')"
+        @update:model-value="update('timeLabel', $event)"
+      />
+      <span
+        class="counter"
+        :class="{ 'counter--over': timeLabelCounter.isOver }"
+      >
+        {{ timeLabelCounter.label }}
+      </span>
+    </div>
+    <BaseTextArea
+      :model-value="draft.description"
+      label="当日の連絡事項（任意）"
+      :rows="3"
+      :rules="rulesFor('description')"
+      @update:model-value="update('description', $event)"
+    />
   </div>
 </template>
 
@@ -53,48 +116,41 @@ const dateNote = computed(() => props.selectedDate?.dateNote ?? null);
   gap: var(--space-4);
   font-size: 14px;
 }
-
-.review-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.review-label {
-  font-weight: 500;
+.label {
   font-size: 12px;
+  font-weight: 500;
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
-
-.review-value {
+.date {
+  margin: var(--space-1) 0 0;
   font-size: 16px;
   font-weight: 500;
 }
-
-.review-note-text {
+ul {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.2em;
+}
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
   font-size: 13px;
-  color: var(--color-text-secondary);
 }
 
-.review-members {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
 }
 
-.review-member::before {
-  content: '・';
+/* 候補日の入力（InputScheduleInfo）と同じ `N / MAX` 形式に揃える */
+.counter {
+  align-self: flex-start;
   color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
-
-.review-note {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 0;
+.counter--over {
+  color: var(--color-error);
+  font-weight: 500;
 }
 </style>

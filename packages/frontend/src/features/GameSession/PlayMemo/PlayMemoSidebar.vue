@@ -8,11 +8,11 @@ import type {
 
 const props = defineProps<{
   entries: PlayMemoMemberEntry[];
-  selectedMemberId: string | null;
+  selectedSeatId: string | null;
 }>();
 
 const emit = defineEmits<{
-  select: [memberId: string];
+  select: [seatId: string];
 }>();
 
 /**
@@ -38,11 +38,7 @@ function tagLabel(tag: PlayMemoMemberTag): string {
     </p>
 
     <ul class="list">
-      <li
-        v-for="entry in props.entries"
-        :key="entry.memberId"
-        class="list__item"
-      >
+      <li v-for="entry in props.entries" :key="entry.seatId" class="list__item">
         <!--
           読めない相手も押せる。押すと本文の代わりに読めない理由が出る
           （disabled にすると、なぜ開かないのかを伝える場所が無くなる）。
@@ -51,11 +47,11 @@ function tagLabel(tag: PlayMemoMemberTag): string {
           type="button"
           class="member"
           :class="{
-            'member--selected': entry.memberId === props.selectedMemberId,
+            'member--selected': entry.seatId === props.selectedSeatId,
             'member--unreadable': !entry.readable,
           }"
-          :aria-current="entry.memberId === props.selectedMemberId"
-          @click="emit('select', entry.memberId)"
+          :aria-current="entry.seatId === props.selectedSeatId"
+          @click="emit('select', entry.seatId)"
         >
           <UserAvatar
             :size="24"

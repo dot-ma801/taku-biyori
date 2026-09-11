@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import PageContainer from '@/components/layout/PageContainer/PageContainer.vue';
+import BaseBreadcrumb from '@/components/common/BaseBreadcrumb/BaseBreadcrumb.vue';
 import BaseButton from '@/components/button/BaseButton.vue';
 import BaseCard from '@/components/common/BaseCard/BaseCard.vue';
 import PlayMemoEditor from '@/features/GameSession/PlayMemo/PlayMemoEditor.vue';
@@ -14,7 +15,7 @@ import { usePlayMemoSelection } from '@/features/GameSession/PlayMemo/usePlayMem
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { useAuthStore } from '@/stores/auth';
 
-const props = defineProps<{ gameSessionId: string }>();
+const props = defineProps<{ lobbyId: string; gameSessionId: string }>();
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -23,7 +24,7 @@ const {
   gameSession,
   loading: loadingDetail,
   errorMessage,
-} = useGetGameSessionDetail(props.gameSessionId);
+} = useGetGameSessionDetail(props.lobbyId, props.gameSessionId);
 
 const {
   playMemo,
@@ -37,7 +38,7 @@ const {
   setShared,
   fetch: fetchPlayMemo,
   applySaved,
-} = useMyPlayMemo(props.gameSessionId, () => gameSession.value);
+} = useMyPlayMemo(props.lobbyId, props.gameSessionId, () => gameSession.value);
 
 const {
   canViewShared,
@@ -45,15 +46,36 @@ const {
   loading: loadingSharedPlayMemos,
   fetch: fetchSharedPlayMemos,
 } = useSharedPlayMemos(
+  props.lobbyId,
   props.gameSessionId,
   () => gameSession.value,
   () => myMember.value?.id ?? null,
 );
 
-const { selectedEntry, selectedMemberId, isMineSelected, select } =
+const { selectedEntry, selectedSeatId, isMineSelected, select } =
   usePlayMemoSelection(entries);
 
 const gameSessionTitle = computed(() => gameSession.value?.title ?? '');
+
+// URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く
+const breadcrumbItems = computed(() => [
+  { label: 'ダッシュボード', to: { name: 'dashboard' } },
+  {
+    label: gameSession.value?.lobby.title ?? 'ロビー',
+    to: { name: 'lobbies-detail', params: { lobbyId: props.lobbyId } },
+  },
+  {
+    label: gameSessionTitle.value || '開催',
+    to: {
+      name: 'game-sessions-detail',
+      params: {
+        lobbyId: props.lobbyId,
+        gameSessionId: props.gameSessionId,
+      },
+    },
+  },
+  { label: 'プレイメモ' },
+]);
 
 /**
  * 「何を出すか」の導出は usePlayMemoPane に集約する（CLAUDE.md「データの
@@ -72,10 +94,10 @@ const { showSidebar, showEditor, showFailedNotice, readerEntry, showLoading } =
   });
 
 // メモを持てず、公開メモも読めない相手がこの URL を直接開いたケース
-// （実施前の卓を非メンバーが開いた・退出後など）。履歴を汚さないよう
-// replace で卓詳細へ戻す。
+// （実施前の開催を非メンバーが開いた・退出後など）。履歴を汚さないよう
+// replace で開催の詳細へ戻す。
 //
-// 完了・中止した卓の公開メモは未ログイン・ゲストにも開くため（要求 §3-4）、
+// 完了・中止した開催の公開メモは未ログイン・ゲストにも開くため（要求 §3-4）、
 // 判定はメンバーかどうかだけでは足りない。canViewShared も見て、読む目的で
 // 来た相手を追い返さないようにする。
 //
@@ -96,7 +118,10 @@ watch(
     if (isMyMemo.value) return;
     void router.replace({
       name: 'game-sessions-detail',
-      params: { gameSessionId: props.gameSessionId },
+      params: {
+        lobbyId: props.lobbyId,
+        gameSessionId: props.gameSessionId,
+      },
     });
   },
 );
@@ -119,6 +144,8 @@ async function onVisibilityChange(shared: boolean) {
 
 <template>
   <PageContainer>
+    <BaseBreadcrumb class="breadcrumb" :items="breadcrumbItems" />
+
     <div v-if="errorMessage">{{ errorMessage }}</div>
 
     <div
@@ -128,19 +155,20 @@ async function onVisibilityChange(shared: boolean) {
     >
       <!--
         自分のメモの取得失敗は、この枠（本来エディタが出る場所）の中だけに
-        閉じ込める。完了・中止した卓では他メンバーの公開メモを読むことが
+        閉じ込める。完了・中止した開催では他メンバーの公開メモを読むことが
         この画面のもう1つの主目的で、それは自分のメモの取得可否とは独立
         （要求 §3-3・§3-4）なので、サイドバーや閲覧面まで道連れにしない。
       -->
       <PlayMemoSidebar
         v-if="showSidebar"
         :entries="entries"
-        :selected-member-id="selectedMemberId"
+        :selected-seat-id="selectedSeatId"
         @select="select"
       />
 
       <PlayMemoEditor
         v-if="showEditor"
+        :lobby-id="props.lobbyId"
         :game-session-id="props.gameSessionId"
         :game-session-title="gameSessionTitle"
         :play-memo="playMemo"
@@ -178,6 +206,10 @@ async function onVisibilityChange(shared: boolean) {
 </template>
 
 <style scoped>
+.breadcrumb {
+  margin-bottom: var(--space-4);
+}
+
 .layout {
   display: grid;
   gap: var(--space-4);
@@ -199,7 +231,7 @@ async function onVisibilityChange(shared: boolean) {
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-8) var(--space-3);
 }
 
 .failed__text {
@@ -209,7 +241,7 @@ async function onVisibilityChange(shared: boolean) {
 
 .empty {
   margin: 0;
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-8) var(--space-3);
 
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);

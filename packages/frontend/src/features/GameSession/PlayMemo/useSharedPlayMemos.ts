@@ -1,12 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import {
-  type GameSessionDetail,
-  type GameSessionMember,
-  type SharedGameSessionPlayMemo,
-  canViewSharedPlayMemos,
-  isGuestMember,
-} from '@taku-biyori/shared';
+import { canViewSharedPlayMemos, isGuestSeat } from '@taku-biyori/shared';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
+import type { SharedPlayMemoModel } from '@/models/play-memo';
 import { listSharedPlayMemos } from '@/api/game-session';
 import { memberBaseName } from '@/utils/memberDisplayName';
 
@@ -20,7 +16,7 @@ export type PlayMemoMemberTag = 'shared' | 'private' | 'guest';
 
 /** メンバー切り替えサイドバーの1行 */
 export interface PlayMemoMemberEntry {
-  memberId: string;
+  seatId: string;
   /** 主ラベル。キャラ名、無ければユーザー名 */
   primaryLabel: string;
   /** 副ラベル。ユーザー名を主ラベルへ繰り上げた行では null */
@@ -39,22 +35,23 @@ export interface PlayMemoMemberEntry {
   readable: boolean;
   isMe: boolean;
   /** その人の公開メモ。非公開・ゲストは null（自分の非公開メモもここには載らない） */
-  sharedPlayMemo: SharedGameSessionPlayMemo | null;
+  sharedPlayMemo: SharedPlayMemoModel | null;
 }
 
 /**
- * 卓の公開プレイメモを取得し、メンバーと突き合わせてサイドバーの行を組み立てる composable。
+ * 開催の公開プレイメモを取得し、メンバーと突き合わせてサイドバーの行を組み立てる composable。
  *
  * 一覧（sharedPlayMemos）の所有者はこの composable 自身なので、内部で `.value =` してよい。
  * 卓・自分のメンバー ID は所有者が別に居るため getter で読むだけにする（CLAUDE.md）。
  */
 export const useSharedPlayMemos = (
+  lobbyId: string,
   gameSessionId: string,
-  gameSession: MaybeRefOrGetter<GameSessionDetail | null>,
+  gameSession: MaybeRefOrGetter<GameSessionDetailModel | null>,
   // メンバーでない閲覧者（未ログイン・ゲスト）は null
   myMemberId: MaybeRefOrGetter<string | null | undefined>,
 ) => {
-  const sharedPlayMemos = ref<SharedGameSessionPlayMemo[]>([]);
+  const sharedPlayMemos = ref<SharedPlayMemoModel[]>([]);
   const loading = ref(false);
 
   // 世代カウンタ。公開切替の連打などで fetch が重複起動したとき、後から
@@ -76,7 +73,7 @@ export const useSharedPlayMemos = (
   /**
    * 公開メモ一覧を取得する。
    *
-   * 完了・中止の前は1件も返らないため通信しない。非公開卓を第三者が開いた場合は
+   * 完了・中止の前は1件も返らないため通信しない。非公開の開催を第三者が開いた場合は
    * 403 が返るが、メモは画面の主目的ではないので空のまま黙って閉じる。
    */
   async function fetch(): Promise<void> {
@@ -85,7 +82,7 @@ export const useSharedPlayMemos = (
     const seq = ++requestSeq;
     loading.value = true;
     try {
-      const result = await listSharedPlayMemos(gameSessionId);
+      const result = await listSharedPlayMemos(lobbyId, gameSessionId);
       // 自分より後に呼ばれた fetch がすでに解決していれば、この応答は
       // 後着（古い）なので一覧・loading のどちらも書き換えない
       if (seq !== requestSeq) return;
@@ -100,7 +97,7 @@ export const useSharedPlayMemos = (
     }
   }
 
-  // 卓が後から届く経路（メモ画面）と、完了して読めるようになる経路の両方を
+  // 開催が後から届く経路（メモ画面）と、完了して読めるようになる経路の両方を
   // 拾うため、「読めるようになったか」を監視して取得する。
   watch(
     canViewShared,
@@ -111,8 +108,8 @@ export const useSharedPlayMemos = (
     { immediate: true },
   );
 
-  const sharedPlayMemoByMemberId = computed(
-    () => new Map(sharedPlayMemos.value.map((memo) => [memo.memberId, memo])),
+  const sharedPlayMemoBySeatId = computed(
+    () => new Map(sharedPlayMemos.value.map((memo) => [memo.seatId, memo])),
   );
 
   /**
@@ -121,17 +118,16 @@ export const useSharedPlayMemos = (
    * ゲストは `user_id = null` でメモを持てないため、公開メモの有無を見るまでもなく
    * ゲストのタグに倒す。自分だけは非公開でも開ける（本人はいつでも読める）。
    */
-  function toEntry(member: GameSessionMember): PlayMemoMemberEntry {
+  function toEntry(member: SeatModel): PlayMemoMemberEntry {
     const isMe = member.id === toValue(myMemberId);
-    const sharedPlayMemo =
-      sharedPlayMemoByMemberId.value.get(member.id) ?? null;
-    const isGuest = isGuestMember(member);
+    const sharedPlayMemo = sharedPlayMemoBySeatId.value.get(member.id) ?? null;
+    const isGuest = isGuestSeat(member);
 
     // タグが「ゲスト」を示すので、名前には「（ゲスト）」を付けない（重複するため）
     const userLabel = memberBaseName(member);
 
     return {
-      memberId: member.id,
+      seatId: member.id,
       primaryLabel: member.characterName ?? userLabel,
       secondaryLabel: member.characterName ? userLabel : null,
       userId: member.userId,
@@ -143,13 +139,13 @@ export const useSharedPlayMemos = (
     };
   }
 
-  /** サイドバーに並べる参加メンバー全員。読めない相手も理由（タグ）付きで並べる */
+  /** サイドバーに並べる着席者全員。読めない相手も理由（タグ）付きで並べる */
   const entries = computed<PlayMemoMemberEntry[]>(
-    () => toValue(gameSession)?.members.map(toEntry) ?? [],
+    () => toValue(gameSession)?.seats.map(toEntry) ?? [],
   );
 
   /**
-   * 公開しているメンバーだけの行。卓詳細のカードに「誰が公開しているか」を並べ、
+   * 公開しているメンバーだけの行。開催の詳細のカードに「誰が公開しているか」を並べ、
    * そこからその人のメモへ直接飛ばすために使う（自分も含む）。
    */
   const sharedEntries = computed(() =>
@@ -165,7 +161,7 @@ export const useSharedPlayMemos = (
   const othersSharedCount = computed(
     () =>
       sharedPlayMemos.value.filter(
-        (memo) => memo.memberId !== toValue(myMemberId),
+        (memo) => memo.seatId !== toValue(myMemberId),
       ).length,
   );
 

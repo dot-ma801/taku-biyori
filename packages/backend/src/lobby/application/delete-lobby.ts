@@ -1,12 +1,20 @@
-import { LobbyStatus } from '@taku-biyori/shared';
 import type { LobbyHostRepository } from '@/lobby/application/lobby-host-repository';
 
 export interface DeleteLobbyRepository extends LobbyHostRepository {
-  findLobbyStatus(id: string): Promise<LobbyStatus | null>;
-  countOtherMembers(id: string, hostUserId: string): Promise<number>;
+  /**
+   * ホスト以外の参加の件数。**脱退済みも数える**（design-v2 §6-13-3）。
+   * 「他人が居た痕跡」があるロビーは削除させない。
+   */
+  countOtherEntries(id: string, hostUserId: string): Promise<number>;
+  /**
+   * ぶら下がっている開催の件数。**中止・完了も数える**（design-v2 §6-13-3）。
+   * `game_sessions.lobby_id` が `ON DELETE CASCADE` になり、ロビーを消すと
+   * 過去の開催記録・着席・プレイメモまで連鎖して消えるため（§3-7）。
+   */
+  countGameSessions(id: string): Promise<number>;
   deleteById(id: string): Promise<void>;
   /**
-   * 削除対象の募集枠行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
+   * 削除対象のロビー行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
    * 「条件チェック → 削除」を別々のクエリに分けると TOCTOU race condition が起きるため、
    * application 層からロック付きトランザクション境界を明示的に開く
    * （既存 game-session の executeWithLock と同方針）。
@@ -21,8 +29,8 @@ export type DeleteLobbyResult =
   | { type: 'ok' }
   | { type: 'notFound' }
   | { type: 'forbidden' }
-  | { type: 'invalidStatus' }
-  | { type: 'hasMember' };
+  | { type: 'hasMember' }
+  | { type: 'hasGameSession' };
 
 export const deleteLobby = async (
   repo: DeleteLobbyRepository,
@@ -38,19 +46,14 @@ export const deleteLobby = async (
       return { type: 'forbidden' };
     }
 
-    const status = await lockedRepo.findLobbyStatus(id);
-    if (status === null) {
-      return { type: 'notFound' };
-    }
-    // 確定済み（closed_at あり）の募集枠は削除不可（卓の出自リンクを保持するため）。
-    // 中止済み（cancelled）は削除可能。
-    if (status === LobbyStatus.confirmed) {
-      return { type: 'invalidStatus' };
+    const otherEntryCount = await lockedRepo.countOtherEntries(id, userId);
+    if (otherEntryCount > 0) {
+      return { type: 'hasMember' };
     }
 
-    const otherMemberCount = await lockedRepo.countOtherMembers(id, userId);
-    if (otherMemberCount > 0) {
-      return { type: 'hasMember' };
+    const gameSessionCount = await lockedRepo.countGameSessions(id);
+    if (gameSessionCount > 0) {
+      return { type: 'hasGameSession' };
     }
 
     await lockedRepo.deleteById(id);

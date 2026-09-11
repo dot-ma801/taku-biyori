@@ -7,8 +7,9 @@ import type { Lobby } from '@taku-biyori/shared';
 const mockLobby: Lobby = {
   id: 'lobby-1',
   title: '更新後',
-  status: 'draft',
-  isPublished: false,
+  status: LobbyStatus.draft,
+  publishedAt: null,
+  receptionClosedAt: null,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
@@ -70,27 +71,10 @@ describe('updateLobby', () => {
     expect(result).toEqual({ type: 'forbidden' });
   });
 
-  it('confirmed の場合は invalidStatus を返す', async () => {
+  it('disbanded の場合は invalidStatus を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.confirmed),
-      updateById: vi.fn(),
-    });
-
-    // Act
-    const result = await updateLobby(repo, 'lobby-1', 'user-1', {
-      title: 'x',
-    });
-
-    // Assert
-    expect(result).toEqual({ type: 'invalidStatus' });
-    expect(repo.updateById).not.toHaveBeenCalled();
-  });
-
-  it('cancelled の場合は invalidStatus を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.cancelled),
+      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.disbanded),
       updateById: vi.fn(),
     });
 
@@ -119,10 +103,10 @@ describe('updateLobby', () => {
     expect(result).toEqual({ type: 'ok', lobby: mockLobby });
   });
 
-  it('scheduling の場合は更新できる', async () => {
+  it('closed（受付終了）でも更新できる', async () => {
     // Arrange
     const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.scheduling),
+      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.closed),
     });
 
     // Act

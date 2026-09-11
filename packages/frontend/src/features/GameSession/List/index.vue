@@ -1,94 +1,99 @@
 <script setup lang="ts">
 defineOptions({ name: 'GameSessionList' });
-import BaseButton from '@/components/button/BaseButton.vue';
-import MySessionList from '@/features/GameSession/List/MySessionList.vue';
-import PublicSessionList from '@/features/GameSession/List/PublicSessionList.vue';
-import { useGameSessionList } from '@/features/GameSession/List/useGameSessionList';
-import type { GameSessionStatus } from '@taku-biyori/shared';
+import { computed, ref } from 'vue';
 import { Plus } from '@lucide/vue';
-import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-
-const props = defineProps<{
-  title?: string;
-  statuses?: GameSessionStatus[];
-  sortByScheduledAt?: boolean;
-  /** 該当セッションが1件も無いときにセクションごと描画しない */
-  hideWhenEmpty?: boolean;
-  /** 作成ボタンを描画しない（同じ画面に複数セクションを並べるとき用） */
-  hideCreateButton?: boolean;
-  /** 他人の公開セッションを描画しない（自分の履歴だけを見せるとき用） */
-  hidePublic?: boolean;
-}>();
+import BaseButton from '@/components/button/BaseButton.vue';
+import BaseTabs from '@/components/common/BaseTabs/BaseTabs.vue';
+import BaseAlert from '@/components/common/BaseAlert/BaseAlert.vue';
+import GameSessionCardGrid from '@/features/GameSession/GameSessionCardGrid.vue';
+import { useGameSessionCards } from '@/features/GameSession/useGameSessionCards';
+import { useGameSessionListTabs } from '@/features/GameSession/List/useGameSessionListTabs';
+import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 const router = useRouter();
-const { filteredMySessions, filteredPublicSessions, hasFilteredSessions } =
-  useGameSessionList({
-    statuses: props.statuses,
-    sortByScheduledAt: props.sortByScheduledAt,
-    includePublic: !props.hidePublic,
-  });
+const { activeCards, publicCards, errorMessage } = useGameSessionCards();
 
-const hasTitle = computed(() => props.title != null);
-const isVisible = computed(
-  () => !props.hideWhenEmpty || hasFilteredSessions.value,
+const activeTab = ref<string>(GameSessionCardStatus.recruiting);
+const { tabs, cardsOfActiveTab, emptyMessage } = useGameSessionListTabs(
+  activeCards,
+  activeTab,
 );
-const showCreateButton = computed(() => !props.hideCreateButton);
-const hasFilteredPublicSessions = computed(
-  () => filteredPublicSessions.value.length > 0,
+
+// 「さがす」導線は募集中のタブにだけ出す。他のタブでは関心が違う
+const showPublicSection = computed(
+  () => activeTab.value === GameSessionCardStatus.recruiting,
 );
 
 const onClickCreate = () => {
-  router.push({ name: 'game-sessions-new' });
+  router.push({ name: 'lobbies-new' });
 };
 </script>
 
 <template>
-  <div v-if="isVisible" class="container">
-    <div v-if="hasTitle" class="section-header">
-      <h2 class="section-title">{{ title }}</h2>
-      <BaseButton
-        v-if="showCreateButton"
-        :left-icon="Plus"
-        @click="onClickCreate"
-        >セッションを作成</BaseButton
-      >
+  <div class="table-list">
+    <div class="table-list__header">
+      <h1 class="table-list__title">卓</h1>
+      <BaseButton :left-icon="Plus" @click="onClickCreate">
+        卓をつくる
+      </BaseButton>
     </div>
-    <BaseButton
-      v-else-if="showCreateButton"
-      class="create-btn"
-      :left-icon="Plus"
-      @click="onClickCreate"
-      >セッションを作成</BaseButton
-    >
-    <MySessionList :my-sessions="filteredMySessions"></MySessionList>
-    <PublicSessionList
-      v-if="hasFilteredPublicSessions"
-      :public-sessions="filteredPublicSessions"
-    ></PublicSessionList>
+
+    <BaseAlert v-if="errorMessage" variant="error">
+      {{ errorMessage }}
+    </BaseAlert>
+
+    <BaseTabs v-model="activeTab" :tabs="tabs" label="卓の状態">
+      <template v-for="tab in tabs" :key="tab.value" #[tab.value]>
+        <GameSessionCardGrid
+          :cards="cardsOfActiveTab"
+          :empty-message="emptyMessage"
+        />
+      </template>
+    </BaseTabs>
+
+    <section v-if="showPublicSection" class="table-list__public">
+      <h2 class="table-list__public-title">ほかの人が募集している卓</h2>
+      <GameSessionCardGrid
+        :cards="publicCards"
+        empty-message="いま募集している卓はありません"
+      />
+    </section>
   </div>
 </template>
 
 <style scoped>
-.container {
+.table-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-6);
+}
+
+.table-list__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-4);
 }
 
-.section-header {
+.table-list__title {
+  flex: 1;
+  margin: 0;
+  font: var(--text-h1);
+  color: var(--text-primary);
+}
+
+.table-list__public {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
 }
 
-.section-title {
-  font-size: var(--font-size-lg);
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.create-btn {
-  align-self: flex-end;
+.table-list__public-title {
+  margin: 0;
+  font: var(--text-h3);
+  color: var(--text-primary);
 }
 </style>

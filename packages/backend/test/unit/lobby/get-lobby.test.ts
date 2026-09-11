@@ -2,16 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 import { getLobby } from '@/lobby/application/get-lobby';
 import type { GetLobbyRepository } from '@/lobby/application/get-lobby';
 import type { LobbyDetail } from '@taku-biyori/shared';
+import { LobbyStatus } from '@taku-biyori/shared';
 
 const mockDetail: LobbyDetail = {
   id: 'lobby-1',
   title: 'テスト募集',
-  status: 'open',
-  isPublished: true,
+  status: LobbyStatus.open,
+  publishedAt: '2026-01-01T00:00:00.000Z',
+  receptionClosedAt: null,
   hostUserId: 'user-1',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
-  members: [],
+  entries: [],
+  schedulePolls: [],
 };
 
 describe('getLobby', () => {
@@ -46,7 +49,7 @@ describe('getLobby', () => {
     const repo: GetLobbyRepository = {
       findDetailById: vi
         .fn()
-        .mockResolvedValue({ ...mockDetail, isPublished: false }),
+        .mockResolvedValue({ ...mockDetail, publishedAt: null }),
     };
 
     // Act
@@ -61,7 +64,7 @@ describe('getLobby', () => {
     const repo: GetLobbyRepository = {
       findDetailById: vi
         .fn()
-        .mockResolvedValue({ ...mockDetail, isPublished: false }),
+        .mockResolvedValue({ ...mockDetail, publishedAt: null }),
     };
 
     // Act
@@ -70,7 +73,7 @@ describe('getLobby', () => {
     // Assert
     expect(result).toEqual({
       type: 'ok',
-      lobby: { ...mockDetail, isPublished: false },
+      lobby: { ...mockDetail, publishedAt: null },
     });
   });
 
@@ -79,7 +82,7 @@ describe('getLobby', () => {
     const repo: GetLobbyRepository = {
       findDetailById: vi
         .fn()
-        .mockResolvedValue({ ...mockDetail, isPublished: false }),
+        .mockResolvedValue({ ...mockDetail, publishedAt: null }),
     };
 
     // Act

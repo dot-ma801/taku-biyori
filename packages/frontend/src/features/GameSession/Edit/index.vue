@@ -12,6 +12,15 @@ const props = defineProps<{
   submitLabel: string;
   loading: boolean;
   errorMessage: string;
+  /**
+   * ロビーの既定値。上書き欄のプレースホルダに出し、
+   * 「空欄のままならこの値が表示される」ことを伝える（design-v2 §5-5）
+   */
+  lobbyDefaults?: {
+    title: string;
+    scenarioName: string | null;
+    location: string | null;
+  } | null;
 }>();
 
 const submitButtonLabel = computed(() =>
@@ -25,15 +34,19 @@ const emit = defineEmits<{
 
 const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
-const maxMembers = defineModel<string>('maxMembers', { default: '' });
+const timeLabel = defineModel<string>('timeLabel', { default: '' });
 const description = defineModel<string>('description', { default: '' });
 const scheduledAt = defineModel<string>('scheduledAt', { default: '' });
 const location = defineModel<string>('location', { default: '' });
 
-/** 卓はタイトルと開催日が確定していないと作れない（design-v1.1 §8） */
-const canSubmit = computed(
-  () => !props.loading && !!title.value && !!scheduledAt.value,
-);
+/**
+ * 開催は日程が決まっていないと作れない（design-v2 §3-7）。
+ *
+ * 呼び名（title）は**この開催だけの上書き**であり、空欄ならロビーの値に追随する
+ * （design-v2 §5-5）。必須にすると、上書きの無い通常の開催が日付・場所・説明を
+ * 保存できず、上書きを作らせることで以後のロビー改名への追随も壊れる。
+ */
+const canSubmit = computed(() => !props.loading && !!scheduledAt.value);
 </script>
 
 <template>
@@ -45,11 +58,13 @@ const canSubmit = computed(
     <InputBasicInfo
       v-model:title="title"
       v-model:scenarioName="scenarioName"
-      v-model:maxMembers="maxMembers"
+      :lobby-defaults="props.lobbyDefaults"
     ></InputBasicInfo>
     <InputScheduleInfo
       v-model:scheduledAt="scheduledAt"
       v-model:location="location"
+      v-model:timeLabel="timeLabel"
+      :lobby-location="props.lobbyDefaults?.location ?? null"
     ></InputScheduleInfo>
     <InputMemo v-model:description="description"></InputMemo>
   </div>
@@ -75,13 +90,13 @@ const canSubmit = computed(
 .container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .button-area {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-8);
 }
 </style>

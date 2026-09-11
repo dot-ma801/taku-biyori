@@ -1,89 +1,209 @@
 import type {
   CreateGameSessionInput,
+  CreateSeatInput,
   GameSession,
   GameSessionDetail,
   GameSessionListItem,
-  GameSessionMember,
-  GuestLinkResponse,
-  JoinAsGuestInput,
-  JoinGameSessionInput,
+  Seat,
+  UpdateGameSessionInput,
+  UpdateGameSessionStatusInput,
   MyGameSessionPlayMemo,
   SharedGameSessionPlayMemo,
-  UpdateGameSessionInput,
   UpdateGameSessionPlayMemoVisibilityInput,
-  UpdateGameSessionStatusInput,
-  UpdateMemberInput,
   UpsertGameSessionPlayMemoInput,
 } from '@taku-biyori/shared';
-import { GUEST_TOKEN_HEADER } from '@taku-biyori/shared';
 import { apiRequest } from '@/lib/api-client';
+import type {
+  GameSessionDetailModel,
+  GameSessionListItemModel,
+  GameSessionModel,
+  SeatModel,
+} from '@/models/game-session';
+import type { MyPlayMemoModel, SharedPlayMemoModel } from '@/models/play-memo';
+import { toMyPlayMemoModel, toSharedPlayMemoModel } from '@/models/play-memo';
+import {
+  toGameSessionDetailModel,
+  toGameSessionListItemModel,
+  toGameSessionModel,
+  toSeatModel,
+} from '@/models/game-session';
 
-export async function listGameSessions(): Promise<GameSessionListItem[]> {
-  return (await apiRequest<GameSessionListItem[]>('/api/game-sessions'))!;
+/**
+ * セッション系の API。
+ *
+ * **DTO ではなく model を返す。** `@taku-biyori/shared` の型を見てよいのは
+ * `src/api/` と `src/models/` だけで、composable / component は model を受け取る
+ * （issue #113 以降の規約・CLAUDE.md）。
+ *
+ * 表示値の解決（`overrides.xxx ?? lobby.xxx`）もこの層の変換で1回だけ行う。
+ */
+
+/** セッションのパスはすべてロビー配下（design-v2 §6-5） */
+const sessionsPath = (lobbyId: string): string =>
+  `/api/lobbies/${lobbyId}/game-sessions`;
+
+const sessionPath = (lobbyId: string, id: string): string =>
+  `${sessionsPath(lobbyId)}/${id}`;
+
+const seatsPath = (lobbyId: string, gameSessionId: string): string =>
+  `${sessionPath(lobbyId, gameSessionId)}/seats`;
+
+const playMemosPath = (lobbyId: string, gameSessionId: string): string =>
+  `${sessionPath(lobbyId, gameSessionId)}/play-memos`;
+
+/**
+ * 自分に関係する開催の横断一覧。
+ * 複数のロビーをまたぐため、これだけは入れ子にしない（design-v2 §6-5）。
+ */
+export async function listGameSessions(): Promise<GameSessionListItemModel[]> {
+  const dto = (await apiRequest<GameSessionListItem[]>(
+    '/api/me/game-sessions',
+  ))!;
+  return dto.map(toGameSessionListItemModel);
 }
 
+/** ロビー配下の開催一覧。中止・完了も含めて全件返る（絞り込みは呼び出し側） */
+export async function listLobbyGameSessions(
+  lobbyId: string,
+): Promise<GameSessionListItemModel[]> {
+  const dto = (await apiRequest<GameSessionListItem[]>(sessionsPath(lobbyId)))!;
+  return dto.map(toGameSessionListItemModel);
+}
+
+export async function getGameSession(
+  lobbyId: string,
+  id: string,
+): Promise<GameSessionDetailModel> {
+  const dto = (await apiRequest<GameSessionDetail>(sessionPath(lobbyId, id)))!;
+  return toGameSessionDetailModel(dto);
+}
+
+/**
+ * 開催を追加する（design-v2 §5-2）。
+ *
+ * `scheduledAt` は候補日から選んだ日付でも直接入力でもよい。候補日 ID は送らない
+ * （開催日の決定は候補日のコピーではなく新しいファクト。design-v2 §5-2）。
+ * 上書き項目は**入力があったときだけ**渡す。空欄を送ると既定値のコピーが発生する。
+ */
 export async function createGameSession(
+  lobbyId: string,
   input: CreateGameSessionInput,
-): Promise<GameSession> {
-  return (await apiRequest<GameSession>('/api/game-sessions', {
+): Promise<GameSessionModel> {
+  const dto = (await apiRequest<GameSession>(sessionsPath(lobbyId), {
     method: 'POST',
     body: input,
   }))!;
+  return toGameSessionModel(dto);
 }
 
-export async function getGameSession(id: string): Promise<GameSessionDetail> {
-  return (await apiRequest<GameSessionDetail>(`/api/game-sessions/${id}`))!;
-}
-
+/**
+ * 開催情報を更新する。
+ *
+ * **上書き項目に `null` を渡すと上書きを解除する**（以後ロビーの値に追随する）。
+ * キーを省略すると変更しない。フォームが空なら `null` を送ること（design-v2 §5-5）。
+ */
 export async function updateGameSession(
+  lobbyId: string,
   id: string,
   input: UpdateGameSessionInput,
-): Promise<GameSession> {
-  return (await apiRequest<GameSession>(`/api/game-sessions/${id}`, {
+): Promise<GameSessionModel> {
+  const dto = (await apiRequest<GameSession>(sessionPath(lobbyId, id), {
     method: 'PATCH',
     body: input,
   }))!;
+  return toGameSessionModel(dto);
 }
 
-export function deleteGameSession(id: string): Promise<void> {
-  return apiRequest<void>(`/api/game-sessions/${id}`, { method: 'DELETE' });
+export function deleteGameSession(lobbyId: string, id: string): Promise<void> {
+  return apiRequest<void>(sessionPath(lobbyId, id), { method: 'DELETE' });
 }
 
-export async function joinGameSession(
-  id: string,
-  input: JoinGameSessionInput,
-): Promise<GameSessionMember> {
-  return (await apiRequest<GameSessionMember>(
-    `/api/game-sessions/${id}/members`,
-    { method: 'POST', body: input },
-  ))!;
-}
-
-export function leaveGameSession(id: string, memberId: string): Promise<void> {
-  return apiRequest<void>(`/api/game-sessions/${id}/members/${memberId}`, {
-    method: 'DELETE',
-  });
-}
-
-export async function updateMember(
-  gameSessionId: string,
-  memberId: string,
-  input: UpdateMemberInput,
-): Promise<GameSessionMember> {
-  return (await apiRequest<GameSessionMember>(
-    `/api/game-sessions/${gameSessionId}/members/${memberId}`,
-    { method: 'PATCH', body: input },
-  ))!;
-}
-
+/** 完了・中止。どちらも終端で、取り消しは無い */
 export async function updateGameSessionStatus(
+  lobbyId: string,
   id: string,
   input: UpdateGameSessionStatusInput,
-): Promise<GameSession> {
-  return (await apiRequest<GameSession>(`/api/game-sessions/${id}/status`, {
-    method: 'PATCH',
+): Promise<GameSessionModel> {
+  const dto = (await apiRequest<GameSession>(
+    `${sessionPath(lobbyId, id)}/status`,
+    { method: 'PATCH', body: input },
+  ))!;
+  return toGameSessionModel(dto);
+}
+
+// ---------- 着席 ----------
+
+export async function listSeats(
+  lobbyId: string,
+  gameSessionId: string,
+): Promise<SeatModel[]> {
+  const dto = (await apiRequest<Seat[]>(seatsPath(lobbyId, gameSessionId)))!;
+  return dto.map(toSeatModel);
+}
+
+/**
+ * 着席させる。**操作できるのはホストだけで `entryId` は必須**（design-v2 §6-6）。
+ * 自分で着席する経路とゲストの「参加 + 着席」はどちらも廃止された。
+ */
+export async function createSeat(
+  lobbyId: string,
+  gameSessionId: string,
+  input: CreateSeatInput,
+): Promise<SeatModel> {
+  const dto = (await apiRequest<Seat>(seatsPath(lobbyId, gameSessionId), {
+    method: 'POST',
     body: input,
   }))!;
+  return toSeatModel(dto);
+}
+
+/**
+ * 着席を更新する。更新できるのはキャラクター名だけで、`null` が解除を表す。
+ * 本人またはホストが操作できる（design-v2 §6-11）。
+ *
+ * 実体は `character_assignments` に分かれているが、API から見た更新対象は Seat のまま。
+ * `.../seats/:seatId/character` のようなサブリソースは持たない。
+ */
+function updateSeat(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+  characterName: string | null,
+): Promise<SeatModel> {
+  return apiRequest<Seat>(`${seatsPath(lobbyId, gameSessionId)}/${seatId}`, {
+    method: 'PATCH',
+    body: { characterName },
+  }).then((dto) => toSeatModel(dto!));
+}
+
+/** キャラクター名を割り当てる。本人またはホスト */
+export function assignCharacter(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+  characterName: string,
+): Promise<SeatModel> {
+  return updateSeat(lobbyId, gameSessionId, seatId, characterName);
+}
+
+/** キャラクター名の割り当てを解除する。未割り当てでも成功する（冪等） */
+export function unassignCharacter(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+): Promise<SeatModel> {
+  return updateSeat(lobbyId, gameSessionId, seatId, null);
+}
+
+/** 離席。本人またはホスト */
+export function deleteSeat(
+  lobbyId: string,
+  gameSessionId: string,
+  seatId: string,
+): Promise<void> {
+  return apiRequest<void>(`${seatsPath(lobbyId, gameSessionId)}/${seatId}`, {
+    method: 'DELETE',
+  });
 }
 
 // ---------- プレイメモ ----------
@@ -95,80 +215,65 @@ export async function updateGameSessionStatus(
  * （design-v1.2 §8）。呼び出し側に「未作成」の分岐は不要。
  */
 export async function getMyPlayMemo(
+  lobbyId: string,
   gameSessionId: string,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me`,
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `${playMemosPath(lobbyId, gameSessionId)}/me`,
+    ))!,
+  );
 }
 
 /**
  * 自分のプレイメモの本文を保存する。
  *
- * 卓が完了・中止していると 409（ApiError.status）が返る。
+ * 開催が完了・中止していると 409（ApiError.status）が返る。
  */
 export async function upsertMyPlayMemo(
+  lobbyId: string,
   gameSessionId: string,
   input: UpsertGameSessionPlayMemoInput,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me`,
-    { method: 'PUT', body: input },
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `${playMemosPath(lobbyId, gameSessionId)}/me`,
+      { method: 'PUT', body: input },
+    ))!,
+  );
 }
 
 /**
  * 自分のプレイメモの公開・非公開を切り替える。
  *
- * 本文の保存と違い、完了・中止した卓でも呼べる（切替はステータス非依存。design-v1.2 §4）。
+ * 本文の保存と違い、完了・中止した開催でも呼べる（切替はステータス非依存。design-v1.2 §4）。
  * 本文を一度も保存していないメモには 404 が返るため、呼び出し側は保存済みのときだけ叩く。
  */
 export async function updateMyPlayMemoVisibility(
+  lobbyId: string,
   gameSessionId: string,
   input: UpdateGameSessionPlayMemoVisibilityInput,
-): Promise<MyGameSessionPlayMemo> {
-  return (await apiRequest<MyGameSessionPlayMemo>(
-    `/api/game-sessions/${gameSessionId}/play-memos/me/visibility`,
-    { method: 'PATCH', body: input },
-  ))!;
+): Promise<MyPlayMemoModel> {
+  return toMyPlayMemoModel(
+    (await apiRequest<MyGameSessionPlayMemo>(
+      `${playMemosPath(lobbyId, gameSessionId)}/me/visibility`,
+      { method: 'PATCH', body: input },
+    ))!,
+  );
 }
 
 /**
- * 卓の公開プレイメモを一覧する。
+ * 開催の公開プレイメモを一覧する。
  *
  * 認証は不要（未ログイン・ゲストでも読める。要求 §3-4）。レスポンスは閲覧者で分岐せず、
- * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは memberId だけが返るため、
- * 表示名は卓のメンバー一覧と突き合わせて解決する。
+ * 自分の公開メモも含めて返る（design-v1.2 §8）。誰のメモかは seatId だけが返るため、
+ * 表示名は開催の着席者一覧と突き合わせて解決する。
  */
 export async function listSharedPlayMemos(
+  lobbyId: string,
   gameSessionId: string,
-): Promise<SharedGameSessionPlayMemo[]> {
+): Promise<SharedPlayMemoModel[]> {
   return (await apiRequest<SharedGameSessionPlayMemo[]>(
-    `/api/game-sessions/${gameSessionId}/play-memos`,
-  ))!;
-}
-
-// ---------- ゲスト（完全匿名）フロー ----------
-
-/** ホストがゲスト招待用のトークンを取得する。 */
-export async function getGuestLink(
-  gameSessionId: string,
-): Promise<GuestLinkResponse> {
-  return (await apiRequest<GuestLinkResponse>(
-    `/api/game-sessions/${gameSessionId}/guest-link`,
-  ))!;
-}
-
-/**
- * ゲストとして卓に参加する。認証不要で、トークンは Guest-Token ヘッダーで送る。
- */
-export async function joinAsGuest(
-  gameSessionId: string,
-  token: string,
-  input: JoinAsGuestInput,
-): Promise<GameSessionMember> {
-  return (await apiRequest<GameSessionMember>(
-    `/api/game-sessions/${gameSessionId}/guest-members`,
-    { method: 'POST', body: input, headers: { [GUEST_TOKEN_HEADER]: token } },
-  ))!;
+    playMemosPath(lobbyId, gameSessionId),
+  ))!.map(toSharedPlayMemoModel);
 }

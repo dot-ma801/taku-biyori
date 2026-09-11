@@ -20,7 +20,7 @@ describe('getGuestLink', () => {
     expect(result).toEqual({ type: 'ok', token: 'token-abc' });
   });
 
-  it('募集枠が存在しない場合は notFound を返す', async () => {
+  it('ロビーが存在しない場合は notFound を返す', async () => {
     // Arrange
     const repo = mockRepo(null);
 

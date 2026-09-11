@@ -1,12 +1,19 @@
-import { LobbyStatus } from '@taku-biyori/shared';
+import {
+  LobbyStatus,
+  LobbyAction,
+  canPerformLobbyAction,
+} from '@taku-biyori/shared';
 
 export interface LeaveLobbyRepository {
-  findMemberOwner(
-    memberId: string,
-  ): Promise<{ lobbyId: string; userId: string | null } | null>;
+  findEntryOwner(entryId: string): Promise<{
+    lobbyId: string;
+    userId: string | null;
+    leftAt: Date | null;
+  } | null>;
   findHostUserId(id: string): Promise<string | null>;
   findLobbyStatus(id: string): Promise<LobbyStatus | null>;
-  deleteMemberById(memberId: string): Promise<void>;
+  /** 脱退は `left_at` をセットするだけ。行は消さない（design-v2 §9-5） */
+  markEntryLeft(entryId: string): Promise<void>;
 }
 
 export type LeaveLobbyResult =
@@ -16,40 +23,45 @@ export type LeaveLobbyResult =
   | { type: 'hostCannotLeave' }
   | { type: 'invalidStatus' };
 
-// 退出可能なステータスは open / scheduling のみ。
-// game-session 側の leaveGameSession は open 以外をすべて禁止する実装だが（既知のバグ）、
-// design-v1.1 §6 が要求するのは「確定済み・中止済みは 409」のみのため、
-// open と scheduling の両方を許可する。
-const LEAVABLE_STATUSES: LobbyStatus[] = [
-  LobbyStatus.open,
-  LobbyStatus.scheduling,
-];
-
+/**
+ * ロビーから脱退する（本人、またはホストによる取り消し）。
+ *
+ * **行は削除せず `left_at` をセットする。** Seat・回答・プレイメモが参照しているため、
+ * 削除すると過去の開催記録が壊れる（design-v2 §9-5）。
+ * 再参加は同じ行の `left_at` を NULL に戻す（join-lobby 参照）。
+ */
 export const leaveLobby = async (
   repo: LeaveLobbyRepository,
   lobbyId: string,
-  memberId: string,
+  entryId: string,
   userId: string,
 ): Promise<LeaveLobbyResult> => {
-  const memberOwner = await repo.findMemberOwner(memberId);
-  if (!memberOwner || memberOwner.lobbyId !== lobbyId) {
+  const owner = await repo.findEntryOwner(entryId);
+  if (!owner || owner.lobbyId !== lobbyId) {
     return { type: 'notFound' };
   }
 
+  // すでに脱退済みの行は対象にしない（二重脱退で left_at を上書きしない）
+  if (owner.leftAt !== null) return { type: 'notFound' };
+
   const status = await repo.findLobbyStatus(lobbyId);
-  if (status === null || !LEAVABLE_STATUSES.includes(status)) {
+  if (
+    status === null ||
+    !canPerformLobbyAction(LobbyAction.leaveLobby, status, 'member')
+  ) {
     return { type: 'invalidStatus' };
   }
 
   const hostUserId = await repo.findHostUserId(lobbyId);
   const isHost = hostUserId === userId;
-  const isSelf = memberOwner.userId === userId;
+  const isSelf = owner.userId === userId;
 
+  // 本人性はロールとステータスの2軸で表せないため、ここで判定する（design-v2 §4-5）
   if (!isHost && !isSelf) return { type: 'forbidden' };
 
-  // ホストは退出不可
-  if (memberOwner.userId === hostUserId) return { type: 'hostCannotLeave' };
+  // ホスト自身の参加は脱退不可（design-v2 §4-3）
+  if (owner.userId === hostUserId) return { type: 'hostCannotLeave' };
 
-  await repo.deleteMemberById(memberId);
+  await repo.markEntryLeft(entryId);
   return { type: 'ok' };
 };

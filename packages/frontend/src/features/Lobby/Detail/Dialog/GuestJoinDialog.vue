@@ -3,7 +3,8 @@ import BaseButton from '@/components/button/BaseButton.vue';
 import BaseDialog from '@/components/dialog/BaseDialog.vue';
 import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import { useGuestJoin } from '@/features/Lobby/Detail/composables/useGuestJoin';
-import type { LobbyMember, LobbyStatus } from '@taku-biyori/shared';
+import type { LobbyStatus } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { useRoute } from 'vue-router';
 
 const model = defineModel();
@@ -16,7 +17,7 @@ const props = defineProps<{
 const route = useRoute();
 
 const emit = defineEmits<{
-  joined: [member: LobbyMember];
+  joined: [member: LobbyEntryModel];
 }>();
 
 const {

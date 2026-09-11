@@ -1,526 +1,372 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
 import { useConfirmFlow } from '@/features/Lobby/Detail/Schedule/ConfirmFlow/useConfirmFlow';
-import type { LobbyAvailabilityDate, LobbyMember } from '@taku-biyori/shared';
+import type { LobbyDetailModel } from '@/models/lobby';
 
+vi.mock('@/api/game-session', () => ({ createGameSession: vi.fn() }));
 vi.mock('@/api/lobby', () => ({
-  confirmLobby: vi.fn(),
+  getSchedulePoll: vi.fn(),
+  updateLobbyStatus: vi.fn(),
 }));
-
-vi.mock('vue-router', () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
-}));
-
 vi.mock('@/composables/useToast', () => ({
-  useToast: vi.fn(() => ({ success: vi.fn(), error: vi.fn() })),
+  useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }));
 
-import { confirmLobby } from '@/api/lobby';
+import { createGameSession } from '@/api/game-session';
+import { getSchedulePoll, updateLobbyStatus } from '@/api/lobby';
 
-const LOBBY_ID = 'lobby-1';
+const lobby = {
+  id: 'lobby-1',
+  maxPlayers: 2,
+  status: 'closed',
+  activeEntries: [
+    { id: 'entry-ok', userId: 'user-1', userName: 'Alice', guestName: null },
+    { id: 'entry-maybe', userId: 'user-2', userName: 'Bob', guestName: null },
+    { id: 'entry-ng', userId: null, userName: null, guestName: 'Carol' },
+  ],
+  schedulePolls: [{ id: 'poll-1' }],
+} as unknown as LobbyDetailModel;
 
-const members: LobbyMember[] = [
-  {
-    id: 'member-1',
-    userId: 'user-1',
-    userName: 'Alice',
-    guestName: null,
-    joinedAt: '2025-01-01T00:00:00Z',
-  },
-  {
-    id: 'member-2',
-    userId: 'user-2',
-    userName: 'Bob',
-    guestName: null,
-    joinedAt: '2025-01-01T00:00:00Z',
-  },
-  {
-    id: 'member-3',
-    userId: null,
-    userName: null,
-    guestName: 'Guest',
-    joinedAt: '2025-01-01T00:00:00Z',
-  },
-];
-
-const dates: LobbyAvailabilityDate[] = [
-  {
-    id: 'date-1',
-    date: '2025-09-01',
-    dateNote: '13:00〜17:00',
-    answers: [
-      { id: 'ans-1', memberId: 'member-1', answer: 'ok', comment: null },
-      { id: 'ans-2', memberId: 'member-2', answer: 'maybe', comment: null },
-      { id: 'ans-3', memberId: 'member-3', answer: 'ng', comment: null },
-    ],
-  },
-  {
-    id: 'date-2',
-    date: '2025-09-08',
-    dateNote: null,
-    answers: [
-      { id: 'ans-4', memberId: 'member-1', answer: 'ok', comment: null },
-    ],
-  },
-];
-
-const onConflict = vi.fn();
+const poll = {
+  id: 'poll-1',
+  lobbyId: 'lobby-1',
+  candidateDates: [
+    {
+      id: 'candidate-1',
+      date: '2026-09-20',
+      timeLabel: '19:00〜',
+      answersByEntryId: new Map([
+        ['entry-ok', { answer: 'ok' }],
+        ['entry-maybe', { answer: 'maybe' }],
+        ['entry-ng', { answer: 'ng' }],
+      ]),
+    },
+  ],
+} as Awaited<ReturnType<typeof getSchedulePoll>>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getSchedulePoll).mockResolvedValue(poll);
 });
 
-describe('candidateOptions', () => {
-  it('各候補日の ok/maybe/ng 件数を含む配列を返す', () => {
+describe('useConfirmFlow', () => {
+  it('ダイアログが開いたら最新の候補日を読み込む', async () => {
     // Arrange
-    const { candidateOptions } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-
-    // Act & Assert
-    expect(candidateOptions.value).toEqual([
-      {
-        id: 'date-1',
-        date: '2025-09-01',
-        dateNote: '13:00〜17:00',
-        counts: { ok: 1, maybe: 1, ng: 1 },
-      },
-      {
-        id: 'date-2',
-        date: '2025-09-08',
-        dateNote: null,
-        counts: { ok: 1, maybe: 0, ng: 0 },
-      },
-    ]);
-  });
-});
-
-describe('canProceedCandidate', () => {
-  it('候補日を選択していないとき false を返す', () => {
-    const { canProceedCandidate } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    expect(canProceedCandidate.value).toBe(false);
-  });
-
-  it('候補日を選択したとき true を返す', () => {
-    const { canProceedCandidate, selectCandidate } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-    expect(canProceedCandidate.value).toBe(true);
-  });
-});
-
-describe('selectCandidate', () => {
-  it('ok/maybe 回答者をデフォルト選択する', () => {
-    // Arrange
-    const { selectCandidate, selectedMemberIds } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
+    const isOpen = ref(false);
+    const flow = useConfirmFlow(() => lobby, isOpen, vi.fn());
 
     // Act
-    selectCandidate('date-1');
-
-    // Assert: member-1 (ok) と member-2 (maybe) が選択される
-    expect(selectedMemberIds.value.has('member-1')).toBe(true);
-    expect(selectedMemberIds.value.has('member-2')).toBe(true);
-    expect(selectedMemberIds.value.has('member-3')).toBe(false);
-  });
-
-  it('候補日を変更するとデフォルト選択がリセットされる', () => {
-    // Arrange
-    const { selectCandidate, selectedMemberIds } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-    expect(selectedMemberIds.value.has('member-2')).toBe(true);
-
-    // Act: date-2 に変更（member-2 は未回答）
-    selectCandidate('date-2');
-
-    // Assert: member-1 のみ選択（date-2 で ok 回答）
-    expect(selectedMemberIds.value.has('member-1')).toBe(true);
-    expect(selectedMemberIds.value.has('member-2')).toBe(false);
-  });
-});
-
-describe('toggleMember', () => {
-  it('未選択メンバーを選択状態にする', () => {
-    // Arrange
-    const { selectCandidate, toggleMember, selectedMemberIds } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-
-    // Act
-    toggleMember('member-3');
+    isOpen.value = true;
 
     // Assert
-    expect(selectedMemberIds.value.has('member-3')).toBe(true);
-  });
-
-  it('選択済みメンバーを未選択状態にする', () => {
-    // Arrange
-    const { selectCandidate, toggleMember, selectedMemberIds } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-    expect(selectedMemberIds.value.has('member-1')).toBe(true);
-
-    // Act
-    toggleMember('member-1');
-
-    // Assert
-    expect(selectedMemberIds.value.has('member-1')).toBe(false);
-  });
-});
-
-describe('canProceedMembers', () => {
-  it('選択メンバーが 0 人のとき false を返す', () => {
-    // Arrange
-    const { selectCandidate, toggleMember, canProceedMembers } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-2'); // member-1 のみデフォルト選択
-    toggleMember('member-1'); // 全員解除
-
-    // Assert
-    expect(canProceedMembers.value).toBe(false);
-  });
-
-  it('1 人以上選択されていれば true を返す', () => {
-    // Arrange
-    const { selectCandidate, canProceedMembers } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-
-    // Assert
-    expect(canProceedMembers.value).toBe(true);
-  });
-});
-
-describe('capacityMismatch', () => {
-  it('maxPlayers が null なら false を返す', () => {
-    // Arrange
-    const { selectCandidate, capacityMismatch } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1'); // 2人選択
-
-    // Assert
-    expect(capacityMismatch.value).toBe(false);
-  });
-
-  it('選択数と maxPlayers が一致するとき false を返す', () => {
-    // Arrange
-    const { selectCandidate, capacityMismatch } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      2,
-      onConflict,
-    );
-    selectCandidate('date-1'); // member-1, member-2 の 2人選択
-
-    // Assert
-    expect(capacityMismatch.value).toBe(false);
-  });
-
-  it('選択数と maxPlayers が不一致のとき true を返す', () => {
-    // Arrange
-    const { selectCandidate, capacityMismatch } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      3,
-      onConflict,
-    );
-    selectCandidate('date-1'); // 2人選択、定員は3
-
-    // Assert
-    expect(capacityMismatch.value).toBe(true);
-  });
-});
-
-describe('isWarnedMember', () => {
-  it('選択中候補日の回答が ng のメンバーは true を返す', () => {
-    // Arrange
-    const { selectCandidate, isWarnedMember } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-
-    // Assert: member-3 は ng
-    expect(isWarnedMember('member-3')).toBe(true);
-  });
-
-  it('選択中候補日に未回答のメンバーは true を返す', () => {
-    // Arrange
-    const { selectCandidate, isWarnedMember } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-2'); // member-2 は date-2 に未回答
-
-    // Assert
-    expect(isWarnedMember('member-2')).toBe(true);
-  });
-
-  it('ok/maybe 回答者は false を返す', () => {
-    // Arrange
-    const { selectCandidate, isWarnedMember } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-
-    // Assert
-    expect(isWarnedMember('member-1')).toBe(false); // ok
-    expect(isWarnedMember('member-2')).toBe(false); // maybe
-  });
-});
-
-describe('getMemberAnswer', () => {
-  it('候補日を選択していないとき null を返す', () => {
-    // Arrange
-    const { getMemberAnswer } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-
-    // Assert
-    expect(getMemberAnswer('member-1')).toBeNull();
-  });
-
-  it('選択中候補日の各メンバーの回答を返す', () => {
-    // Arrange
-    const { selectCandidate, getMemberAnswer } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-
-    // Assert
-    expect(getMemberAnswer('member-1')).toBe('ok');
-    expect(getMemberAnswer('member-2')).toBe('maybe');
-    expect(getMemberAnswer('member-3')).toBe('ng');
-  });
-
-  it('選択中候補日に未回答のメンバーは null を返す', () => {
-    // Arrange
-    const { selectCandidate, getMemberAnswer } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-2'); // member-2 は date-2 に未回答
-
-    // Assert
-    expect(getMemberAnswer('member-2')).toBeNull();
-  });
-});
-
-describe('step management', () => {
-  it('初期ステップは 1', () => {
-    const { step } = useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
-    expect(step.value).toBe(1);
-  });
-
-  it('goNext でステップが進む', () => {
-    const { step, goNext, selectCandidate } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-    goNext();
-    expect(step.value).toBe(2);
-    goNext();
-    expect(step.value).toBe(3);
-  });
-
-  it('goBack でステップが戻る', () => {
-    const { step, goNext, goBack, selectCandidate } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-    goNext();
-    goBack();
-    expect(step.value).toBe(1);
-  });
-
-  it('reset でステップ 1 に戻る', () => {
-    const { step, goNext, reset, selectCandidate } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-    goNext();
-    reset();
-    expect(step.value).toBe(1);
-  });
-});
-
-describe('reset（初期選択の反映）', () => {
-  it('initialCandidateId を指定して reset すると selectedCandidateId に反映される', () => {
-    // Arrange
-    const { reset, selectedCandidateId } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-      () => 'date-2',
-    );
-
-    // Act
-    reset();
-
-    // Assert
-    expect(selectedCandidateId.value).toBe('date-2');
-  });
-
-  it('initialCandidateId 指定時、reset すると対応するデフォルトメンバーも選択される', () => {
-    // Arrange
-    const { reset, selectedMemberIds } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-      () => 'date-1',
-    );
-
-    // Act
-    reset();
-
-    // Assert: member-1 (ok) と member-2 (maybe) が選択される
-    expect(selectedMemberIds.value.has('member-1')).toBe(true);
-    expect(selectedMemberIds.value.has('member-2')).toBe(true);
-  });
-
-  it('initialCandidateId が null の場合、reset すると選択がクリアされる（既存動作を維持）', () => {
-    // Arrange
-    const { selectCandidate, reset, selectedCandidateId, selectedMemberIds } =
-      useConfirmFlow(LOBBY_ID, members, dates, null, onConflict);
-    selectCandidate('date-1');
-
-    // Act
-    reset();
-
-    // Assert
-    expect(selectedCandidateId.value).toBeNull();
-    expect(selectedMemberIds.value.size).toBe(0);
-  });
-
-  it('reset は常にステップ 1 に戻す', () => {
-    // Arrange
-    const { goNext, reset, step } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-      () => 'date-1',
-    );
-    goNext();
-
-    // Act
-    reset();
-
-    // Assert
-    expect(step.value).toBe(1);
-  });
-});
-
-describe('confirm', () => {
-  it('API を呼び出す', async () => {
-    // Arrange
-    vi.mocked(confirmLobby).mockResolvedValue({ id: 'gs-1' } as never);
-    const { selectCandidate, confirm } = useConfirmFlow(
-      LOBBY_ID,
-      members,
-      dates,
-      null,
-      onConflict,
-    );
-    selectCandidate('date-1');
-
-    // Act
-    await confirm();
-
-    // Assert
-    expect(confirmLobby).toHaveBeenCalledWith(LOBBY_ID, {
-      candidateId: 'date-1',
-      memberIds: expect.arrayContaining(['member-1', 'member-2']),
+    await vi.waitFor(() => {
+      expect(getSchedulePoll).toHaveBeenCalledWith('lobby-1', 'poll-1');
+      expect(flow.candidateOptions.value).toHaveLength(1);
     });
+  });
+
+  it('候補日を選ぶと ok / maybe の在籍 entry を既定で選ぶ', async () => {
+    // Arrange
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
+    await flow.reset();
+
+    // Act
+    flow.selectCandidate('candidate-1');
+
+    // Assert
+    expect(flow.scheduledAt.value).toBe('2026-09-20');
+    expect([...flow.selectedEntryIds.value]).toEqual([
+      'entry-ok',
+      'entry-maybe',
+    ]);
+    expect(flow.isWarnedEntry('entry-ng')).toBe(true);
+  });
+
+  it('候補日が未選択のあいだは次のステップへ進めない', async () => {
+    // Arrange
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
+    await flow.reset();
+
+    // Act
+    const beforeSelect = flow.canProceedCandidate.value;
+    flow.selectCandidate('candidate-1');
+
+    // Assert
+    expect(beforeSelect).toBe(false);
+    expect(flow.canProceedCandidate.value).toBe(true);
+  });
+
+  it('開催日は選択した候補日から導出する', async () => {
+    // Arrange
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
+    await flow.reset();
+    flow.selectCandidate('candidate-1');
+
+    // Act
+    await flow.reset();
+
+    // Assert
+    expect(flow.selectedCandidateId.value).toBeNull();
+    expect(flow.scheduledAt.value).toBe('');
+  });
+
+  // 開催日は候補日からしか選べない。候補日が1件も無いロビーでは確定そのものができない
+  it('候補日が1件も無いロビーでは確定へ進めない', async () => {
+    // Arrange
+    const lobbyWithoutPoll = {
+      ...lobby,
+      schedulePolls: [],
+    } as unknown as LobbyDetailModel;
+    const flow = useConfirmFlow(
+      () => lobbyWithoutPoll,
+      () => false,
+      vi.fn(),
+    );
+
+    // Act
+    await flow.reset();
+
+    // Assert
+    expect(getSchedulePoll).not.toHaveBeenCalled();
+    expect(flow.candidateOptions.value).toEqual([]);
+    expect(flow.canProceedCandidate.value).toBe(false);
+  });
+
+  describe('ステップの進退', () => {
+    it('候補日と参加者が決まるとステップを進められる', async () => {
+      // Arrange
+      const flow = useConfirmFlow(
+        () => lobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+
+      // Act
+      flow.goNext();
+      const blockedAtStep1 = flow.step.value;
+      flow.selectCandidate('candidate-1');
+      flow.goNext();
+      flow.goNext();
+
+      // Assert
+      expect(blockedAtStep1).toBe(1);
+      expect(flow.step.value).toBe(3);
+    });
+
+    it('戻るとひとつ前のステップに戻る', async () => {
+      // Arrange
+      const flow = useConfirmFlow(
+        () => lobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      flow.goNext();
+
+      // Act
+      flow.goBack();
+
+      // Assert
+      expect(flow.step.value).toBe(1);
+    });
+  });
+
+  describe('確定後の受付', () => {
+    it('受付中のロビーは確定と同時に受付を閉じる', async () => {
+      // Arrange
+      const openLobby = { ...lobby, status: 'open' } as LobbyDetailModel;
+      const flow = useConfirmFlow(
+        () => openLobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(updateLobbyStatus).toHaveBeenCalledWith('lobby-1', {
+        status: 'closed',
+      });
+    });
+
+    it('すでに受付を閉じているロビーでは status を触らない', async () => {
+      // Arrange
+      const flow = useConfirmFlow(
+        () => lobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(updateLobbyStatus).not.toHaveBeenCalled();
+    });
+
+    // 受付を閉じられなくても確定そのものは成立している（ホストは手動で閉じられる）
+    it('受付を閉じられなくても作成の通知は行う', async () => {
+      // Arrange
+      const openLobby = { ...lobby, status: 'open' } as LobbyDetailModel;
+      const onCreated = vi.fn();
+      const flow = useConfirmFlow(
+        () => openLobby,
+        () => false,
+        onCreated,
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+      vi.mocked(updateLobbyStatus).mockRejectedValue(new Error('failed'));
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(onCreated).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // API の契約（CreateGameSessionInputSchema の timeLabel: max 20）を送信前に守る。
+  // 超えたまま送ると 400 になり、画面には汎用の失敗メッセージしか出せない
+  describe('ひとことの文字数', () => {
+    const prepare = async () => {
+      const flow = useConfirmFlow(
+        () => lobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      return flow;
+    };
+
+    it('20文字を超えると確定できない', async () => {
+      // Arrange
+      const flow = await prepare();
+
+      // Act
+      flow.draft.value = { ...flow.draft.value, timeLabel: 'あ'.repeat(21) };
+
+      // Assert
+      expect(flow.canConfirm.value).toBe(false);
+      expect(flow.timeLabelCounter.value).toEqual({
+        label: '21 / 20',
+        isOver: true,
+      });
+    });
+
+    it('20文字までなら確定できる', async () => {
+      // Arrange
+      const flow = await prepare();
+
+      // Act
+      flow.draft.value = { ...flow.draft.value, timeLabel: 'あ'.repeat(20) };
+
+      // Assert
+      expect(flow.canConfirm.value).toBe(true);
+    });
+
+    it('超過中は confirm を呼んでも送信しない', async () => {
+      // Arrange
+      const flow = await prepare();
+      flow.draft.value = { ...flow.draft.value, timeLabel: 'あ'.repeat(21) };
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(createGameSession).not.toHaveBeenCalled();
+    });
+
+    // 検証は正規化後の長さで数えているので、送る値も正規化後で揃える。
+    // 生値のまま送ると前後の空白ぶんだけ契約を超えうる
+    it('正規化したひとことを送る', async () => {
+      // Arrange
+      const flow = await prepare();
+      flow.draft.value = { ...flow.draft.value, timeLabel: '  19:00〜  ' };
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(createGameSession).toHaveBeenCalledWith(
+        'lobby-1',
+        expect.objectContaining({ timeLabel: '19:00〜' }),
+      );
+    });
+  });
+
+  it('開催日を表示用に整形して返す', async () => {
+    // Arrange
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
+    await flow.reset();
+
+    // Act
+    const beforeSelect = flow.scheduledAtLabel.value;
+    flow.selectCandidate('candidate-1');
+
+    // Assert
+    expect(beforeSelect).toBe('');
+    expect(flow.scheduledAtLabel.value).toBe('9/20（日）');
+  });
+
+  it('空欄の上書き項目を省略して createGameSession を呼ぶ', async () => {
+    // Arrange
+    const onCreated = vi.fn();
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      onCreated,
+    );
+    await flow.reset();
+    flow.selectCandidate('candidate-1');
+    vi.mocked(createGameSession).mockResolvedValue({
+      id: 'session-1',
+    } as never);
+
+    // Act
+    await flow.confirm();
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith('lobby-1', {
+      scheduledAt: '2026-09-20',
+      entryIds: ['entry-ok', 'entry-maybe'],
+    });
+    expect(onCreated).toHaveBeenCalledTimes(1);
   });
 });

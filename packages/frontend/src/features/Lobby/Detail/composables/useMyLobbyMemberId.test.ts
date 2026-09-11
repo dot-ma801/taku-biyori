@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
-import type { LobbyMember } from '@taku-biyori/shared';
+import type { LobbyEntryModel } from '@/models/lobby';
 
 // useSession（nanostores の Atom）のモック。
 // get() は現在値を返し、subscribe() はコールバックを保持して後から発火できるようにする。
@@ -28,13 +28,14 @@ function setSession(value: SessionValue) {
   sessionSubscribers.forEach((cb) => cb(value));
 }
 
-function makeMember(overrides: Partial<LobbyMember> = {}): LobbyMember {
+function makeMember(overrides: Partial<LobbyEntryModel> = {}): LobbyEntryModel {
   return {
     id: 'member-1',
     userId: 'user-1',
     userName: 'たろう',
     guestName: null,
-    joinedAt: '2026-01-01T00:00:00.000Z',
+    joinedAt: new Date('2026-01-01T00:00:00.000Z'),
+    leftAt: null,
     ...overrides,
   };
 }
@@ -115,7 +116,7 @@ describe('useMyLobbyMemberId', () => {
   it('members を getter で渡した場合、後から中身が変わると myMemberId も追従する', () => {
     // Arrange
     currentSessionValue = { data: { user: { id: 'user-1' } } };
-    const membersRef = ref<LobbyMember[]>([]);
+    const membersRef = ref<LobbyEntryModel[]>([]);
 
     // Act
     const { myMemberId } = useMyLobbyMemberId(() => membersRef.value);

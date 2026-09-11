@@ -1,5 +1,7 @@
 import {
+  LobbyAction,
   LobbyStatus,
+  canPerformLobbyAction,
   type Lobby,
   type UpdateLobbyInput,
 } from '@taku-biyori/shared';
@@ -9,9 +11,9 @@ export interface UpdateLobbyRepository extends LobbyHostRepository {
   findLobbyStatus(id: string): Promise<LobbyStatus | null>;
   updateById(id: string, input: UpdateLobbyInput): Promise<Lobby | null>;
   /**
-   * 更新対象の募集枠行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
+   * 更新対象のロビー行に排他ロックを取り、コールバック内のクエリを 1 トランザクションで実行する。
    * ステータスチェックと updateById を別々のクエリに分けると、その間に並行する
-   * updateLobbyStatus が confirmed/cancelled へ遷移させた場合、チェックを素通りして
+   * updateLobbyStatus が disbanded へ遷移させた場合、チェックを素通りして
    * 更新が成功してしまう race condition（TOCTOU）が起きる。deleteLobby と同方針で
    * ロック付きトランザクション境界を application 層から明示的に開く。
    */
@@ -40,7 +42,7 @@ export const updateLobby = async (
 
     const status = await lockedRepo.findLobbyStatus(id);
     if (status === null) return { type: 'notFound' };
-    if (status === LobbyStatus.confirmed || status === LobbyStatus.cancelled) {
+    if (!canPerformLobbyAction(LobbyAction.editLobby, status, 'host')) {
       return { type: 'invalidStatus' };
     }
 

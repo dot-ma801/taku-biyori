@@ -3,11 +3,12 @@ import { ref } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { GameSessionStatus } from '@taku-biyori/shared';
-import type {
-  GameSessionDetail,
-  GameSessionMember,
-  SharedGameSessionPlayMemo,
-} from '@taku-biyori/shared';
+import {
+  makeGameSessionDetailModel,
+  makeSeatModel,
+} from '@/models/__fixtures__/game-session';
+import type { GameSessionDetailModel, SeatModel } from '@/models/game-session';
+import type { SharedPlayMemoModel } from '@/models/play-memo';
 
 vi.mock('@/api/game-session', () => ({
   listSharedPlayMemos: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock('@/api/game-session', () => ({
 
 import { listSharedPlayMemos } from '@/api/game-session';
 
+const LOBBY_ID = 'lobby-1';
 const SESSION_ID = 'session-1';
 const HOST_USER_ID = 'user-host';
 
@@ -23,89 +25,93 @@ const OTHER_MEMBER_ID = 'member-other';
 const PRIVATE_MEMBER_ID = 'member-private';
 const GUEST_MEMBER_ID = 'member-guest';
 
-function makeMember(
+const makeMember = (
   id: string,
-  overrides: Partial<GameSessionMember> = {},
-): GameSessionMember {
-  return {
+  overrides: Partial<SeatModel> = {},
+): SeatModel =>
+  makeSeatModel({
     id,
+    entryId: `entry-${id}`,
     userId: `user-${id}`,
     userName: `ユーザー${id}`,
     guestName: null,
     characterName: null,
-    joinedAt: '2024-01-01T00:00:00Z',
     ...overrides,
-  };
-}
+  });
 
-/** 自分・公開している他メンバー・非公開の他メンバー・ゲストの4人が居る卓 */
-function makeGameSession(
-  overrides: Partial<GameSessionDetail> = {},
-): GameSessionDetail {
-  return {
+/** 自分・公開している他メンバー・非公開の他メンバー・ゲストの4人が着席した開催 */
+const makeGameSession = (
+  overrides: Partial<GameSessionDetailModel> = {},
+): GameSessionDetailModel =>
+  makeGameSessionDetailModel({
     id: SESSION_ID,
-    title: 'テストセッション',
     status: GameSessionStatus.completed,
-    isPublished: true,
     scheduledAt: '2026-08-01',
-    createdBy: HOST_USER_ID,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    members: [
+    completedAt: new Date('2026-08-01T22:00:00.000Z'),
+    lobby: {
+      ...makeGameSessionDetailModel().lobby,
+      hostUserId: HOST_USER_ID,
+    },
+    seats: [
       makeMember(MY_MEMBER_ID, { userName: '自分', characterName: '探偵' }),
-      makeMember(OTHER_MEMBER_ID, {
-        userName: '青木',
-        characterName: '執事',
-      }),
+      makeMember(OTHER_MEMBER_ID, { userName: '青木', characterName: '執事' }),
       makeMember(PRIVATE_MEMBER_ID, { userName: '佐藤' }),
       makeMember(GUEST_MEMBER_ID, {
         userId: null,
         userName: null,
         guestName: '通りすがり',
+        isGuest: true,
       }),
     ],
     ...overrides,
-  };
-}
+  });
 
 function makeSharedMemo(
-  memberId: string,
-  overrides: Partial<SharedGameSessionPlayMemo> = {},
-): SharedGameSessionPlayMemo {
+  seatId: string,
+  overrides: Partial<SharedPlayMemoModel> = {},
+): SharedPlayMemoModel {
   return {
-    memberId,
+    seatId,
     body: '書斎の鍵は青木さんが持っていた',
-    sharedAt: '2026-08-04T09:00:00Z',
-    updatedAt: '2026-08-03T12:04:00Z',
+    sharedAt: new Date('2026-08-04T09:00:00Z'),
+    updatedAt: new Date('2026-08-03T12:04:00Z'),
     ...overrides,
   };
 }
 
 function setup(
-  gameSession: GameSessionDetail | null = makeGameSession(),
-  myMemberId: string | null = MY_MEMBER_ID,
+  gameSession: GameSessionDetailModel | null = makeGameSession(),
+  mySeatId: string | null = MY_MEMBER_ID,
 ) {
   return useSharedPlayMemos(
+    LOBBY_ID,
     SESSION_ID,
     () => gameSession,
-    () => myMemberId,
+    () => mySeatId,
   );
 }
 
 /** ステータスの変化（完了・中止への遷移）を再現するため ref で渡す */
-function setupWithGameSessionRef(initial: GameSessionDetail | null = null) {
-  const gameSession = ref<GameSessionDetail | null>(initial);
+function setupWithGameSessionRef(
+  initial: GameSessionDetailModel | null = null,
+) {
+  const gameSession = ref<GameSessionDetailModel | null>(initial);
   return {
-    ...useSharedPlayMemos(SESSION_ID, gameSession, () => MY_MEMBER_ID),
+    ...useSharedPlayMemos(
+      LOBBY_ID,
+      SESSION_ID,
+      gameSession,
+      () => MY_MEMBER_ID,
+    ),
     gameSession,
   };
 }
 
 function findEntry(
   entries: ReturnType<typeof setup>['entries'],
-  memberId: string,
+  seatId: string,
 ) {
-  return entries.value.find((entry) => entry.memberId === memberId);
+  return entries.value.find((entry) => entry.seatId === seatId);
 }
 
 beforeEach(() => {
@@ -128,19 +134,18 @@ describe('canViewShared', () => {
     },
   );
 
-  it.each([
-    GameSessionStatus.draft,
-    GameSessionStatus.confirmed,
-    GameSessionStatus.today,
-  ])('%s なら false（他メンバーのメモは読めない）', (status) => {
-    // Arrange & Act
-    const { canViewShared } = setup(makeGameSession({ status }));
+  it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
+    '%s なら false（他メンバーのメモは読めない）',
+    (status) => {
+      // Arrange & Act
+      const { canViewShared } = setup(makeGameSession({ status }));
 
-    // Assert
-    expect(canViewShared.value).toBe(false);
-  });
+      // Assert
+      expect(canViewShared.value).toBe(false);
+    },
+  );
 
-  it('卓がまだ読み込まれていなければ false', () => {
+  it('開催がまだ読み込まれていなければ false', () => {
     // Arrange & Act
     const { canViewShared } = setup(null);
 
@@ -156,23 +161,22 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(listSharedPlayMemos).toHaveBeenCalledWith(SESSION_ID);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 
-  it.each([
-    GameSessionStatus.draft,
-    GameSessionStatus.confirmed,
-    GameSessionStatus.today,
-  ])('%s では取得しない（1件も返らない時期に通信しない）', async (status) => {
-    // Arrange & Act
-    setup(makeGameSession({ status }));
-    await flushPromises();
+  it.each([GameSessionStatus.scheduled, GameSessionStatus.today])(
+    '%s では取得しない（1件も返らない時期に通信しない）',
+    async (status) => {
+      // Arrange & Act
+      setup(makeGameSession({ status }));
+      await flushPromises();
 
-    // Assert
-    expect(listSharedPlayMemos).not.toHaveBeenCalled();
-  });
+      // Assert
+      expect(listSharedPlayMemos).not.toHaveBeenCalled();
+    },
+  );
 
-  it('卓が後から届いても、完了していれば取得する', async () => {
+  it('開催が後から届いても、完了していれば取得する', async () => {
     // Arrange
     const { gameSession } = setupWithGameSessionRef(null);
     await flushPromises();
@@ -183,10 +187,10 @@ describe('自動取得', () => {
     await flushPromises();
 
     // Assert
-    expect(listSharedPlayMemos).toHaveBeenCalledWith(SESSION_ID);
+    expect(listSharedPlayMemos).toHaveBeenCalledWith(LOBBY_ID, SESSION_ID);
   });
 
-  it('取得に失敗したら空のまま（非公開卓の 403 でも画面を壊さない）', async () => {
+  it('取得に失敗したら空のまま（非公開の開催の 403 でも画面を壊さない）', async () => {
     // Arrange
     vi.mocked(listSharedPlayMemos).mockRejectedValue(new Error('Forbidden'));
 
@@ -221,13 +225,13 @@ describe('自動取得', () => {
 });
 
 describe('entries', () => {
-  it('参加メンバー全員が卓の並び順で並ぶ', async () => {
+  it('着席者全員が開催の並び順で並ぶ', async () => {
     // Arrange & Act
     const { entries } = setup();
     await flushPromises();
 
     // Assert
-    expect(entries.value.map((entry) => entry.memberId)).toEqual([
+    expect(entries.value.map((entry) => entry.seatId)).toEqual([
       MY_MEMBER_ID,
       OTHER_MEMBER_ID,
       PRIVATE_MEMBER_ID,
@@ -356,13 +360,13 @@ describe('entries', () => {
     });
   });
 
-  it('sharedEntries は公開しているメンバーだけを卓の並び順で返す', async () => {
+  it('sharedEntries は公開しているメンバーだけを開催の並び順で返す', async () => {
     // Arrange & Act
     const { sharedEntries } = setup();
     await flushPromises();
 
     // Assert
-    expect(sharedEntries.value.map((entry) => entry.memberId)).toEqual([
+    expect(sharedEntries.value.map((entry) => entry.seatId)).toEqual([
       MY_MEMBER_ID,
       OTHER_MEMBER_ID,
     ]);
@@ -380,7 +384,7 @@ describe('entries', () => {
     expect(sharedEntries.value).toEqual([]);
   });
 
-  it('卓がまだ読み込まれていなければ空', () => {
+  it('開催がまだ読み込まれていなければ空', () => {
     // Arrange & Act
     const { entries } = setup(null);
 
@@ -455,7 +459,7 @@ describe('fetch', () => {
   it('読めないステータスでは呼んでも通信しない', async () => {
     // Arrange
     const { fetch } = setup(
-      makeGameSession({ status: GameSessionStatus.confirmed }),
+      makeGameSession({ status: GameSessionStatus.scheduled }),
     );
     await flushPromises();
 

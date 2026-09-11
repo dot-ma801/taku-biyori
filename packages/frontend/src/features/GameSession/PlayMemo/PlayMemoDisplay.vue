@@ -8,10 +8,10 @@ import MyPlayMemoCard from '@/features/GameSession/PlayMemo/MyPlayMemoCard.vue';
 import { useMyPlayMemo } from '@/features/GameSession/PlayMemo/useMyPlayMemo';
 import { useSharedPlayMemos } from '@/features/GameSession/PlayMemo/useSharedPlayMemos';
 import { useAuthStore } from '@/stores/auth';
-import type { GameSessionDetail } from '@taku-biyori/shared';
+import type { GameSessionDetailModel } from '@/models/game-session';
 
 const props = defineProps<{
-  gameSession: GameSessionDetail;
+  gameSession: GameSessionDetailModel;
 }>();
 
 const authStore = useAuthStore();
@@ -23,9 +23,14 @@ const {
   isMyMemo,
   showLoginPrompt,
   canEditBody,
-} = useMyPlayMemo(props.gameSession.id, () => props.gameSession);
+} = useMyPlayMemo(
+  props.gameSession.lobbyId,
+  props.gameSession.id,
+  () => props.gameSession,
+);
 
 const { canViewShared, sharedEntries, othersSharedCount } = useSharedPlayMemos(
+  props.gameSession.lobbyId,
   props.gameSession.id,
   () => props.gameSession,
   () => myMember.value?.id ?? null,
@@ -44,7 +49,7 @@ const showMyMemoCard = computed(
 /**
  * メンバーでない相手にも読む導線を出すか。
  *
- * 完了・中止した卓の公開メモは未ログイン・ゲストも読めるため（要求 §3-4）、
+ * 完了・中止した開催の公開メモは未ログイン・ゲストも読めるため（要求 §3-4）、
  * 書けないことだけを伝えて終わらせない。1件も無いときは出さない。
  */
 const showReadEntry = computed(

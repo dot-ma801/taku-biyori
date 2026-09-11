@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nextTick } from 'vue';
 import { useCreateLobby } from '@/features/Lobby/Edit/composables/useCreateLobby';
-import type { Lobby } from '@taku-biyori/shared';
+import type { LobbyModel } from '@/models/lobby';
 import { LobbyStatus } from '@taku-biyori/shared';
 
 vi.mock('@/api/lobby', () => ({
   createLobby: vi.fn(),
+  getLobby: vi.fn(),
+}));
+
+vi.mock('@/api/game-session', () => ({
+  createGameSession: vi.fn(),
 }));
 
 const pushMock = vi.fn();
@@ -14,54 +19,81 @@ vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({ push: pushMock, back: backMock })),
 }));
 
-import { createLobby } from '@/api/lobby';
+import { createLobby, getLobby } from '@/api/lobby';
+import { createGameSession } from '@/api/game-session';
+import type { LobbyDetailModel } from '@/models/lobby';
 
-const mockLobby: Lobby = {
+const mockLobby: LobbyModel = {
   id: 'lobby-1',
-  title: 'テスト募集枠',
+  title: 'テストロビー',
   description: null,
   scenarioName: null,
   location: null,
   status: LobbyStatus.draft,
-  isPublished: false,
   maxPlayers: null,
+  publishedAt: null,
   openUntil: null,
-  closedAt: null,
-  cancelledAt: null,
+  receptionClosedAt: null,
+  disbandedAt: null,
   hostUserId: 'user-1',
-  createdAt: '2025-01-01T00:00:00.000Z',
-  updatedAt: '2025-01-01T00:00:00.000Z',
+  createdAt: new Date('2025-01-01T00:00:00.000Z'),
+  updatedAt: new Date('2025-01-01T00:00:00.000Z'),
+};
+
+const HOST_ENTRY_ID = 'entry-host';
+
+const mockLobbyDetail: LobbyDetailModel = {
+  ...mockLobby,
+  entries: [],
+  activeEntries: [
+    {
+      id: HOST_ENTRY_ID,
+      userId: 'user-1',
+      userName: 'ホスト',
+      guestName: null,
+      joinedAt: new Date('2025-01-01T00:00:00.000Z'),
+      leftAt: null,
+    },
+  ],
+  schedulePolls: [],
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(createLobby).mockResolvedValue(mockLobby);
+  vi.mocked(getLobby).mockResolvedValue(mockLobbyDetail);
+  vi.mocked(createGameSession).mockResolvedValue({
+    id: 'game-session-1',
+  } as never);
 });
 
 describe('useCreateLobby', () => {
   describe('候補日のバリデーション', () => {
-    it('候補日が0件だと送信をブロックしエラーメッセージを表示する', async () => {
+    // 候補日の編集はロビー編集画面から外れたため、作成時点では0件を許容する
+    it('候補日が0件でも送信できる', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [];
 
       // Act
       await submit();
 
       // Assert
-      expect(createLobby).not.toHaveBeenCalled();
-      expect(errorMessages.value).toEqual(['候補日を1件以上指定してください']);
+      expect(errorMessages.value).toEqual([]);
+      expect(createLobby).toHaveBeenCalledWith(
+        expect.objectContaining({ candidateDates: [] }),
+      );
     });
 
     // blur 時の rules は送信をブロックしないので、送信側でも同じ基準で弾く
     it('ひとことが上限を超えていたら送信をブロックする', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [
-        { date: '2025-05-01', dateNote: 'あ'.repeat(21) },
-        { date: '2025-05-02', dateNote: '午後から' },
+        { date: '2025-05-01', timeLabel: 'あ'.repeat(21) },
+        { date: '2025-05-02', timeLabel: '午後から' },
       ];
 
       // Act
@@ -77,10 +109,10 @@ describe('useCreateLobby', () => {
     it('候補日が1件以上あれば candidateDates として送信する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [
-        { date: '2025-05-01', dateNote: '' },
-        { date: '2025-05-02', dateNote: '' },
+        { date: '2025-05-01', timeLabel: '' },
+        { date: '2025-05-02', timeLabel: '' },
       ];
 
       // Act
@@ -90,8 +122,8 @@ describe('useCreateLobby', () => {
       expect(createLobby).toHaveBeenCalledWith(
         expect.objectContaining({
           candidateDates: [
-            { date: '2025-05-01', dateNote: null },
-            { date: '2025-05-02', dateNote: null },
+            { date: '2025-05-01', timeLabel: null },
+            { date: '2025-05-02', timeLabel: null },
           ],
         }),
       );
@@ -100,10 +132,10 @@ describe('useCreateLobby', () => {
     it('候補日ごとのひとことを正規化して送信する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       pendingDates.value = [
-        { date: '2025-05-01', dateNote: '  13:00〜17:00  ' },
-        { date: '2025-05-02', dateNote: '' },
+        { date: '2025-05-01', timeLabel: '  13:00〜17:00  ' },
+        { date: '2025-05-02', timeLabel: '' },
       ];
 
       // Act
@@ -113,8 +145,8 @@ describe('useCreateLobby', () => {
       expect(createLobby).toHaveBeenCalledWith(
         expect.objectContaining({
           candidateDates: [
-            { date: '2025-05-01', dateNote: '13:00〜17:00' },
-            { date: '2025-05-02', dateNote: null },
+            { date: '2025-05-01', timeLabel: '13:00〜17:00' },
+            { date: '2025-05-02', timeLabel: null },
           ],
         }),
       );
@@ -126,7 +158,7 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
       title.value = '';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -138,11 +170,13 @@ describe('useCreateLobby', () => {
   });
 
   describe('複数のバリデーションエラー', () => {
-    it('タイトル未入力かつ候補日0件のとき、両方のエラーメッセージを表示する', async () => {
+    it('タイトル未入力かつ募集人数が範囲外のとき、両方のエラーメッセージを表示する', async () => {
       // Arrange
-      const { title, pendingDates, errorMessages, submit } = useCreateLobby();
+      const { title, maxMembers, pendingDates, errorMessages, submit } =
+        useCreateLobby();
       title.value = '';
-      pendingDates.value = [];
+      maxMembers.value = '1';
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -151,7 +185,7 @@ describe('useCreateLobby', () => {
       expect(createLobby).not.toHaveBeenCalled();
       expect(errorMessages.value).toEqual([
         'タイトルを入力してください',
-        '候補日を1件以上指定してください',
+        '募集人数は2〜20人の範囲で入力してください',
       ]);
     });
   });
@@ -161,9 +195,9 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, maxMembers, pendingDates, errorMessages, submit } =
         useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '1';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -179,9 +213,9 @@ describe('useCreateLobby', () => {
       // Arrange
       const { title, maxMembers, pendingDates, errorMessages, submit } =
         useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '21';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -196,9 +230,9 @@ describe('useCreateLobby', () => {
     it('2（下限）を入力すると maxPlayers: 2 で送信する', async () => {
       // Arrange
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '2';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -212,9 +246,9 @@ describe('useCreateLobby', () => {
     it('未入力なら maxPlayers を含めずに送信する', async () => {
       // Arrange
       const { title, maxMembers, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       maxMembers.value = '';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -230,16 +264,16 @@ describe('useCreateLobby', () => {
     it('未入力の任意項目は送信内容から除外する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      title.value = 'ロビー';
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
 
       // Assert
       expect(createLobby).toHaveBeenCalledWith({
-        title: '募集枠',
-        candidateDates: [{ date: '2025-05-01', dateNote: null }],
+        title: 'ロビー',
+        candidateDates: [{ date: '2025-05-01', timeLabel: null }],
       });
     });
 
@@ -254,12 +288,12 @@ describe('useCreateLobby', () => {
         pendingDates,
         submit,
       } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = 'ロビー';
       scenarioName.value = 'シナリオ';
       description.value = '説明文';
       location.value = 'ココフォリア';
       openUntil.value = '2025-04-30';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -286,7 +320,7 @@ describe('useCreateLobby', () => {
       expect(errorMessages.value).not.toEqual([]);
 
       // Act
-      title.value = '募集枠';
+      title.value = 'ロビー';
       await nextTick();
 
       // Assert
@@ -296,13 +330,13 @@ describe('useCreateLobby', () => {
     it('候補日を変更した場合も errorMessages がクリアされる', async () => {
       // Arrange
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
+      title.value = '';
       pendingDates.value = [];
       await submit();
       expect(errorMessages.value).not.toEqual([]);
 
       // Act
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
       await nextTick();
 
       // Assert
@@ -315,8 +349,8 @@ describe('useCreateLobby', () => {
       // Arrange
       vi.mocked(createLobby).mockRejectedValue(new Error('network error'));
       const { title, pendingDates, errorMessages, submit } = useCreateLobby();
-      title.value = '募集枠';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      title.value = 'ロビー';
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -330,8 +364,8 @@ describe('useCreateLobby', () => {
     it('作成したロビーの詳細画面へ遷移する', async () => {
       // Arrange
       const { title, pendingDates, submit } = useCreateLobby();
-      title.value = '募集枠';
-      pendingDates.value = [{ date: '2025-05-01', dateNote: '' }];
+      title.value = 'ロビー';
+      pendingDates.value = [{ date: '2025-05-01', timeLabel: '' }];
 
       // Act
       await submit();
@@ -354,6 +388,348 @@ describe('useCreateLobby', () => {
 
       // Assert
       expect(backMock).toHaveBeenCalled();
+    });
+  });
+});
+
+describe('useCreateLobby（日程が決まっているモード）', () => {
+  it('開催日が未入力なら送信をブロックする', async () => {
+    // Arrange
+    const { title, scheduleMode, errorMessages, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(errorMessages.value).toContain('開催日を入力してください');
+    expect(createLobby).not.toHaveBeenCalled();
+  });
+
+  it('候補日を送らずにロビーを作る', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, pendingDates, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    pendingDates.value = [{ date: '2099-10-01', timeLabel: '' }];
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledWith(
+      expect.objectContaining({ candidateDates: [] }),
+    );
+  });
+
+  it('ホストを着席者にして開催を1件つくる', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, timeLabel, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    timeLabel.value = '19:00〜';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith('lobby-1', {
+      scheduledAt: '2099-09-01',
+      entryIds: [HOST_ENTRY_ID],
+      timeLabel: '19:00〜',
+    });
+  });
+
+  it('当日の連絡事項は開催に載せる（ロビーの説明とは別）', async () => {
+    // Arrange
+    const {
+      title,
+      scheduleMode,
+      scheduledAt,
+      description,
+      gameSessionDescription,
+      submit,
+    } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    description.value = 'ロビーの説明';
+    gameSessionDescription.value = '19時に駅前集合';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith(
+      'lobby-1',
+      expect.objectContaining({ description: '19時に駅前集合' }),
+    );
+    expect(createLobby).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'ロビーの説明' }),
+    );
+  });
+
+  it('モードを切り替えたら作りかけのロビーは使い回さない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    const { title, scheduleMode, scheduledAt, pendingDates, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+    scheduleMode.value = 'poll';
+    pendingDates.value = [{ date: '2099-10-01', timeLabel: '' }];
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        candidateDates: [{ date: '2099-10-01', timeLabel: null }],
+      }),
+    );
+  });
+
+  it('作成後は開催の詳細へ遷移する', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'game-sessions-detail',
+      params: { lobbyId: 'lobby-1', gameSessionId: 'game-session-1' },
+    });
+  });
+
+  it('開催の作成に失敗しても再送信でロビーを作り直さない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledOnce();
+    expect(createGameSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('ロビーに載る項目を編集したら作りかけのロビーを使い回さない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+    title.value = '直したロビー名';
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: '直したロビー名' }),
+    );
+  });
+
+  // 募集締め切り日は poll モードの入力欄。fixed に切り替えると画面から消えるため、
+  // 残った値をそのまま送ると「見えない締め切り」でロビーが受付終了になってしまう
+  it('モードを fixed に切り替えたら募集締め切り日は送らない', async () => {
+    // Arrange
+    const { title, scheduleMode, scheduledAt, openUntil, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    openUntil.value = '2099-08-01';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledWith(
+      expect.not.objectContaining({ openUntil: expect.anything() }),
+    );
+  });
+
+  // 送信中もフォームは編集できる。await をまたいでモードを読み直すと、
+  // ペイロードの組み立てとその後の分岐が別のモードで動きうる
+  it('送信中にモードが変わっても送信開始時のモードで処理する', async () => {
+    // Arrange
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const { title, scheduleMode, scheduledAt, submit } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    const submitted = submit();
+    scheduleMode.value = 'poll';
+    resolveCreate?.(mockLobby);
+    await submitted;
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledOnce();
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'game-sessions-detail',
+      params: { lobbyId: 'lobby-1', gameSessionId: 'game-session-1' },
+    });
+  });
+
+  // モードと同じ理由で、開催に載る入力も await をまたいで読み直してはいけない
+  it('送信中に開催の入力を変えても送信開始時の値で開催を作る', async () => {
+    // Arrange
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const {
+      title,
+      scheduleMode,
+      scheduledAt,
+      timeLabel,
+      gameSessionDescription,
+      submit,
+    } = useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+    timeLabel.value = '19:00〜';
+    gameSessionDescription.value = '19時に駅前集合';
+
+    // Act
+    const submitted = submit();
+    scheduledAt.value = '2099-12-31';
+    timeLabel.value = '10:00〜';
+    gameSessionDescription.value = '書き換え';
+    resolveCreate?.(mockLobby);
+    await submitted;
+
+    // Assert
+    expect(createGameSession).toHaveBeenCalledWith('lobby-1', {
+      scheduledAt: '2099-09-01',
+      entryIds: [HOST_ENTRY_ID],
+      timeLabel: '19:00〜',
+      description: '19時に駅前集合',
+    });
+  });
+
+  // watch がモード変更で消したキャッシュを、飛行中の submit が書き戻してはいけない
+  it('送信中にモードが変わったら作りかけのロビーをキャッシュしない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const { title, scheduleMode, scheduledAt, pendingDates, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    const submitted = submit();
+    scheduleMode.value = 'poll';
+    resolveCreate?.(mockLobby);
+    await submitted;
+    pendingDates.value = [{ date: '2099-10-01', timeLabel: '' }];
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        candidateDates: [{ date: '2099-10-01', timeLabel: null }],
+      }),
+    );
+  });
+
+  // モードだけでなく、ロビーに載る項目の編集でも watch はキャッシュを消す。
+  // 飛行中の submit がそれを書き戻すと、編集した値が黙って捨てられる
+  it('送信中にロビーの項目を編集したら作りかけのロビーをキャッシュしない', async () => {
+    // Arrange
+    vi.mocked(createGameSession).mockRejectedValueOnce(
+      new Error('開催の作成に失敗'),
+    );
+    let resolveCreate: ((lobby: LobbyModel) => void) | undefined;
+    vi.mocked(createLobby).mockReturnValueOnce(
+      new Promise<LobbyModel>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    const { title, scheduleMode, scheduledAt, timeLabel, submit } =
+      useCreateLobby();
+    title.value = 'ロビー';
+    scheduleMode.value = 'fixed';
+    scheduledAt.value = '2099-09-01';
+
+    // Act
+    const submitted = submit();
+    title.value = '直したロビー名';
+    resolveCreate?.(mockLobby);
+    await submitted;
+    // 開催だけの項目を直しても、ロビーのキャッシュは消えない
+    timeLabel.value = '19:00〜';
+    await submit();
+
+    // Assert
+    expect(createLobby).toHaveBeenCalledTimes(2);
+    expect(createLobby).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: '直したロビー名' }),
+    );
+  });
+
+  it('候補日モードならロビーの詳細へ遷移し開催は作らない', async () => {
+    // Arrange
+    const { title, submit } = useCreateLobby();
+    title.value = 'ロビー';
+
+    // Act
+    await submit();
+
+    // Assert
+    expect(createGameSession).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'lobbies-detail',
+      params: { lobbyId: 'lobby-1' },
     });
   });
 });

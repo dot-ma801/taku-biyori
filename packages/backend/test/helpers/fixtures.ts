@@ -1,0 +1,238 @@
+/**
+ * 実 DB テスト用のフィクスチャ生成ヘルパー。
+ *
+ * ID はすべてランダムに採番する。テストはロールバックで分離されるが、
+ * `withCommitted`（ロック競合のテスト）ではコミットされるため、
+ * 他のテストと衝突しない値を使うことを前提にしている。
+ */
+import { randomUUID } from 'node:crypto';
+import type { Database } from '@/system/infrastructure/database/client';
+import { firstRow } from '@/system/infrastructure/database/first-row';
+import { user } from '@/system/infrastructure/database/schema';
+import {
+  lobbies,
+  lobbyEntries,
+  schedulePolls,
+  candidateDates,
+  scheduleAnswers,
+} from '@/system/infrastructure/database/lobby-schema';
+import {
+  characterAssignments,
+  gameSessions,
+  playMemos,
+  seats,
+} from '@/system/infrastructure/database/game-session-schema';
+
+export const insertUser = async (
+  db: Database,
+  overrides: { name?: string | null } = {},
+): Promise<{ id: string; name: string | null }> => {
+  const id = `test-user-${randomUUID()}`;
+  const name = overrides.name === undefined ? 'テストユーザー' : overrides.name;
+
+  await db.insert(user).values({
+    id,
+    name,
+    email: `${id}@example.test`,
+  });
+
+  return { id, name };
+};
+
+export interface InsertLobbyOverrides {
+  title?: string;
+  scenarioName?: string | null;
+  description?: string | null;
+  location?: string | null;
+  maxPlayers?: number | null;
+  guestLinkToken?: string;
+  publishedAt?: Date | null;
+  openUntil?: string | null;
+  receptionClosedAt?: Date | null;
+  disbandedAt?: Date | null;
+}
+
+export const insertLobby = async (
+  db: Database,
+  hostUserId: string,
+  overrides: InsertLobbyOverrides = {},
+): Promise<string> => {
+  const rows = await db
+    .insert(lobbies)
+    .values({
+      hostUserId,
+      title: overrides.title ?? 'テスト募集',
+      scenarioName: overrides.scenarioName ?? null,
+      description: overrides.description ?? null,
+      location: overrides.location ?? null,
+      maxPlayers: overrides.maxPlayers ?? null,
+      guestLinkToken: overrides.guestLinkToken ?? `token-${randomUUID()}`,
+      publishedAt: overrides.publishedAt ?? null,
+      openUntil: overrides.openUntil ?? null,
+      receptionClosedAt: overrides.receptionClosedAt ?? null,
+      disbandedAt: overrides.disbandedAt ?? null,
+    })
+    .returning({ id: lobbies.id });
+
+  return firstRow(rows, 'insertLobby').id;
+};
+
+export const insertLobbyEntry = async (
+  db: Database,
+  lobbyId: string,
+  entry: {
+    userId?: string | null;
+    guestName?: string | null;
+    leftAt?: Date | null;
+  } = {},
+): Promise<string> => {
+  const rows = await db
+    .insert(lobbyEntries)
+    .values({
+      lobbyId,
+      userId: entry.userId ?? null,
+      guestName: entry.guestName ?? null,
+      leftAt: entry.leftAt ?? null,
+    })
+    .returning({ id: lobbyEntries.id });
+
+  return firstRow(rows, 'insertLobbyEntry').id;
+};
+
+export const insertSchedulePoll = async (
+  db: Database,
+  lobbyId: string,
+  overrides: { createdAt?: Date } = {},
+): Promise<string> => {
+  const rows = await db
+    .insert(schedulePolls)
+    .values({
+      lobbyId,
+      // 同一 timestamp での id タイブレークを検証するテスト用に上書きできる
+      ...(overrides.createdAt !== undefined && {
+        createdAt: overrides.createdAt,
+      }),
+    })
+    .returning({ id: schedulePolls.id });
+
+  return firstRow(rows, 'insertSchedulePoll').id;
+};
+
+export const insertCandidateDate = async (
+  db: Database,
+  pollId: string,
+  date: string,
+  timeLabel: string | null = null,
+): Promise<string> => {
+  const rows = await db
+    .insert(candidateDates)
+    .values({ pollId, date, timeLabel })
+    .returning({ id: candidateDates.id });
+
+  return firstRow(rows, 'insertCandidateDate').id;
+};
+
+export const insertScheduleAnswer = async (
+  db: Database,
+  candidateDateId: string,
+  entryId: string,
+  answer: 'ok' | 'maybe' | 'ng',
+  comment: string | null = null,
+): Promise<string> => {
+  const rows = await db
+    .insert(scheduleAnswers)
+    .values({ candidateDateId, lobbyEntryId: entryId, answer, comment })
+    .returning({ id: scheduleAnswers.id });
+
+  return firstRow(rows, 'insertScheduleAnswer').id;
+};
+
+export interface InsertGameSessionOverrides {
+  /** 未指定なら null。上書きしない＝ロビーの値を表示する（design-v2 §5-5） */
+  title?: string | null;
+  scenarioName?: string | null;
+  description?: string | null;
+  location?: string | null;
+  timeLabel?: string | null;
+  scheduledAt?: string;
+  completedAt?: Date | null;
+  cancelledAt?: Date | null;
+}
+
+/**
+ * セッションは必ずロビーに属するため lobbyId が必須（design-v2 §9-3）。
+ *
+ * 上書き項目は既定で null にしてある。既定値をコピーしないのが v2 の要点なので、
+ * フィクスチャでも「未設定」を既定にしておく。
+ */
+export const insertGameSession = async (
+  db: Database,
+  lobbyId: string,
+  overrides: InsertGameSessionOverrides = {},
+): Promise<string> => {
+  const rows = await db
+    .insert(gameSessions)
+    .values({
+      lobbyId,
+      title: overrides.title ?? null,
+      scenarioName: overrides.scenarioName ?? null,
+      description: overrides.description ?? null,
+      location: overrides.location ?? null,
+      timeLabel: overrides.timeLabel ?? null,
+      scheduledAt: overrides.scheduledAt ?? '2999-12-31',
+      completedAt: overrides.completedAt ?? null,
+      cancelledAt: overrides.cancelledAt ?? null,
+    })
+    .returning({ id: gameSessions.id });
+
+  return firstRow(rows, 'insertGameSession').id;
+};
+
+/** 着席。紐付けは lobby_entry_id 1本になった（design-v2 §3-8） */
+/**
+ * 着席を作る。
+ *
+ * `createdAt` を明示できるようにしてあるのは、既定の `now()` が
+ * **トランザクション開始時刻で固定される**ため。`withRollback` の中では
+ * 何件入れても `created_at` が同じ値になり、`seatedAt` 昇順を検証できない。
+ */
+export const insertSeat = async (
+  db: Database,
+  gameSessionId: string,
+  lobbyEntryId: string,
+  seat: { characterName?: string | null; createdAt?: Date } = {},
+): Promise<string> => {
+  const rows = await db
+    .insert(seats)
+    .values({
+      gameSessionId,
+      lobbyEntryId,
+      ...(seat.createdAt ? { createdAt: seat.createdAt } : {}),
+    })
+    .returning({ id: seats.id });
+
+  const id = firstRow(rows, 'insertSeat').id;
+  if (seat.characterName !== undefined && seat.characterName !== null) {
+    await db.insert(characterAssignments).values({
+      seatId: id,
+      characterName: seat.characterName,
+    });
+  }
+  return id;
+};
+
+export const insertPlayMemo = async (
+  db: Database,
+  seatId: string,
+  memo: { body?: string; sharedAt?: Date | null } = {},
+): Promise<void> => {
+  await db.insert(playMemos).values({
+    seatId,
+    body: memo.body ?? '',
+    sharedAt: memo.sharedAt ?? null,
+  });
+};
+
+// dateFromToday（`scheduled_at` の境界テスト用の相対日付ヘルパー）は
+// scripts/seed.ts と重複していたため `@/system/domain/date-from-today` へ
+// 切り出した。ここでは re-export せず、利用側にそちらを直接 import させる。

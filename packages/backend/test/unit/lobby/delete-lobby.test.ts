@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { deleteLobby } from '@/lobby/application/delete-lobby';
 import type { DeleteLobbyRepository } from '@/lobby/application/delete-lobby';
-import { LobbyStatus } from '@taku-biyori/shared';
 
 // makeRepo:
 // `executeWithLock` のモックは「コールバックを同期的にそのまま実行する」スタブを既定とする。
@@ -13,8 +12,8 @@ function makeRepo(
 ): DeleteLobbyRepository {
   const repo: DeleteLobbyRepository = {
     findHostUserId: vi.fn().mockResolvedValue('user-1'),
-    findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.draft),
-    countOtherMembers: vi.fn().mockResolvedValue(0),
+    countOtherEntries: vi.fn().mockResolvedValue(0),
+    countGameSessions: vi.fn().mockResolvedValue(0),
     deleteById: vi.fn().mockResolvedValue(undefined),
     executeWithLock: vi.fn(async (_id, fn) => fn(repo)),
     ...overrides,
@@ -47,7 +46,7 @@ describe('deleteLobby', () => {
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
 
-  it('募集枠が存在しない場合は notFound を返す', async () => {
+  it('ロビーが存在しない場合は notFound を返す', async () => {
     // Arrange
     const repo = makeRepo({
       findHostUserId: vi.fn().mockResolvedValue(null),
@@ -62,64 +61,10 @@ describe('deleteLobby', () => {
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
 
-  it('status が open のときも ok を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.open),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
-  it('status が scheduling のときも ok を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.scheduling),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
-  it('status が cancelled のときも ok を返す（中止済みは削除可）', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.cancelled),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'ok' });
-  });
-
-  it('status が confirmed のとき invalidStatus を返す', async () => {
-    // Arrange
-    const repo = makeRepo({
-      findLobbyStatus: vi.fn().mockResolvedValue(LobbyStatus.confirmed),
-      deleteById: vi.fn(),
-    });
-
-    // Act
-    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
-
-    // Assert
-    expect(result).toEqual({ type: 'invalidStatus' });
-    expect(repo.deleteById).not.toHaveBeenCalled();
-  });
-
   it('自分以外のメンバーが存在するとき hasMember を返す', async () => {
     // Arrange
     const repo = makeRepo({
-      countOtherMembers: vi.fn().mockResolvedValue(1),
+      countOtherEntries: vi.fn().mockResolvedValue(1),
       deleteById: vi.fn(),
     });
 
@@ -129,6 +74,39 @@ describe('deleteLobby', () => {
     // Assert
     expect(result).toEqual({ type: 'hasMember' });
     expect(repo.deleteById).not.toHaveBeenCalled();
+  });
+
+  it('開催が1件でもあるとき hasGameSession を返す', async () => {
+    // Arrange
+    // lobby_id が ON DELETE CASCADE になったため、ロビーを消すと過去の開催記録・
+    // 着席・プレイメモまで連鎖して消える（design-v2 §6-13-3）
+    const repo = makeRepo({
+      countGameSessions: vi.fn().mockResolvedValue(1),
+      deleteById: vi.fn(),
+    });
+
+    // Act
+    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
+
+    // Assert
+    expect(result).toEqual({ type: 'hasGameSession' });
+    expect(repo.deleteById).not.toHaveBeenCalled();
+  });
+
+  it('中止・完了した開催も数に入れる', async () => {
+    // Arrange
+    // 「終わった開催なら消してよい」ではない。記録として残す（design-v2 §4-4）
+    const repo = makeRepo({
+      countGameSessions: vi.fn().mockResolvedValue(3),
+      deleteById: vi.fn(),
+    });
+
+    // Act
+    const result = await deleteLobby(repo, 'lobby-1', 'user-1');
+
+    // Assert
+    expect(result).toEqual({ type: 'hasGameSession' });
+    expect(repo.countGameSessions).toHaveBeenCalledWith('lobby-1');
   });
 
   describe('TOCTOU 対策（トランザクション + 行ロック）', () => {
@@ -161,8 +139,8 @@ describe('deleteLobby', () => {
       // Assert
       expect(result).toEqual({ type: 'notFound' });
       expect(repo.findHostUserId).not.toHaveBeenCalled();
-      expect(repo.findLobbyStatus).not.toHaveBeenCalled();
-      expect(repo.countOtherMembers).not.toHaveBeenCalled();
+      expect(repo.countOtherEntries).not.toHaveBeenCalled();
+      expect(repo.countGameSessions).not.toHaveBeenCalled();
       expect(repo.deleteById).not.toHaveBeenCalled();
     });
   });

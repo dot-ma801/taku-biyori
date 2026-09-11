@@ -1,80 +1,240 @@
 import { z } from 'zod';
 import { GameSessionStatus } from '@/game-session/status';
+import { LobbyStatus } from '@/lobby/status';
+import { SeatRefSchema, SeatSchema } from '@/game-session/seat';
+import { TIME_LABEL_MAX_LENGTH } from '@/lobby/time-label';
 import { todayDateString } from '@/date';
 
 export { GameSessionStatus };
-export const GameSessionStatusSchema = z.nativeEnum(GameSessionStatus);
 
-export const GameSessionListItemSchema = z.object({
+/**
+ * レスポンスのステータス。`getGameSessionStatus()` が導出する4値だけを許す（design-v2 §4-2）。
+ */
+export const GameSessionStatusSchema = z.enum([
+  GameSessionStatus.scheduled,
+  GameSessionStatus.today,
+  GameSessionStatus.completed,
+  GameSessionStatus.cancelled,
+]);
+
+/**
+ * **編集フォーム用の生値。** `null` は「上書きしていない」を意味する。
+ *
+ * 解決済みの値（`resolveGameSessionDisplay()` の戻り値）をフォームの初期値に使ってはいけない。
+ * 上書きしていない項目にもロビーの値が入って見え、そのまま保存すると意図しない上書きが発生して
+ * 以後ロビーを改名しても追随しなくなる（design-v2 §5-5）。
+ *
+ * `description`（当日の連絡事項）は上書きではなくセッション固有のファクトなので、ここには含まれない。
+ */
+export const GameSessionOverridesSchema = z.object({
+  title: z.string().nullable(),
+  scenarioName: z.string().nullable(),
+  location: z.string().nullable(),
+  timeLabel: z.string().nullable(),
+});
+export type GameSessionOverrides = z.infer<typeof GameSessionOverridesSchema>;
+
+/**
+ * セッション詳細に埋め込むロビー情報。**3つの役割を兼ねる**（design-v2 §6-13-5）。
+ *
+ * 1. **既定値の出所** — `overrides.*` が null のとき表示に使う値
+ * 2. パンくず・戻り導線
+ * 3. 閲覧者がホストかどうかの判定（`hostUserId`）
+ *
+ * ロビー全体を埋め込まないのは、`entries` や `gameSessions` まで抱えると重くなるため。
+ */
+export const LobbySummarySchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
-  scenarioName: z.string().nullable().optional(),
-  status: GameSessionStatusSchema,
-  isPublished: z.boolean(),
-  memberCount: z.number().int(),
-  maxMembers: z.number().int().nullable().optional(),
-  // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
-  scheduledAt: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  role: z.enum(['host', 'member']).nullable(),
+  scenarioName: z.string().nullable(),
+  location: z.string().nullable(),
+  maxPlayers: z.number().int().nullable(),
+  hostUserId: z.string(),
+  status: z.nativeEnum(LobbyStatus),
 });
-export type GameSessionListItem = z.infer<typeof GameSessionListItemSchema>;
+export type LobbySummary = z.infer<typeof LobbySummarySchema>;
 
+/**
+ * セッション（1回の開催）。
+ *
+ * **解決済みの表示値は返さない。** `title` / `scenarioName` / `location` は
+ * 上書きの生値（`overrides`）とロビーの既定値（`lobby`）から求める。
+ * クライアントは `resolveGameSessionDisplay()` を呼ぶ（design-v2 §5-5・§6-1）。
+ *
+ * v0.2 から消えたフィールド: `isPublished`・`maxMembers`・`createdBy`（すべてロビーの関心事）。
+ */
 export const GameSessionSchema = z.object({
   id: z.string().uuid(),
-  title: z.string(),
-  description: z.string().nullable().optional(),
-  scenarioName: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
-  status: GameSessionStatusSchema,
-  isPublished: z.boolean(),
-  // 卓は日程が確定した状態でのみ存在するため必須（design-v1.1 §8）
+  /** **非 null**。セッションは必ずロビーに属する（design-v2 §9-3） */
+  lobbyId: z.string().uuid(),
+  /**
+   * 開催日。「この日に開くと決めた」という決定のファクトで、候補日のコピーではない。
+   * `GameSession → CandidateDate` の出自リンクは持たない。
+   */
   scheduledAt: z.string(),
-  completedAt: z.string().nullable().optional(),
-  cancelledAt: z.string().nullable().optional(),
-  maxMembers: z.number().int().nullable().optional(),
-  // 出自の募集枠。直接卓立ては null（design-v1.1 §6）
-  lobbyId: z.string().uuid().nullable().optional(),
-  createdBy: z.string(),
+  status: GameSessionStatusSchema,
+  /**
+   * 当日の連絡事項（VC・部屋の URL・集合情報など）。
+   * **上書き項目ではなくセッション固有のファクト**なので `overrides` に入らない。
+   */
+  description: z.string().nullable(),
+  overrides: GameSessionOverridesSchema,
+  lobby: LobbySummarySchema,
+  completedAt: z.string().nullable(),
+  /** 開催の中止日時。ロビー側の `disbandedAt`（企画の解散）とは別概念 */
+  cancelledAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type GameSession = z.infer<typeof GameSessionSchema>;
 
-// 卓は日程が確定した状態でのみ存在するため scheduledAt は必須（design-v1.1 §8）。
-// 募集締め切り（openUntil）は募集枠（lobby）の関心事なので卓では受け付けない。
+export const GameSessionDetailSchema = GameSessionSchema.extend({
+  /** 着席者。`seatedAt` 昇順。v0.2 の `members` の改名 */
+  seats: z.array(SeatSchema),
+});
+export type GameSessionDetail = z.infer<typeof GameSessionDetailSchema>;
+
+/**
+ * セッション一覧表示用の軽量スキーマ。
+ *
+ * `title` / `scenarioName` / `timeLabel` は一覧の文脈では**解決済み**の値を返す。
+ * 一覧はロビーが自明な文脈で使われるため、要素ごとに `lobby` を繰り返さない（design-v2 §5-5）。
+ */
+export const GameSessionListItemSchema = z.object({
+  id: z.string().uuid(),
+  lobbyId: z.string().uuid(),
+  /** 解決済み（未設定ならロビーの title） */
+  title: z.string(),
+  scenarioName: z.string().nullable(),
+  status: GameSessionStatusSchema,
+  scheduledAt: z.string(),
+  timeLabel: z.string().nullable(),
+  seats: z.array(SeatRefSchema),
+  /** ロビーのホスト。`hostUserId === myUserId` で自分がホストか判定する（v0.2 の `role` を置き換えた） */
+  hostUserId: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type GameSessionListItem = z.infer<typeof GameSessionListItemSchema>;
+
+/**
+ * ロビー詳細に埋め込む開催の軽量表現（design-v2 §6-13-4）。
+ * 親がロビーそのものなので `lobby` を持たず、解決済みの表示値を持つ。
+ */
+export const GameSessionSummarySchema = z.object({
+  id: z.string().uuid(),
+  scheduledAt: z.string(),
+  status: GameSessionStatusSchema,
+  /** 解決済み（未設定ならロビーの title） */
+  title: z.string(),
+  timeLabel: z.string().nullable(),
+  seats: z.array(SeatRefSchema),
+});
+export type GameSessionSummary = z.infer<typeof GameSessionSummarySchema>;
+
+/**
+ * セッションを開く入力（design-v2 §5-2）。v0.2 の `ConfirmLobbyInput` の後継。
+ *
+ * `candidateId` は受け取らず `scheduledAt` を直接受け取る。開催日の決定は新しいファクトであり、
+ * 候補日のコピーではないため。「候補日を選ぶ」のは UI の仕事で、
+ * フロントが選ばれた候補日の `date` を送る。
+ *
+ * 上書き項目は渡したときだけ保存し、既定値は書き込まない。
+ */
+/**
+ * 上書き項目の最大文字数。
+ *
+ * **契約なので定数で持つ。** フロントは送信前に同じ基準で弾く必要があり、
+ * 数値を両側に書くと片方だけ動かしたときに「画面は通るのに 400」が起きる。
+ * `timeLabel` は候補日のひとことと同じ上限（`TIME_LABEL_MAX_LENGTH`）を使う。
+ */
+export const GAME_SESSION_OVERRIDE_MAX_LENGTHS = {
+  title: 100,
+  scenarioName: 200,
+  location: 200,
+  timeLabel: TIME_LABEL_MAX_LENGTH,
+  description: 1000,
+} as const satisfies Record<string, number>;
+
 export const CreateGameSessionInputSchema = z
   .object({
-    title: z.string().min(1).max(100),
-    description: z.string().max(1000).optional(),
-    scenarioName: z.string().max(200).optional(),
-    location: z.string().max(200).optional(),
-    maxMembers: z.number().int().min(2).max(20).optional(),
+    /** 開催日。**今日以降**（過ぎた日に新しい開催は作らせない） */
     scheduledAt: z.iso.date(),
+    /**
+     * 着席させる LobbyEntry の ID の配列。1件以上必須。
+     * このロビーのものでない ID、または脱退済み（`leftAt != null`）の ID を含むと 422。
+     * v0.2 の `memberIds` の改名。
+     */
+    entryIds: z.array(z.string().uuid()).min(1),
+    title: z
+      .string()
+      .min(1)
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.title)
+      .optional(),
+    scenarioName: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.scenarioName)
+      .optional(),
+    location: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.location)
+      .optional(),
+    timeLabel: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.timeLabel)
+      .optional(),
+    description: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.description)
+      .optional(),
   })
-  .superRefine((input, ctx) => {
-    if (input.scheduledAt < todayDateString()) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['scheduledAt'],
-        message: '開催日には今日以降の日付を指定してください',
-      });
-    }
+  .refine((input) => input.scheduledAt >= todayDateString(), {
+    message: '開催日には今日以降の日付を指定してください',
+    path: ['scheduledAt'],
   });
 export type CreateGameSessionInput = z.infer<
   typeof CreateGameSessionInputSchema
 >;
 
+/**
+ * セッションの partial 更新。キーを省略すると変更しない。
+ *
+ * **上書き項目に `null` を渡すと上書きを解除する**（以後ロビーの値に追随する）。
+ * この2つを区別できることが `overrides` を返している理由なので、
+ * フロントは「フォームが空 → `null` を送る」を守ること。
+ */
 export const UpdateGameSessionInputSchema = z
   .object({
-    title: z.string().min(1).max(100).optional(),
-    description: z.string().max(1000).nullable().optional(),
-    scenarioName: z.string().max(200).nullable().optional(),
-    location: z.string().max(200).nullable().optional(),
-    maxMembers: z.number().int().min(2).max(20).nullable().optional(),
-    // 卓は日程が確定した状態でのみ存在するため null への更新は受け付けない（design-v1.1 §8）
+    /** 開催日。null への更新は受け付けない（セッションは必ず日程を持つ） */
     scheduledAt: z.iso.date().optional(),
+    /** null で上書き解除 */
+    title: z
+      .string()
+      .min(1)
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.title)
+      .nullable()
+      .optional(),
+    scenarioName: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.scenarioName)
+      .nullable()
+      .optional(),
+    location: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.location)
+      .nullable()
+      .optional(),
+    timeLabel: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.timeLabel)
+      .nullable()
+      .optional(),
+    /** 当日の連絡事項。上書きではないので null はクリアを意味する */
+    description: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.description)
+      .nullable()
+      .optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: '少なくとも1つのフィールドが必要です',
@@ -83,57 +243,15 @@ export type UpdateGameSessionInput = z.infer<
   typeof UpdateGameSessionInputSchema
 >;
 
+/**
+ * セッションのステータス遷移（design-v2 §6-13-6）。
+ *
+ * v0.2 にあった `open` は廃止した（セッションに公開の概念が無くなったため）。
+ * どちらも終端状態で、逆方向（完了・中止の取り消し）は無い。
+ */
 export const UpdateGameSessionStatusInputSchema = z.object({
-  status: z.enum(['open', 'completed', 'cancelled']),
+  status: z.enum(['completed', 'cancelled']),
 });
 export type UpdateGameSessionStatusInput = z.infer<
   typeof UpdateGameSessionStatusInputSchema
 >;
-
-export const GameSessionMemberSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().nullable(),
-  userName: z.string().nullable(),
-  guestName: z.string().nullable(),
-  characterName: z.string().nullable(),
-  // 卓確定でコピーされたメンバーの出自（募集枠メンバーID）。直接参加は null（design-v1.1 §3）
-  lobbyMemberId: z.string().uuid().nullable().optional(),
-  joinedAt: z.string(),
-});
-export type GameSessionMember = z.infer<typeof GameSessionMemberSchema>;
-
-export const GameSessionDetailSchema = GameSessionSchema.extend({
-  members: z.array(GameSessionMemberSchema),
-});
-export type GameSessionDetail = z.infer<typeof GameSessionDetailSchema>;
-
-export const JoinGameSessionInputSchema = z.object({
-  characterName: z.string().max(100).optional(),
-});
-export type JoinGameSessionInput = z.infer<typeof JoinGameSessionInputSchema>;
-
-export const JoinAsGuestInputSchema = z.object({
-  guestName: z.string().min(1).max(100),
-});
-export type JoinAsGuestInput = z.infer<typeof JoinAsGuestInputSchema>;
-
-export const UpdateMemberInputSchema = z
-  .object({
-    characterName: z.string().max(100).nullable().optional(),
-  })
-  .refine((input) => Object.keys(input).length > 0, {
-    message: '少なくとも1つのフィールドが必要です',
-  });
-export type UpdateMemberInput = z.infer<typeof UpdateMemberInputSchema>;
-
-export const GuestLinkResponseSchema = z.object({
-  token: z.string(),
-});
-export type GuestLinkResponse = z.infer<typeof GuestLinkResponseSchema>;
-
-/**
- * ゲストの参加・回答を認可するトークンを送るヘッダー名。
- * トークンは capability（資格情報）として扱い、クエリやボディではなくこのヘッダーで送る。
- * X- prefix は RFC 6648 で非推奨のため使用しない。
- */
-export const GUEST_TOKEN_HEADER = 'Guest-Token';

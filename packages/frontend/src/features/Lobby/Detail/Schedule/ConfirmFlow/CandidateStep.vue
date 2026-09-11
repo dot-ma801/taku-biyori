@@ -5,10 +5,11 @@ defineProps<{
   candidateOptions: {
     id: string;
     date: string;
-    dateNote: string | null;
+    timeLabel: string | null;
     counts: { ok: number; maybe: number; ng: number };
   }[];
   selectedCandidateId: string | null;
+  loading: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -17,105 +18,104 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <p class="step-label">候補日を選んでください</p>
-  <ul class="candidate-list">
-    <li
-      v-for="option in candidateOptions"
-      :key="option.id"
-      :class="[
-        'candidate-item',
-        { 'candidate-item--selected': selectedCandidateId === option.id },
-      ]"
-      @click="emit('select', option.id)"
-    >
-      <span class="candidate-main">
-        <span class="candidate-date">{{
-          formatDateWithWeekday(option.date)
-        }}</span>
-        <span v-if="option.dateNote" class="candidate-note">{{
-          option.dateNote
-        }}</span>
-      </span>
-      <span class="candidate-counts">
-        <span class="count ok">◯ {{ option.counts.ok }}</span>
-        <span class="count maybe">△ {{ option.counts.maybe }}</span>
-        <span class="count ng">× {{ option.counts.ng }}</span>
-      </span>
+  <!-- 開催日は日程調整の候補日からしか選べない。
+       直接日付を入れる経路は「調整の結果を確定する」という操作の意味とずれるため持たない -->
+  <p class="step-label">日程調整の候補日から開催日を選んでください</p>
+  <p v-if="loading" class="empty">候補日を読み込んでいます…</p>
+  <p v-else-if="candidateOptions.length === 0" class="empty">
+    候補日がありません。日程調整で候補日を追加してください
+  </p>
+  <ul v-else class="candidate-list">
+    <li v-for="option in candidateOptions" :key="option.id">
+      <button
+        type="button"
+        :class="[
+          'candidate-item',
+          { 'candidate-item--selected': selectedCandidateId === option.id },
+        ]"
+        :aria-pressed="selectedCandidateId === option.id"
+        @click="emit('select', option.id)"
+      >
+        <span class="candidate-main">
+          <span class="candidate-date">{{
+            formatDateWithWeekday(option.date)
+          }}</span>
+          <span v-if="option.timeLabel" class="candidate-note">{{
+            option.timeLabel
+          }}</span>
+        </span>
+        <span class="candidate-counts">
+          <span class="ok">○ {{ option.counts.ok }}</span>
+          <span class="maybe">△ {{ option.counts.maybe }}</span>
+          <span class="ng">× {{ option.counts.ng }}</span>
+        </span>
+      </button>
     </li>
   </ul>
 </template>
 
 <style scoped>
-.step-label {
+.step-label,
+.empty {
   font-size: 13px;
   color: var(--color-text-muted);
   margin: 0 0 var(--space-3);
 }
-
 .candidate-list {
   list-style: none;
-  margin: 0;
+  margin: var(--space-4) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
-
 .candidate-item {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  background: var(--color-surface);
   cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background-color 0.15s;
-  font-size: 14px;
+  text-align: left;
+  font: inherit;
 }
-
 .candidate-item:hover {
   border-color: var(--color-primary);
-  background-color: var(--color-surface-raised);
+  background: var(--color-surface-raised);
 }
-
+/* 選択中は面の色だけでなく枠でも示す（夜のパレットで塗りの差が小さいため） */
+.candidate-item--selected {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary-on-subtle);
+}
 .candidate-main {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 0;
 }
-
+.candidate-date {
+  font-weight: 500;
+}
 .candidate-note {
   font-size: 12px;
   color: var(--color-text-secondary);
 }
-
-.candidate-item--selected {
-  border-color: var(--color-primary);
-  background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
-}
-
-.candidate-date {
-  font-weight: 500;
-}
-
 .candidate-counts {
   display: flex;
   gap: var(--space-3);
   font-size: 13px;
 }
-
-.count.ok {
-  color: var(--color-success, #2da44e);
+.ok {
+  color: var(--color-success);
 }
-
-.count.maybe {
-  color: var(--color-warning, #bf8700);
+.maybe {
+  color: var(--color-warning);
 }
-
-.count.ng {
-  color: var(--color-error, #cf222e);
+.ng {
+  color: var(--color-error);
 }
 </style>

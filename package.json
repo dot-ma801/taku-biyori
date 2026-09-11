@@ -16,6 +16,7 @@
   ],
   "dependencies": {
     "@taku-biyori/backend": "workspace:*",
-    "@taku-biyori/frontend": "workspace:*"
+    "@taku-biyori/frontend": "workspace:*",
+    "rulesync": "^16.18.0"
   }
 }

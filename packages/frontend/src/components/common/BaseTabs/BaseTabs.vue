@@ -18,7 +18,7 @@ const model = defineModel<string>();
 </script>
 
 <template>
-  <Tabs.Root v-model="model" class="tabs">
+  <Tabs.Root v-model="model">
     <Tabs.List
       :label="label ?? 'タブ'"
       :class="['tabs__list', { 'tabs__list--stretch': stretch }]"
@@ -50,10 +50,6 @@ const model = defineModel<string>();
 </template>
 
 <style scoped>
-.tabs {
-  font-family: var(--font-body);
-}
-
 /* DS: underline tabs. The active indicator is the sun accent — the one
    place the accent colour appears in navigation. */
 .tabs__list {

@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
-import { SCHEDULE_MODE_OPTIONS } from '@/features/Lobby/Edit/composables/schedule-mode';
+import { useScheduleModeOptions } from '@/features/Lobby/Edit/composables/useScheduleModeOptions';
 
 const model = defineModel<ScheduleMode>({ required: true });
 
-const options = computed(() =>
-  SCHEDULE_MODE_OPTIONS.map((option) => ({
-    ...option,
-    isSelected: option.value === model.value,
-  })),
-);
+const { options } = useScheduleModeOptions(() => model.value);
 </script>
 
 <template>

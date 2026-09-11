@@ -21,7 +21,7 @@ const model = defineModel<string>();
 <template>
   <div class="select-wrap">
     <span v-if="label" class="select-wrap__label">{{ label }}</span>
-    <Select.Root v-model="model" :disabled="disabled" class="select">
+    <Select.Root v-model="model" :disabled="disabled">
       <Select.Activator class="select__activator">
         <Select.Value v-slot="{ selectedValue }" class="select__value">
           {{
@@ -82,10 +82,6 @@ const model = defineModel<string>();
 .select-wrap__label {
   font: var(--text-label);
   color: var(--text-primary);
-}
-
-.select {
-  position: relative;
 }
 
 .select__activator {

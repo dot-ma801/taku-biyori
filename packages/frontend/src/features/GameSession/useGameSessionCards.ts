@@ -7,6 +7,7 @@ import type { GameSessionListItemModel } from '@/models/game-session';
 import { useAuthStore } from '@/stores/auth';
 import {
   sortGameSessionCards,
+  toFinishedGameSessionCards,
   toGameSessionCards,
 } from '@/features/GameSession/toGameSessionCards';
 import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
@@ -73,6 +74,14 @@ export const useGameSessionCards = () => {
       [],
       myUserId.value,
     ),
+  );
+
+  /**
+   * 終えた卓（完了・中止）。マイページの履歴に出す。
+   * 状態をまたいで1つの並びにするので、`cardsOf` を2回呼んで連結しない。
+   */
+  const finishedCards = computed(() =>
+    toFinishedGameSessionCards(activeCards.value),
   );
 
   const countBy = (status: GameSessionCardStatus) =>
@@ -182,6 +191,7 @@ export const useGameSessionCards = () => {
     activeCards,
     draftCards,
     publicCards,
+    finishedCards,
     cardsOf,
     countBy,
     loading,

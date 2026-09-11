@@ -24,16 +24,21 @@ const { options } = useScheduleModeOptions(() => model.value);
           name="schedule-mode"
           :value="option.value"
         />
-        <span class="mode-switch__label">{{ option.label }}</span>
-        <span class="mode-switch__description">{{ option.description }}</span>
+        <!-- 選択の印。面（カード）だけだと「今どちらが選ばれているか」を
+             色の違いだけに頼ることになるため、ラジオの丸も残す -->
+        <span class="mode-switch__mark" aria-hidden="true"></span>
+        <span class="mode-switch__body">
+          <span class="mode-switch__label">{{ option.label }}</span>
+          <span class="mode-switch__description">{{ option.description }}</span>
+        </span>
       </label>
     </div>
   </fieldset>
 </template>
 
 <style scoped>
-/* 2択なので、ラジオの点ではなく面で選ばせる。選択は --primary-subtle で示し、
-   ベタ塗りにはしない（デザインシステムの選択状態の作法）。 */
+/* 2択なので面（カード）で選ばせるが、ラジオの丸は残す。選択は --primary-subtle で
+   示し、ベタ塗りにはしない（デザインシステムの選択状態の作法）。 */
 .mode-switch {
   border: none;
   margin: 0;
@@ -54,9 +59,10 @@ const { options } = useScheduleModeOptions(() => model.value);
 }
 
 .mode-switch__option {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
   padding: var(--space-3) var(--space-4);
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-card);
@@ -82,6 +88,36 @@ const { options } = useScheduleModeOptions(() => model.value);
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* BaseRadioGroup と同じ 18px の丸。入力自体は隠しているので、
+   選択の見た目はこの要素だけで作る */
+.mode-switch__mark {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: var(--border-width-strong) solid var(--border-strong);
+  transition: var(--transition-control);
+}
+.mode-switch__option--selected .mode-switch__mark {
+  border-color: var(--primary);
+  /* 中心の点はグラデーションで描く（余計な要素を足さない） */
+  background:
+    radial-gradient(
+      circle at center,
+      var(--primary) 0 4px,
+      transparent 4px 100%
+    ),
+    var(--surface);
+}
+
+.mode-switch__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .mode-switch__label {

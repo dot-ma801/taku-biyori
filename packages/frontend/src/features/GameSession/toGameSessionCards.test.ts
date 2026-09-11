@@ -4,6 +4,7 @@ import type { LobbyListItemModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
 import {
   sortGameSessionCards,
+  toFinishedGameSessionCards,
   toGameSessionCards,
 } from '@/features/GameSession/toGameSessionCards';
 import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
@@ -590,6 +591,98 @@ describe('toGameSessionCards', () => {
 
       // Assert
       expect(cards.map((c) => c.lobbyId)).toEqual(['later', 'sooner']);
+    });
+  });
+
+  describe('toFinishedGameSessionCards', () => {
+    const finishedCard = (
+      lobbyId: string,
+      status: GameSessionCardStatus,
+      updatedAt: string,
+    ) => ({
+      ...(toGameSessionCards([makeLobby({ id: lobbyId })], [], MY_USER_ID)[0] ??
+        ({} as never)),
+      status,
+      updatedAt: new Date(updatedAt),
+    });
+
+    it('完了と中止を混ぜて更新の新しい順に並べる', () => {
+      // Arrange
+      // 完了 → 中止 の順に連結すると、昨日中止した卓が
+      // 半年前に完了した卓より下に沈んでしまう
+      const cards = [
+        finishedCard(
+          'old-completed',
+          GameSessionCardStatus.completed,
+          '2026-01-01T00:00:00.000Z',
+        ),
+        finishedCard(
+          'new-cancelled',
+          GameSessionCardStatus.cancelled,
+          '2026-09-01T00:00:00.000Z',
+        ),
+      ];
+
+      // Act
+      const finished = toFinishedGameSessionCards(cards);
+
+      // Assert
+      expect(finished.map((c) => c.lobbyId)).toEqual([
+        'new-cancelled',
+        'old-completed',
+      ]);
+    });
+
+    it('終端でない状態の卓は含めない', () => {
+      // Arrange
+      const cards = [
+        finishedCard(
+          'completed',
+          GameSessionCardStatus.completed,
+          '2026-01-01T00:00:00.000Z',
+        ),
+        finishedCard(
+          'scheduled',
+          GameSessionCardStatus.scheduled,
+          '2026-09-01T00:00:00.000Z',
+        ),
+        finishedCard(
+          'draft',
+          GameSessionCardStatus.draft,
+          '2026-09-02T00:00:00.000Z',
+        ),
+      ];
+
+      // Act
+      const finished = toFinishedGameSessionCards(cards);
+
+      // Assert
+      expect(finished.map((c) => c.lobbyId)).toEqual(['completed']);
+    });
+
+    it('元の配列を書き換えない', () => {
+      // Arrange
+      const cards = [
+        finishedCard(
+          'old-completed',
+          GameSessionCardStatus.completed,
+          '2026-01-01T00:00:00.000Z',
+        ),
+        finishedCard(
+          'new-cancelled',
+          GameSessionCardStatus.cancelled,
+          '2026-09-01T00:00:00.000Z',
+        ),
+      ];
+
+      // Act
+      toFinishedGameSessionCards(cards);
+
+      // Assert
+      expect(cards.map((c) => c.lobbyId)).toEqual([
+        'old-completed',
+        'new-cancelled',
+      ]);
     });
   });
 });

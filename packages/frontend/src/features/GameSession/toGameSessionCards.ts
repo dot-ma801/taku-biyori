@@ -147,6 +147,26 @@ const toOrphanSessionCards = (
   }));
 };
 
+/** 終端の状態（もう進まない卓）。マイページの履歴はこの2つをまとめて出す */
+const FINISHED_STATUSES: readonly GameSessionCardStatus[] = [
+  GameSessionCardStatus.completed,
+  GameSessionCardStatus.cancelled,
+];
+
+/**
+ * 終えた卓（完了・中止）を1つの並びにまとめる。
+ *
+ * 状態ごとに取って連結すると、**完了が必ず中止より前**に来てしまい、
+ * 昨日中止した卓が半年前に完了した卓より下に沈む。履歴として並べるときは
+ * 状態をまたいで更新の新しい順にする。
+ */
+export const toFinishedGameSessionCards = (
+  cards: GameSessionCardModel[],
+): GameSessionCardModel[] =>
+  cards
+    .filter((c) => FINISHED_STATUSES.includes(c.status))
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
 /**
  * 状態ごとの並び順。
  *

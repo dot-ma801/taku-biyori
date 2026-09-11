@@ -1,6 +1,10 @@
-import { GameSessionStatus, LobbyStatus } from '@taku-biyori/shared';
+import { GameSessionStatus } from '@taku-biyori/shared';
 import type { LobbyListItemModel } from '@/models/lobby';
 import type { GameSessionListItemModel } from '@/models/game-session';
+import {
+  byNewestSession,
+  resolveGameSessionCardStatus,
+} from '@/features/GameSession/resolveGameSessionCardStatus';
 import { GameSessionCardStatus } from '@/features/GameSession/gameSessionCardStatus';
 
 /**
@@ -38,84 +42,6 @@ export type GameSessionCardModel = {
   updatedAt: Date;
 };
 
-/** 進行中の開催（この卓の「いま」を決める） */
-const LIVE_SESSION_STATUSES: readonly GameSessionStatus[] = [
-  GameSessionStatus.scheduled,
-  GameSessionStatus.today,
-];
-
-/**
- * 開催の新しさ。開催日が新しいものを優先し、同日なら後から作ったほうを採る。
- *
- * 1つのロビーから複数の開催が生まれているケースでも、卓カードは常に
- * 「いちばん新しい開催」を代表として1枚だけ出す。
- */
-const byNewest = (
-  a: GameSessionListItemModel,
-  b: GameSessionListItemModel,
-): number =>
-  b.scheduledAt.localeCompare(a.scheduledAt) ||
-  b.createdAt.getTime() - a.createdAt.getTime();
-
-const pickNewest = (
-  sessions: GameSessionListItemModel[],
-  statuses: readonly GameSessionStatus[],
-): GameSessionListItemModel | null =>
-  sessions.filter((s) => statuses.includes(s.status)).sort(byNewest)[0] ?? null;
-
-/**
- * ロビーと、そのロビーに属する開催から卓の状態を決める。
- *
- * 優先順位:
- * 1. 解散したロビーは `cancelled`。企画そのものが畳まれているので開催より強い
- * 2. 進行中の開催があれば `scheduled`
- * 3. 完了した開催があれば `completed`
- * 4. 下書きのロビーは `draft`（系列の外）
- * 5. どれでもなければロビーの受付状態で決める（受付中なら `recruiting`、
- *    締めていれば `adjusting`）
- *
- * **下書きの判定を開催より後ろに置いている**のは、「日程が決まっている」で
- * 卓を作る経路がロビーを下書きのまま残したうえで開催を作るため。
- * 先に下書きへ倒すと、作ったばかりの卓が一覧からも「日程の決まった卓」からも
- * 消えて、下書きの1行だけが残ってしまう。
- *
- * 中止された開催しか無い卓が 5 に落ちるのは意図どおり。開催をやめても
- * ロビーが生きているなら、その卓はまた日程調整からやり直す状態に戻る。
- */
-const resolveStatus = (
-  lobby: LobbyListItemModel,
-  sessions: GameSessionListItemModel[],
-): {
-  status: GameSessionCardStatus;
-  session: GameSessionListItemModel | null;
-} => {
-  if (lobby.status === LobbyStatus.disbanded) {
-    return { status: GameSessionCardStatus.cancelled, session: null };
-  }
-
-  const live = pickNewest(sessions, LIVE_SESSION_STATUSES);
-  if (live !== null) {
-    return { status: GameSessionCardStatus.scheduled, session: live };
-  }
-
-  const completed = pickNewest(sessions, [GameSessionStatus.completed]);
-  if (completed !== null) {
-    return { status: GameSessionCardStatus.completed, session: completed };
-  }
-
-  if (lobby.status === LobbyStatus.draft) {
-    return { status: GameSessionCardStatus.draft, session: null };
-  }
-
-  return {
-    status:
-      lobby.status === LobbyStatus.open
-        ? GameSessionCardStatus.recruiting
-        : GameSessionCardStatus.adjusting,
-    session: null,
-  };
-};
-
 /**
  * ロビー一覧と開催一覧を突き合わせて、卓カードの配列にする。
  *
@@ -141,8 +67,8 @@ export const toGameSessionCards = (
 
   const cards = lobbies
     .map((lobby) => {
-      const { status, session } = resolveStatus(
-        lobby,
+      const { status, session } = resolveGameSessionCardStatus(
+        lobby.status,
         sessionsByLobbyId.get(lobby.id) ?? [],
       );
       const memberCount = lobby.activeEntries.length;
@@ -200,7 +126,7 @@ const toOrphanSessionCards = (
 
   // 同じロビーの開催が複数残っていても、卓カードは1枚だけ作る
   const newestByLobbyId = new Map<string, GameSessionListItemModel>();
-  for (const session of orphans.sort(byNewest)) {
+  for (const session of orphans.sort(byNewestSession)) {
     if (!newestByLobbyId.has(session.lobbyId)) {
       newestByLobbyId.set(session.lobbyId, session);
     }

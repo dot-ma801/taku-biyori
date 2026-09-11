@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import GameSessionDetailPage from '@/features/GameSession/Detail/index.vue';
+import GameSessionDetail from '@/features/GameSession/Detail/GameSessionDetail.vue';
 import PageContainer from '@/components/layout/PageContainer/PageContainer.vue';
 
-const props = defineProps<{ lobbyId: string; gameSessionId: string }>();
+defineProps<{
+  lobbyId: string;
+  /** 開催の URL から来たときに名指しされている開催 */
+  gameSessionId?: string;
+  /** 開催の URL から来たときに開くタブ */
+  initialTab?: string;
+}>();
 </script>
 
 <template>
-  <PageContainer>
-    <GameSessionDetailPage
-      :lobby-id="props.lobbyId"
-      :game-session-id="props.gameSessionId"
-    ></GameSessionDetailPage>
+  <PageContainer size="lg">
+    <GameSessionDetail
+      :lobby-id="lobbyId"
+      :game-session-id="gameSessionId"
+      :initial-tab="initialTab"
+    />
   </PageContainer>
 </template>
-
-<style scoped></style>

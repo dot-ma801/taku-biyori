@@ -1,9 +1,14 @@
 import { computed, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-import { LobbyStatus } from '@taku-biyori/shared';
+import { LobbyStatus, normalizeTimeLabel } from '@taku-biyori/shared';
 import { createGameSession } from '@/api/game-session';
 import { getSchedulePoll, updateLobbyStatus } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
+import { formatDateWithWeekday } from '@/utils/date';
+import {
+  getTimeLabelCounter,
+  getTimeLabelError,
+} from '@/utils/pendingCandidateDates';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import { ApiError } from '@/lib/api-client';
 import type { GameSessionModel } from '@/models/game-session';
@@ -80,12 +85,34 @@ export const useConfirmFlow = (
   );
   // 開催日は選択中の候補日から導出する
   const scheduledAt = computed(() => selectedCandidateDate.value?.date ?? '');
+  /** 表示用に整形した開催日。整形はコンポーネントではなくここで済ませる */
+  const scheduledAtLabel = computed(() =>
+    scheduledAt.value === '' ? '' : formatDateWithWeekday(scheduledAt.value),
+  );
   const selectedEntries = computed(() =>
     entries.value.filter((entry) => selectedEntryIds.value.has(entry.id)),
   );
   const selectedCount = computed(() => selectedEntryIds.value.size);
   const canProceedCandidate = computed(() => scheduledAt.value !== '');
   const canProceedEntries = computed(() => selectedCount.value > 0);
+
+  /** ひとことの文字数カウンター。候補日の入力と同じ `N / MAX` 形式 */
+  const timeLabelCounter = computed(() =>
+    getTimeLabelCounter(draft.value.timeLabel),
+  );
+  /**
+   * 確定できるか。
+   *
+   * 上書き項目は API の契約（`CreateGameSessionInputSchema`）で長さが決まっている。
+   * 超えたまま送ると 400 が返るだけで、画面には「日程の確定に失敗しました」としか
+   * 出せず、どこを直せばよいか伝わらない。送る前にここで止める。
+   */
+  const canConfirm = computed(
+    () =>
+      canProceedCandidate.value &&
+      canProceedEntries.value &&
+      getTimeLabelError(draft.value.timeLabel) === null,
+  );
   const capacityMismatch = computed(() => {
     const maxPlayers = toValue(lobby).maxPlayers;
     return maxPlayers !== null && maxPlayers !== selectedCount.value;
@@ -177,13 +204,17 @@ export const useConfirmFlow = (
 
   function createInput() {
     const values = draft.value;
+    const normalizedTimeLabel = normalizeTimeLabel(values.timeLabel);
     return {
       scheduledAt: scheduledAt.value,
       entryIds: [...selectedEntryIds.value],
       ...(values.title ? { title: values.title } : {}),
       ...(values.scenarioName ? { scenarioName: values.scenarioName } : {}),
       ...(values.location ? { location: values.location } : {}),
-      ...(values.timeLabel ? { timeLabel: values.timeLabel } : {}),
+      // 候補日のひとことと同じく正規化して送る。検証（getTimeLabelError）が
+      // 正規化後の長さで数えているので、生値のまま送ると前後の空白ぶんだけ
+      // 契約（max 20）を超えて 400 になりうる
+      ...(normalizedTimeLabel ? { timeLabel: normalizedTimeLabel } : {}),
       ...(values.description ? { description: values.description } : {}),
     };
   }
@@ -205,8 +236,7 @@ export const useConfirmFlow = (
   }
 
   async function confirm() {
-    if (loading.value || !canProceedCandidate.value || !canProceedEntries.value)
-      return;
+    if (loading.value || !canConfirm.value) return;
     loading.value = true;
     try {
       const gameSession = await createGameSession(
@@ -233,6 +263,7 @@ export const useConfirmFlow = (
     loadingPoll,
     selectedCandidateId,
     scheduledAt,
+    scheduledAtLabel,
     selectedEntryIds,
     selectedEntries,
     selectedCount,
@@ -240,6 +271,8 @@ export const useConfirmFlow = (
     draft,
     canProceedCandidate,
     canProceedEntries,
+    canConfirm,
+    timeLabelCounter,
     capacityMismatch,
     selectCandidate,
     toggleEntry,

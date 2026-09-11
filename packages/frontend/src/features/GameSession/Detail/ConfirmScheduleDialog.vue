@@ -33,7 +33,7 @@ const {
   loading,
   loadingPoll,
   selectedCandidateId,
-  scheduledAt,
+  scheduledAtLabel,
   selectedEntryIds,
   selectedEntries,
   selectedCount,
@@ -41,6 +41,8 @@ const {
   draft,
   canProceedCandidate,
   canProceedEntries,
+  canConfirm,
+  timeLabelCounter,
   capacityMismatch,
   selectCandidate,
   toggleEntry,
@@ -102,9 +104,10 @@ function updateDraft(next: GameSessionDraft) {
 
     <template v-else>
       <ReviewStep
-        :scheduled-at="scheduledAt"
+        :scheduled-at-label="scheduledAtLabel"
         :selected-entries="selectedEntries"
         :draft="draft"
+        :time-label-counter="timeLabelCounter"
         @update:draft="updateDraft"
       />
       <BaseAlert v-if="capacityMismatch" class="capacity" variant="info">
@@ -131,7 +134,12 @@ function updateDraft(next: GameSessionDraft) {
       <BaseButton v-if="step < 3" :disabled="isNextDisabled" @click="goNext">
         次へ
       </BaseButton>
-      <BaseButton v-else :loading="loading" @click="confirm">
+      <BaseButton
+        v-else
+        :disabled="!canConfirm"
+        :loading="loading"
+        @click="confirm"
+      >
         この日で確定する
       </BaseButton>
     </div>

@@ -254,6 +254,97 @@ describe('useConfirmFlow', () => {
     });
   });
 
+  // API の契約（CreateGameSessionInputSchema の timeLabel: max 20）を送信前に守る。
+  // 超えたまま送ると 400 になり、画面には汎用の失敗メッセージしか出せない
+  describe('ひとことの文字数', () => {
+    const prepare = async () => {
+      const flow = useConfirmFlow(
+        () => lobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      return flow;
+    };
+
+    it('20文字を超えると確定できない', async () => {
+      // Arrange
+      const flow = await prepare();
+
+      // Act
+      flow.draft.value = { ...flow.draft.value, timeLabel: 'あ'.repeat(21) };
+
+      // Assert
+      expect(flow.canConfirm.value).toBe(false);
+      expect(flow.timeLabelCounter.value).toEqual({
+        label: '21 / 20',
+        isOver: true,
+      });
+    });
+
+    it('20文字までなら確定できる', async () => {
+      // Arrange
+      const flow = await prepare();
+
+      // Act
+      flow.draft.value = { ...flow.draft.value, timeLabel: 'あ'.repeat(20) };
+
+      // Assert
+      expect(flow.canConfirm.value).toBe(true);
+    });
+
+    it('超過中は confirm を呼んでも送信しない', async () => {
+      // Arrange
+      const flow = await prepare();
+      flow.draft.value = { ...flow.draft.value, timeLabel: 'あ'.repeat(21) };
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(createGameSession).not.toHaveBeenCalled();
+    });
+
+    // 検証は正規化後の長さで数えているので、送る値も正規化後で揃える。
+    // 生値のまま送ると前後の空白ぶんだけ契約を超えうる
+    it('正規化したひとことを送る', async () => {
+      // Arrange
+      const flow = await prepare();
+      flow.draft.value = { ...flow.draft.value, timeLabel: '  19:00〜  ' };
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(createGameSession).toHaveBeenCalledWith(
+        'lobby-1',
+        expect.objectContaining({ timeLabel: '19:00〜' }),
+      );
+    });
+  });
+
+  it('開催日を表示用に整形して返す', async () => {
+    // Arrange
+    const flow = useConfirmFlow(
+      () => lobby,
+      () => false,
+      vi.fn(),
+    );
+    await flow.reset();
+
+    // Act
+    const beforeSelect = flow.scheduledAtLabel.value;
+    flow.selectCandidate('candidate-1');
+
+    // Assert
+    expect(beforeSelect).toBe('');
+    expect(flow.scheduledAtLabel.value).toBe('9/20（日）');
+  });
+
   it('空欄の上書き項目を省略して createGameSession を呼ぶ', async () => {
     // Arrange
     const onCreated = vi.fn();

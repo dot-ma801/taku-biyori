@@ -6,9 +6,9 @@ import { getSchedulePoll, updateLobbyStatus } from '@/api/lobby';
 import { useToast } from '@/composables/useToast';
 import { formatDateWithWeekday } from '@/utils/date';
 import {
-  getTimeLabelCounter,
-  getTimeLabelError,
-} from '@/utils/pendingCandidateDates';
+  getDraftFieldCounter,
+  isDraftValid,
+} from '@/features/Lobby/Detail/Schedule/ConfirmFlow/draftValidation';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import { ApiError } from '@/lib/api-client';
 import type { GameSessionModel } from '@/models/game-session';
@@ -96,22 +96,22 @@ export const useConfirmFlow = (
   const canProceedCandidate = computed(() => scheduledAt.value !== '');
   const canProceedEntries = computed(() => selectedCount.value > 0);
 
-  /** ひとことの文字数カウンター。候補日の入力と同じ `N / MAX` 形式 */
+  /** 時間帯の文字数カウンター。候補日の入力と同じ `N / MAX` 形式 */
   const timeLabelCounter = computed(() =>
-    getTimeLabelCounter(draft.value.timeLabel),
+    getDraftFieldCounter('timeLabel', draft.value.timeLabel),
   );
   /**
    * 確定できるか。
    *
-   * 上書き項目は API の契約（`CreateGameSessionInputSchema`）で長さが決まっている。
-   * 超えたまま送ると 400 が返るだけで、画面には「日程の確定に失敗しました」としか
-   * 出せず、どこを直せばよいか伝わらない。送る前にここで止める。
+   * 上書き項目は**すべて** API の契約（`CreateGameSessionInputSchema`）で長さが
+   * 決まっている。超えたまま送ると 400 が返るだけで、画面には「日程の確定に
+   * 失敗しました」としか出せず、どこを直せばよいか伝わらない。送る前にここで止める。
    */
   const canConfirm = computed(
     () =>
       canProceedCandidate.value &&
       canProceedEntries.value &&
-      getTimeLabelError(draft.value.timeLabel) === null,
+      isDraftValid(draft.value),
   );
   const capacityMismatch = computed(() => {
     const maxPlayers = toValue(lobby).maxPlayers;

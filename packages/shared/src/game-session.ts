@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { GameSessionStatus } from '@/game-session/status';
 import { LobbyStatus } from '@/lobby/status';
 import { SeatRefSchema, SeatSchema } from '@/game-session/seat';
+import { TIME_LABEL_MAX_LENGTH } from '@/lobby/time-label';
 import { todayDateString } from '@/date';
 
 export { GameSessionStatus };
@@ -140,6 +141,21 @@ export type GameSessionSummary = z.infer<typeof GameSessionSummarySchema>;
  *
  * 上書き項目は渡したときだけ保存し、既定値は書き込まない。
  */
+/**
+ * 上書き項目の最大文字数。
+ *
+ * **契約なので定数で持つ。** フロントは送信前に同じ基準で弾く必要があり、
+ * 数値を両側に書くと片方だけ動かしたときに「画面は通るのに 400」が起きる。
+ * `timeLabel` は候補日のひとことと同じ上限（`TIME_LABEL_MAX_LENGTH`）を使う。
+ */
+export const GAME_SESSION_OVERRIDE_MAX_LENGTHS = {
+  title: 100,
+  scenarioName: 200,
+  location: 200,
+  timeLabel: TIME_LABEL_MAX_LENGTH,
+  description: 1000,
+} as const satisfies Record<string, number>;
+
 export const CreateGameSessionInputSchema = z
   .object({
     /** 開催日。**今日以降**（過ぎた日に新しい開催は作らせない） */
@@ -150,11 +166,27 @@ export const CreateGameSessionInputSchema = z
      * v0.2 の `memberIds` の改名。
      */
     entryIds: z.array(z.string().uuid()).min(1),
-    title: z.string().min(1).max(100).optional(),
-    scenarioName: z.string().max(200).optional(),
-    location: z.string().max(200).optional(),
-    timeLabel: z.string().max(20).optional(),
-    description: z.string().max(1000).optional(),
+    title: z
+      .string()
+      .min(1)
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.title)
+      .optional(),
+    scenarioName: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.scenarioName)
+      .optional(),
+    location: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.location)
+      .optional(),
+    timeLabel: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.timeLabel)
+      .optional(),
+    description: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.description)
+      .optional(),
   })
   .refine((input) => input.scheduledAt >= todayDateString(), {
     message: '開催日には今日以降の日付を指定してください',
@@ -176,12 +208,33 @@ export const UpdateGameSessionInputSchema = z
     /** 開催日。null への更新は受け付けない（セッションは必ず日程を持つ） */
     scheduledAt: z.iso.date().optional(),
     /** null で上書き解除 */
-    title: z.string().min(1).max(100).nullable().optional(),
-    scenarioName: z.string().max(200).nullable().optional(),
-    location: z.string().max(200).nullable().optional(),
-    timeLabel: z.string().max(20).nullable().optional(),
+    title: z
+      .string()
+      .min(1)
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.title)
+      .nullable()
+      .optional(),
+    scenarioName: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.scenarioName)
+      .nullable()
+      .optional(),
+    location: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.location)
+      .nullable()
+      .optional(),
+    timeLabel: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.timeLabel)
+      .nullable()
+      .optional(),
     /** 当日の連絡事項。上書きではないので null はクリアを意味する */
-    description: z.string().max(1000).nullable().optional(),
+    description: z
+      .string()
+      .max(GAME_SESSION_OVERRIDE_MAX_LENGTHS.description)
+      .nullable()
+      .optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: '少なくとも1つのフィールドが必要です',

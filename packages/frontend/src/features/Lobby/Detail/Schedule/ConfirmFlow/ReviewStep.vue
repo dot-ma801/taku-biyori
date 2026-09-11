@@ -4,7 +4,10 @@ import BaseTextBox from '@/components/form/BaseTextBox/BaseTextBox.vue';
 import type { GameSessionDraft } from '@/features/Lobby/Detail/Schedule/ConfirmFlow/useConfirmFlow';
 import type { LobbyEntryModel } from '@/models/lobby';
 import { memberDisplayName } from '@/utils/memberDisplayName';
-import { getTimeLabelError } from '@/utils/pendingCandidateDates';
+import {
+  getDraftFieldError,
+  type GameSessionDraftField,
+} from '@/features/Lobby/Detail/Schedule/ConfirmFlow/draftValidation';
 
 /**
  * 確定の最終ステップ。決まった内容の確認と、この日だけの上書きを受け取る。
@@ -23,10 +26,12 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ 'update:draft': [draft: GameSessionDraft] }>();
 
-// API の契約（CreateGameSessionInputSchema の max(20)）と同じ基準で弾く。
+// API の契約（CreateGameSessionInputSchema の max）と同じ基準で、**全項目**を弾く。
 // 送信してから 400 になると「日程の確定に失敗しました」としか出ず、
 // どこを直せばよいか利用者に分からない
-const timeLabelRules = [(v: unknown) => getTimeLabelError(v as string) ?? true];
+const rulesFor = (field: GameSessionDraftField) => [
+  (v: unknown) => getDraftFieldError(field, (v as string) ?? '') ?? true,
+];
 
 function update<K extends keyof GameSessionDraft>(
   key: K,
@@ -62,16 +67,19 @@ function update<K extends keyof GameSessionDraft>(
     <BaseTextBox
       :model-value="draft.title"
       label="卓名（任意）"
+      :rules="rulesFor('title')"
       @update:model-value="update('title', $event)"
     />
     <BaseTextBox
       :model-value="draft.scenarioName"
       label="シナリオ名（任意）"
+      :rules="rulesFor('scenarioName')"
       @update:model-value="update('scenarioName', $event)"
     />
     <BaseTextBox
       :model-value="draft.location"
       label="場所（任意）"
+      :rules="rulesFor('location')"
       @update:model-value="update('location', $event)"
     />
 
@@ -81,7 +89,7 @@ function update<K extends keyof GameSessionDraft>(
         :model-value="draft.timeLabel"
         label="時間帯（任意）"
         placeholder="例）19:00〜 / 午後から"
-        :rules="timeLabelRules"
+        :rules="rulesFor('timeLabel')"
         @update:model-value="update('timeLabel', $event)"
       />
       <span
@@ -95,6 +103,7 @@ function update<K extends keyof GameSessionDraft>(
       :model-value="draft.description"
       label="当日の連絡事項（任意）"
       :rows="3"
+      :rules="rulesFor('description')"
       @update:model-value="update('description', $event)"
     />
   </div>

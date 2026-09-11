@@ -69,6 +69,33 @@ beforeEach(() => {
 });
 
 describe('useGameSessionDetailPage の hasPendingSchedulePoll', () => {
+  // ロビーが先に揃うと画面は描画される。空配列を「開催なし」と読むと、
+  // そのあいだだけ確定済みの調整を確定待ちと誤判定してしまう
+  it('開催一覧を取る前は確定待ちにしない', async () => {
+    // Arrange
+    lobbyRef.value = makeLobby(POLL_AT);
+
+    // Act
+    const page = useGameSessionDetailPage('lobby-1');
+
+    // Assert
+    expect(page.hasPendingSchedulePoll.value).toBe(false);
+  });
+
+  it('開催一覧の取得に失敗したら確定待ちにしない', async () => {
+    // Arrange
+    const { listLobbyGameSessions } = await import('@/api/game-session');
+    vi.mocked(listLobbyGameSessions).mockRejectedValue(new Error('failed'));
+    lobbyRef.value = makeLobby(POLL_AT);
+    const page = useGameSessionDetailPage('lobby-1');
+
+    // Act
+    await page.fetchSessions();
+
+    // Assert
+    expect(page.hasPendingSchedulePoll.value).toBe(false);
+  });
+
   it('調整が1件も無ければ確定待ちではない', async () => {
     // Arrange / Act
     const page = await setup(makeLobby(null), []);

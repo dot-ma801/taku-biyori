@@ -29,14 +29,24 @@ export const useGameSessionDetailPage = (lobbyId: string) => {
 
   const sessions = ref<GameSessionListItemModel[]>([]);
   const loadingSessions = ref(false);
+  /**
+   * 開催一覧を**取れたか**。初期状態と取得失敗のどちらも false になる。
+   *
+   * `sessions` が空なだけでは「開催が無い」と「まだ／もう分からない」を区別できない。
+   * ロビーが先に揃うと画面は描画されるので、この区別が無いと取得前・取得失敗の
+   * あいだだけ「開催なし」として扱ってしまう。
+   */
+  const sessionsLoaded = ref(false);
 
   async function fetchSessions() {
     loadingSessions.value = true;
     try {
       sessions.value = await listLobbyGameSessions(lobbyId);
+      sessionsLoaded.value = true;
     } catch {
       // 開催が取れなくてもロビーとしては表示できる。状態は「開催なし」に倒れる
       sessions.value = [];
+      sessionsLoaded.value = false;
     } finally {
       loadingSessions.value = false;
     }
@@ -78,8 +88,14 @@ export const useGameSessionDetailPage = (lobbyId: string) => {
    * 開いたときに「確定待ち」と誤判定し、確定済みの調整からもう1件作れてしまう。
    *
    * 最新の調整より後に作られた開催が1件でもあれば、その調整は決着済みとみなす。
+   *
+   * **開催一覧を取れていないあいだは false に倒す。** 空配列を「開催なし」と
+   * 読むと、取得前・取得失敗のあいだだけ確定済みの調整を確定待ちと誤判定し、
+   * そこから開催を重複して作れてしまう。確定は取り消せないので、
+   * 分からないときは導線を閉じるほうへ倒す。
    */
   const hasPendingSchedulePoll = computed(() => {
+    if (!sessionsLoaded.value) return false;
     const latestPoll = schedulePolls.value[0];
     if (!latestPoll) return false;
     return !sessions.value.some(

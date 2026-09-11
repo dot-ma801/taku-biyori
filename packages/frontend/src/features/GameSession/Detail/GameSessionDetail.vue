@@ -20,6 +20,7 @@ import {
 } from '@/features/GameSession/Detail/useGameSessionDetailTabs';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
 import { useSession } from '@/lib/auth';
+import { PAGE_NAME } from '@/config/pageName';
 
 const props = defineProps<{
   lobbyId: string;
@@ -125,8 +126,8 @@ const isHost = computed(() => role.value === 'host');
 
 // URL を入れ子にしたぶん（design-v2 §7-1）、階層を辿る導線を画面にも置く
 const breadcrumbItems = computed(() => [
-  { label: 'ダッシュボード', to: { name: 'dashboard' } },
-  { label: '卓', to: { name: 'tables' } },
+  { label: 'ダッシュボード', to: { name: PAGE_NAME.dashboard } },
+  { label: '卓', to: { name: PAGE_NAME.gameSessions } },
   { label: lobby.value?.title ?? '卓' },
 ]);
 

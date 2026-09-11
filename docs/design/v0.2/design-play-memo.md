@@ -1,7 +1,7 @@
-# RollHub（たく日和）— 設計ドキュメント v1.2: プレイメモ
+# RollHub（たく日和）— v0.2 設計: プレイメモ
 
 > [!IMPORTANT]
-> **この文書は [design-v2.md](./design-v2.md) に置き換えられた（superseded）。**
+> **この文書は [design-concept-model.md](../v0.3/design-concept-model.md) に置き換えられた（superseded）。**
 > v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
 > 本書の DB スキーマ・ステータス設計・紐付け先（`memberId` → `seatId`）は現行の実装と一致しない。
 > 現行の設計は design-v2 を参照すること。
@@ -13,9 +13,10 @@
 
 <!-- MD028: superseded 注記と元のメタ情報を別の blockquote として保つ -->
 
+> **旧ファイル名**: `docs/design-v1.2.md`（コード中の `design-v1.2 §…` はこの文書を指す）
 > **最終更新**: 2026-08-03
-> **元要求**: [docs/requirements/play-memo.md](./requirements/play-memo.md)
-> **位置づけ**: [design-v1.md](./design-v1.md) / [design-v1.1.md](./design-v1.1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針、卓のステータス導出など）は design-v1 / design-v1.1 を踏襲する。
+> **元要求**: [docs/design/v0.2/requirement-play-memo.md](./requirement-play-memo.md)
+> **位置づけ**: [design.md](../v0.1/design.md) / [design-recruitment-separation.md](../v0.1/design-recruitment-separation.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針、卓のステータス導出など）は design-v1 / design-v1.1 を踏襲する。
 > **マージ先**: `develop/0.2`
 
 ---

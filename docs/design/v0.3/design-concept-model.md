@@ -1,12 +1,13 @@
-# 設計 v2: ロビー（企画）とセッション（開催）
+# v0.3 基本設計: ロビー（企画）とセッション（開催）
 
+> 旧ファイル名: `docs/design-v2.md`（**コード中の `design-v2 §…` はこの文書を指す**）
 > 最終更新: 2026-08-22
-> 元概念設計: [docs/concept/lobby-game-session.md](./concept/lobby-game-session.md)
-> ロール定義: [docs/concept/roles.md](./concept/roles.md)
-> 前版: [docs/design-v1.1.md](./design-v1.1.md)（募集と卓の分離）、[docs/design-v1.2.md](./design-v1.2.md)（プレイメモ）
+> 元概念設計: [docs/concept/lobby-game-session.md](../../concept/lobby-game-session.md)
+> ロール定義: [docs/concept/roles.md](../../concept/roles.md)
+> 前版: [docs/design/v0.1/design-recruitment-separation.md](../v0.1/design-recruitment-separation.md)（募集と卓の分離）、[docs/design/v0.2/design-play-memo.md](../v0.2/design-play-memo.md)（プレイメモ）
 
 本書は概念設計 `docs/concept/lobby-game-session.md` を実装可能な設計（DBスキーマ・ステータス導出・API・画面）に落とし込んだものである。
-移行の手順・段階分けは [docs/migration-plan-concept-model.md](./migration-plan-concept-model.md) が担当する。
+移行の手順・段階分けは [docs/design/v0.3/migration-plan-concept-model.md](./migration-plan-concept-model.md) が担当する。
 
 **design-v1.1 / design-v1.2 は本書によって置き換えられる。** 両者は履歴として残すが、実装の参照先は本書とする。
 
@@ -1976,7 +1977,7 @@ v2 は次の4セクションに再編する。
 | `backend` | **全面書き換え** | `src/lobby/` 22ファイル、`src/game-session/` 22ファイル、DBスキーマ2ファイル。`health` / `auth` / `profile` は無傷 |
 | `frontend` | **大部分** | `features/Lobby/` 34ファイル、`features/GameSession/` 46ファイル、`api/lobby.ts`・`api/game-session.ts`、`Dashboard`、badge コンポーネント2つ。`components/`（Base*）と `Profile` / `user` / `Landing` は無傷 |
 | テスト | **大部分** | backend 51ファイル中 44ファイル（lobby 21 + game-session 21 + integration 2）、frontend 81ファイル中 35ファイル程度 |
-| ドキュメント | 更新 | `openapi.yml` 全面改訂、`design-v1.md` / `v1.1` / `v1.2` に supersede 注記、`game-session-status.md` 更新（現状すでに陳腐化） |
+| ドキュメント | 更新 | `openapi.yml` 全面改訂、`v0.1/design.md` / `v0.1/design-recruitment-separation.md` / `v0.2/design-play-memo.md` に supersede 注記、`game-session-status.md` 更新（現状すでに陳腐化） |
 
 ### 8-2. 無傷で残るもの
 

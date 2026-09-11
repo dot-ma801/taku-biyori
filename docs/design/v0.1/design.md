@@ -1,7 +1,7 @@
-# RollHub（たく日和）— 設計ドキュメント 最新版
+# RollHub（たく日和）— v0.1 基本設計
 
 > [!IMPORTANT]
-> **この文書は [design-v2.md](./design-v2.md) に置き換えられた（superseded）。**
+> **この文書は [design-concept-model.md](../v0.3/design-concept-model.md) に置き換えられた（superseded）。**
 > v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
 > 本書の DB スキーマ・API・ステータス設計はいずれも現行の実装と一致しない。
 > **履歴として残しているだけなので、実装の根拠には使わないこと。** 現行の設計は design-v2 を参照する。
@@ -11,6 +11,7 @@
 
 <!-- MD028: superseded 注記と元のメタ情報を別の blockquote として保つ -->
 
+> **旧ファイル名**: `docs/design-v1.md`
 > **最終更新**: 2026-07-01  
 > マーダーミステリー・TRPG向けのセッション管理・卓建て補助 Web アプリ
 
@@ -222,7 +223,7 @@ game_session_members
 
 ### 導出ロジック
 
-> 最新の導出ロジックは [`docs/game-session-status.md`](./game-session-status.md) を参照。
+> 最新の導出ロジックは [`docs/game-session-status.md`](../../game-session-status.md) を参照。
 > 以下のスニペットは初期設計時のもので、`openUntil` が `null`（締め切りなし）のときに
 > `open` を飛ばして `scheduling` に落ちてしまう不具合があった。実装では
 > `!session.openUntil || now < session.openUntil` として修正済み（`open` を
@@ -462,7 +463,7 @@ Ph2 でシナリオ管理機能を実装する際に `scenario_id`（FK）へ移
 
 この基準に基づき、空き枠表示のために `maxMembers` を一覧レスポンスに追加した。
 追加 DB コストはゼロ（`max_players` カラムはクエリですでに取得済みだったため）。
-詳細は [ADR 0002](./adr/0002-game-session-list-max-members.md) を参照。
+詳細は [ADR 0002](../../adr/0002-game-session-list-max-members.md) を参照。
 
 #### ゲスト参加は「完全匿名 + トークンリンクのみ」で、専用ページを持たない
 

@@ -1,7 +1,7 @@
-# RollHub（たく日和）— 設計ドキュメント v1.1: 募集と卓の分離
+# RollHub（たく日和）— v0.1 設計: 募集と卓の分離
 
 > [!IMPORTANT]
-> **この文書は [design-v2.md](./design-v2.md) に置き換えられた（superseded）。**
+> **この文書は [design-concept-model.md](../v0.3/design-concept-model.md) に置き換えられた（superseded）。**
 > v2 で Lobby / SchedulePoll / GameSession / Seat の概念モデルを作り直したため、
 > 本書の DB スキーマ・API・ステータス設計はいずれも現行の実装と一致しない。
 > **履歴として残しているだけなので、実装の根拠には使わないこと。** 現行の設計は design-v2 を参照する。
@@ -11,9 +11,10 @@
 
 <!-- MD028: superseded 注記と元のメタ情報を別の blockquote として保つ -->
 
+> **旧ファイル名**: `docs/design-v1.1.md`
 > **最終更新**: 2026-07-11
-> **元要求**: [docs/requirements/recruitment-separation.md](./requirements/recruitment-separation.md)
-> **位置づけ**: [design-v1.md](./design-v1.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針など）は design-v1 を踏襲する。
+> **元要求**: [docs/design/v0.1/requirement-recruitment-separation.md](./requirement-recruitment-separation.md)
+> **位置づけ**: [design.md](./design.md) に対する**差分設計書**。本書に記載のない事項（技術スタック、認証、ゲストトークンの扱い、命名規則の基本方針など）は design-v1 を踏襲する。
 
 ---
 
@@ -539,7 +540,7 @@ export type GameSessionStatus =
 | 3 | **卓確定 API**: `POST /:id/confirm`（選出バリデーション + トランザクション卓生成 + 二重確定排他）+ `game_session_members.lobby_member_id` 追加 + `GET /game-sessions/:id` への `lobbyId` 追加 + 卓の中止（`cancelled_at` カラム + `PATCH /:id/status` の `cancelled` 遷移） | backend |
 | 4 | **募集枠のフロントエンド**: 一覧・作成・詳細（参加・日程調整）・編集画面（既存 GameSession 実装の移植） | frontend `features/Lobby/` |
 | 5 | **卓確定フローのフロントエンド**: 確定ダイアログ（候補日選択 → 条件付き選出 → 確認）、確定後表示（非選出者文言含む）、ダッシュボード再構成 | frontend |
-| 6 | **旧経路の廃止**: 卓の候補日・回答・募集ステータスの削除（API・UI・テーブル）、`POST /api/game-sessions` の `scheduledAt` 必須化、卓ステータス簡素化（6a フロント導線撤去 → 6b API 廃止 → 6c DB 整理 の分割・詳細は[移行計画](./migration-plan-recruitment-separation.md)参照） | backend + frontend + マイグレーション |
+| 6 | **旧経路の廃止**: 卓の候補日・回答・募集ステータスの削除（API・UI・テーブル）、`POST /api/game-sessions` の `scheduledAt` 必須化、卓ステータス簡素化（6a フロント導線撤去 → 6b API 廃止 → 6c DB 整理 の分割・詳細は[移行計画](../v0.2/migration-plan-recruitment-separation.md)参照） | backend + frontend + マイグレーション |
 
 > 段階 1〜5 の間、既存機能は無変更で動き続ける（要求 §5「既存実装を壊さず段階的に」）。
 > 段階 6 は新経路の動作確認（受け入れ基準の一連フロー）完了後に着手する。

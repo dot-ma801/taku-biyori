@@ -1,8 +1,9 @@
 # 要求ドキュメント: プレイメモ（参加者メモ・権限公開）
 
+> **旧ファイル名**: `docs/requirements/play-memo.md`
 > **作成日**: 2026-08-02
 > **種別**: 要求定義
-> **設計**: [docs/design-v1.2.md](../design-v1.2.md)
+> **設計**: [docs/design/v0.2/design-play-memo.md](./design-play-memo.md)
 
 ---
 

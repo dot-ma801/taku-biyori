@@ -1,8 +1,9 @@
 # 移行計画: 募集と卓の分離
 
+> **旧ファイル名**: `docs/migration-plan-recruitment-separation.md`
 > **最終更新**: 2026-07-11
-> **元設計**: [design-v1.1.md](./design-v1.1.md)（特に §9 実装ステップ）
-> **元要求**: [requirements/recruitment-separation.md](./requirements/recruitment-separation.md)
+> **元設計**: [design-recruitment-separation.md](../v0.1/design-recruitment-separation.md)（特に §9 実装ステップ）
+> **元要求**: [requirement-recruitment-separation.md](../v0.1/requirement-recruitment-separation.md)
 
 本書は design-v1.1 の実装ステップを「安全に既存機能を保ったまま新経路へ切り替え、最終的に旧経路を廃止する」ための実行計画に落とし込んだもの。
 
@@ -137,7 +138,7 @@
 
 ## 5. 廃止後のフォローアップ（スコープ外だが忘れないこと）
 
-- `docs/design-v1.md` の卓ステータス・日程調整・API セクションに「v1.1 で廃止済み」の注記を入れる（または design-v2 として統合改訂する）
-- `docs/design-v1.md` の `game_sessions` テーブル定義に `location` カラムが欠けている既存 drift を修正する（実装・v1.1 には存在する）
+- `docs/design/v0.1/design.md` の卓ステータス・日程調整・API セクションに「v1.1 で廃止済み」の注記を入れる（または design-v2 として統合改訂する）
+- `docs/design/v0.1/design.md` の `game_sessions` テーブル定義に `location` カラムが欠けている既存 drift を修正する（実装・v1.1 には存在する）
 - 共通化リファクタの検討（募集枠と卓で重複した日程調整ロジックが残る場合。ただし卓側は 6c で消えるため、原則発生しない想定）
 - 非選出者への通知機能（要求 §6 スコープ外。リマインド通知機能と合わせて別途要求定義）

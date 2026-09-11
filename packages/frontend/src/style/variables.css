@@ -338,9 +338,14 @@
   --primary: #7db4e6;
   --primary-hover: #9bc7ef;
   --primary-active: #b6d7f5;
-  --primary-subtle: #1b2f44;
-  --primary-subtle-hover: #23405b;
-  --primary-on-subtle: #b6d7f5;
+  /*
+   * --surface-raised (#1f2d3d) との差が小さいと、浮いた面（カレンダー・
+   * ポップオーバー）の上に置いたときに選択が見えなくなる。
+   * 昼のパレットが白地に sky-100 を置いているのと同じくらいの段差を作る。
+   */
+  --primary-subtle: #24425f;
+  --primary-subtle-hover: #2d5279;
+  --primary-on-subtle: #cfe4f8;
 
   --accent: var(--sun-300);
   --accent-hover: var(--sun-200);

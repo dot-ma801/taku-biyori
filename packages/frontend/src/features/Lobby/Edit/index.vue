@@ -9,15 +9,26 @@ import type { PendingCandidateDate } from '@/utils/pendingCandidateDates';
 import type { ScheduleMode } from '@/features/Lobby/Edit/composables/schedule-mode';
 import { computed } from 'vue';
 
-const props = defineProps<{
-  heading: string;
-  submitLabel: string;
-  loading: boolean;
-  errorMessages: string[];
-  hasSchedulePoll?: boolean;
-  /** 「候補日を出して決める / 開催日を入れる」の切り替えを出すか（作成画面のみ） */
-  showScheduleModeSwitch?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    heading: string;
+    submitLabel: string;
+    loading: boolean;
+    errorMessages: string[];
+    /**
+     * 候補日（とひとこと）の入力欄を出すか。
+     * 作成画面は常に出す。編集画面は日程調整が1件でもあるときだけ出す。
+     *
+     * **既定値を明示する必要がある**: Boolean の prop は省略されると `undefined` では
+     * なく `false` になるため、既定値なしだと呼び出し側が渡し忘れたときに
+     * 候補日の入力欄ごと消える。
+     */
+    showCandidateDates?: boolean;
+    /** 「候補日を出して決める / 開催日を入れる」の切り替えを出すか（作成画面のみ） */
+    showScheduleModeSwitch?: boolean;
+  }>(),
+  { showCandidateDates: true, showScheduleModeSwitch: false },
+);
 
 const title = defineModel<string>('title', { default: '' });
 const scenarioName = defineModel<string>('scenarioName', { default: '' });
@@ -68,7 +79,7 @@ const hasErrors = computed(() => props.errorMessages.length > 0);
       v-model:gameSessionDescription="gameSessionDescription"
       v-model:scheduleMode="scheduleMode"
       v-model:pendingDates="pendingDates"
-      :show-candidate-dates="props.hasSchedulePoll"
+      :show-candidate-dates="props.showCandidateDates"
       :show-mode-switch="props.showScheduleModeSwitch"
     />
 

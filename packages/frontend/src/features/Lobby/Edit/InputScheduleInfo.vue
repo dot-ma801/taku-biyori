@@ -123,8 +123,8 @@ function updateTimeLabel(date: string, timeLabel: string) {
         </template>
 
         <template v-else>
+          <!-- 締め切り日はロビー自身の項目。候補日の有無に関わらず編集できる -->
           <BaseDatePicker
-            v-if="props.showCandidateDates"
             v-model="openUntil"
             label="募集締め切り日"
             disable-past
@@ -132,6 +132,7 @@ function updateTimeLabel(date: string, timeLabel: string) {
           ></BaseDatePicker>
 
           <BaseDatePicker
+            v-if="props.showCandidateDates"
             label="候補日"
             multiple
             disable-past

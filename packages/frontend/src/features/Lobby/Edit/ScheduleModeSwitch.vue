@@ -82,8 +82,17 @@ const { options } = useScheduleModeOptions(() => model.value);
   box-shadow: var(--focus-ring);
 }
 
-.mode-switch__input {
+/*
+ * セレクタを深くしているのは詳細度のため。
+ * BaseCard の `.card__body :is(a, button, …, input, …)` が配下の input に
+ * position: relative を付けており、`.mode-switch__input` 単体（詳細度 0-1-0）では
+ * 負けて絶対配置が外れる。外れた input は 1px のグリッドアイテムとして1列目を占め、
+ * 丸が本文の列へ、本文が次の行へ押し出される。
+ * 詳細度で勝たせたうえで、万一また外れても崩れないよう丸と同じセルに重ねておく。
+ */
+.mode-switch .mode-switch__option .mode-switch__input {
   position: absolute;
+  grid-area: 1 / 1;
   width: 1px;
   height: 1px;
   opacity: 0;

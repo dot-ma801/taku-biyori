@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // FIXME: @vuetify/v0 に DatePicker が追加されたら、カレンダーロジックをそちらに置き換える
 // https://0.vuetifyjs.com/components/date-picker
-import { computed, ref } from 'vue';
+import { computed, ref, useId } from 'vue';
 import { Popover } from '@vuetify/v0';
 import { ChevronLeft, ChevronRight, CalendarDays, X } from '@lucide/vue';
 import { todayDateString } from '@taku-biyori/shared';
@@ -32,6 +32,15 @@ const props = withDefaults(
 
 const model = defineModel<ModelValue>();
 const isOpen = ref(false);
+
+/*
+ * Popover.Content は id を渡したときだけ position-area / position-try を見る
+ * （渡さないと Popover.Root 側の既定値が使われ、真下固定になる）。
+ * 既定の fallback では画面下端にぶつかってもカレンダーが下に出たままになり、
+ * 月末の行が画面外に隠れて選べない。上下・左右の反転を候補として渡しておく。
+ */
+const popoverId = useId();
+const POSITION_TRY = 'flip-block, flip-inline, flip-block flip-inline';
 
 // 内部的には常に string[] で扱う
 const selectedDates = computed<string[]>(() => {
@@ -175,7 +184,7 @@ function selectDate(dateStr: string | null) {
       {{ label }}<span v-if="required" class="datepicker__required">*</span>
     </span>
     <div class="datepicker__field">
-      <Popover.Root v-model="isOpen">
+      <Popover.Root :id="popoverId" v-model="isOpen">
         <!-- Activator 自体が button を描画するため、内側に button を置くと枠線が二重になる -->
         <Popover.Activator
           :class="[
@@ -200,7 +209,11 @@ function selectDate(dateStr: string | null) {
           />
         </Popover.Activator>
 
-        <Popover.Content class="datepicker__popover">
+        <Popover.Content
+          :id="popoverId"
+          :position-try="POSITION_TRY"
+          class="datepicker__popover"
+        >
           <template #default>
             <!-- ナビゲーション -->
             <div class="datepicker__nav">
@@ -501,13 +514,29 @@ function selectDate(dateStr: string | null) {
   border-radius: var(--radius-full);
   pointer-events: none;
 }
+/*
+ * 選択は面の色だけに頼らない。--primary-subtle と --surface-raised は
+ * 夜のパレットだと差が小さく、塗りだけでは選択が読み取れないため、
+ * --primary の枠線を必ず添える。
+ */
 .datepicker__cell--selected {
   background: var(--primary-subtle);
+  box-shadow: inset 0 0 0 var(--border-width-strong) var(--primary);
   color: var(--primary-on-subtle);
   font-weight: var(--weight-semibold);
 }
 .datepicker__cell--selected:hover {
   background: var(--primary-subtle-hover);
+}
+/* フォーカスリングで選択枠が消えないよう、選択中は2本重ねる */
+.datepicker__cell--selected:focus-visible {
+  box-shadow:
+    inset 0 0 0 var(--border-width-strong) var(--primary),
+    var(--focus-ring);
+}
+/* 当日かつ選択済みのときは、丸枠と選択枠が二重に出るので丸枠を引っ込める */
+.datepicker__cell--selected.datepicker__cell--today::after {
+  display: none;
 }
 .datepicker__cell--disabled {
   color: var(--text-disabled);

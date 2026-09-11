@@ -4,17 +4,21 @@ import { useConfirmFlow } from '@/features/Lobby/Detail/Schedule/ConfirmFlow/use
 import type { LobbyDetailModel } from '@/models/lobby';
 
 vi.mock('@/api/game-session', () => ({ createGameSession: vi.fn() }));
-vi.mock('@/api/lobby', () => ({ getSchedulePoll: vi.fn() }));
+vi.mock('@/api/lobby', () => ({
+  getSchedulePoll: vi.fn(),
+  updateLobbyStatus: vi.fn(),
+}));
 vi.mock('@/composables/useToast', () => ({
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }));
 
 import { createGameSession } from '@/api/game-session';
-import { getSchedulePoll } from '@/api/lobby';
+import { getSchedulePoll, updateLobbyStatus } from '@/api/lobby';
 
 const lobby = {
   id: 'lobby-1',
   maxPlayers: 2,
+  status: 'closed',
   activeEntries: [
     { id: 'entry-ok', userId: 'user-1', userName: 'Alice', guestName: null },
     { id: 'entry-maybe', userId: 'user-2', userName: 'Bob', guestName: null },
@@ -118,71 +122,51 @@ describe('useConfirmFlow', () => {
     expect(flow.scheduledAt.value).toBe('');
   });
 
-  // 候補日の無いロビー（日程調整を回していない・直接卓立て）でも開催を作れる必要がある
-  // （design-v2 §7 ステップ1「候補日から選ぶ / 直接日付を入れる の2経路」）
-  describe('直接日付を入れる経路', () => {
+  // 開催日は候補日からしか選べない。候補日が1件も無いロビーでは確定そのものができない
+  it('候補日が1件も無いロビーでは確定へ進めない', async () => {
+    // Arrange
     const lobbyWithoutPoll = {
       ...lobby,
       schedulePolls: [],
     } as unknown as LobbyDetailModel;
+    const flow = useConfirmFlow(
+      () => lobbyWithoutPoll,
+      () => false,
+      vi.fn(),
+    );
 
-    it('候補日が1件も無いロビーでは直接入力に切り替わる', async () => {
+    // Act
+    await flow.reset();
+
+    // Assert
+    expect(getSchedulePoll).not.toHaveBeenCalled();
+    expect(flow.candidateOptions.value).toEqual([]);
+    expect(flow.canProceedCandidate.value).toBe(false);
+  });
+
+  describe('ステップの進退', () => {
+    it('候補日と参加者が決まるとステップを進められる', async () => {
       // Arrange
       const flow = useConfirmFlow(
-        () => lobbyWithoutPoll,
-        () => false,
-        vi.fn(),
-      );
-
-      // Act
-      await flow.reset();
-
-      // Assert
-      expect(flow.dateMode.value).toBe('direct');
-      expect(getSchedulePoll).not.toHaveBeenCalled();
-    });
-
-    it('直接入力した日付が開催日になり次へ進める', async () => {
-      // Arrange
-      const flow = useConfirmFlow(
-        () => lobbyWithoutPoll,
-        () => false,
-        vi.fn(),
-      );
-      await flow.reset();
-
-      // Act
-      flow.setDirectDate('2026-10-05');
-
-      // Assert
-      expect(flow.scheduledAt.value).toBe('2026-10-05');
-      expect(flow.canProceedCandidate.value).toBe(true);
-    });
-
-    // 直接日付には回答が無いので、ok / maybe で絞り込む既定値が作れない
-    it('直接入力では在籍している entry を既定で全員選ぶ', async () => {
-      // Arrange
-      const flow = useConfirmFlow(
-        () => lobbyWithoutPoll,
+        () => lobby,
         () => false,
         vi.fn(),
       );
       await flow.reset();
 
       // Act
-      flow.setDirectDate('2026-10-05');
+      flow.goNext();
+      const blockedAtStep1 = flow.step.value;
+      flow.selectCandidate('candidate-1');
+      flow.goNext();
+      flow.goNext();
 
       // Assert
-      expect([...flow.selectedEntryIds.value]).toEqual([
-        'entry-ok',
-        'entry-maybe',
-        'entry-ng',
-      ]);
-      expect(flow.isWarnedEntry('entry-ng')).toBe(false);
-      expect(flow.getEntryAnswer('entry-ok')).toBeNull();
+      expect(blockedAtStep1).toBe(1);
+      expect(flow.step.value).toBe(3);
     });
 
-    it('候補日があるロビーでも直接入力へ切り替えられる', async () => {
+    it('戻るとひとつ前のステップに戻る', async () => {
       // Arrange
       const flow = useConfirmFlow(
         () => lobby,
@@ -191,44 +175,27 @@ describe('useConfirmFlow', () => {
       );
       await flow.reset();
       flow.selectCandidate('candidate-1');
+      flow.goNext();
 
       // Act
-      flow.setDateMode('direct');
-
-      // Assert: 候補日側の選択は持ち越さない
-      expect(flow.selectedCandidateId.value).toBeNull();
-      expect(flow.scheduledAt.value).toBe('');
-      expect(flow.canProceedCandidate.value).toBe(false);
-    });
-
-    it('直接入力から候補日選択へ戻すと入力した日付を捨てる', async () => {
-      // Arrange
-      const flow = useConfirmFlow(
-        () => lobby,
-        () => false,
-        vi.fn(),
-      );
-      await flow.reset();
-      flow.setDateMode('direct');
-      flow.setDirectDate('2026-10-05');
-
-      // Act
-      flow.setDateMode('candidate');
+      flow.goBack();
 
       // Assert
-      expect(flow.scheduledAt.value).toBe('');
-      expect([...flow.selectedEntryIds.value]).toEqual([]);
+      expect(flow.step.value).toBe(1);
     });
+  });
 
-    it('直接入力した日付で createGameSession を呼ぶ', async () => {
+  describe('確定後の受付', () => {
+    it('受付中のロビーは確定と同時に受付を閉じる', async () => {
       // Arrange
+      const openLobby = { ...lobby, status: 'open' } as LobbyDetailModel;
       const flow = useConfirmFlow(
-        () => lobbyWithoutPoll,
+        () => openLobby,
         () => false,
         vi.fn(),
       );
       await flow.reset();
-      flow.setDirectDate('2026-10-05');
+      flow.selectCandidate('candidate-1');
       vi.mocked(createGameSession).mockResolvedValue({
         id: 'session-1',
       } as never);
@@ -237,10 +204,53 @@ describe('useConfirmFlow', () => {
       await flow.confirm();
 
       // Assert
-      expect(createGameSession).toHaveBeenCalledWith('lobby-1', {
-        scheduledAt: '2026-10-05',
-        entryIds: ['entry-ok', 'entry-maybe', 'entry-ng'],
+      expect(updateLobbyStatus).toHaveBeenCalledWith('lobby-1', {
+        status: 'closed',
       });
+    });
+
+    it('すでに受付を閉じているロビーでは status を触らない', async () => {
+      // Arrange
+      const flow = useConfirmFlow(
+        () => lobby,
+        () => false,
+        vi.fn(),
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(updateLobbyStatus).not.toHaveBeenCalled();
+    });
+
+    // 受付を閉じられなくても確定そのものは成立している（ホストは手動で閉じられる）
+    it('受付を閉じられなくても作成の通知は行う', async () => {
+      // Arrange
+      const openLobby = { ...lobby, status: 'open' } as LobbyDetailModel;
+      const onCreated = vi.fn();
+      const flow = useConfirmFlow(
+        () => openLobby,
+        () => false,
+        onCreated,
+      );
+      await flow.reset();
+      flow.selectCandidate('candidate-1');
+      vi.mocked(createGameSession).mockResolvedValue({
+        id: 'session-1',
+      } as never);
+      vi.mocked(updateLobbyStatus).mockRejectedValue(new Error('failed'));
+
+      // Act
+      await flow.confirm();
+
+      // Assert
+      expect(onCreated).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -1,110 +1,79 @@
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { config as loadEnv } from 'dotenv';
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
+// 接続先はバックエンドの .env が正。CI では env で直接渡すため、既存の値は上書きしない
+loadEnv({ path: fileURLToPath(new URL('../backend/.env', import.meta.url)) });
 
 /**
- * See https://playwright.dev/docs/test-configuration.
+ * e2e 専用のポートとデータベースで動かす。
+ * 開発中の dev サーバー（3000 / 5173）と同時に起動しても衝突しない。
  */
+const BACKEND_PORT = 3100;
+const FRONTEND_PORT = 5273;
+const backendUrl = `http://localhost:${BACKEND_PORT}`;
+const frontendUrl = `http://localhost:${FRONTEND_PORT}`;
+
+const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
+
+if (!e2eDatabaseUrl) {
+  throw new Error(
+    'E2E_DATABASE_URL is required. packages/backend/.env.example を参照して設定し、' +
+      'pnpm --filter @taku-biyori/backend db:e2e:setup を実行してください',
+  );
+}
+
 export default defineConfig({
   testDir: './e2e',
-  /* Maximum time one test can run for. */
+  globalSetup: './e2e/global-setup.ts',
   timeout: 30 * 1000,
-  expect: {
-    /**
-     * Maximum time expect() should wait for the condition to be met.
-     * For example in `await expect(locator).toHaveText();`
-     */
-    timeout: 5000,
-  },
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  expect: { timeout: 5000 },
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  workers: 1,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
   use: {
-    /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: frontendUrl,
     trace: 'on-first-retry',
-
-    /* Only on CI systems run the tests headless */
     headless: !!process.env.CI,
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    // ログイン状態を作る。他のテストはこれが保存した storageState を使い回す
+    { name: 'setup', testMatch: /auth\.setup\.ts$/ },
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
       },
+      dependencies: ['setup'],
     },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-      },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: {
-    //     ...devices['Pixel 5'],
-    //   },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: {
-    //     ...devices['iPhone 12'],
-    //   },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: {
-    //     channel: 'msedge',
-    //   },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: {
-    //     channel: 'chrome',
-    //   },
-    // },
   ],
 
-  /* Folder for test artifacts such as screenshots, videos, traces, etc. */
-  // outputDir: 'test-results/',
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    /**
-     * Use the dev server by default for faster feedback loop.
-     * Use the preview server on CI for more realistic testing.
-     * Playwright will re-use the local server if there is already a dev-server running.
-     */
-    command: process.env.CI ? 'npm run preview' : 'npm run dev',
-    port: process.env.CI ? 4173 : 5173,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: 'pnpm exec tsx src/index.ts',
+      cwd: fileURLToPath(new URL('../backend', import.meta.url)),
+      url: backendUrl,
+      reuseExistingServer: !process.env.CI,
+      env: {
+        DATABASE_URL: e2eDatabaseUrl,
+        PORT: String(BACKEND_PORT),
+        BETTER_AUTH_URL: backendUrl,
+        // e2e 専用の使い捨てセッションにしか使わない
+        BETTER_AUTH_SECRET: 'e2e-only-not-a-real-secret',
+        FRONTEND_URL: frontendUrl,
+      },
+    },
+    {
+      command: `pnpm exec vite --port ${FRONTEND_PORT} --strictPort`,
+      url: frontendUrl,
+      reuseExistingServer: !process.env.CI,
+      env: { VITE_API_URL: backendUrl },
+    },
+  ],
 });

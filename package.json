@@ -12,7 +12,7 @@
     "check": "node scripts/check.mjs",
     "check:ci": "node scripts/check.mjs --ci",
     "rules:sync": "rulesync generate --delete",
-    "rules:check": "rulesync generate --check"
+    "rules:check": "rulesync generate --check --features rules,subagents,skills,hooks,permissions"
   },
   "packageManager": "pnpm@10.30.3",
   "workspaces": [

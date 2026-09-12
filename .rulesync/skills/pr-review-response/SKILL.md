@@ -72,7 +72,11 @@ gh pr view <PR番号> --json comments --jq '.comments[] | {author: .author.login
 - 指摘に対応した時点で都度コミットする
 - プレフィックスは AGENTS.md のコミット規則に従う（`[fix]` / `[update]` / `[clean]` など）
 
+**コミットの前に `pnpm check` を通す。** 壊れたリビジョンを push すると、無駄な CI を起動してから
+問題を検出することになる。
+
 ```bash
+pnpm check
 git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" \
   commit -m "[fix] 未認証時に 401 ではなく 500 を返していた問題を修正"
 ```
@@ -130,13 +134,10 @@ git push --force-with-lease
 
 `--force-with-lease` を使う（`--force` は使わない）。
 
-## 6. CI と最終確認
+## 6. CI を確認する
 
-```bash
-pnpm check
-```
-
-CI の結果を確認し、赤ければ同じ手順で直す。
+CI の結果を確認し、赤ければ同じ手順で直す。`pnpm check` はコミット前に通してあるので、
+ここで落ちるのは CI 固有の要因（環境差・gitignore されたファイルなど）を疑う。
 
 ## チェックリスト
 

@@ -34,6 +34,67 @@ packages/
 └── shared/       # 共通型定義・スキーマ (frontend/backend で共有)
 ```
 
+## 開発の進め方
+
+コーディングエージェントを中心に、**設計を先に固めてから実装に入る**流れで進めます。
+各段に担当スキルがあり、いまどの段にいるか迷ったら `/dev-flow` が振り先を教えます
+（`/dev-flow` は明示的に呼んだときだけ動きます）。
+
+```
+設計を詰める ──→ Issue に割る ──→ 実装する ──→ PR ──→ マージ
+```
+
+| 段 | やること | 担当スキル | 出力 |
+|---|---|---|---|
+| 1 | 曖昧な要望を詰める | `dig` | 共通理解（ファイルは残らない） |
+| 2 | 概念と語彙を決める | `concept-design` | `docs/concept/` |
+| 3 | 元に戻しにくい判断を記録する | `adr-creator` | `docs/adr/` |
+| 4 | 実装単位に割る | `to-issues` | GitHub Issue |
+| 5 | 実装する | 下の表 | コードとテスト |
+| 6 | レビュー指摘に答える | `pr-review-response` | 返信とコミット |
+
+段5は触る対象で分かれます。
+
+| 対象 | スキル |
+|---|---|
+| API エンドポイント | `add-api-endpoint` |
+| テーブル・カラム・enum | `db-schema-change` |
+| frontend の処理ロジック | `tdd-composable` |
+| `components/` の基本UI | `add-basic-component` |
+
+### 語彙
+
+利用者に見せる言葉の正は **[`docs/concept/CONTEXT.md`](docs/concept/CONTEXT.md)** です。
+一文定義・UI 表記・紛らわしい語の対比・ロールがここに集まっています。
+設計の会話でこの表と食い違う言葉が出たら、その場で指摘して更新します。
+
+### Issue の割り方
+
+**1枚の Issue は型・API・画面・テストを貫く縦切り**にします。層（shared / backend / frontend）で
+割ると下流が上流の完了を待つことになり、並列に進められません。
+
+影響範囲がコードベース全体に及ぶ改修だけは例外で、expand（新しい形を旧と並べて足す）→
+migrate（呼び出し側を移す）→ contract（旧い形を消す）の3段階に分けます。
+
+### 完了の定義
+
+```bash
+pnpm check      # ビルド・format・lint・型・ユニットテスト
+pnpm test:e2e   # ブラウザで画面を実際に動かす
+```
+
+**両方が緑になって完了**です。`pnpm check` に e2e は含まれません（DB とブラウザが必要で、
+コミット前チェックとしては重いため別コマンドにしています）。UI を触ったなら
+`pnpm test:e2e` を省かないでください。
+
+e2e は開発用ともテスト用とも別のデータベース（`E2E_DATABASE_URL`）を使い、実行のたびに
+シードし直します。専用ポート（backend 3100 / frontend 5273）で起動するため、開発サーバーを
+上げたままでも走ります。ブラウザの取得だけは初回に1度必要です。
+
+```bash
+pnpm --filter @taku-biyori/frontend exec playwright install chromium
+```
+
 ## セットアップ
 
 ### 1. 依存関係のインストール
@@ -51,6 +112,8 @@ pnpm install
 **Backend** (`packages/backend/.env`):
 ```
 DATABASE_URL=postgresql://...
+TEST_DATABASE_URL=postgresql://.../taku_biyori_test   # リポジトリ層テスト用。開発用とは別の DB
+E2E_DATABASE_URL=postgresql://.../taku_biyori_e2e     # e2e 用。上の2つとも別の DB
 PORT=3000
 BETTER_AUTH_SECRET=your-secret-key
 BETTER_AUTH_URL=http://localhost:3000
@@ -84,7 +147,16 @@ pnpm dev
 - Frontend: http://localhost:5173
 - Backend: http://localhost:3000
 
-## 各パッケージのコマンド
+## コマンド
+
+### ルート（全パッケージ横断）
+
+```bash
+pnpm check      # shared ビルド → format → lint → typecheck → test（コミット前に実行する）
+pnpm check:ci   # 自動修正なしの検査のみ。CI と同じ
+pnpm test:e2e   # e2e。DB の用意とシードは自動で走る
+pnpm rules:sync # .rulesync/ から CLAUDE.md / AGENTS.md / .claude/ を生成する
+```
 
 ### Frontend (`packages/frontend`)
 
@@ -107,6 +179,8 @@ pnpm --filter @taku-biyori/backend test:unit        # ユニットテスト
 pnpm --filter @taku-biyori/backend test:integration # インテグレーションテスト
 pnpm --filter @taku-biyori/backend db:generate      # マイグレーションファイル生成
 pnpm --filter @taku-biyori/backend db:migrate       # マイグレーション実行
+pnpm --filter @taku-biyori/backend db:seed          # 開発用データの投入
+pnpm --filter @taku-biyori/backend db:e2e:setup     # e2e 用 DB の作成・マイグレーション・シード
 ```
 
 ### Shared (`packages/shared`)

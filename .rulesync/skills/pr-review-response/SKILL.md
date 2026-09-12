@@ -19,7 +19,19 @@ targets:
 - 各スレッドは **対応済み** か **WONTFIX**（直さない判断 + 理由）のどちらかに必ず収束させる。黙殺は禁止
 - **resolve は自分で押さない。** 返信までが担当で、解決マークはレビュアー（人間）に委ねる
 
-## 1. 指摘を洗い出す
+## 1. 対象ブランチに切り替える
+
+**最初に必ず行う。** 別のブランチ（とくに `main`）のまま進めると、後段の commit と push が
+対象 PR に入らず、無関係なブランチを汚す。
+
+```bash
+gh pr checkout <PR番号>
+git branch --show-current   # PR の headRefName と一致することを確認
+```
+
+未コミットの変更があると checkout に失敗する。先に退避するか、コミットしてから切り替える。
+
+## 2. 指摘を洗い出す
 
 ```bash
 gh pr view <PR番号> --json title,headRefName,url
@@ -33,7 +45,7 @@ gh pr view <PR番号> --json comments --jq '.comments[] | {author: .author.login
 
 対応表を作ってから着手する。1つずつ潰し、途中で対象を増やさない。
 
-## 2. 1指摘 = 1コミットで直す
+## 3. 1指摘 = 1コミットで直す
 
 - **まとめて後でコミットしない。** 同じファイルに別の文脈の変更が混ざり、切り分けられなくなる
 - 指摘に対応した時点で都度コミットする
@@ -44,7 +56,7 @@ git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" \
   commit -m "[fix] 未認証時に 401 ではなく 500 を返していた問題を修正"
 ```
 
-## 3. push してスレッドに返信する
+## 4. push してスレッドに返信する
 
 ```bash
 git push
@@ -78,7 +90,7 @@ PR 全体へのコメントに対しては `gh pr comment <PR番号> --body "...
 今回は対応しません。変更するなら設計側の合意が先になります。
 ```
 
-## 4. コンフリクトは rebase で解消する
+## 5. コンフリクトは rebase で解消する
 
 **`git merge` は使わない。** 履歴を直線に保つ。
 
@@ -97,7 +109,7 @@ git push --force-with-lease
 
 `--force-with-lease` を使う（`--force` は使わない）。
 
-## 5. CI と最終確認
+## 6. CI と最終確認
 
 ```bash
 pnpm check
@@ -107,6 +119,7 @@ CI の結果を確認し、赤ければ同じ手順で直す。
 
 ## チェックリスト
 
+- [ ] 対象 PR のブランチに切り替えてから作業した
 - [ ] インラインコメントと PR 全体コメントの両方を集めた
 - [ ] 投稿者を問わず全 unresolved スレッドを対象にした
 - [ ] 指摘ごとに都度コミットした

@@ -1,9 +1,9 @@
 {
   "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/config-schema.json",
+  // opencode は使っていない。codexcli と同じ AGENTS.md を書き、後勝ちで上書きしてしまうため外している。
   "targets": [
     "codexcli",
-    "claudecode",
-    "opencode"
+    "claudecode"
   ],
   "features": [
     "rules",

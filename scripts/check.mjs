@@ -24,6 +24,10 @@ const steps = [
   })),
   { label: 'typecheck (backend)', args: ['--filter', name('backend'), 'typecheck'] },
   { label: 'typecheck (frontend)', args: ['--filter', name('frontend'), 'type-check'] },
+  // shared は先頭でビルド済み。ここは Vite のバンドル時エラーを拾うための backend / frontend。
+  { label: 'build (backend)', args: ['--filter', name('backend'), 'build'] },
+  { label: 'build (frontend)', args: ['--filter', name('frontend'), 'build'] },
+  { label: 'test (shared)', args: ['--filter', name('shared'), 'test'] },
   { label: 'test (backend)', args: ['--filter', name('backend'), 'test'], hint: dbHint },
   { label: 'test (frontend)', args: ['--filter', name('frontend'), 'test'] },
 ];

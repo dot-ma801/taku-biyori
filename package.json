@@ -8,7 +8,11 @@
     "lint": "pnpm -r run lint",
     "format": "pnpm -r run format",
     "test": "pnpm -r run test",
-    "test:coverage": "pnpm -r run test:coverage"
+    "test:coverage": "pnpm -r run test:coverage",
+    "check": "node scripts/check.mjs",
+    "check:ci": "node scripts/check.mjs --ci",
+    "rules:sync": "rulesync generate --delete",
+    "rules:check": "rulesync generate --check --features rules,subagents,skills,hooks,permissions"
   },
   "packageManager": "pnpm@10.30.3",
   "workspaces": [

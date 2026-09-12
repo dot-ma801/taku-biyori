@@ -1,9 +1,10 @@
 # 移行計画: 概念モデル v2 への移行（ロビーとセッションの分離）
 
+> 旧ファイル名: `docs/migration-plan-concept-model.md`
 > 最終更新: 2026-08-22
-> 元概念設計: [docs/concept/lobby-game-session.md](./concept/lobby-game-session.md)
-> 基本設計: [docs/design-v2.md](./design-v2.md)
-> 前例: [docs/migration-plan-recruitment-separation.md](./migration-plan-recruitment-separation.md)
+> 元概念設計: [docs/concept/lobby-game-session.md](../../concept/lobby-game-session.md)
+> 基本設計: [docs/design/v0.3/design-concept-model.md](./design-concept-model.md)
+> 前例: [docs/design/v0.2/migration-plan-recruitment-separation.md](../v0.2/migration-plan-recruitment-separation.md)
 
 本書は design-v2 を「どの順番で・どの単位の PR で実装するか」の実行計画に落とし込んだものである。
 設計そのもの（スキーマ・API・ステータス導出）は design-v2 が正であり、本書では繰り返さない。
@@ -183,7 +184,7 @@ design-v2 はエンドポイント一覧・権限・差分分類までを定義�
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **frontend**: ダッシュボードを design-v2 §7-5 の4セクションに再編、`GameSessionStatusBadge` / `LobbyStatusBadge` のラベル更新、日本語ラベルの一斉置換（「募集枠」→「ロビー」、「卓」→「開催 / セッション」、「参加メンバー」→「着席者」、「募集中止」→「解散」、「確定」系文言の削除）、**画面ルートの入れ子化**（design-v2 §7-1。`/game-sessions/*` を廃止し `/lobbies/:lobbyId/game-sessions/:gameSessionId/*` へ、`/lobbies/edit/:lobbyId` を `/lobbies/:lobbyId/edit` へ。旧パスからのリダイレクトは作らない）。**docs**: `openapi.yml` は**残差の突き合わせのみ**（全面改訂はタスク1 で完了済み）、`design-v1.md` / `v1.1` / `v1.2` に supersede 注記、`game-session-status.md` を更新、ADR 0006 を `Superseded` に、`db:seed` の生成データを新モデルに追従、CLAUDE.md の用語とディレクトリ例を更新 |
+| スコープ | **frontend**: ダッシュボードを design-v2 §7-5 の4セクションに再編、`GameSessionStatusBadge` / `LobbyStatusBadge` のラベル更新、日本語ラベルの一斉置換（「募集枠」→「ロビー」、「卓」→「開催 / セッション」、「参加メンバー」→「着席者」、「募集中止」→「解散」、「確定」系文言の削除）、**画面ルートの入れ子化**（design-v2 §7-1。`/game-sessions/*` を廃止し `/lobbies/:lobbyId/game-sessions/:gameSessionId/*` へ、`/lobbies/edit/:lobbyId` を `/lobbies/:lobbyId/edit` へ。旧パスからのリダイレクトは作らない）。**docs**: `openapi.yml` は**残差の突き合わせのみ**（全面改訂はタスク1 で完了済み）、`v0.1/design.md` / `v1.1` / `v1.2` に supersede 注記、`game-session-status.md` を更新、ADR 0006 を `Superseded` に、`db:seed` の生成データを新モデルに追従、CLAUDE.md の用語とディレクトリ例を更新 |
 | 既存への影響 | 表示文言とドキュメントのみ |
 | 完了条件 | badge の2テストが新ラベルで green / `募集枠` `卓確定` `confirmed` `closedAt` `lobbyMemberId` `dateNote` `availability` `game_session_members` で全体を grep して0件（`features/Landing/` の「卓」のみ除外） / `openapi.yml` と実装のルートが一致 |
 | 検証 | ダッシュボードの4セクションがそれぞれ正しい対象を出す。UI 上に「確定」「募集枠」という語が残っていない |
@@ -277,7 +278,7 @@ Vercel のビルドコマンドにマイグレーション実行が含まれて�
 
 ## 6. 移行後のフォローアップ（スコープ外だが忘れないこと）
 
-- `docs/design-v1.md` / `v1.1` / `v1.2` は履歴として残すが、参照先が v2 であることを冒頭で明示する
+- `docs/design/v0.1/design.md` / `v0.1/design-recruitment-separation.md` / `v0.2/design-play-memo.md` は履歴として残すが、参照先が v2 であることを冒頭で明示する
 - `docs/game-session-status.md` は v1.1 の時点ですでに陳腐化していた（`open` / `scheduling` / `open_until` が残存）。v2 の内容に更新するか、design-v2 §4 へのリンクだけ残して削除する
 - ADR 0006（`Proposed` のまま）は design-v1.1 の時点で前提が失効している。`Superseded` にする
 - ADR を新規に起票する: 「セッションはロビーに必ず属する（`lobby_id` NOT NULL）」（design-v2 §9-3）、

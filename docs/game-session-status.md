@@ -1,7 +1,7 @@
 # ステータス設計
 
 ロビーと開催のステータスは **DB に保持せず、ファクトから毎回導出する**。
-導出表・遷移図・操作可否は [design-v2.md](./design-v2.md) の §4 に集約した。
+導出表・遷移図・操作可否は [design-concept-model.md](./design/v0.3/design-concept-model.md) の §4 に集約した。
 
 | 知りたいこと | 参照先 |
 |---|---|

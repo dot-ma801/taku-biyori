@@ -2,7 +2,7 @@
 
 ## Status
 
-Superseded by [design-v2.md](../design-v2.md) §7-1
+Superseded by [design-concept-model.md](../design/v0.3/design-concept-model.md) §7-1
 
 v2 は画面ルートをロビー配下へ入れ子にする方針を採ったため、本 ADR の「各ドメインが独立した
 ルートパスを持つ」という判断は v2 の設計と一致しない。`/game-sessions/*` を廃止し、

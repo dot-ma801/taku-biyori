@@ -7,8 +7,11 @@
 
 ## 設計ドキュメント
 
-実装に必要な設計情報は **[`docs/design-v2.md`](docs/design-v2.md)** にまとまっています。
-**APIを実装する前に必ず参照してください。**
+実装に必要な設計情報は **[`docs/design/v0.3/design-concept-model.md`](docs/design/v0.3/design-concept-model.md)** に
+まとまっています。**APIを実装する前に必ず参照してください。**
+
+設計ドキュメントはバージョンごとに `docs/design/v{版}/` に分かれています。
+一覧と旧ファイル名の対応表は [`docs/design/README.md`](docs/design/README.md) にあります。
 
 特に以下のセクションを確認してください。
 
@@ -18,10 +21,21 @@
 - §6 API設計（エンドポイント一覧・方針）
 - §7 画面構成（ルート・ダッシュボード）
 
-`docs/design-v1.md` / `v1.1` / `v1.2` は **superseded**（履歴）です。実装の根拠には使わないでください。
+`docs/design/v0.1/` / `v0.2/` 配下は **superseded**（履歴）です。実装の根拠には使わないでください。
 
-コード中に残る `design-v1.x §…` というコメントは、**v2 が引き継いだ判断の出典を示す履歴参照**です。
-現行の仕様は必ず design-v2 で確認してください。
+### コード中の `design-v2 §…` という参照の読み方
+
+ソースコードのコメントにある `design-v2` / `design-v1.x` は**ファイル名ではなく設計書の通称**です。
+ファイルを `docs/design/v{版}/` へ再編したあとも、この語彙はそのまま残しています。
+
+| コード中の表記 | 指す文書 |
+|---|---|
+| `design-v2 §…` | `docs/design/v0.3/design-concept-model.md`（**現行仕様**） |
+| `design-v1.2 §…` | `docs/design/v0.2/design-play-memo.md` |
+| `design-v1.1 §…` / `design-v1 §…` | `docs/design/v0.1/` の各文書 |
+
+`design-v1.x §…` は、**v2 が引き継いだ判断の出典を示す履歴参照**です。
+現行の仕様は必ず v0.3 の design-concept-model.md で確認してください。
 唯一の例外はプレイメモ4本で、design-v2 §6-15 が「リクエスト・レスポンス契約を v2 でも変えない」と
 明示しているため、v1.2 §4（操作可否）・§5（エラー表）・§8 は**その挙動の記録として有効**です
 （パスの入れ子化と `memberId` → `seatId` の改名を除く）。
@@ -227,7 +241,7 @@ pnpm --filter @taku-biyori/backend test:integration
 
 ## 新しい API を追加する手順
 
-1. `docs/design-v2.md` でエンドポイント仕様・DBスキーマを確認する
+1. `docs/design/v0.3/design-concept-model.md` でエンドポイント仕様・DBスキーマを確認する
 2. **`packages/shared` にリクエスト型・レスポンス型を定義する**（実装より先に行うこと）
 3. **テストを先に書く**（TDD: Red → Green → Refactor）
 4. `src/{機能名}/` ディレクトリを作成し、レイヤーごとにファイルを分ける

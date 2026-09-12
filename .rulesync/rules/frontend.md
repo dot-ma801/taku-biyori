@@ -103,6 +103,39 @@ composable はフォールバックなしの生データを返し、コンポー
 
 ---
 
+## `watch` を多用しない
+
+**`watch` は最後の手段。** 書きたくなったら、先に次の4つを検討する。
+
+| 代わりに使えないか | 典型例 |
+|---|---|
+| `computed` で導出できないか | 他の state から計算できる値に `watch` + `ref` を使わない |
+| `emit` で親にイベントを渡せば済まないか | 子の変更を親が `watch` で拾う → 子が `emit`、親がハンドラで処理する |
+| イベントドリブンにできないか | 「値が変わったら実行」ではなく「ユーザーが押したら実行」で書けないか |
+| `onMounted` の初期化で済まないか | 初回だけ必要な処理に `watch(..., { immediate: true })` を使わない |
+
+```ts
+// ❌ NG — 子の state 変化を watch で親に伝播させる
+watch(draftName, (value) => {
+  emit('update', value);
+});
+
+// ✅ OK — 確定した時点のイベントとして親へ渡す
+function handleSubmit() {
+  emit('update', draftName.value);
+}
+```
+
+`watch` が妥当なのは、**自分が発生源ではない外部の変化に追従する**とき。
+
+- 再取得などで props の元データが差し替わり、編集ドラフトを作り直す必要がある
+- ルートパラメータの変化に応じて再フェッチする
+- 外部リソース（購読・タイマー）のライフサイクルを state に合わせる
+
+使う場合は「何の変化に追従しているのか」をコメント1行で残す。
+
+---
+
 ## composable の引数は `Ref` を要求しない（依存は一方向に保つ）
 
 **composable の引数で `Ref<T>` を受け取ってはいけない。**
@@ -171,6 +204,7 @@ API 由来の値（＝真実）と、UI で編集中の値（＝ドラフト）�
   （親で判定したいときは emit した object と親が持つ original を比較）
 - ⚠️ **罠**: 再取得などで original（prop）が変わったら draft は古いまま取り残される。
   `watch(() => props.original, reset)` で draft を作り直すか `:key` で再マウントする
+  （これは上の「`watch` が妥当なケース」にあたる）
 - 参考実装: `useMemberEdit.ts`（`baseline` / `draftCharacterName` / `isDirty`）
 
 ---

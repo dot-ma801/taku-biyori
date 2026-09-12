@@ -21,7 +21,7 @@ disable-model-invocation: true
 | 2 | 概念が怪しい（フラグが増える・条件分岐が無理になる） | `concept-design` | `docs/concept/` に書き出した |
 | 3 | 元に戻しにくい判断をした | `adr-creator` | `docs/adr/` に書き出した |
 | 4 | 作るものが決まった | `to-issues` | Issue を発行し、承認された |
-| 5 | 実装する | 下の表へ | `pnpm check` が緑 |
+| 5 | 実装する | 下の表へ | `pnpm check` と `pnpm test:e2e` が緑 |
 | 6 | PR に指摘がついた | `pr-review-response` | 全スレッドが対応済み or WONTFIX |
 
 ### 5 の振り分け
@@ -52,7 +52,9 @@ disable-model-invocation: true
 段 5 のどのスキルを使っていても共通。
 
 - **型チェックと個別のテストファイルは頻繁に回す。** `pnpm check` は重いので最後に1回
-- **完了の定義は `pnpm check` が緑になること。** 自己申告で終わらせない
+- **完了の定義は `pnpm check` と `pnpm test:e2e` の両方が緑になること。** 自己申告で終わらせない
+  - `pnpm check` はビルド・lint・型・ユニットテスト、`pnpm test:e2e` は画面を実際に動かす。
+    UI を触ったなら後者を省かない
 - 仕様が曖昧になったら、推測で埋めずに止まってユーザーに聞く
 - 意味のまとまりができた時点でコミットする。まとめて最後にやらない
 

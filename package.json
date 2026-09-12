@@ -8,6 +8,7 @@
     "lint": "pnpm -r run lint",
     "format": "pnpm -r run format",
     "test": "pnpm -r run test",
+    "test:e2e": "pnpm --filter @taku-biyori/frontend test:e2e",
     "test:coverage": "pnpm -r run test:coverage",
     "check": "node scripts/check.mjs",
     "check:ci": "node scripts/check.mjs --ci",

@@ -74,6 +74,9 @@ import { foo } from '@/game-session/domain/foo'; // ✅
 
 ## 日本語ラベル（design-v2 §2-2 / issue #147）
 
+**語彙の正は [`docs/concept/CONTEXT.md`](docs/concept/CONTEXT.md)。** ここに置くのは UI 表示の方針と
+固定語彙だけで、概念の一文定義・紛らわしい語の対比・ロールはそちらにある。
+
 **方針: BE では概念を分ける。UI ではそれを漏らさない。**
 
 Lobby と GameSession は**バックエンドでは別リソース・別ステータスのまま**だが、

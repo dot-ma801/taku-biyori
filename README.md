@@ -37,30 +37,64 @@ packages/
 ## 開発の進め方
 
 コーディングエージェントを中心に、**設計を先に固めてから実装に入る**流れで進めます。
-各段に担当スキルがあり、いまどの段にいるか迷ったら `/dev-flow` が振り先を教えます
-（`/dev-flow` は明示的に呼んだときだけ動きます）。
 
-```
-設計を詰める ──→ Issue に割る ──→ 実装する ──→ PR ──→ マージ
+**人間が明示的に呼ぶのは `/dev-flow` と `/dig` の2つだけ**です。残りは依頼の文面から
+エージェントが自分で選びます。`/dev-flow` は振り先を答えるだけで、自分では何もしません。
+
+### 全体の流れ
+
+```mermaid
+flowchart TD
+    S([やりたいことが出てくる])
+    NAV["どの段か分からないとき: /dev-flow<br/>呼ぶ: 人間だけ（自動では起動しない）<br/>振り先を答えるだけで仕事はしない"]
+    A["1. 要望を詰める ・ dig<br/>呼ぶ: 人間<br/>止まる: 共通理解を確認するまで実装に移らない"]
+    B["2. 概念と語彙を決める ・ concept-design<br/>呼ぶ: エージェント<br/>止まる: 書き出した概念モデルのレビュー"]
+    C["3. 判断を記録する ・ adr-creator<br/>呼ぶ: エージェント<br/>3条件を満たすときだけ書く"]
+    D["4. Issue に割る ・ to-issues<br/>呼ぶ: エージェント<br/>止まる: 割り方を承認するまで発行しない"]
+    E["5. 実装する ・ 対象ごとの4スキル<br/>呼ぶ: エージェント<br/>完了: pnpm check と pnpm test:e2e が緑"]
+    F["6. PR ・ CI が同じ検証を回す"]
+    G["7. 指摘に答える ・ pr-review-response<br/>呼ぶ: エージェント<br/>全スレッドを対応済みか WONTFIX にする"]
+    H([人間がマージする])
+
+    S --> A --> B --> C --> D --> E --> F --> G --> H
+    S -.-> NAV
 ```
 
-| 段 | やること | 担当スキル | 出力 |
-|---|---|---|---|
-| 1 | 曖昧な要望を詰める | `dig` | 共通理解（ファイルは残らない） |
-| 2 | 概念と語彙を決める | `concept-design` | `docs/concept/` |
-| 3 | 元に戻しにくい判断を記録する | `adr-creator` | `docs/adr/` |
-| 4 | 実装単位に割る | `to-issues` | GitHub Issue |
-| 5 | 実装する | 下の表 | コードとテスト |
-| 6 | レビュー指摘に答える | `pr-review-response` | 返信とコミット |
+**「止まる」と書いた段は、人間が返事をするまでエージェントが先へ進みません。**
+ここを飛ばすと、あとから画面を触って気づく手戻りに変わります。
 
 段5は触る対象で分かれます。
 
-| 対象 | スキル |
-|---|---|
-| API エンドポイント | `add-api-endpoint` |
-| テーブル・カラム・enum | `db-schema-change` |
-| frontend の処理ロジック | `tdd-composable` |
-| `components/` の基本UI | `add-basic-component` |
+| 対象                    | スキル                |
+| ----------------------- | --------------------- |
+| API エンドポイント      | `add-api-endpoint`    |
+| テーブル・カラム・enum  | `db-schema-change`    |
+| frontend の処理ロジック | `tdd-composable`      |
+| `components/` の基本UI  | `add-basic-component` |
+
+### 並列に進める
+
+```mermaid
+flowchart TD
+    I["to-issues が割った Issue 群"]
+    I -->|依存なし| WA["worktree: issue-A"]
+    I -->|依存なし| WB["worktree: issue-B"]
+    I -->|issue-A 待ち| WC["worktree: issue-C"]
+    WA --> PA["PR ・ CI"]
+    WB --> PB["PR ・ CI"]
+    WC --> PC["PR ・ CI"]
+    PA --> M([人間がチェックしてマージ])
+    PB --> M
+    PC --> M
+    WA -.->|完了してから着手| WC
+```
+
+依存が「なし」の Issue は互いに衝突しないので、worktree を分けて同時に進められます。
+依存があるもの、**「触るディレクトリ」が重なるものは同時に走らせません**。
+
+```bash
+git worktree add ../taku-biyori-issue-<番号> -b claude/issue-<番号>-<要約>
+```
 
 ### 語彙
 
@@ -110,6 +144,7 @@ pnpm install
 各パッケージの `.env.example` をコピーして `.env` を作成し、必要な値を設定してください。
 
 **Backend** (`packages/backend/.env`):
+
 ```
 DATABASE_URL=postgresql://...
 TEST_DATABASE_URL=postgresql://.../taku_biyori_test   # リポジトリ層テスト用。開発用とは別の DB
@@ -123,6 +158,7 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 ```
 
 **Frontend** (`packages/frontend/.env`):
+
 ```
 VITE_API_URL=http://localhost:3000
 ```

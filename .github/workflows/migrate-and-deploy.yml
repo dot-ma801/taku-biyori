@@ -25,6 +25,11 @@ jobs:
   migrate-and-deploy:
     name: Migrate DB & Trigger Deploy
     runs-on: ubuntu-24.04
+    # Secrets（PRODUCTION_DATABASE_URL 等）は Environment secrets として
+    # migrate-deploy 環境にのみ登録する。この環境は Deployment branches を
+    # main に限定しているため、ワークフロー側の if 条件に万一漏れがあっても
+    # main 以外のブランチでは GitHub 側が secrets へのアクセスを拒否する。
+    environment: migrate-deploy
     # workflow_run の head_branch は「トリガー元ワークフローが走ったブランチ名」でしかなく、
     # フォークの pull_request イベントでブランチ名がたまたま main であるケースも含んでしまう。
     # push イベントかつ、フォークではなくこのリポジトリ自身のコミットであることまで確認する

@@ -34,14 +34,35 @@ git branch --show-current   # PR の headRefName と一致することを確認
 ## 2. 指摘を洗い出す
 
 ```bash
-gh pr view <PR番号> --json title,headRefName,url
-gh api repos/dot-ma801/taku-biyori/pulls/<PR番号>/comments --paginate \
-  --jq '.[] | {id, path, line, user: .user.login, body}'
+gh pr view <PR番号> --json title,baseRefName,headRefName,url
+
+# 未解決のレビュースレッド
+gh api graphql -f query='
+  query($owner:String!, $repo:String!, $pr:Int!) {
+    repository(owner:$owner, name:$repo) {
+      pullRequest(number:$pr) {
+        reviewThreads(first:100) {
+          nodes {
+            id
+            isResolved
+            comments(first:20) { nodes { databaseId path line author { login } body } }
+          }
+        }
+      }
+    }
+  }' -f owner=dot-ma801 -f repo=taku-biyori -F pr=<PR番号> \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
+
+# PR 全体へのコメント（レビュースレッドとは別物）
 gh pr view <PR番号> --json comments --jq '.comments[] | {author: .author.login, body}'
 ```
 
-インラインコメント（`/pulls/<n>/comments`）と PR 全体へのコメント（`gh pr view --json comments`）は
-別物。**両方を集める。**
+**REST の `/pulls/<n>/comments` は使わない。** 解決状態（`isResolved`）を持たず、返信も独立した
+コメントとして返すため、解決済みの指摘や自分の返信まで未対応として再処理してしまう。
+解決状態は GraphQL の `PullRequestReviewThread` にしかない。
+
+レビュースレッドと PR 全体へのコメントは別物。**両方を集める。**
+返信先のコメント ID には、そのスレッドの先頭コメントの `databaseId` を使う。
 
 対応表を作ってから着手する。1つずつ潰し、途中で対象を増やさない。
 

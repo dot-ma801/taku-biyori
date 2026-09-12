@@ -157,6 +157,19 @@ UI が「卓」1つに見せていても、**コード側（型・変数・API�
 git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" commit -m "..."
 ```
 
+### コンフリクトの解消
+
+**必ず rebase で解消する。`git merge` は使わない。**
+
+```bash
+git fetch origin
+git rebase origin/main
+# 解消後
+git rebase --continue
+```
+
+履歴を直線に保つため、マージコミットを作る解決方法は取らない。
+
 ### PR
 
 - **タイトルは日本語**で簡潔に。コミット規則と同じプレフィックスを使う

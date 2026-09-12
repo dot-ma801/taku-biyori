@@ -78,9 +78,13 @@ PR 全体へのコメントに対しては `gh pr comment <PR番号> --body "...
 
 **`git merge` は使わない。** 履歴を直線に保つ。
 
+rebase 先は **その PR のベースブランチ**。ADR 0011 では feature のベースが `develop/{version}` に
+なるため、`origin/main` 固定だと誤ったベースに載せ替わる。
+
 ```bash
+base=$(gh pr view <PR番号> --json baseRefName --jq .baseRefName)
 git fetch origin
-git rebase origin/main
+git rebase origin/"$base"
 # 解消したら
 git add <解消したファイル>
 git rebase --continue

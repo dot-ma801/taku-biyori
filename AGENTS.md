@@ -156,9 +156,13 @@ git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" c
 
 **必ず rebase で解消する。`git merge` は使わない。**
 
+rebase 先は **その PR のベースブランチ**。ADR 0011 のリリースブランチ戦略では feature ブランチの
+ベースが `develop/{version}` になるため、`origin/main` 固定だと誤ったベースに載せ替わる。
+
 ```bash
+base=$(gh pr view --json baseRefName --jq .baseRefName)
 git fetch origin
-git rebase origin/main
+git rebase origin/"$base"
 # 解消後
 git rebase --continue
 ```

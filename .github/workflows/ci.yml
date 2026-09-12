@@ -168,3 +168,22 @@ jobs:
         run: pnpm --filter @taku-biyori/backend test
       - name: Test (frontend)
         run: pnpm --filter @taku-biyori/frontend test
+
+  rules:
+    name: AI Rules Sync
+    runs-on: ubuntu-24.04
+    # CLAUDE.md / AGENTS.md / .claude/ は .rulesync/ からの生成物。
+    # 直接編集して rulesync generate を忘れたまま push されるのを防ぐ。
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check generated rule files are up to date
+        run: pnpm rules:check

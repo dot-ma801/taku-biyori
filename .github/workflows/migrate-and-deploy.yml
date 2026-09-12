@@ -1,0 +1,86 @@
+name: Migrate and Deploy (Production)
+
+# main への push を検知した CI ワークフローが成功した後にのみ実行する。
+# Vercel の Git 連携は vercel.json の ignoreCommand で常時スキップしているため、
+# 本番デプロイはここで叩く Deploy Hook 経由でのみ発生する
+# （Deploy Hook は Ignored Build Step を無視して必ずビルドが走る）。
+# これにより「マイグレーション → デプロイ」の順序を保証する。
+on:
+  workflow_run:
+    workflows: ['CI']
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+
+# 短時間に main への push が連続すると、複数の workflow_run が並行して
+# 本番マイグレーションを実行しうる。同一グループで直列化し、後続を待たせる
+# （cancel-in-progress: false のため実行中のジョブを打ち切らない）。
+concurrency:
+  group: production-migrate-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-deploy:
+    name: Migrate DB & Trigger Deploy
+    runs-on: ubuntu-24.04
+    # Secrets（PRODUCTION_DATABASE_URL 等）は Environment secrets として
+    # migrate-deploy 環境にのみ登録する。この環境は Deployment branches を
+    # main に限定しているため、ワークフロー側の if 条件に万一漏れがあっても
+    # main 以外のブランチでは GitHub 側が secrets へのアクセスを拒否する。
+    environment: migrate-deploy
+    # workflow_run の head_branch は「トリガー元ワークフローが走ったブランチ名」でしかなく、
+    # フォークの pull_request イベントでブランチ名がたまたま main であるケースも含んでしまう。
+    # push イベントかつ、フォークではなくこのリポジトリ自身のコミットであることまで確認する
+    # （ここを満たさないと、フォークからの未信頼コードが本番シークレットで実行されうる）。
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.30.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared
+        run: pnpm --filter @taku-biyori/shared build
+      # CI の Build ジョブは `build`（vite.config.ts）を検証しているが、実際に Vercel が
+      # 使うのは `build:vercel`（vite.config.vercel.ts）で、CI では検証されていない
+      # （ADR 0007）。このビルドが後で（DB 変更後に）失敗すると、新スキーマに対して
+      # 旧バックエンドが動き続けることになるため、マイグレーションの前に検証する。
+      - name: Validate Vercel backend build
+        run: pnpm --filter @taku-biyori/backend build:vercel
+      - name: Run production migrations
+        run: pnpm --filter @taku-biyori/backend db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      # このジョブの実行中に main へ別のコミットが積まれていた場合、Deploy Hook は
+      # （このジョブが checkout した head_sha ではなく）その時点の main HEAD を
+      # ビルドしてしまう。その新しいコミットのマイグレーションがまだ適用されて
+      # いない可能性があるため、head_sha が今も main HEAD である場合のみデプロイする。
+      # 一致しない場合は、その新しいコミット自身の workflow_run がデプロイを担当する。
+      - name: Check main has not advanced past this commit
+        id: head_check
+        run: |
+          latest_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$latest_sha" != "${{ github.event.workflow_run.head_sha }}" ]; then
+            echo "main has advanced to $latest_sha; skipping deploy for stale commit ${{ github.event.workflow_run.head_sha }}"
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Trigger Vercel deploy (backend)
+        if: steps.head_check.outputs.stale == 'false'
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_BACKEND }}"
+      - name: Trigger Vercel deploy (frontend)
+        if: steps.head_check.outputs.stale == 'false'
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_FRONTEND }}"

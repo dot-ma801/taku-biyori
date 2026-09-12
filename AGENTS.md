@@ -1,44 +1,248 @@
-# CLAUDE.md — RollHub Backend
+# taku-biyori（RollHub）
 
-このファイルは Claude Code 向けの実装ガイドです。
-実装を始める前に必ず読んでください。
+TRPG の「卓」を立てて日程調整し、当日の記録を残す Web アプリ。
+pnpm workspace のモノレポで、`packages/` 配下に `shared` / `backend` / `frontend` がある。
+
+> **このファイルは生成物です。** 実体は `.rulesync/rules/` にあります。
+> `CLAUDE.md` / `AGENTS.md` / `.claude/` を直接編集しても `rulesync generate` で上書きされます。
+> ルールを変えるときは `.rulesync/rules/*.md` を編集し、`pnpm rules:sync` を実行してください。
+
+パッケージ固有の規約は、そのパッケージのファイルを触ったときに読み込まれます。
+
+| 対象 | ルール |
+|---|---|
+| `packages/backend/**` `packages/shared/**` | `.claude/rules/backend.md` |
+| `packages/frontend/**` | `.claude/rules/frontend.md` |
 
 ---
 
 ## 設計ドキュメント
 
-実装に必要な設計情報は **[`docs/design/v0.3/design-concept-model.md`](docs/design/v0.3/design-concept-model.md)** に
-まとまっています。**APIを実装する前に必ず参照してください。**
+現行仕様は **[`docs/design/v0.3/design-concept-model.md`](docs/design/v0.3/design-concept-model.md)** が唯一の根拠。
+**API を実装・変更する前に必ず参照すること。** 一覧は [`docs/design/README.md`](docs/design/README.md)。
 
-設計ドキュメントはバージョンごとに `docs/design/v{版}/` に分かれています。
-一覧と旧ファイル名の対応表は [`docs/design/README.md`](docs/design/README.md) にあります。
+`docs/design/v0.1/` `v0.2/` は **superseded**（履歴）。実装の根拠には使わない。
 
-特に以下のセクションを確認してください。
+### コード中の `design-v2 §…` の読み方
 
-- §2 命名（日本語ラベルの対応表を含む）
-- §3 DBスキーマ（テーブル定義・カラム型・リレーション）
-- §4 ステータス設計（`getLobbyStatus` / `getGameSessionStatus` の導出ロジック）
-- §6 API設計（エンドポイント一覧・方針）
-- §7 画面構成（ルート・ダッシュボード）
-
-`docs/design/v0.1/` / `v0.2/` 配下は **superseded**（履歴）です。実装の根拠には使わないでください。
-
-### コード中の `design-v2 §…` という参照の読み方
-
-ソースコードのコメントにある `design-v2` / `design-v1.x` は**ファイル名ではなく設計書の通称**です。
-ファイルを `docs/design/v{版}/` へ再編したあとも、この語彙はそのまま残しています。
+これは**ファイル名ではなく設計書の通称**。ファイルを `docs/design/v{版}/` へ再編したあとも語彙だけ残っている。
 
 | コード中の表記 | 指す文書 |
 |---|---|
-| `design-v2 §…` | `docs/design/v0.3/design-concept-model.md`（**現行仕様**） |
+| `design-v2 §…` | `docs/design/v0.3/design-concept-model.md`（現行） |
 | `design-v1.2 §…` | `docs/design/v0.2/design-play-memo.md` |
 | `design-v1.1 §…` / `design-v1 §…` | `docs/design/v0.1/` の各文書 |
 
-`design-v1.x §…` は、**v2 が引き継いだ判断の出典を示す履歴参照**です。
-現行の仕様は必ず v0.3 の design-concept-model.md で確認してください。
+`design-v1.x §…` は **v2 が引き継いだ判断の出典を示す履歴参照**。仕様の確認は必ず v0.3 で行う。
 唯一の例外はプレイメモ4本で、design-v2 §6-15 が「リクエスト・レスポンス契約を v2 でも変えない」と
-明示しているため、v1.2 §4（操作可否）・§5（エラー表）・§8 は**その挙動の記録として有効**です
+明示しているため、v1.2 §4（操作可否）・§5（エラー表）・§8 は挙動の記録として有効
 （パスの入れ子化と `memberId` → `seatId` の改名を除く）。
+
+---
+
+## インポートルール
+
+`src/` および `test/` 配下で**相対パス（`./`・`../`）のインポートは禁止**。必ず `@/` エイリアスを使う
+（ESLint `no-restricted-imports` で強制。backend・frontend 共通）。
+
+```ts
+import { foo } from '../../../src/game-session/domain/foo'; // ❌
+import { foo } from '@/game-session/domain/foo'; // ✅
+```
+
+`@/` は各パッケージの `src/` を指す（`tsconfig.json` の `paths` と `vite.config.ts` の `resolve.alias`）。
+
+---
+
+## 命名規則
+
+- ファイル名は **kebab-case**（`create-game-session.ts`）
+  - **例外: Vue の SFC（`.vue`）とそのディレクトリは PascalCase**（`PublicLobbyList.vue`,
+    `components/common/BaseBreadcrumb/`）。ルートに対応するエントリポイントだけ `index.vue`
+- 開催（セッション）の識別子はすべて **`game` プレフィックス**（`gameSession` / `GameSession`）
+  - Better Auth の `session` と衝突するため
+- DB カラム名は **スネークケース**（`host_user_id`, `scheduled_at`）
+
+---
+
+## 日本語ラベル（design-v2 §2-2 / issue #147）
+
+**方針: BE では概念を分ける。UI ではそれを漏らさない。**
+
+Lobby と GameSession は**バックエンドでは別リソース・別ステータスのまま**だが、
+**利用者に見せる名詞は「卓」1つ**に統一する。UI 表示層で2つを1つの卓に畳む場所は
+`features/GameSession/` に集約してある。
+
+| 概念 | UI 表記 |
+|---|---|
+| Lobby + GameSession（1つの企画） | 卓 |
+| LobbyEntry | 参加 / 参加者 / メンバー |
+| SchedulePoll | 日程調整 |
+| Seat | 着席 / 当日の参加者 |
+
+卓の状態は次の1系列だけを見せる。**固定語彙なのでそのまま使うこと**
+（定義は `features/GameSession/gameSessionCardStatus.ts`）。
+
+```
+募集中 → 調整中 → 開催予定 → 完了 / 中止
+```
+
+「下書き」はこの系列の外側で、ホストにしか見えない。
+
+UI が「卓」1つに見せていても、**コード側（型・変数・API）の分離はそのまま維持する**。
+`Lobby` / `GameSession` / `LobbyStatus`（4値）/ `GameSessionStatus`（4値）や
+`disbanded_at`（解散）・`cancelled_at`（中止）は design-v2 のとおりに扱う。
+
+`features/Landing/` のマーケティング文言の「卓」はサービス全体を語る文脈として残しているもの。
+「直接卓立て」は design-v2 §5-3 / §7-3 の用語なのでそのまま。
+
+### ドキュメントでのステータス表記
+
+ドキュメントでステータスに言及するときは **`日本語ラベル名(変数名)`** の形で書く。
+
+```
+✅ 募集中(recruiting) から 調整中(scheduling) に遷移する
+❌ recruiting から scheduling に遷移する
+❌ 「募集中」から「調整中」に遷移する
+```
+
+---
+
+## 書き方の規約
+
+- **あらゆる出力は MECE を意識し、簡潔に書く。** 重複・漏れのない切り分けを優先し、冗長な前置きや
+  言い換えは削る。これはコード・ドキュメント・PR 本文・レビュー返信・チャット応答すべてに適用する
+- **コメントは基本3行以内。どんなに長くても5行**。それ以上必要ならコメントではなく設計か命名を直す
+- 複雑なビジネスロジックにはコメントを残す。自明なコードには付けない
+- `if` 文のブロックは単行でも必ず `{}` を付ける
+
+---
+
+## Git 運用
+
+### コミット
+
+- **メッセージは日本語**
+- **粒度は細かく、その場で都度コミットする。** まとめて後でコミットすると、同じファイルに別の文脈の
+  変更が混ざって切り分けられなくなる。意味のまとまりができた時点でコミットする
+- 1 コミットに複数の独立した変更を混ぜない
+- **プレフィックスは以下のいずれか**
+
+| プレフィックス | 用途 |
+|---|---|
+| `[add]` | 新規ファイル・機能・型の追加 |
+| `[update]` | 既存機能の変更・改善 |
+| `[fix]` | バグ修正 |
+| `[delete]` | ファイル・コード・機能の削除 |
+| `[clean]` | フォーマット・lint・命名など動作に影響しない変更 |
+| `[style]` | CSS・スタイリングの変更 |
+| `[doc]` | ドキュメント・コメントの追加・更新 |
+
+```
+[add] shared に UpdateGameSessionInput 型を追加
+[add] update-game-session ユースケースを実装
+[fix] GET /api/game-sessions/:id を未認証でも公開セッションに接続できるよう修正
+```
+
+コミット時は必ず以下の形式を使う（`git config` は変更しない）。
+
+```bash
+git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" commit -m "..."
+```
+
+### コンフリクトの解消
+
+**必ず rebase で解消する。`git merge` は使わない。**
+
+```bash
+git fetch origin
+git rebase origin/main
+# 解消後
+git rebase --continue
+```
+
+履歴を直線に保つため、マージコミットを作る解決方法は取らない。
+
+### PR
+
+- **タイトルは日本語**で簡潔に。コミット規則と同じプレフィックスを使う
+  - 例: `[add] 候補日一括更新・日程回答（◯△×）API を実装`
+- **本文は詳細に**。次を含める
+  - 実装の背景・目的
+  - 追加・変更したエンドポイントや機能の一覧
+  - レイヤーごとの変更概要（shared / application / infrastructure / presentation）
+  - 権限・バリデーション・エラーハンドリングの方針
+  - DB スキーマ変更があればその内容
+
+### レビュー指摘への対応
+
+指摘を直したら**必ずそのスレッドに返信する**。返信には対応したコミットハッシュを書く。
+**ハッシュはバッククォートで囲まない**（GitHub がコミットへのリンクに変換しなくなるため）。
+
+```
+✅ 1b493ad で修正しました。
+❌ `1b493ad` で修正しました。
+```
+
+詳細な進め方は `pr-review-response` スキルを使う。
+
+---
+
+## コミット前チェック
+
+```bash
+pnpm check
+```
+
+shared のビルド → format → lint → typecheck → test を shared・backend・frontend の3パッケージすべてに
+対して実行する。CI（`.github/workflows/ci.yml`）と同じ検証内容。`pnpm check:ci` は自動修正なしの検査のみ。
+
+> `@taku-biyori/shared` は `dist/` がないと backend・frontend のテストが型解決に失敗する。
+> `pnpm check` は先頭で shared をビルドするので、個別にコマンドを打つ場合も同じ順序を守ること。
+
+ルールを編集したあとは生成物を更新する。
+
+```bash
+pnpm rules:sync   # .rulesync/ → CLAUDE.md / AGENTS.md / .claude/ / .codex/
+pnpm rules:check  # 生成物が最新か検証（CI でも実行）
+```
+
+---
+
+## 環境変数
+
+| 変数名 | 必須 | 既定値 |
+|---|---|---|
+| `DATABASE_URL` | ✅ | — |
+| `TEST_DATABASE_URL` | ✅（テスト実行時） | — |
+| `BETTER_AUTH_SECRET` | ✅ | — |
+| `PORT` | — | `3000` |
+| `FRONTEND_URL` | — | `http://localhost:5173` |
+| `BETTER_AUTH_URL` | — | `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID` | — | — |
+| `GOOGLE_CLIENT_SECRET` | — | — |
+
+---
+
+## 開発サーバー
+
+```bash
+pnpm --filter @taku-biyori/backend dev   # http://localhost:3000
+pnpm --filter @taku-biyori/frontend dev  # http://localhost:5173
+```
+
+# backend / shared の規約
+
+## 技術スタック
+
+| 用途 | ライブラリ |
+|---|---|
+| HTTP フレームワーク | Hono 4.x |
+| 認証 | Better Auth 1.x |
+| ORM | Drizzle ORM 0.45.x |
+| DB ドライバ | postgres（Neon） |
+| テスト | Vitest 4.x |
+| ランタイム | Node.js（`@hono/node-server`） |
 
 ---
 
@@ -62,117 +266,30 @@ packages/backend/src/
             └── create-app.ts  # アプリ組み立て
 ```
 
-依存の向きは **内側の層に向かう** ように保つこと。
-`presentation` → `application` → `domain` の順。`infrastructure` は外側から注入する。
-
-既存の `health/` ディレクトリが実装例として参考になります。
+依存の向きは **内側の層に向かう**（`presentation` → `application` → `domain`）。
+`infrastructure` は外側から注入する。実装例は `health/` が参考になる。
 
 ---
 
-## 技術スタック
+## `shared` パッケージとの連携
 
-| 用途 | ライブラリ |
-|---|---|
-| HTTP フレームワーク | Hono 4.x |
-| 認証 | Better Auth 1.x |
-| ORM | Drizzle ORM 0.45.x |
-| DB ドライバ | postgres（Neon） |
-| テスト | Vitest 4.x |
-| ランタイム | Node.js（`@hono/node-server`） |
+`packages/shared`（`@taku-biyori/shared`）はフロントエンドとバックエンド共通の型・契約を置く場所。
 
----
+**API を実装する前に、必ず `shared` にリクエスト型・レスポンス型を定義してから始めること。**
+型定義が契約となり、FE と BE の整合性を保証する。定義したら `packages/shared` の
+エクスポートへの追加も忘れずに。
 
-## インポートルール
-
-`src/` および `test/` 配下のファイルは、**相対パス（`./`・`../`）でのインポートを禁止**しています。
-必ず `@/` エイリアスを使うこと（ESLint `no-restricted-imports` で強制）。
-
-```ts
-// ❌ NG
-import { foo } from '../../../src/game-session/domain/foo';
-import { bar } from './schema';
-
-// ✅ OK
-import { foo } from '@/game-session/domain/foo';
-import { bar } from '@/system/infrastructure/database/schema';
-```
-
-`@/` は各パッケージの `src/` にマッピングされています（`tsconfig.json` の `paths` と `vite.config.ts` の `resolve.alias` で設定）。
-backend・frontend ともに同じ規則です。
-
----
-
-## 命名規則
-
-- ファイル名は **kebab-case**（例: `create-game-session.ts`, `game-session-route.ts`）
-  - **例外: Vue の SFC（`.vue`）とそのディレクトリは PascalCase**（例: `PublicLobbyList.vue`,
-    `components/common/BaseBreadcrumb/`）。ルートに対応するエントリポイントだけ `index.vue`
-- 開催（セッション）に関する識別子はすべて **`game` プレフィックス**を付ける
-  - 変数名: `gameSession`
-  - 型名: `GameSession`
-  - 理由: Better Auth の `session` と衝突するため
-- DB カラム名は **スネークケース**（例: `host_user_id`, `scheduled_at`）
-
-### 日本語ラベル（design-v2 §2-2 / issue #147）
-
-**方針: BE では概念を分ける。UI ではそれを漏らさない。**
-
-Lobby と GameSession は**バックエンドでは別リソース・別ステータスのまま**だが、
-**利用者に見せる名詞は「卓」1つ**に統一する（issue #147 のリデザインで確定）。
-UI 表示層で2つを1つの卓に畳む場所は `features/GameSession/` に集約してある。
-
-#### 利用者に見せる語（UI）
-
-| 概念 | UI 表記 |
-|---|---|
-| Lobby + GameSession（1つの企画） | 卓 |
-| LobbyEntry | 参加 / 参加者 / メンバー |
-| SchedulePoll | 日程調整 |
-| Seat | 着席 / 当日の参加者 |
-
-卓の状態は次の1系列だけを見せる。**この語は固定語彙なのでそのまま使うこと**
-（定義は `features/GameSession/gameSessionCardStatus.ts`）。
-
-```
-募集中 → 調整中 → 開催予定 → 完了 / 中止
-```
-
-「下書き」はこの系列の外側で、ホストにしか見えない。
-
-#### コードの中で使う語（型・変数・API）
-
-UI が「卓」1つに見せていても、**コード側の分離はそのまま維持する**。
-`Lobby` / `GameSession` / `LobbyStatus`（4値）/ `GameSessionStatus`（4値）や
-`disbanded_at`（解散）・`cancelled_at`（中止）は design-v2 のとおりに扱う。
-
-`features/Landing/` のマーケティング文言の「卓」は、以前からサービス全体を語る文脈として
-残していたもので、この統一と矛盾しない。
-「直接卓立て」は design-v2 §5-3 / §7-3 が用語として使っているのでそのまま。
-
----
-
-## DB スキーマの変更手順
-
-**新しいテーブル・enum は機能ごとの PostgreSQL スキーマに置くこと**（`docs/adr/0005-postgresql-schema-per-feature.md` 参照）。
-**開催（`GameSession`）は必ずロビーに属する**（`lobby_id` は NOT NULL。`docs/adr/0008-game-session-belongs-to-lobby.md`）。
-`pgTable()` / `pgEnum()` は使わず、`pgSchema('{機能名}')` 経由で定義する
-（例: `gameSessionSchema.table(...)`。機能ディレクトリ名の kebab-case はスキーマ名では snake_case に読み替える）。
-
-スキーマを変更した場合は以下を実行します。
-
-```bash
-pnpm --filter @taku-biyori/backend db:generate
-pnpm --filter @taku-biyori/backend db:migrate
-```
+`shared` を変更したら `pnpm --filter @taku-biyori/shared build` を実行する
+（`dist/` がないと backend のテストが型解決に失敗する）。
 
 ---
 
 ## テスト方針
 
-**Backend の実装は TDD（テスト駆動開発）で進めること。**
-必ずテストを先に書き、失敗を確認してから実装する。Red → Green → Refactor のサイクルを守る。
+**backend の実装は TDD で進めること。** 必ずテストを先に書き、失敗を確認してから実装する
+（Red → Green → Refactor）。
 
-t-wada の **AAA パターン**を採用しています。
+t-wada の **AAA パターン**を採用している。
 
 ```ts
 // Arrange
@@ -194,150 +311,57 @@ expect(result).toEqual(...)
   各ケースはトランザクションでロールバックする
 
 ```bash
-# テスト DB の作成 + マイグレーション適用（初回・スキーマ変更後）
-pnpm --filter @taku-biyori/backend db:test:setup
+pnpm --filter @taku-biyori/backend db:test:setup   # テスト DB 作成 + マイグレーション（初回・スキーマ変更後）
+pnpm --filter @taku-biyori/backend test:unit
+pnpm --filter @taku-biyori/backend test:integration
 ```
 
 > インテグレーションテストが `relation "auth.user" does not exist` やフックのタイムアウトで
 > まとめて落ちたら、コードではなく **PostgreSQL が止まっていないか**を先に疑う（`pg_isready`）。
 
-```bash
-# 全テスト
-pnpm --filter @taku-biyori/backend test
-
-# ユニットテストのみ
-pnpm --filter @taku-biyori/backend test:unit
-
-# インテグレーションテストのみ
-pnpm --filter @taku-biyori/backend test:integration
-```
+> `pnpm --filter @taku-biyori/backend test` はローカルでは watch モードで起動する。
+> 1 回だけ実行したいときは `pnpm check`（`CI=true` で実行する）か `test -- run` を使う。
 
 ---
 
-## `shared` パッケージとの連携
+## 作業の入口
 
-`packages/shared`（`@taku-biyori/shared`）には、フロントエンドとバックエンドで共通の型・契約を置いています。
-
-**API を実装する前に、必ず `shared` にリクエスト型・レスポンス型を定義してから始めること。**
-型定義が契約となり、フロントエンドとバックエンドの整合性を保証する。
-型を定義したら `packages/shared` のエクスポートに追加することも忘れずに。
-
----
-
-## 環境変数
-
-| 変数名 | 必須 | 既定値 |
-|---|---|---|
-| `DATABASE_URL` | ✅ | — |
-| `TEST_DATABASE_URL` | ✅（テスト実行時） | — |
-| `BETTER_AUTH_SECRET` | ✅ | — |
-| `PORT` | — | `3000` |
-| `FRONTEND_URL` | — | `http://localhost:5173` |
-| `BETTER_AUTH_URL` | — | `http://localhost:3000` |
-| `GOOGLE_CLIENT_ID` | — | — |
-| `GOOGLE_CLIENT_SECRET` | — | — |
-
----
-
-## 新しい API を追加する手順
-
-1. `docs/design/v0.3/design-concept-model.md` でエンドポイント仕様・DBスキーマを確認する
-2. **`packages/shared` にリクエスト型・レスポンス型を定義する**（実装より先に行うこと）
-3. **テストを先に書く**（TDD: Red → Green → Refactor）
-4. `src/{機能名}/` ディレクトリを作成し、レイヤーごとにファイルを分ける
-5. `src/{機能名}/presentation/controller/routes/{機能名}-route.ts` にルートを定義する
-6. `src/app/presentation/controller/create-app.ts` にルートを登録する
-
----
-
-## PR 規則
-
-- **タイトルは日本語**で簡潔に書く。コミット規則と同じプレフィックスを使うこと
-  - 例: `[add] 候補日一括更新・日程回答（◯△×）API を実装`
-- **Summary（本文）は詳細に**記載する。以下の項目を含めること
-  - 実装の背景・目的
-  - 追加・変更したエンドポイントや機能の一覧
-  - レイヤーごとの変更概要（shared / application / infrastructure / presentation）
-  - 権限・バリデーション・エラーハンドリングの方針
-  - DBスキーマ変更がある場合はその内容
-
----
-
-## コミット規則
-
-- **メッセージは日本語**で書く
-- **粒度は細かく**保つ。「shared に型追加」「application 層実装」「route 登録」など、意味のまとまりごとに分けてコミットする
-- 1 コミットに複数の独立した変更を混ぜない
-- **プレフィックスは以下のいずれかを使う**
-
-| プレフィックス | 用途 |
+| やること | 使うスキル |
 |---|---|
-| `[add]` | 新規ファイル・機能・型の追加 |
-| `[update]` | 既存機能の変更・改善 |
-| `[fix]` | バグ修正 |
-| `[delete]` | ファイル・コード・機能の削除 |
-| `[clean]` | コードフォーマット・lint・命名など動作に影響しない変更 |
-| `[style]` | CSS・スタイリングの変更 |
-| `[doc]` | ドキュメント・コメントの追加・更新 |
+| 新しい API エンドポイントを追加する | `add-api-endpoint` |
+| DB のテーブル・カラム・enum を変更する | `db-schema-change` |
 
-```
-# 例
-[add] shared に UpdateGameSessionInput 型を追加
-[add] update-game-session ユースケースを実装
-[add] PATCH /api/game-sessions/:id ルートを登録
-[add] update-game-session のユニットテストを追加
-[fix] GET /api/game-sessions/:id を未認証でも公開セッションに接続できるよう修正
-[update] getGameSession の権限チェックを application 層へ移動
-[doc] コミット規則を CLAUDE.md に追記
-```
+# PR レビューの規約（Codex 向け）
 
----
+## 言語
 
-## コミット前チェック
+**レビューコメントは必ず日本語で書く。** 要約・インラインコメント・指摘の見出し・結論のすべてを日本語にする。
+コード片・識別子・コマンド・エラーメッセージの引用は原文のままでよい。
 
-コミット前に以下をすべて通しておくこと。CI で Lint・Format Check・Type Check・Test が別ジョブで動くため、まとめて確認しておくと安全。
+## 書き方
 
-```bash
-# shared のビルド（テスト実行前に必要）
-pnpm --filter @taku-biyori/shared build
+- **MECE を意識し、簡潔に書く。** 同じ指摘を観点を変えて繰り返さない
+- 1つの指摘は「何が問題か」→「なぜ問題か」→「どう直すか」の3点で完結させる
+- 重大度を明示する（例: `[must]` / `[should]` / `[nits]`）
+- 憶測で断定しない。確認が必要なものは質問として書く
 
-# フォーマット修正（shared・backend 両方）
-pnpm --filter @taku-biyori/shared format
-pnpm --filter @taku-biyori/backend format
+## 観点
 
-# Lint
-pnpm --filter @taku-biyori/backend lint
+このリポジトリ固有の規約に反していないかを優先して見る。
 
-# 型チェック
-pnpm --filter @taku-biyori/backend typecheck
+| 観点 | 参照 |
+|---|---|
+| `@/` エイリアスを使わず相対パスで import していないか | AGENTS.md「インポートルール」 |
+| 仕様が `docs/design/v0.3/design-concept-model.md` と一致しているか | AGENTS.md「設計ドキュメント」 |
+| backend の実装にテストが先行しているか（TDD） | AGENTS.md「テスト方針」 |
+| frontend が DTO を composable / component に持ち込んでいないか | AGENTS.md「API の型（DTO）と FE の model を分ける」 |
+| `watch` を `computed` / `emit` / `onMounted` で置き換えられないか | AGENTS.md「`watch` を多用しない」 |
+| 新規テーブル・enum が `pgSchema()` 経由で定義されているか | `docs/adr/0005-postgresql-schema-per-feature.md` |
+| コメントが3行（最大5行）に収まっているか | AGENTS.md「書き方の規約」 |
 
-# テスト
-pnpm --filter @taku-biyori/backend test
-```
+# frontend の規約
 
-> **注意**: `@taku-biyori/shared` は `dist/` が存在しないとバックエンドのテストが型解決に失敗する。
-> shared のコードを変更した場合は必ず `build` を再実行すること。
-
-## Git 設定
-
-コミット時は必ず以下の形式を使うこと（git config は変更しない）：
-
-git -c "user.name=Claude Code Bot" -c "user.email=claude-code-bot@example.com" commit -m "..."
-
----
-
-## 開発サーバーの起動
-
-```bash
-pnpm --filter @taku-biyori/backend dev
-# → http://localhost:3000
-```
-
----
-
-## フロントエンド実装方針
-
-### API の型（DTO）と FE の model を分ける
+## API の型（DTO）と FE の model を分ける
 
 `@taku-biyori/shared` の型は **API との通信契約（DTO）** であって、フロントエンド内部で扱う
 データ構造ではない。DTO を見てよいのは `src/api/` と `src/models/` だけで、
@@ -386,7 +410,9 @@ model 側で引き受けること。
   現状は `utils/pendingCandidateDates.ts` が `LobbyCandidateDateInput` を持つ1件のみ
 - 参考: `src/models/lobby.ts` / `src/models/lobby.test.ts`
 
-### template 内の式は computed に切り出す
+---
+
+## template 内の式は computed に切り出す
 
 `<template>` 内に `??` や三項演算子などの式を直接書かない。
 必ず `<script setup>` 内の `computed` に切り出すこと。
@@ -402,17 +428,15 @@ model 側で引き受けること。
 const scenarioName = computed(() => gameSession.value?.scenarioName ?? '未設定');
 ```
 
-### 表示用のフォールバック値は composable ではなくコンポーネントに置く
+---
 
-`'未設定'` のような表示文言は UI の関心事であり、データ取得に集中する composable には含めない。
-composable はフォールバックなしの生データを返し、コンポーネント側の `computed` で表示用に加工する。
-
-### コンポーネントが持っていいもの・composable に寄せるもの
+## コンポーネントが持っていいもの・composable に寄せるもの
 
 **コンポーネントの責務はテンプレートの構造制御に限定する。**
 
 - ✅ コンポーネントに置く: `v-if` / `v-for` の条件、イベント転送、子コンポーネントへの props マッピング
-- ❌ コンポーネントに置かない: データの変換・集計・導出。「表示のための計算」も含め、判断に迷ったら composable に寄せる
+- ❌ コンポーネントに置かない: データの変換・集計・導出。「表示のための計算」も含め、判断に迷ったら
+  composable に寄せる
 
 ```ts
 // ❌ NG — ScheduleTable.vue の中に計算ロジックを書く
@@ -427,34 +451,51 @@ const { getAnswer, okCount } = useScheduleView(
 );
 ```
 
-### フィーチャー内のディレクトリ構成
+`'未設定'` のような表示用フォールバックは UI の関心事なので composable に含めない。
+composable はフォールバックなしの生データを返し、コンポーネント側の `computed` で表示用に加工する。
 
-**他の機能から使われることを意図しない実装詳細が生まれたら、サブディレクトリを切る。**
+---
 
-外部に公開するエントリポイントは1ファイルに限定し、内部の分割が外に漏れないようにする。
+## `watch` を多用しない
 
-```plaintext
-features/GameSession/Detail/
-  Schedule/                     ← 日程調整の実装詳細をまとめたサブディレクトリ
-    ScheduleDisplay.vue         ← 外部から import するのはここだけ
-    ScheduleTable.vue           ← Detail/ の他コンポーネントからは使わない
-    AnswerCell.vue
-    useScheduleDisplay.ts
-    useScheduleEdit.ts
-    useScheduleView.ts
-  index.vue                     ← ScheduleDisplay.vue だけを import する
-  MemberDisplay.vue
+**`watch` は最後の手段。** 書きたくなったら、先に次の4つを検討する。
+
+| 代わりに使えないか | 典型例 |
+|---|---|
+| `computed` で導出できないか | 他の state から計算できる値に `watch` + `ref` を使わない |
+| `emit` で親にイベントを渡せば済まないか | 子の変更を親が `watch` で拾う → 子が `emit`、親がハンドラで処理する |
+| イベントドリブンにできないか | 「値が変わったら実行」ではなく「ユーザーが押したら実行」で書けないか |
+| `onMounted` の初期化で済まないか | 初回だけ必要な処理に `watch(..., { immediate: true })` を使わない |
+
+```ts
+// ❌ NG — 子の state 変化を watch で親に伝播させる
+watch(draftName, (value) => {
+  emit('update', value);
+});
+
+// ✅ OK — 確定した時点のイベントとして親へ渡す
+function handleSubmit() {
+  emit('update', draftName.value);
+}
 ```
 
-### composable の引数は `Ref` を要求しない（依存は一方向に保つ）
+`watch` が妥当なのは、**自分が発生源ではない外部の変化に追従する**とき。
+
+- 再取得などで props の元データが差し替わり、編集ドラフトを作り直す必要がある
+- ルートパラメータの変化に応じて再フェッチする
+- 外部リソース（購読・タイマー）のライフサイクルを state に合わせる
+
+使う場合は「何の変化に追従しているのか」をコメント1行で残す。
+
+---
+
+## composable の引数は `Ref` を要求しない（依存は一方向に保つ）
 
 **composable の引数で `Ref<T>` を受け取ってはいけない。**
 依存の向き（とくに書き込み）は常に「呼び出し側 → composable」の一方向に保つ。
 `Ref` を渡すと composable が `.value =` で呼び出し側の状態を書き換えられてしまい、
 親が所有する状態を子のロジックが勝手に変える＝Vue の一方向データフロー違反になる。
 （props のバケツリレーで「値」を下に流すのは可。逆流する「書き込み」を作らないことが要点）
-
-関心事ごとに引数の形を分ける。
 
 | 関心事 | ❌ NG | ✅ OK |
 |---|---|---|
@@ -493,13 +534,13 @@ export const useEdit = (
 **例外**: composable がその状態の所有者自身（自分で `ref()` を宣言している）の場合のみ、
 内部で `.value =` してよい。props 境界をまたいで受け取った値は書き換えない。
 
-### 「サーバ値」と「編集ドラフト」は別物として管理する
+---
+
+## 「サーバ値」と「編集ドラフト」は別物として管理する
 
 API 由来の値（＝真実）と、UI で編集中の値（＝ドラフト）を**同一の状態にしない**。
 同一視すると「元の値」が残らず変更検知ができず、キャンセルで戻す処理も複雑になる。
-（Pinia などのグローバルストアは使わない方針。下記のコンポーネント所有で完結させる）
-
-データフローは次の3者で固定する。
+（Pinia などのグローバルストアは使わない方針。コンポーネント所有で完結させる）
 
 | 状態 | 所有者 | 渡し方 |
 |---|---|---|
@@ -516,12 +557,35 @@ API 由来の値（＝真実）と、UI で編集中の値（＝ドラフト）�
   （親で判定したいときは emit した object と親が持つ original を比較）
 - ⚠️ **罠**: 再取得などで original（prop）が変わったら draft は古いまま取り残される。
   `watch(() => props.original, reset)` で draft を作り直すか `:key` で再マウントする
+  （これは上の「`watch` が妥当なケース」にあたる）
 - 参考実装: `useMemberEdit.ts`（`baseline` / `draftCharacterName` / `isDirty`）
 
-### `useSession` の使い方（better-auth）
+---
 
-`createAuthClient`（`better-auth/client` の vanilla クライアント）の `useSession` は nanostores の Atom であり、Vue の `ref` ではないため直接リアクティブに使えない。
-以下のパターンで Vue の `ref` に変換すること。
+## フィーチャー内のディレクトリ構成
+
+**他の機能から使われることを意図しない実装詳細が生まれたら、サブディレクトリを切る。**
+外部に公開するエントリポイントは1ファイルに限定し、内部の分割が外に漏れないようにする。
+
+```plaintext
+features/GameSession/Detail/
+  Schedule/                     ← 日程調整の実装詳細をまとめたサブディレクトリ
+    ScheduleDisplay.vue         ← 外部から import するのはここだけ
+    ScheduleTable.vue           ← Detail/ の他コンポーネントからは使わない
+    AnswerCell.vue
+    useScheduleDisplay.ts
+    useScheduleEdit.ts
+    useScheduleView.ts
+  index.vue                     ← ScheduleDisplay.vue だけを import する
+  MemberDisplay.vue
+```
+
+---
+
+## `useSession` の使い方（better-auth）
+
+`createAuthClient`（`better-auth/client` の vanilla クライアント）の `useSession` は nanostores の
+Atom であり、Vue の `ref` ではないため直接リアクティブに使えない。以下のパターンで変換する。
 
 ```ts
 import { useSession } from '@/lib/auth';
@@ -533,40 +597,23 @@ onUnmounted(unsub);
 // → sessionData.value.data?.user?.id でユーザー ID にアクセス
 ```
 
-### `noUncheckedIndexedAccess` への対応
+---
 
-`tsconfig` で `noUncheckedIndexedAccess: true` が有効なため、`Record<string, T>` のインデックスアクセスは `T | undefined` になる。
-キーが存在するかどうか不明なルックアップには `Map` + `.get()` を使うと型が明確になる。
+## `noUncheckedIndexedAccess` への対応
+
+`tsconfig` で `noUncheckedIndexedAccess: true` が有効なため、`Record<string, T>` のインデックス
+アクセスは `T | undefined` になる。キーの存在が不明なルックアップには `Map` + `.get()` を使う。
 
 ```ts
-// ❌ Record のインデックスアクセスは undefined になりうる
-const answer = myAnswers[dateId]; // string | undefined
-
-// ✅ Map の .get() は意図が明確
-const answer = myAnswers.get(dateId); // string | undefined（型は同じだが意図が明示的）
+const answer = myAnswers[dateId]; // ❌ Record のインデックスアクセスは undefined になりうる
+const answer = myAnswers.get(dateId); // ✅ .get() は意図が明確
 ```
 
-# Project Overview
+---
 
-## General Guidelines
+## 作業の入口
 
-- Use TypeScript for all new code
-- Follow consistent naming conventions
-- Write self-documenting code with clear variable and function names
-- Prefer composition over inheritance
-- Use meaningful comments for complex business logic
-
-## Code Style
-
-- Use 2 spaces for indentation
-- Use semicolons
-- Use double quotes for strings
-- Use trailing commas in multi-line objects and arrays
-
-## Architecture Principles
-
-- Organize code by feature, not by file type
-- Keep related files close together
-- Use dependency injection for better testability
-- Implement proper error handling
-- Follow single responsibility principle
+| やること | 使うスキル |
+|---|---|
+| 基本 UI コンポーネントを追加する | `add-basic-component` |
+| composable（処理ロジック）を TDD で実装する | `tdd-composable` |

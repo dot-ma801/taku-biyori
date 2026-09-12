@@ -14,7 +14,7 @@ info:
     v1.1 にあった「確定」という概念は消えている。募集枠が確定して卓へ転生するのではなく、
     ロビーの配下にセッションが 0..n 件ぶら下がる。リスケは「中止 → 新しい日程調整 → 新しいセッション」で表す。
 
-    詳細は [docs/design-v2.md](https://github.com/dot-ma801/taku-biyori/blob/develop/v0.3/docs/design-v2.md) を参照。
+    詳細は [docs/design/v0.3/design-concept-model.md](https://github.com/dot-ma801/taku-biyori/blob/main/docs/design/v0.3/design-concept-model.md) を参照。
 
     ## ステータス
     ステータスは**DB に持たず、ファクトカラムから導出する**。導出関数は `packages/shared` に置き、

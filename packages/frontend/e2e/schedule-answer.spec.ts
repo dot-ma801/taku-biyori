@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { RECRUITING_LOBBY_TITLE } from './fixtures';
+import { RECRUITING_LOBBY_TITLE, candidateDateLabel } from './fixtures';
 
 /** 「あなた」列のセルは ◯ → △ → ✕ の順に切り替わる */
 const NEXT_ANSWER = {
@@ -15,8 +15,9 @@ test('日程の回答を切り替えると、保存後の表に残る', async ({
     .click();
   await page.getByRole('tab', { name: '日程調整' }).click();
 
-  // シードは 10/3 に「調整できる」を入れている
-  const row = page.getByRole('row').filter({ hasText: '10/3' });
+  // シードは3つ目の候補日（21日後）にホストの「調整できる」を入れている
+  const targetDate = candidateDateLabel(21);
+  const row = page.getByRole('row').filter({ hasText: targetDate });
   await expect(
     row.getByRole('cell', { name: '調整できる' }).first(),
   ).toBeVisible();
@@ -35,7 +36,7 @@ test('日程の回答を切り替えると、保存後の表に残る', async ({
   await expect(
     page
       .getByRole('row')
-      .filter({ hasText: '10/3' })
+      .filter({ hasText: targetDate })
       .getByRole('cell', { name: '不可' })
       .first(),
   ).toBeVisible();

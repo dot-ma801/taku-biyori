@@ -18,6 +18,16 @@ export const SCHEDULED_LOBBY_TITLE = 'TRPG「はじめての探索」';
 export const AUTH_STATE_PATH = 'e2e/.auth/user.json';
 
 /**
+ * シードの候補日（`dateFromToday(offsetDays)`）を画面表示と同じ "M/D" で返す。
+ * 日付を決め打ちすると実行日が変わった途端に対象行が消えるため、シードと同じ基準で導出する。
+ */
+export const candidateDateLabel = (offsetDays: number): string => {
+  const target = new Date();
+  target.setDate(target.getDate() + offsetDays);
+  return `${target.getMonth() + 1}/${target.getDate()}`;
+};
+
+/**
  * 開いているカレンダーから「今日から days 日後」を選ぶ。
  * 月をまたぐ場合は次の月へ送る（days は31未満を前提にしている）。
  */

@@ -13,6 +13,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { assertDistinctFromDatabaseUrl } from '@/system/infrastructure/database/assert-distinct-database-url';
+import { assertLocalDatabaseUrl } from '@/system/infrastructure/database/assert-local-database-url';
 
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
 
@@ -21,6 +22,10 @@ if (!e2eDatabaseUrl) {
     'E2E_DATABASE_URL is required. packages/backend/.env.example を参照して設定してください',
   );
 }
+
+// seed.ts も同じ検証をするが、そこまで待つと CREATE DATABASE とマイグレーションが
+// リモートで完了してしまう。最初の DB 操作より前にここで弾く
+assertLocalDatabaseUrl(e2eDatabaseUrl, process.env.SEED_ALLOW_REMOTE === '1');
 
 assertDistinctFromDatabaseUrl(
   e2eDatabaseUrl,

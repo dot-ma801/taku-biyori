@@ -30,6 +30,11 @@ test('日程の回答を切り替えると、保存後の表に残る', async ({
 
   await page.getByRole('button', { name: '完了' }).click();
 
+  // 保存が終わると編集モードが閉じる。待たずに reload すると送信が中断される
+  await expect(
+    page.getByRole('button', { name: '回答を編集する' }),
+  ).toBeVisible();
+
   // 読み込み直しても保存されている
   await page.reload();
   await page.getByRole('tab', { name: '日程調整' }).click();

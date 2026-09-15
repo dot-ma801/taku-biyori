@@ -29,13 +29,10 @@ description: >
 | テーブル・カラム・enum | `db-schema-change` |
 | frontend の処理ロジック | `tdd-composable` |
 | `components/` の基本UI | `add-basic-component` |
-| `features/` の画面の組み立て | スキルなし |
+| `features/` の画面の組み立て | `add-feature-screen` |
 
 ルートを増やさない backend の変更も `add-api-endpoint` の手順に従う（ルート登録の段だけ飛ばす）。
-
-**画面の組み立てだけは「スキルなし」。** 手順を固定していないという意味で、やらなくていいという
-意味ではない。処理ロジックを `tdd-composable` で先に固めてから `.vue` を書き、下の
-「実装中の共通の作法」に従う。
+画面は処理ロジックを `tdd-composable` で先に固めてから `.vue` を書く（`add-feature-screen` の段2）。
 
 ## 入口（本流の途中から入る）
 

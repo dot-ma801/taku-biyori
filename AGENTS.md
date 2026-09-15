@@ -627,3 +627,4 @@ const answer = myAnswers.get(dateId); // ✅ .get() は意図が明確
 |---|---|
 | 基本 UI コンポーネントを追加する | `add-basic-component` |
 | composable（処理ロジック）を TDD で実装する | `tdd-composable` |
+| `features/` の画面を組む・変える | `add-feature-screen` |

@@ -65,18 +65,17 @@ flowchart TD
 
 段5は触る対象で分かれます。
 
-| 対象                          | スキル                |
-| ----------------------------- | --------------------- |
-| API エンドポイント            | `add-api-endpoint`    |
-| テーブル・カラム・enum        | `db-schema-change`    |
-| frontend の処理ロジック       | `tdd-composable`      |
-| `components/` の基本UI        | `add-basic-component` |
-| `features/` の画面の組み立て  | スキルなし            |
-| API を伴わない backend の実装 | スキルなし            |
+| 対象                                 | スキル                |
+| ------------------------------------ | --------------------- |
+| backend の実装（API の有無を問わない） | `add-api-endpoint`    |
+| テーブル・カラム・enum               | `db-schema-change`    |
+| frontend の処理ロジック              | `tdd-composable`      |
+| `components/` の基本UI               | `add-basic-component` |
+| `features/` の画面の組み立て         | スキルなし            |
 
-「スキルなし」は手順を固定していないという意味です。完了の定義（`pnpm check` と
-`pnpm test:e2e` が緑）は同じで、画面の組み立ては処理ロジックを `tdd-composable` で
-先に固めてから `.vue` を書きます。
+ルートを増やさない backend の変更も `add-api-endpoint` の手順に従います（ルート登録の段だけ飛ばす）。
+「スキルなし」は手順を固定していないという意味で、完了の定義（`pnpm check` と `pnpm test:e2e` が緑）は
+同じです。画面の組み立ては処理ロジックを `tdd-composable` で先に固めてから `.vue` を書きます。
 
 ### 並列に進める
 

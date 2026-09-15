@@ -28,16 +28,17 @@ disable-model-invocation: true
 
 | 対象 | 振り先 |
 |---|---|
-| API エンドポイント | `add-api-endpoint` |
+| backend の実装（API の有無を問わない） | `add-api-endpoint` |
 | テーブル・カラム・enum | `db-schema-change` |
 | frontend の処理ロジック | `tdd-composable` |
 | `components/` の基本UI | `add-basic-component` |
 | `features/` の画面の組み立て | スキルなし |
-| API を伴わない backend の実装 | スキルなし |
 
-**「スキルなし」は手順を固定していないという意味で、やらなくていいという意味ではない。**
-下の「実装中の共通の作法」に従う。画面の組み立ては、処理ロジックを `tdd-composable` で
-先に固めてから `.vue` を書く（`features/` の composable がテストの切り口）。
+ルートを増やさない backend の変更も `add-api-endpoint` の手順に従う（ルート登録の段だけ飛ばす）。
+
+**画面の組み立てだけは「スキルなし」。** 手順を固定していないという意味で、やらなくていいという
+意味ではない。処理ロジックを `tdd-composable` で先に固めてから `.vue` を書き、下の
+「実装中の共通の作法」に従う。
 
 ## 入口（本流の途中から入る）
 

@@ -22,7 +22,9 @@ description: >
 
 ## 1. 書く前に調べる
 
-1. **文脈を集める** — 会話・`docs/design/v0.3/design-concept-model.md` の該当 §・トラッキング Issue
+1. **文脈を集める** — 会話・現行版の設計書の該当 §・トラッキング Issue
+   - **版は名指しせず、[`docs/design/README.md`](../../../docs/design/README.md) が「現行」と書いている版を読む。**
+     版は増えていくので、ここに版番号を書くと古い設計書を指したまま腐る
 2. **現状を読む** — 既にあるもの、命名、同種の実装パターン
 3. **語彙を合わせる** — 利用者に見せる名詞は CLAUDE.md の日本語ラベルに従う（卓 / 参加 / 日程調整 / 着席）
 4. **prefactoring の機会を探す** — 先に変更しやすくしてから変える。必要なら独立した Issue にする
@@ -86,7 +88,7 @@ description: >
 
 ## 参照
 
-- `docs/design/v0.3/design-concept-model.md` §{番号}
+- `docs/design/v{版}/{設計書}` §{番号}（Issue を書いた時点の現行版を実名で書く）
 - {関連 ADR があれば}
 
 ## 触るディレクトリ

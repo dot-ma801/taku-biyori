@@ -99,7 +99,7 @@ flowchart TD
 依存があるもの、**「触るディレクトリ」が重なるものは同時に走らせません**。
 
 ```bash
-git worktree add ../taku-biyori-issue-<番号> -b claude/issue-<番号>-<要約>
+git worktree add ../taku-biyori-issue-<番号> -b feature/issue-<番号>-<要約>
 ```
 
 ### 語彙

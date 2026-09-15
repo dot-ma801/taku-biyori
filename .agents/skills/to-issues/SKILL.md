@@ -106,7 +106,7 @@ description: >
 
 - **依存が「なし」の Issue が今すぐ着手できるもの**。これらは互いに衝突しないので並列に回せる
 - 「触るディレクトリ」が重なる Issue は、依存が無くても**同時に走らせない**
-- worktree は `../taku-biyori-issue-<番号>`、ブランチは `claude/issue-<番号>-<要約>`
+- worktree は `../taku-biyori-issue-<番号>`、ブランチは `feature/issue-<番号>-<要約>`
 
 ## 7. 承認で止まる（省略不可）
 

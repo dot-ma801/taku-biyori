@@ -9,7 +9,7 @@ targets:
 ---
 # 設計を Issue に割る
 
-`dig` / `concept-design` / 設計書で固まった判断を、**そのまま着手できる Issue 群**に落とす。
+`requirement-dig` / `concept-design` / 設計書で固まった判断を、**そのまま着手できる Issue 群**に落とす。
 
 ## 0. 前提を確認する
 
@@ -17,7 +17,7 @@ targets:
 
 | 前提 | 欠けていたら |
 |---|---|
-| 何を作るかが決まっている | `dig` へ |
+| 何を作るかが決まっている | `requirement-dig` へ |
 | 概念と語彙が決まっている | `concept-design` へ |
 | 元に戻しにくい判断が記録されている | `adr-creator` へ |
 

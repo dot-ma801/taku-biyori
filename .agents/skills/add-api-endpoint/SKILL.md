@@ -11,7 +11,7 @@ description: >
 
 ## 1. 仕様を確定する
 
-[`docs/design/v0.3/design-concept-model.md`](../../../docs/design/v0.3/design-concept-model.md) で次を確認する。
+現行版の基本設計（[`docs/design/README.md`](../../../docs/design/README.md) の「現行版」）で次を確認する。
 
 - §6 API設計 — パス・メソッド・認可の方針
 - §3 DBスキーマ — 触るテーブルとリレーション
@@ -85,7 +85,7 @@ Green を確認し、リファクタする。エラーレスポンスの形が�
 
 ## チェックリスト
 
-- [ ] `docs/design/v0.3/design-concept-model.md` と仕様が一致している
+- [ ] 現行版の設計書と仕様が一致している
 - [ ] `shared` に型を定義し、エクスポートに追加した
 - [ ] テストを先に書き、Red を確認した
 - [ ] 相対パス import がない（`@/` を使っている）

@@ -4,8 +4,14 @@
 **版はディレクトリ名（`v0.1` / `v0.2` / `v0.3`）が示す。ファイル名に版番号は付けない。**
 以前の `design-v1.md` / `design-v2.md` という採番はアプリの実バージョンとズレていたため廃止した。
 
-**実装の根拠に使うのは [v0.3/design-concept-model.md](./v0.3/design-concept-model.md) だけ。**
-v0.1 / v0.2 は superseded（履歴）。
+## 現行版
+
+**v0.3 — [design-concept-model.md](./v0.3/design-concept-model.md)**
+
+**実装の根拠に使うのはこれだけ。** 過去の版は superseded（履歴）。
+
+版を切り替えたら**この節だけを書き換える。** ルール・スキル・他のドキュメントは版を名指しせず
+「現行版（`docs/design/README.md` が示す）」としてここを指しているので、追随の書き換えは要らない。
 
 ## 一覧
 

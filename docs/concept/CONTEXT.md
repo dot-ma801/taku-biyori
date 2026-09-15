@@ -4,7 +4,7 @@
 
 - **会話・コード・ドキュメントにこの表と食い違う言葉が出てきたら、その場で指摘する。**
   決着したらこのファイルを更新する（`concept-design` スキルの担当）
-- テーブル・カラム・API の詳細は書かない → [`docs/design/v0.3/design-concept-model.md`](../design/v0.3/design-concept-model.md)
+- テーブル・カラム・API の詳細は書かない → 現行版の設計書（[`docs/design/README.md`](../design/README.md) の「現行版」）
 - 概念の責務・持たないものの詳細も書かない → `docs/concept/*.md`
 
 ## 概念

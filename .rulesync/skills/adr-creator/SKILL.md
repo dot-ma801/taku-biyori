@@ -31,7 +31,7 @@ ADR（Architecture Decision Record）を一定品質で作成するためのス�
 |---|---|
 | 元に戻しやすい・影響が局所的 | コミットメッセージと PR 本文 |
 | 概念・語彙の話 | `docs/concept/`（`concept-design` スキル） |
-| 仕様そのもの | `docs/design/v0.3/design-concept-model.md` |
+| 仕様そのもの | 現行版の設計書（`docs/design/README.md` の「現行版」） |
 | 手順・規約 | `.rulesync/rules/` またはスキル |
 
 **明示的に「ADR を書いて」と言われた場合でも、3条件を満たさないと判断したら、書き始める前に

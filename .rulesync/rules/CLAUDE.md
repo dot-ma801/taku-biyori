@@ -25,10 +25,11 @@ pnpm workspace のモノレポで、`packages/` 配下に `shared` / `backend` /
 
 ## 設計ドキュメント
 
-現行仕様は **[`docs/design/v0.3/design-concept-model.md`](docs/design/v0.3/design-concept-model.md)** が唯一の根拠。
-**API を実装・変更する前に必ず参照すること。** 一覧は [`docs/design/README.md`](docs/design/README.md)。
+現行仕様は **[`docs/design/README.md`](docs/design/README.md) の「現行版」が指す文書**が唯一の根拠。
+**API を実装・変更する前に必ず参照すること。**
 
-`docs/design/v0.1/` `v0.2/` は **superseded**（履歴）。実装の根拠には使わない。
+版は増えるので、**ここには版番号を書かない。** どれが現行かは上の索引だけが持つ。
+現行版より前の版は **superseded**（履歴）。実装の根拠には使わない。
 
 ### コード中の `design-v2 §…` の読み方
 
@@ -36,11 +37,11 @@ pnpm workspace のモノレポで、`packages/` 配下に `shared` / `backend` /
 
 | コード中の表記 | 指す文書 |
 |---|---|
-| `design-v2 §…` | `docs/design/v0.3/design-concept-model.md`（現行） |
+| `design-v2 §…` | 現行版の基本設計（`docs/design/README.md` の「現行版」） |
 | `design-v1.2 §…` | `docs/design/v0.2/design-play-memo.md` |
 | `design-v1.1 §…` / `design-v1 §…` | `docs/design/v0.1/` の各文書 |
 
-`design-v1.x §…` は **v2 が引き継いだ判断の出典を示す履歴参照**。仕様の確認は必ず v0.3 で行う。
+`design-v1.x §…` は **v2 が引き継いだ判断の出典を示す履歴参照**。仕様の確認は必ず現行版で行う。
 唯一の例外はプレイメモ4本で、design-v2 §6-15 が「リクエスト・レスポンス契約を v2 でも変えない」と
 明示しているため、v1.2 §4（操作可否）・§5（エラー表）・§8 は挙動の記録として有効
 （パスの入れ子化と `memberId` → `seatId` の改名を除く）。

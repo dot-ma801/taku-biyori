@@ -1,4 +1,10 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["./**/*"]
+  "include": ["./**/*"],
+  "compilerOptions": {
+    // Playwright は tsc の型チェックを介さず、独自のトランスパイルでテストを読み込む。
+    // tsconfig.node.json と同じ理由でバンドラー流の解決に寄せ、拡張子なしの相対importを許可する。
+    "module": "preserve",
+    "moduleResolution": "bundler"
+  }
 }

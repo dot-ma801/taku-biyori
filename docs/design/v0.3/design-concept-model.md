@@ -3,7 +3,7 @@
 > 旧ファイル名: `docs/design-v2.md`（**コード中の `design-v2 §…` はこの文書を指す**）
 > 最終更新: 2026-08-22
 > 元概念設計: [docs/concept/lobby-game-session.md](../../concept/lobby-game-session.md)
-> ロール定義: [docs/concept/roles.md](../../concept/roles.md)
+> 用語集・ロール定義: [docs/concept/CONTEXT.md](../../concept/CONTEXT.md)
 > 前版: [docs/design/v0.1/design-recruitment-separation.md](../v0.1/design-recruitment-separation.md)（募集と卓の分離）、[docs/design/v0.2/design-play-memo.md](../v0.2/design-play-memo.md)（プレイメモ）
 
 本書は概念設計 `docs/concept/lobby-game-session.md` を実装可能な設計（DBスキーマ・ステータス導出・API・画面）に落とし込んだものである。
@@ -69,7 +69,7 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 | 概念 | 実装 | テーブルにしない理由 |
 |---|---|---|
 | ステータス（ロビー・セッション） | ファクトカラムからの**導出関数** | 独立した同一性もライフサイクルも無い。状態を保存すると事実と状態の二重管理になる（v1 からの継続方針） |
-| ロール（ホスト / 参加者 / ゲスト参加者） | `lobbies.host_user_id`、`lobby_entries.user_id IS NULL` | ホストは「ロビーが持つ1つの属性」であり、ゲスト参加者は `LobbyEntry` の一状態。`roles.md` も「ゲスト参加者は独立した概念ではなく LobbyEntry の一状態」と明記している |
+| ロール（ホスト / 参加者 / ゲスト参加者） | `lobbies.host_user_id`、`lobby_entries.user_id IS NULL` | ホストは「ロビーが持つ1つの属性」であり、ゲスト参加者は `LobbyEntry` の一状態。`CONTEXT.md` も「ゲスト参加者は独立した概念ではなく LobbyEntry の一状態」と明記している |
 | 募集 | `lobbies.published_at` + `open_until` + `reception_closed_at` | 概念設計で独立概念化を検討し**棄却済み**（「募集を独立概念にするかの検討」）。「2回目の募集」を区別して語る現実が無い |
 | 選出 / 非選出 | `Seat` の**有無** | 「選ばれた」というファクトは着席そのもの。専用の行を持つと現行の `lobby_member_id` 突合が別の形で復活する |
 
@@ -128,6 +128,10 @@ ADR 0005（機能ごとの PostgreSQL スキーマ）は継続する。スキー
 
 「卓」は現場語としてロビー（企画）側を指すため、1回の開催の呼称には使わない。ランディングページなど
 サービス全体を語る文脈での「卓」はそのまま残してよい。
+
+> **この表は issue #147 より前のもの。** UI 表記の正は
+> [`docs/concept/CONTEXT.md`](../../concept/CONTEXT.md) にあり、現在は Lobby と GameSession を
+> 「卓」1つに畳んで見せている。本節は改名の履歴として読む。
 
 ### 2-3. 棄却した名前
 

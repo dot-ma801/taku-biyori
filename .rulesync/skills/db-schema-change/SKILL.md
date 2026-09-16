@@ -13,7 +13,7 @@ Drizzle ORM + PostgreSQL（Neon）。スキーマ定義は `packages/backend/src
 
 ## 1. 設計を確認する
 
-[`docs/design/v0.3/design-concept-model.md`](../../../docs/design/v0.3/design-concept-model.md) §3 DBスキーマ が正。
+現行版の基本設計（[`docs/design/README.md`](../../../docs/design/README.md) の「現行版」）§3 DBスキーマ が正。
 設計書にないテーブル・カラムを勝手に追加しない。概念そのものを足す判断が要るなら `concept-design` スキルへ。
 
 ## 2. 定義する

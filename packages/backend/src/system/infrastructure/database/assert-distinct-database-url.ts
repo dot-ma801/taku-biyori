@@ -9,6 +9,7 @@
 export const assertDistinctFromDatabaseUrl = (
   testDatabaseUrl: string,
   databaseUrl: string | undefined,
+  variableName = 'TEST_DATABASE_URL',
 ): void => {
   // 開発用 DB の接続先が設定されていなければ比較のしようがない（例: CI で
   // DATABASE_URL を使わない構成）ため、その場合はチェックをスキップする。
@@ -19,10 +20,10 @@ export const assertDistinctFromDatabaseUrl = (
   if (normalize(testDatabaseUrl) === normalize(databaseUrl)) {
     throw new Error(
       [
-        'TEST_DATABASE_URL が DATABASE_URL と同じ接続先を指しています。',
+        `${variableName} が DATABASE_URL と同じ接続先を指しています。`,
         'このまま実行すると開発用データベースにマイグレーションが適用されたり、',
         'テストのトランザクション・DELETE が開発用データを巻き込みます。',
-        'TEST_DATABASE_URL には開発用とは別名のデータベース（例: taku_biyori_test）を指定してください。',
+        `${variableName} には開発用とは別名のデータベースを指定してください。`,
       ].join('\n'),
     );
   }

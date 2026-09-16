@@ -169,6 +169,56 @@ jobs:
       - name: Test (frontend)
         run: pnpm --filter @taku-biyori/frontend test
 
+  e2e:
+    name: E2E
+    runs-on: ubuntu-24.04
+    needs: build-shared
+    # ブラウザから実 DB に書き込むため、リポジトリ層テストとは別のデータベースを使う。
+    # 作成・マイグレーション・シードは playwright の globalSetup が行う。
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      E2E_DATABASE_URL: postgresql://app:password@localhost:5432/taku_biyori_e2e
+      # シードとバックエンドの起動に必要。e2e の使い捨てセッションにしか使わない
+      BETTER_AUTH_SECRET: e2e-only-not-a-real-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: shared-dist
+          path: packages/shared/dist
+      - name: Install Playwright browser
+        run: pnpm --filter @taku-biyori/frontend exec playwright install --with-deps chromium
+      - name: E2E (frontend)
+        run: pnpm test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: packages/frontend/playwright-report
+          retention-days: 7
+
   rules:
     name: AI Rules Sync
     runs-on: ubuntu-24.04

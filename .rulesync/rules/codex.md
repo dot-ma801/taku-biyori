@@ -27,7 +27,7 @@ globs:
 | 観点 | 参照 |
 |---|---|
 | `@/` エイリアスを使わず相対パスで import していないか | AGENTS.md「インポートルール」 |
-| 仕様が `docs/design/v0.3/design-concept-model.md` と一致しているか | AGENTS.md「設計ドキュメント」 |
+| 仕様が現行版の設計書（`docs/design/README.md` の「現行版」）と一致しているか | AGENTS.md「設計ドキュメント」 |
 | backend の実装にテストが先行しているか（TDD） | AGENTS.md「テスト方針」 |
 | frontend が DTO を composable / component に持ち込んでいないか | AGENTS.md「API の型（DTO）と FE の model を分ける」 |
 | `watch` を `computed` / `emit` / `onMounted` で置き換えられないか | AGENTS.md「`watch` を多用しない」 |

@@ -23,7 +23,7 @@ describe('useToast', () => {
       show('test');
 
       // Assert
-      expect(toasts).toHaveLength(1);
+      expect(toasts[0]!.message).toBe('test');
     });
 
     it('variant の既定値は info', () => {

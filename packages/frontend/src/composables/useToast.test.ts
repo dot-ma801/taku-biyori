@@ -103,43 +103,33 @@ describe('useToast', () => {
   });
 
   describe('各 variant を直接生成するメソッド', () => {
-    it.each(['success', 'error', 'warning', 'info'] as const)(
+    it.each([
+      ['success', success],
+      ['error', error],
+      ['warning', warning],
+      ['info', info],
+    ] as const)(
       '%s() メソッドで %s バリアントのトーストが表示される',
-      (variant) => {
+      (variant, fn) => {
         // Arrange, Act
-        makeToast(variant, 'test');
+        fn('test');
 
         // Assert
-        expect(toasts.some(item => item.variant == variant)).toBe(true);
+        expect(toasts.some((item) => item.variant == variant)).toBe(true);
       },
     );
 
-    it.each(['success', 'error', 'warning', 'info'] as const)(
-      '%s() は表示時間（duration）の指定ができる',
-      (variant) => {
-        // Arrange, Act
-        makeToast(variant, 'test', 5000);
+    it.each([
+      ['success', success],
+      ['error', error],
+      ['warning', warning],
+      ['info', info],
+    ] as const)('%s() は表示時間（duration）の指定ができる', (variant, fn) => {
+      // Arrange, Act
+      fn('test', 5000);
 
-        // Assert
-        expect(toasts.some(item => item.duration == 5000)).toBe(true);
-      },
-    );
+      // Assert
+      expect(toasts.some((item) => item.duration == 5000)).toBe(true);
+    });
   });
 });
-
-const makeToast = (
-  variant: ToastVariant,
-  message: string,
-  duration?: number,
-) => {
-  switch (variant) {
-    case 'success':
-      success(message, duration);
-    case 'info':
-      info(message, duration);
-    case 'warning':
-      warning(message, duration);
-    case 'error':
-      error(message, duration);
-  }
-};

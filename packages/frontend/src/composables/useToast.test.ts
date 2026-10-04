@@ -31,7 +31,7 @@ describe('useToast', () => {
       show('test');
 
       // Assert
-      expect(toasts.some((item) => item.variant == 'info')).toBe(true);
+      expect(toasts).toEqual([expect.objectContaining({ variant: 'info' })]);
     });
 
     it('表示時間（duration）の既定値は 4000ms', () => {
@@ -39,7 +39,7 @@ describe('useToast', () => {
       show('test');
 
       // Assert
-      expect(toasts.some((item) => item.duration == 4000)).toBe(true);
+      expect(toasts).toEqual(expect.objectContaining({ duration: 4000 }));
     });
 
     it('variant の指定ができる', () => {
@@ -47,7 +47,7 @@ describe('useToast', () => {
       show('test', 'error');
 
       // Assert
-      expect(toasts.some((item) => item.variant == 'error')).toBe(true);
+      expect(toasts).toEqual(expect.objectContaining({ variant: error }));
     });
 
     it('表示時間（duration）の指定ができる', () => {
@@ -55,7 +55,7 @@ describe('useToast', () => {
       show('test', 'info', 5000);
 
       // Assert
-      expect(toasts.some((item) => item.duration == 5000)).toBe(true);
+      expect(toasts).toEqual(expect.objectContaining({ duration: 5000 }));
     });
 
     it('表示時間が経過と、自動で消える', () => {
@@ -115,7 +115,7 @@ describe('useToast', () => {
         fn('test');
 
         // Assert
-        expect(toasts.some((item) => item.variant == variant)).toBe(true);
+        expect(toasts).toEqual([expect.objectContaining({ variant: variant })]);
       },
     );
 
@@ -129,7 +129,7 @@ describe('useToast', () => {
       fn('test', 5000);
 
       // Assert
-      expect(toasts.some((item) => item.duration == 5000)).toBe(true);
+      expect(toasts).toEqual(expect.objectContaining([{ duration: 5000 }]));
     });
   });
 });

@@ -17,28 +17,32 @@ const WITHOUT_SCHEDULE = [
 
 describe('useJoinScheduleGuide', () => {
   describe('handleJoined', () => {
-    it.each([GameSessionCardStatus.recruiting, GameSessionCardStatus.adjusting])(
-      '"%s" で回答待ちの日程調整があれば日程調整タブを返す',
-      (status) => {
-        // Arrange
-        const { handleJoined } = useJoinScheduleGuide(
-          status,
-          WITH_SCHEDULE,
-          true,
-        );
+    it.each([
+      GameSessionCardStatus.recruiting,
+      GameSessionCardStatus.adjusting,
+    ])('"%s" で回答待ちの日程調整があれば日程調整タブを返す', (status) => {
+      // Arrange
+      const { handleJoined } = useJoinScheduleGuide(
+        status,
+        WITH_SCHEDULE,
+        true,
+      );
 
-        // Act
-        const tab = handleJoined(ENTRY_ID);
+      // Act
+      const tab = handleJoined(ENTRY_ID);
 
-        // Assert
-        expect(tab).toBe(GameSessionDetailTab.schedule);
-      },
-    );
+      // Assert
+      expect(tab).toBe(GameSessionDetailTab.schedule);
+    });
 
     it('案内を出すときは参加した entryId を覚え、案内を表示状態にする', () => {
       // Arrange
       const { handleJoined, joinedEntryId, isGuideActive } =
-        useJoinScheduleGuide(GameSessionCardStatus.recruiting, WITH_SCHEDULE, true);
+        useJoinScheduleGuide(
+          GameSessionCardStatus.recruiting,
+          WITH_SCHEDULE,
+          true,
+        );
 
       // Act
       handleJoined(ENTRY_ID);
@@ -136,7 +140,11 @@ describe('useJoinScheduleGuide', () => {
     it('案内を閉じても参加した entryId は残る', () => {
       // Arrange
       const { handleJoined, dismissGuide, joinedEntryId, isGuideActive } =
-        useJoinScheduleGuide(GameSessionCardStatus.recruiting, WITH_SCHEDULE, true);
+        useJoinScheduleGuide(
+          GameSessionCardStatus.recruiting,
+          WITH_SCHEDULE,
+          true,
+        );
       handleJoined(ENTRY_ID);
 
       // Act

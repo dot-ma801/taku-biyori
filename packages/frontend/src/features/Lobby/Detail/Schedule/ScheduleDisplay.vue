@@ -7,8 +7,10 @@ import ScheduleCardList from '@/features/Lobby/Detail/Schedule/ScheduleCardList.
 import RestartSchedulePoll from '@/features/Lobby/Detail/Schedule/RestartSchedulePoll.vue';
 import CandidateDateEditSection from '@/features/Lobby/Detail/Schedule/CandidateDateEditSection.vue';
 import SchedulePollHistory from '@/features/Lobby/Detail/Schedule/SchedulePollHistory.vue';
+import JoinGuideBanner from '@/features/Lobby/Detail/Schedule/JoinGuideBanner.vue';
 import { useSchedulePoll } from '@/features/Lobby/Detail/Schedule/useSchedulePoll';
 import { useGuestSchedule } from '@/features/Lobby/Detail/Schedule/useGuestSchedule';
+import { useSelfAnswerGuide } from '@/features/Lobby/Detail/Schedule/useSelfAnswerGuide';
 import { isGuestMember } from '@taku-biyori/shared';
 import type { LobbyDetailModel } from '@/models/lobby';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
@@ -17,9 +19,16 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMyLobbyMemberId } from '@/features/Lobby/Detail/composables/useMyLobbyMemberId';
 
-const props = defineProps<{
-  lobby: LobbyDetailModel;
-}>();
+const props = withDefaults(
+  defineProps<{
+    lobby: LobbyDetailModel;
+    // この画面で参加した entryId。ゲストの「自分の列」はこれでしか分からない
+    joinedEntryId?: string | null;
+    // 参加直後の案内中か（閉じたら false）
+    isJoinGuideActive?: boolean;
+  }>(),
+  { joinedEntryId: null, isJoinGuideActive: false },
+);
 
 const emit = defineEmits<{
   // 送信時に日程調整が最新でなくなっていた（409）とき、親にロビー詳細の再取得を依頼する
@@ -27,6 +36,8 @@ const emit = defineEmits<{
   // 新しい日程調整を開始した（やり直す）。schedulePolls が変わり最新の調整 id が
   // 切り替わるため、親にロビー詳細の再取得を依頼する
   restarted: [];
+  // 参加直後の案内を閉じた
+  dismissGuide: [];
 }>();
 
 const { myMemberId: myEntryId } = useMyLobbyMemberId(
@@ -156,6 +167,23 @@ const canShowScheduleActions = computed(
 const canEditSchedule = computed(
   () => canInputSchedule.value || canEditGuestSchedule.value,
 );
+
+// 表示上の「自分」。ログインユーザーの参加か、この画面で参加したゲスト
+const selfEntryId = computed(() => myEntryId.value ?? props.joinedEntryId);
+
+const { unansweredCount, isGuideVisible, orderedMembers } = useSelfAnswerGuide(
+  () => props.lobby.activeEntries,
+  () => candidateDates.value,
+  () => selfEntryId.value,
+  () => props.isJoinGuideActive,
+);
+
+const canStartAnswer = computed(
+  () =>
+    canShowScheduleActions.value &&
+    canEditSchedule.value &&
+    !isScheduleEditing.value,
+);
 </script>
 
 <template>
@@ -163,6 +191,14 @@ const canEditSchedule = computed(
     <BaseSectionHeading class="heading" level="h3" :icon="CalendarCheck">
       日程調整
     </BaseSectionHeading>
+
+    <JoinGuideBanner
+      v-if="isGuideVisible"
+      :unanswered-count="unansweredCount"
+      :can-start-answer="canStartAnswer"
+      @answer="startScheduleEdit"
+      @dismiss="emit('dismissGuide')"
+    />
 
     <div v-if="loading" class="state-message">読み込み中...</div>
     <template v-else>
@@ -172,8 +208,9 @@ const canEditSchedule = computed(
       <div class="schedule-table">
         <ScheduleTable
           :candidate-dates="candidateDates"
-          :members="props.lobby.activeEntries"
-          :my-entry-id="myEntryId"
+          :members="orderedMembers"
+          :my-entry-id="selfEntryId"
+          :my-unanswered-count="unansweredCount"
           :editable-entry-ids="editableEntryIds"
           :draft-answers="tableDraftAnswers"
           @cell-click="onCellClick"
@@ -182,8 +219,8 @@ const canEditSchedule = computed(
       <div class="schedule-cards">
         <ScheduleCardList
           :candidate-dates="candidateDates"
-          :members="props.lobby.activeEntries"
-          :my-entry-id="myEntryId"
+          :members="orderedMembers"
+          :my-entry-id="selfEntryId"
           :editable-entry-ids="editableEntryIds"
           :draft-answers="tableDraftAnswers"
           @cell-click="onCellClick"

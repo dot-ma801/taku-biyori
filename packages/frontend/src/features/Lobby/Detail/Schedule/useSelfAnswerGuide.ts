@@ -15,10 +15,10 @@ export const useSelfAnswerGuide = (
   // 参加直後の案内中か（親が持つ。閉じたら false）
   isGuideActive: MaybeRefOrGetter<boolean>,
 ) => {
-  /** 自分が未回答の候補日の数。自分が分からなければ 0 */
+  /** 自分が未回答の候補日の数。自分が分からない・在籍していない（退出した）なら 0 */
   const unansweredCount = computed(() => {
     const selfId = toValue(selfEntryId);
-    if (!selfId) {
+    if (!selfId || !toValue(members).some((m) => m.id === selfId)) {
       return 0;
     }
     return toValue(candidateDates).filter(

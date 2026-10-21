@@ -28,6 +28,8 @@ const date = (
     ),
   }) as CandidateDateModel;
 
+const MEMBERS = [entry(SELF_ID), entry(OTHER_ID)];
+
 describe('useSelfAnswerGuide', () => {
   describe('unansweredCount', () => {
     it('自分が回答していない候補日の数を返す', () => {
@@ -39,10 +41,28 @@ describe('useSelfAnswerGuide', () => {
       ];
 
       // Act
-      const { unansweredCount } = useSelfAnswerGuide([], dates, SELF_ID, true);
+      const { unansweredCount } = useSelfAnswerGuide(
+        MEMBERS,
+        dates,
+        SELF_ID,
+        true,
+      );
 
       // Assert
       expect(unansweredCount.value).toBe(2);
+    });
+
+    it('自分が在籍者に居ない（参加後に退出した）ときは 0 を返す', () => {
+      // Arrange & Act
+      const { unansweredCount } = useSelfAnswerGuide(
+        [entry(OTHER_ID)],
+        [date('d1')],
+        SELF_ID,
+        true,
+      );
+
+      // Assert
+      expect(unansweredCount.value).toBe(0);
     });
 
     it('自分が分からないときは 0 を返す', () => {
@@ -63,7 +83,7 @@ describe('useSelfAnswerGuide', () => {
     it('案内中で未回答が残っていれば表示する', () => {
       // Arrange & Act
       const { isGuideVisible } = useSelfAnswerGuide(
-        [],
+        MEMBERS,
         [date('d1')],
         SELF_ID,
         true,
@@ -89,7 +109,12 @@ describe('useSelfAnswerGuide', () => {
     it('自分の回答がすべて埋まると表示しない', () => {
       // Arrange
       const dates = ref([date('d1')]);
-      const { isGuideVisible } = useSelfAnswerGuide([], dates, SELF_ID, true);
+      const { isGuideVisible } = useSelfAnswerGuide(
+        MEMBERS,
+        dates,
+        SELF_ID,
+        true,
+      );
 
       // Act
       dates.value = [date('d1', [[SELF_ID, 'ng']])];
@@ -100,7 +125,7 @@ describe('useSelfAnswerGuide', () => {
 
     it('候補日がまだ無い（読み込み前を含む）ときは表示しない', () => {
       // Arrange & Act
-      const { isGuideVisible } = useSelfAnswerGuide([], [], SELF_ID, true);
+      const { isGuideVisible } = useSelfAnswerGuide(MEMBERS, [], SELF_ID, true);
 
       // Assert
       expect(isGuideVisible.value).toBe(false);

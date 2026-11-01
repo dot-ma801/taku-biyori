@@ -7,19 +7,28 @@ import ConfirmScheduleDialog from '@/features/GameSession/Detail/ConfirmSchedule
 import { useCanOpenGameSession } from '@/features/Lobby/Detail/composables/useCanOpenGameSession';
 import type { LobbyDetailModel } from '@/models/lobby';
 
-const props = defineProps<{
-  lobby: LobbyDetailModel;
-  isHost: boolean;
-  /**
-   * いま確定を待っている日程調整があるか。
-   * 確定済み（＝この調整から開催が生まれている）なら false になり、確定の導線を出さない。
-   */
-  hasPendingSchedulePoll: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    lobby: LobbyDetailModel;
+    isHost: boolean;
+    /**
+     * いま確定を待っている日程調整があるか。
+     * 確定済み（＝この調整から開催が生まれている）なら false になり、確定の導線を出さない。
+     */
+    hasPendingSchedulePoll: boolean;
+    /** この画面で参加した entryId。参加操作をしていなければ null */
+    joinedEntryId?: string | null;
+    /** 参加直後の案内中か */
+    isJoinGuideActive?: boolean;
+  }>(),
+  { joinedEntryId: null, isJoinGuideActive: false },
+);
 
 const emit = defineEmits<{
   /** 卓の状態が動いた（確定・やり直し・回答の競合）。親に取り直しを頼む */
   changed: [];
+  /** 参加直後の案内を閉じた */
+  dismissGuide: [];
 }>();
 
 const { canOpenGameSession } = useCanOpenGameSession(() => props.lobby);
@@ -50,6 +59,9 @@ function handleCreated() {
   <div class="schedule-tab">
     <ScheduleDisplay
       :lobby="lobby"
+      :joined-entry-id="joinedEntryId"
+      :is-join-guide-active="isJoinGuideActive"
+      @dismiss-guide="emit('dismissGuide')"
       @stale="emit('changed')"
       @restarted="emit('changed')"
     />

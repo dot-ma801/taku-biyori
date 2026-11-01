@@ -2,6 +2,7 @@
 import type { CandidateDateModel } from '@/models/schedule-poll';
 import type { LobbyEntryModel } from '@/models/lobby';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
+import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useScheduleEditHint';
 import type { Answer } from '@/features/Lobby/Detail/Schedule/types';
@@ -9,15 +10,20 @@ import { formatDateWithWeekday } from '@/utils/date';
 import { memberDisplayName } from '@/utils/memberDisplayName';
 import { computed } from 'vue';
 
-const props = defineProps<{
-  candidateDates: CandidateDateModel[];
-  members: LobbyEntryModel[];
-  myEntryId: string | null;
-  // いま編集可能なメンバー列の id 一覧
-  editableEntryIds: string[];
-  // 編集中ドラフト。`${entryId}::${dateId}` → 回答
-  draftAnswers: Map<string, Answer>;
-}>();
+const props = withDefaults(
+  defineProps<{
+    candidateDates: CandidateDateModel[];
+    members: LobbyEntryModel[];
+    myEntryId: string | null;
+    // 自分が未回答の候補日の数（サーバ値）
+    myUnansweredCount?: number;
+    // いま編集可能なメンバー列の id 一覧
+    editableEntryIds: string[];
+    // 編集中ドラフト。`${entryId}::${dateId}` → 回答
+    draftAnswers: Map<string, Answer>;
+  }>(),
+  { myUnansweredCount: 0 },
+);
 
 const emit = defineEmits<{
   cellClick: [entryId: string, dateId: string];
@@ -39,6 +45,8 @@ const { isEditing, editHint } = useScheduleEditHint(
 const emptyRowColspan = computed(
   () => props.members.length + 1 + (hasAnyTimeLabel.value ? 1 : 0),
 );
+
+const hasMyUnanswered = computed(() => props.myUnansweredCount > 0);
 
 // 自分のメンバーかどうか判定（「（あなた）」ラベル表示用）
 function isMe(member: LobbyEntryModel): boolean {
@@ -89,9 +97,17 @@ function onCellKeydown(
             :key="member.id"
             scope="col"
             class="th th--member"
+            :class="{ 'th--self': isMe(member) }"
           >
             {{ memberDisplayName(member) }}
             <span v-if="isMe(member)" class="you-label">（あなた）</span>
+            <BaseBadge
+              v-if="isMe(member) && hasMyUnanswered"
+              class="unanswered-badge"
+              variant="warning"
+            >
+              未回答 {{ myUnansweredCount }}件
+            </BaseBadge>
           </th>
         </tr>
       </thead>
@@ -105,7 +121,10 @@ function onCellKeydown(
             v-for="member in members"
             :key="member.id"
             class="td td--answer"
-            :class="{ 'td--editing': isCellEditable(member) }"
+            :class="{
+              'td--editing': isCellEditable(member),
+              'td--self': isMe(member),
+            }"
             v-bind="editableCellAttrs(member)"
             @click="onCellClick(member, date.id)"
             @keydown="onCellKeydown($event, member, date.id)"
@@ -211,6 +230,16 @@ function onCellKeydown(
   font-weight: 400;
   color: var(--color-text-muted);
   display: block;
+}
+
+.unanswered-badge {
+  margin-top: var(--space-1);
+}
+
+/* 自分の列は他の列と見分けられるよう、薄く塗る */
+.th--self,
+.td--self {
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
 }
 
 .tr {

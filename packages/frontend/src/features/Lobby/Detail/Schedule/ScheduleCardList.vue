@@ -2,6 +2,7 @@
 import type { CandidateDateModel } from '@/models/schedule-poll';
 import type { LobbyEntryModel } from '@/models/lobby';
 import AnswerCell from '@/features/Lobby/Detail/Schedule/AnswerCell.vue';
+import BaseBadge from '@/components/common/BaseBadge/BaseBadge.vue';
 import UserAvatar from '@/features/user/UserAvatar/UserAvatar.vue';
 import { useScheduleView } from '@/features/Lobby/Detail/Schedule/useScheduleView';
 import { useScheduleEditHint } from '@/features/Lobby/Detail/Schedule/useScheduleEditHint';
@@ -47,6 +48,11 @@ function chipAnswerClass(date: CandidateDateModel, entryId: string): string {
 function myAnswer(date: CandidateDateModel): Answer | null {
   if (!props.myEntryId) return null;
   return getAnswer(date, props.myEntryId);
+}
+
+// 自分の回答がまだ無いか（編集中のドラフトで埋めたぶんも含めて判定する）
+function isMyUnanswered(date: CandidateDateModel): boolean {
+  return props.myEntryId !== null && myAnswer(date) === null;
 }
 
 // このメンバーのチップがいま編集可能か
@@ -134,6 +140,9 @@ function onMyAnswerKeydown(e: KeyboardEvent, dateId: string) {
       >
         <span class="my-answer-label">あなたの回答：</span>
         <AnswerCell :answer="myAnswer(date)" />
+        <BaseBadge v-if="isMyUnanswered(date)" variant="warning">
+          未回答
+        </BaseBadge>
       </div>
     </div>
   </div>

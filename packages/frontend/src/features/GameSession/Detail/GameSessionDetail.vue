@@ -19,6 +19,8 @@ import {
   useGameSessionDetailTabs,
 } from '@/features/GameSession/Detail/useGameSessionDetailTabs';
 import { useGetGameSessionDetail } from '@/features/GameSession/Detail/useGetGameSessionDetail';
+import { useJoinScheduleGuide } from '@/features/GameSession/Detail/useJoinScheduleGuide';
+import type { LobbyEntryModel } from '@/models/lobby';
 import { useSession } from '@/lib/auth';
 import { PAGE_NAME } from '@/config/pageName';
 
@@ -92,7 +94,7 @@ const role = computed(() =>
 );
 const hasGameSession = computed(() => gameSessionId.value !== null);
 
-const { tabs, resolveActiveTab } = useGameSessionDetailTabs(
+const { availableTabs, tabs, resolveActiveTab } = useGameSessionDetailTabs(
   status,
   role,
   hasGameSession,
@@ -107,6 +109,21 @@ const activeTab = ref<string>(
 watch(tabs, () => {
   activeTab.value = resolveActiveTab(activeTab.value);
 });
+
+const { joinedEntryId, isGuideActive, handleJoined, dismissGuide } =
+  useJoinScheduleGuide(status, availableTabs, hasPendingSchedulePoll);
+
+/**
+ * 参加（ログイン・ゲストとも）が成功したとき。
+ * 次にやること（◯△× の回答）が伝わるよう、日程調整タブへ切り替える
+ */
+function handleMemberAdded(member: LobbyEntryModel) {
+  addEntry(member);
+  const nextTab = handleJoined(member.id);
+  if (nextTab) {
+    activeTab.value = nextTab;
+  }
+}
 
 const isHost = computed(() => role.value === 'host');
 
@@ -164,7 +181,7 @@ const showGameSessionError = computed(
         <ActionBar
           :lobby="lobby"
           @updated="patchLobby"
-          @member-added="addEntry"
+          @member-added="handleMemberAdded"
           @member-removed="removeEntry"
         />
         <!--
@@ -203,6 +220,9 @@ const showGameSessionError = computed(
           :lobby="lobby"
           :is-host="isHost"
           :has-pending-schedule-poll="hasPendingSchedulePoll"
+          :joined-entry-id="joinedEntryId"
+          :is-join-guide-active="isGuideActive"
+          @dismiss-guide="dismissGuide"
           @changed="refreshAll"
         />
       </template>
